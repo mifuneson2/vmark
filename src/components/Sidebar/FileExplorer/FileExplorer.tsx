@@ -1,13 +1,14 @@
 import { useState, useCallback, useRef, forwardRef, useImperativeHandle } from "react";
 import { Tree, type TreeApi } from "react-arborist";
 import { Folder } from "lucide-react";
+import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { useFileTree } from "./useFileTree";
 import { useExplorerOperations } from "./useExplorerOperations";
 import { FileNode } from "./FileNode";
 import { ContextMenu, type ContextMenuType, type ContextMenuPosition } from "./ContextMenu";
 import { useWorkspaceStore } from "@/stores/workspaceStore";
 import { useWindowLabel } from "@/contexts/WindowContext";
-import { getFileName } from "@/utils/paths";
+import { getFileName, getParentDir } from "@/utils/paths";
 import type { FileNode as FileNodeType } from "./types";
 import "./FileExplorer.css";
 
@@ -143,6 +144,20 @@ export const FileExplorer = forwardRef<FileExplorerHandle, FileExplorerProps>(
           }
           break;
 
+        case "moveTo":
+          if (targetPath && !targetIsFolder) {
+            const currentFolder = getParentDir(targetPath);
+            const destFolder = await openDialog({
+              title: `Move "${getFileName(targetPath)}" to...`,
+              directory: true,
+              defaultPath: currentFolder ?? undefined,
+            });
+            if (destFolder) {
+              await moveItem(targetPath, destFolder);
+            }
+          }
+          break;
+
         case "delete":
           if (targetPath) {
             await deleteItem(targetPath, targetIsFolder);
@@ -171,7 +186,7 @@ export const FileExplorer = forwardRef<FileExplorerHandle, FileExplorerProps>(
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps -- handleNewFile/handleNewFolder use getState() pattern
-    [contextMenu, openFile, duplicateFile, deleteItem, copyPath, revealInFinder]
+    [contextMenu, openFile, duplicateFile, moveItem, deleteItem, copyPath, revealInFinder]
   );
 
   // Handle file activation (double-click or Enter)

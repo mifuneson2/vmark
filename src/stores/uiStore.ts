@@ -19,6 +19,7 @@ interface UIState {
   universalToolbarHasFocus: boolean; // Keyboard focus is inside the universal toolbar
   toolbarSessionFocusIndex: number; // Session-only focus index (cleared on toolbar close)
   toolbarDropdownOpen: boolean; // Whether a dropdown menu is currently open
+  isDraggingFiles: boolean; // Files are being dragged over the window
 }
 
 interface UIActions {
@@ -39,6 +40,7 @@ interface UIActions {
   setToolbarDropdownOpen: (open: boolean) => void;
   /** Clear session memory when toolbar closes */
   clearToolbarSession: () => void;
+  setDraggingFiles: (dragging: boolean) => void;
 }
 
 export const useUIStore = create<UIState & UIActions>((set) => ({
@@ -53,6 +55,7 @@ export const useUIStore = create<UIState & UIActions>((set) => ({
   universalToolbarHasFocus: false,
   toolbarSessionFocusIndex: -1, // Session-only, -1 = use smart focus
   toolbarDropdownOpen: false,
+  isDraggingFiles: false,
 
   openSettings: () => set({ settingsOpen: true }),
   closeSettings: () => set({ settingsOpen: false }),
@@ -105,4 +108,6 @@ export const useUIStore = create<UIState & UIActions>((set) => ({
     toolbarSessionFocusIndex: -1,
     toolbarDropdownOpen: false,
   }),
+
+  setDraggingFiles: (dragging) => set({ isDraggingFiles: dragging }),
 }));

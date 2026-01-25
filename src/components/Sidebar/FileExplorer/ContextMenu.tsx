@@ -7,6 +7,7 @@ import {
   Trash2,
   Copy,
   FolderOpen,
+  FolderInput,
 } from "lucide-react";
 import { isImeKeyEvent } from "@/utils/imeGuard";
 import { getRevealInFileManagerLabel } from "@/utils/pathUtils";
@@ -33,6 +34,7 @@ function buildFileMenuItems(revealLabel: string): MenuItem[] {
     { id: "open", label: "Open", icon: <FileText size={14} /> },
     { id: "rename", label: "Rename", icon: <Pencil size={14} />, separator: true },
     { id: "duplicate", label: "Duplicate", icon: <Copy size={14} /> },
+    { id: "moveTo", label: "Move to...", icon: <FolderInput size={14} /> },
     { id: "delete", label: "Delete", icon: <Trash2 size={14} />, separator: true },
     { id: "copyPath", label: "Copy Path", icon: <Copy size={14} /> },
     { id: "revealInFinder", label: revealLabel, icon: <FolderOpen size={14} /> },

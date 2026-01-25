@@ -91,6 +91,44 @@ import { useFinderFileOpen } from "@/hooks/useFinderFileOpen";
 /** Height of the title bar area in pixels */
 const TITLEBAR_HEIGHT = 40;
 
+/** Drop zone indicator when dragging markdown files */
+function DropOverlay() {
+  const isDragging = useUIStore((state) => state.isDraggingFiles);
+  if (!isDragging) return null;
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        backgroundColor: "var(--accent-bg)",
+        border: "3px dashed var(--accent-primary)",
+        borderRadius: "var(--radius-lg)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 9998,
+        pointerEvents: "none",
+        margin: 8,
+      }}
+    >
+      <div
+        style={{
+          padding: "16px 24px",
+          backgroundColor: "var(--bg-color)",
+          borderRadius: "var(--radius-md)",
+          boxShadow: "var(--popup-shadow)",
+          color: "var(--text-color)",
+          fontSize: 14,
+          fontWeight: 500,
+        }}
+      >
+        Drop to open
+      </div>
+    </div>
+  );
+}
+
 // Separate component for window lifecycle hooks to avoid conditional hook calls
 function DocumentWindowHooks() {
   useWindowClose();
@@ -174,6 +212,9 @@ function MainLayout() {
       {isDocumentWindow && <DocumentWindowHooks />}
       {/* Main window specific hooks */}
       {windowLabel === "main" && <MainWindowHooks />}
+
+      {/* Drop zone indicator for drag-and-drop */}
+      <DropOverlay />
 
       {/* Title bar with drag region and filename display */}
       <TitleBar />

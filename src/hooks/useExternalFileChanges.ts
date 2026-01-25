@@ -3,7 +3,7 @@
  *
  * Listens to file system change events and applies the policy:
  * - Clean documents: auto-reload with brief notification
- * - Dirty documents: prompt user to choose
+ * - Dirty documents: prompt user to choose (batched if multiple)
  * - Deleted files: mark as missing
  *
  * @module hooks/useExternalFileChanges
@@ -23,6 +23,15 @@ import { detectLinebreaks } from "@/utils/linebreakDetection";
 import { matchesPendingSave } from "@/utils/pendingSaves";
 import { getFileName } from "@/utils/paths";
 
+/** Pending dirty file change awaiting user decision */
+interface PendingDirtyChange {
+  tabId: string;
+  filePath: string;
+}
+
+/** Debounce window for batching external changes (ms) */
+const BATCH_DEBOUNCE_MS = 300;
+
 interface FsChangeEvent {
   watchId: string;
   rootPath: string;
@@ -41,6 +50,11 @@ interface FsChangeEvent {
 export function useExternalFileChanges(): void {
   const windowLabel = useWindowLabel();
   const unlistenRef = useRef<UnlistenFn | null>(null);
+
+  // Batching state for dirty file changes
+  const pendingDirtyChangesRef = useRef<PendingDirtyChange[]>([]);
+  const batchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isProcessingBatchRef = useRef(false);
 
   // Get tabs and their file paths for the current window
   const getOpenFilePaths = useCallback(() => {
@@ -141,6 +155,82 @@ export function useExternalFileChanges(): void {
     useDocumentStore.getState().markMissing(targetTabId);
   }, []);
 
+  // Process batched dirty file changes with a single dialog
+  const processBatchedChanges = useCallback(async () => {
+    const pending = pendingDirtyChangesRef.current;
+    if (pending.length === 0 || isProcessingBatchRef.current) return;
+
+    isProcessingBatchRef.current = true;
+    pendingDirtyChangesRef.current = [];
+
+    try {
+      if (pending.length === 1) {
+        // Single file - use the existing single-file dialog
+        await handleDirtyChange(pending[0].tabId, pending[0].filePath);
+      } else {
+        // Multiple files - show batch dialog
+        const fileNames = pending.map((p) => getFileName(p.filePath) || "file").join(", ");
+        const result = await message(
+          `${pending.length} files have been modified externally:\n${fileNames}\n\nWhat would you like to do?`,
+          {
+            title: "Multiple Files Changed",
+            kind: "warning",
+            buttons: {
+              yes: "Reload All",
+              no: "Keep All",
+              cancel: "Review Each",
+            },
+          }
+        );
+
+        if (result === "Yes") {
+          // Reload all files from disk
+          for (const { tabId, filePath } of pending) {
+            try {
+              const content = await readTextFile(filePath);
+              useDocumentStore.getState().loadContent(tabId, content, filePath, detectLinebreaks(content));
+              useDocumentStore.getState().clearMissing(tabId);
+            } catch (error) {
+              console.error("[ExternalChange] Failed to reload file:", filePath, error);
+              useDocumentStore.getState().markMissing(tabId);
+            }
+          }
+        } else if (result === "No") {
+          // Keep all local versions - mark as divergent
+          for (const { tabId } of pending) {
+            useDocumentStore.getState().markDivergent(tabId);
+          }
+        } else {
+          // Review each - process individually
+          for (const { tabId, filePath } of pending) {
+            await handleDirtyChange(tabId, filePath);
+          }
+        }
+      }
+    } finally {
+      isProcessingBatchRef.current = false;
+    }
+  }, [handleDirtyChange]);
+
+  // Queue a dirty file change for batched processing
+  const queueDirtyChange = useCallback(
+    (tabId: string, filePath: string) => {
+      // Add to pending queue
+      pendingDirtyChangesRef.current.push({ tabId, filePath });
+
+      // Clear existing timeout and set a new one
+      if (batchTimeoutRef.current) {
+        clearTimeout(batchTimeoutRef.current);
+      }
+
+      batchTimeoutRef.current = setTimeout(() => {
+        batchTimeoutRef.current = null;
+        processBatchedChanges();
+      }, BATCH_DEBOUNCE_MS);
+    },
+    [processBatchedChanges]
+  );
+
   useEffect(() => {
     let cancelled = false;
 
@@ -235,7 +325,8 @@ export function useExternalFileChanges(): void {
                 toast.info(`Reloaded: ${getFileName(changedPath)}`);
                 break;
               case "prompt_user":
-                await handleDirtyChange(tabId, changedPath);
+                // Queue for batched processing to avoid dialog storms
+                queueDirtyChange(tabId, changedPath);
                 break;
               case "no_op":
                 // Should not happen for files with paths
@@ -261,6 +352,11 @@ export function useExternalFileChanges(): void {
         unlistenRef.current();
         unlistenRef.current = null;
       }
+      // Clean up batch timeout on unmount
+      if (batchTimeoutRef.current) {
+        clearTimeout(batchTimeoutRef.current);
+        batchTimeoutRef.current = null;
+      }
     };
-  }, [windowLabel, getOpenFilePaths, handleReload, handleDirtyChange, handleDeletion]);
+  }, [windowLabel, getOpenFilePaths, handleReload, queueDirtyChange, handleDeletion]);
 }

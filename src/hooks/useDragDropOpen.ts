@@ -17,6 +17,7 @@ import { useTabStore } from "@/stores/tabStore";
 import { useDocumentStore } from "@/stores/documentStore";
 import { useRecentFilesStore } from "@/stores/recentFilesStore";
 import { useWorkspaceStore } from "@/stores/workspaceStore";
+import { useUIStore } from "@/stores/uiStore";
 import { filterMarkdownPaths } from "@/utils/dropPaths";
 import { resolveOpenAction, resolveWorkspaceRootForExternalFile } from "@/utils/openPolicy";
 import { getReplaceableTab, findExistingTabForPath } from "@/hooks/useReplaceableTab";
@@ -75,8 +76,36 @@ export function useDragDropOpen(): void {
       const unlisten = await webview.onDragDropEvent(async (event) => {
         if (cancelled) return;
 
-        // Only handle drop events (not hover/leave)
-        if (event.payload.type !== "drop") return;
+        const { type } = event.payload;
+
+        // Handle drag enter for visual feedback
+        if (type === "enter") {
+          // Check if any markdown files are being dragged
+          const paths = event.payload.paths;
+          const hasMarkdown = paths.some((p: string) =>
+            [".md", ".markdown", ".txt"].some((ext) => p.toLowerCase().endsWith(ext))
+          );
+          if (hasMarkdown) {
+            useUIStore.getState().setDraggingFiles(true);
+          }
+          return;
+        }
+
+        // Ignore over events (just position updates)
+        if (type === "over") {
+          return;
+        }
+
+        if (type === "leave") {
+          useUIStore.getState().setDraggingFiles(false);
+          return;
+        }
+
+        // Handle drop event
+        if (type !== "drop") return;
+
+        // Clear dragging state on drop
+        useUIStore.getState().setDraggingFiles(false);
 
         const paths = event.payload.paths;
         const markdownPaths = filterMarkdownPaths(paths);
