@@ -53,15 +53,13 @@
   cursor: not-allowed;
 }
 
-.source-link-popup-href:focus {
+/* Input focus: caret is the indicator (per design rules) */
+.source-link-popup-href:focus,
+.source-link-popup-href:focus-visible {
   border: none;
   outline: none;
   box-shadow: none;
-}
-
-.source-link-popup-href:focus-visible {
-  outline: none;
-  box-shadow: none;
+  /* Caret visibility indicates focus */
 }
 
 .source-link-popup-href::placeholder {
@@ -95,12 +93,13 @@
   opacity: 0.8;
 }
 
-/* Focus state - U-shaped underline */
-.source-link-popup-btn:focus {
+/* Focus state - U-shaped underline (keyboard focus only) */
+.source-link-popup-btn:focus-visible {
   outline: none;
+  color: var(--primary-color);
 }
 
-.source-link-popup-btn:focus::after {
+.source-link-popup-btn:focus-visible::after {
   content: "";
   position: absolute;
   bottom: 2px;

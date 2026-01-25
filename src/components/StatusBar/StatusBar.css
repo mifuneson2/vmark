@@ -54,7 +54,7 @@
   justify-content: center;
   padding: 2px 4px;
   border: none;
-  border-radius: 3px;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--text-secondary);
   cursor: pointer;
@@ -81,7 +81,7 @@
   align-items: center;
   gap: 4px;
   padding: 2px 6px;
-  border-radius: 3px;
+  border-radius: var(--radius-sm);
   background-color: var(--bg-hover, rgba(0, 0, 0, 0.05));
   color: var(--text-secondary);
   font-size: 11px;
@@ -105,7 +105,7 @@
   align-items: center;
   gap: 4px;
   padding: 2px 6px;
-  border-radius: 3px;
+  border-radius: var(--radius-sm);
   background-color: var(--warning-bg);
   color: var(--warning-color);
   font-size: 11px;
@@ -117,7 +117,7 @@
   align-items: center;
   gap: 4px;
   padding: 2px 6px;
-  border-radius: 3px;
+  border-radius: var(--radius-sm);
   background-color: var(--accent-bg);
   color: var(--accent-primary);
   font-size: 11px;

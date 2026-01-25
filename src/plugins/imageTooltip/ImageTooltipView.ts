@@ -6,6 +6,9 @@
  */
 
 import { useImageTooltipStore } from "@/stores/imageTooltipStore";
+import { useDocumentStore } from "@/stores/documentStore";
+import { useTabStore } from "@/stores/tabStore";
+import { getWindowLabel } from "@/hooks/useWindowFocus";
 import {
   calculatePopupPosition,
   getBoundaryRects,
@@ -199,15 +202,11 @@ export class ImageTooltipView {
     if (!imageSrc) return;
 
     try {
-      // Import dynamically to avoid bundling issues
+      // Import Tauri APIs dynamically (platform-specific)
       const { revealItemInDir } = await import("@tauri-apps/plugin-opener");
       const { dirname, join } = await import("@tauri-apps/api/path");
 
       // Get document path to resolve relative paths
-      const { useDocumentStore } = await import("@/stores/documentStore");
-      const { useTabStore } = await import("@/stores/tabStore");
-      const { getWindowLabel } = await import("@/hooks/useWindowFocus");
-
       const windowLabel = getWindowLabel();
       const activeTabId = useTabStore.getState().activeTabId[windowLabel];
       const doc = activeTabId ? useDocumentStore.getState().getDocument(activeTabId) : undefined;

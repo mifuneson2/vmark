@@ -52,7 +52,11 @@ const lightModeColors = {
   "--accent-bg": "rgba(0, 102, 204, 0.1)",
   "--source-mode-bg": "rgba(0, 0, 0, 0.02)",
   "--error-color": "#cf222e",
+  "--error-color-hover": "#b91c1c",
   "--error-bg": "#ffebe9",
+  // Success states
+  "--success-color": "#16a34a",
+  "--success-color-hover": "#15803d",
   // Warning states
   "--warning-color": "#9a6700",
   "--warning-bg": "rgba(245, 158, 11, 0.1)",
@@ -92,7 +96,11 @@ const darkModeColors = {
   "--accent-bg": "rgba(90, 168, 255, 0.12)",
   "--source-mode-bg": "rgba(255, 255, 255, 0.02)",
   "--error-color": "#f85149",
+  "--error-color-hover": "#fca5a5",
   "--error-bg": "rgba(248, 81, 73, 0.15)",
+  // Success states (adjusted for dark mode)
+  "--success-color": "#4ade80",
+  "--success-color-hover": "#86efac",
   // Warning states (adjusted for dark mode)
   "--warning-color": "#d29922",
   "--warning-bg": "rgba(245, 158, 11, 0.15)",
@@ -158,7 +166,10 @@ function applyModeColors(root: HTMLElement, colors: ThemeColors, isDark: boolean
       "--accent-bg": darkModeColors["--accent-bg"],
       "--source-mode-bg": darkModeColors["--source-mode-bg"],
       "--error-color": darkModeColors["--error-color"],
+      "--error-color-hover": darkModeColors["--error-color-hover"],
       "--error-bg": darkModeColors["--error-bg"],
+      "--success-color": darkModeColors["--success-color"],
+      "--success-color-hover": darkModeColors["--success-color-hover"],
       // Alert block colors
       "--alert-note": darkModeColors["--alert-note"],
       "--alert-tip": darkModeColors["--alert-tip"],

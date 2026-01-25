@@ -103,12 +103,13 @@
   cursor: not-allowed;
 }
 
-/* Focus state - U-shaped underline */
-.popup-icon-btn:focus {
+/* Focus state - U-shaped underline (uses :focus-visible for keyboard focus only) */
+.popup-icon-btn:focus-visible {
   outline: none;
+  color: var(--primary-color);
 }
 
-.popup-icon-btn:focus::after {
+.popup-icon-btn:focus-visible::after {
   content: "";
   position: absolute;
   bottom: 2px;

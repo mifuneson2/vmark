@@ -11,7 +11,7 @@
  */
 
 import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
-import { render, screen, fireEvent, cleanup } from "@testing-library/react";
+import { render, screen, fireEvent, cleanup, act } from "@testing-library/react";
 
 // Mock store
 const mockClosePicker = vi.fn();
@@ -407,7 +407,10 @@ describe("HeadingPicker", () => {
 
       const mousedownEvent = new MouseEvent("mousedown", { bubbles: true });
       Object.defineProperty(mousedownEvent, "target", { value: outsideEl });
-      document.dispatchEvent(mousedownEvent);
+
+      await act(async () => {
+        document.dispatchEvent(mousedownEvent);
+      });
 
       expect(mockClosePicker).toHaveBeenCalled();
     });
@@ -428,7 +431,10 @@ describe("HeadingPicker", () => {
       const container = document.querySelector(".heading-picker") as HTMLElement;
       const mousedownEvent = new MouseEvent("mousedown", { bubbles: true });
       Object.defineProperty(mousedownEvent, "target", { value: container });
-      document.dispatchEvent(mousedownEvent);
+
+      await act(async () => {
+        document.dispatchEvent(mousedownEvent);
+      });
 
       expect(mockClosePicker).not.toHaveBeenCalled();
     });

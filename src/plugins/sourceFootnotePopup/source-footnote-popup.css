@@ -62,9 +62,12 @@
   outline: none;
 }
 
-.source-footnote-popup-textarea:focus {
+/* Input focus: caret is the indicator (per design rules) */
+.source-footnote-popup-textarea:focus,
+.source-footnote-popup-textarea:focus-visible {
   outline: none;
   box-shadow: none;
+  /* Caret visibility indicates focus */
 }
 
 .source-footnote-popup-textarea::placeholder {
@@ -103,12 +106,13 @@
   cursor: not-allowed;
 }
 
-/* Focus state - U-shaped underline */
-.source-footnote-popup-btn:focus {
+/* Focus state - U-shaped underline (keyboard focus only) */
+.source-footnote-popup-btn:focus-visible {
   outline: none;
+  color: var(--primary-color);
 }
 
-.source-footnote-popup-btn:focus::after {
+.source-footnote-popup-btn:focus-visible::after {
   content: "";
   position: absolute;
   bottom: 2px;

@@ -41,7 +41,8 @@ const checks = [
   },
   {
     name: "Non-standard border-radius",
-    pattern: /border-radius:\s*(1px|2px|3px|5px|7px|9px|10px|12px)/g,
+    // Note: 1px and 2px are acceptable for small elements (scrollbars, code spans, cursors)
+    pattern: /border-radius:\s*(3px|5px|7px|9px|10px|12px)/g,
     message: "Use standard values: 4px, 6px, 8px, or 100px (pill)",
     severity: "warning", // Normalize gradually
   },

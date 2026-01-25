@@ -70,17 +70,15 @@
   user-select: none;
 }
 
+/* Input focus: caret is the indicator (per design rules) */
 .image-popup-src:focus,
-.image-popup-alt:focus {
+.image-popup-src:focus-visible,
+.image-popup-alt:focus,
+.image-popup-alt:focus-visible {
   border: none;
   outline: none;
   box-shadow: none;
-}
-
-.image-popup-src:focus-visible,
-.image-popup-alt:focus-visible {
-  outline: none;
-  box-shadow: none;
+  /* Caret visibility indicates focus */
 }
 
 .image-popup-src::placeholder,
@@ -114,30 +112,10 @@
   opacity: 0.8;
 }
 
-/* Focus state for keyboard navigation - U-shaped underline */
-.image-popup-btn:focus {
-  outline: none;
-  position: relative;
-}
-
-.image-popup-btn:focus::after {
-  content: "";
-  position: absolute;
-  bottom: 2px;
-  left: 4px;
-  right: 4px;
-  height: 4px;
-  background: transparent;
-  border-bottom: 2px solid var(--primary-color);
-  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
-}
-
-.image-popup-btn:focus:not(:focus-visible)::after {
-  display: none;
-}
-
+/* Focus state for keyboard navigation - U-shaped underline (keyboard focus only) */
 .image-popup-btn:focus-visible {
   outline: none;
+  color: var(--primary-color);
 }
 
 .image-popup-btn:focus-visible::after {

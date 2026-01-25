@@ -68,7 +68,9 @@
   box-shadow: none;
 }
 
-.title-bar-input:focus {
+/* Input focus: border-bottom highlight is the indicator */
+.title-bar-input:focus,
+.title-bar-input:focus-visible {
   border-bottom-color: color-mix(in srgb, var(--text-secondary) 60%, transparent);
   outline: none;
   box-shadow: none;

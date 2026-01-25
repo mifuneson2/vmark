@@ -88,12 +88,9 @@
   transform: scale(0.95);
 }
 
-/* Focus state - U-shaped underline */
-.ai-suggestion-btn:focus {
-  outline: none;
-}
-
+/* Focus state - U-shaped underline (keyboard focus only) */
 .ai-suggestion-btn:focus-visible {
+  outline: none;
   opacity: 1;
 }
 
@@ -122,35 +119,18 @@
 
 /* Accept button - green icon only */
 .ai-suggestion-btn-accept {
-  color: #16a34a;
+  color: var(--success-color);
 }
 
 .ai-suggestion-btn-accept:hover {
-  color: #15803d;
+  color: var(--success-color-hover);
 }
 
 /* Reject button - red icon only */
 .ai-suggestion-btn-reject {
-  color: #dc2626;
+  color: var(--error-color);
 }
 
 .ai-suggestion-btn-reject:hover {
-  color: #b91c1c;
-}
-
-/* Dark theme adjustments */
-.dark-theme .ai-suggestion-btn-accept {
-  color: #4ade80;
-}
-
-.dark-theme .ai-suggestion-btn-accept:hover {
-  color: #86efac;
-}
-
-.dark-theme .ai-suggestion-btn-reject {
-  color: #f87171;
-}
-
-.dark-theme .ai-suggestion-btn-reject:hover {
-  color: #fca5a5;
+  color: var(--error-color-hover);
 }

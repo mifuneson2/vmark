@@ -58,15 +58,13 @@
   min-width: 0;
 }
 
-.find-bar-input:focus {
+/* Input focus: caret is the indicator (per design rules) */
+.find-bar-input:focus,
+.find-bar-input:focus-visible {
   outline: none;
   border: none;
   box-shadow: none;
-}
-
-.find-bar-input:focus-visible {
-  outline: none;
-  box-shadow: none;
+  /* Caret visibility indicates focus */
 }
 
 .find-bar-input::placeholder {
@@ -86,7 +84,7 @@
   font-family: var(--font-mono, monospace);
   background: transparent;
   border: 1px solid transparent;
-  border-radius: 3px;
+  border-radius: var(--radius-sm);
   color: var(--text-secondary, #666);
   cursor: pointer;
   transition: all 0.1s ease;
@@ -128,7 +126,7 @@
   justify-content: center;
   background: transparent;
   border: none;
-  border-radius: 3px;
+  border-radius: var(--radius-sm);
   color: var(--text-secondary, #666);
   cursor: pointer;
   transition: all 0.1s ease;
@@ -165,7 +163,7 @@
   justify-content: center;
   background: transparent;
   border: none;
-  border-radius: 3px;
+  border-radius: var(--radius-sm);
   color: var(--text-tertiary, #999);
   cursor: pointer;
   transition: all 0.1s ease;

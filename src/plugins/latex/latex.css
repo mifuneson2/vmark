@@ -62,9 +62,12 @@
   text-decoration: none;
 }
 
-.math-inline-input:focus {
+/* Input focus: caret is the indicator (per design rules) */
+.math-inline-input:focus,
+.math-inline-input:focus-visible {
   outline: none;
   box-shadow: none;
+  /* Caret visibility indicates focus */
 }
 
 .math-inline-input::placeholder {

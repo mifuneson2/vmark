@@ -133,10 +133,12 @@
   outline: none;
 }
 
-.file-node-input:focus {
+/* Input focus: caret is the indicator (per design rules) */
+.file-node-input:focus,
+.file-node-input:focus-visible {
   outline: none;
   box-shadow: none;
-  /* Focus indicated by caret only */
+  /* Caret visibility indicates focus */
 }
 
 /* Drag and drop styles */

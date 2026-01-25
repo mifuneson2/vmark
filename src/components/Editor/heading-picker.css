@@ -77,8 +77,10 @@
   background: var(--accent-bg);
 }
 
-.heading-picker-item:focus {
+/* Focus state - background highlight (keyboard focus only) */
+.heading-picker-item:focus-visible {
   outline: none;
+  background: var(--accent-bg);
 }
 
 .heading-picker-level {

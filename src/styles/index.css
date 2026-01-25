@@ -83,12 +83,17 @@
 
   /* Error states (default for light mode) */
   --error-color: #cf222e;
+  --error-color-hover: #b91c1c;
   --error-bg: #ffebe9;
 
   /* Warning states */
   --warning-color: #9a6700;
   --warning-bg: rgba(245, 158, 11, 0.1);
   --warning-border: rgba(245, 158, 11, 0.3);
+
+  /* Success states */
+  --success-color: #16a34a;
+  --success-color-hover: #15803d;
 
   /* Contrast text (for colored backgrounds like primary buttons) */
   --contrast-text: white;

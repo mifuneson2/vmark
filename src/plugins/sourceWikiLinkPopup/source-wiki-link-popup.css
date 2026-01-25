@@ -46,15 +46,13 @@
   outline: none;
 }
 
-.source-wiki-link-popup-target:focus {
+/* Input focus: caret is the indicator (per design rules) */
+.source-wiki-link-popup-target:focus,
+.source-wiki-link-popup-target:focus-visible {
   border: none;
   outline: none;
   box-shadow: none;
-}
-
-.source-wiki-link-popup-target:focus-visible {
-  outline: none;
-  box-shadow: none;
+  /* Caret visibility indicates focus */
 }
 
 .source-wiki-link-popup-target::placeholder {
@@ -93,12 +91,13 @@
   cursor: not-allowed;
 }
 
-/* Focus state - U-shaped underline */
-.source-wiki-link-popup-btn:focus {
+/* Focus state - U-shaped underline (keyboard focus only) */
+.source-wiki-link-popup-btn:focus-visible {
   outline: none;
+  color: var(--primary-color);
 }
 
-.source-wiki-link-popup-btn:focus::after {
+.source-wiki-link-popup-btn:focus-visible::after {
   content: "";
   position: absolute;
   bottom: 2px;

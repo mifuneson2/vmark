@@ -61,12 +61,13 @@
   opacity: 0.8;
 }
 
-/* Focus state - U-shaped underline */
-.image-paste-toast-btn:focus {
+/* Focus state - U-shaped underline (keyboard focus only) */
+.image-paste-toast-btn:focus-visible {
   outline: none;
+  color: var(--accent-primary);
 }
 
-.image-paste-toast-btn:focus::after {
+.image-paste-toast-btn:focus-visible::after {
   content: "";
   position: absolute;
   bottom: 2px;

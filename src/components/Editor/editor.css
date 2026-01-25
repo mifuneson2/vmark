@@ -617,9 +617,12 @@
   overflow: hidden;
 }
 
-.footnote-popup-textarea:focus {
+/* Input focus: caret is the indicator (per design rules) */
+.footnote-popup-textarea:focus,
+.footnote-popup-textarea:focus-visible {
   outline: none !important;
   box-shadow: none;
+  /* Caret visibility indicates focus */
 }
 
 /* Edit mode */
@@ -1098,7 +1101,7 @@
   justify-content: center;
   background: rgba(var(--accent-rgb, 66, 133, 244), 0.08);
   border: 2px dashed var(--accent-primary, #4285f4);
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   animation: dropZoneFadeIn 0.15s ease-out;
 }
 
