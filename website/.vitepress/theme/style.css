@@ -362,7 +362,7 @@
 
 .credit-link:hover {
   background: var(--vp-c-brand-1);
-  color: var(--badge-hover-text);
+  color: var(--badge-hover-text) !important;
 }
 
 .credit-link svg {
