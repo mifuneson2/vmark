@@ -20,6 +20,7 @@ VMark is designed for keyboard-first workflows. All shortcuts can be customized 
 | Subscript | `Alt + Mod + =` |
 | Superscript | `Alt + Mod + Shift + =` |
 | Link | `Mod + K` |
+| Open Link (Source mode) | `Cmd + Click` |
 | Remove Link | `Alt + Shift + K` |
 | Wiki Link | `Alt + Mod + K` |
 | Bookmark Link | `Alt + Mod + B` |

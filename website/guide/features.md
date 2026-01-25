@@ -89,7 +89,8 @@ Comprehensive image support:
 - Paste from clipboard
 - Auto-copy to project assets folder
 - Resize via context menu
-- Preview popups on hover
+- Hover tooltip with filename, dimensions, and reveal in Finder
+- Click to edit source path and alt text
 
 ## Special Content
 

@@ -12,45 +12,83 @@ All popups share these keyboard behaviors:
 | Confirm/Save | `Enter` |
 | Navigate fields | `Tab` / `Shift + Tab` |
 
-## Link Popup
+## Link Tooltip & Popup
 
-Edit hyperlinks inline without dialogs.
+VMark uses a two-tier system for links: a read-only tooltip on hover, and an edit popup via keyboard shortcut.
 
-**Trigger:**
-- **WYSIWYG:** Hover over link (300ms delay) or click
-- **Source:** Click on `[text](url)` or `Mod + K` inside link
+### Hover Tooltip (Read-Only)
+
+**Trigger:** Hover over link (300ms delay)
+
+**Shows:**
+- **URL preview** — Truncated URL with full URL on hover
+- **Open button** — Opens link in browser (or jumps to heading for `#bookmarks`)
+
+**Behavior:** View-only. Move mouse away to dismiss.
+
+### Edit Existing Link
+
+**Trigger:** Place cursor in link + `Mod + K`
 
 **Fields:**
 - **URL** — Edit the link destination
-- **Open** — Open link in browser (or jump to heading for `#bookmarks`)
+- **Open** — Open link in browser
 - **Copy** — Copy URL to clipboard
 - **Delete** — Remove link, keep text
 
-**Shortcuts:**
-- `Mod + K` — Insert new link or edit existing link at cursor
+### Create New Link
+
+**Trigger:** Select text + `Mod + K`
+
+**Smart clipboard:** If your clipboard contains a URL, it's auto-filled.
+
+**Fields:**
+- **URL input** — Enter destination
+- **Confirm** — Press Enter or click ✓
+- **Cancel** — Press Escape or click ✗
+
+### Source Mode
+
+- **`Cmd + Click`** on link → opens in browser
+- **Click** on `[text](url)` syntax → shows edit popup
+- **`Mod + K`** inside link → shows edit popup
 
 ::: tip Bookmark Links
-Links starting with `#` are treated as bookmarks (internal heading links). The URL field is read-only and Open jumps to the heading.
+Links starting with `#` are treated as bookmarks (internal heading links). Open jumps to the heading instead of opening a browser.
 :::
 
-## Image Popup
+## Image Tooltip & Popup
 
-Edit image properties inline.
+VMark uses a two-tier system for images: a read-only tooltip on hover, and an edit popup on click.
 
-**Trigger:**
-- **WYSIWYG:** Click on image
-- **Source:** `Mod + Shift + I` inside image syntax
+### Hover Tooltip (Read-Only)
+
+**Trigger:** Hover over image (300ms delay)
+
+**Shows:**
+- **Filename** — Truncated name with full path on hover
+- **Dimensions** — Image width × height in pixels
+- **Reveal button** — Opens image location in Finder
+
+**Behavior:** View-only. Move mouse away to dismiss.
+
+### Edit Popup
+
+**Trigger:** Click on image
 
 **Fields:**
 - **Source** — Image URL or local path
 - **Alt Text** — Accessibility description
+- **Dimensions** — Read-only display (e.g., "800 × 600 px")
+
+**Buttons:**
 - **Browse** — Pick image from filesystem
-- **Copy** — Copy source URL
+- **Copy** — Copy source path
 - **Toggle** — Switch between inline and block image
 - **Delete** — Remove image
 
 **Shortcuts:**
-- `Mod + Shift + I` — Insert new image or edit existing
+- `Mod + Shift + I` — Insert new image
 
 ## Math Popup
 
@@ -137,15 +175,15 @@ Fix spelling errors with suggestions.
 
 ## Mode Comparison
 
-| Popup | WYSIWYG | Source |
-|-------|---------|--------|
-| Link | Hover/Click | Click / `Mod+K` |
-| Image | Click | `Mod+Shift+I` |
-| Math | Click | Direct edit |
-| Footnote | Hover | Direct edit |
-| Wiki Link | Hover | Click |
-| Table | Toolbar | Right-click menu |
-| Spell Check | Right-click | Right-click |
+| Element | WYSIWYG Tooltip | WYSIWYG Edit | Source |
+|---------|-----------------|--------------|--------|
+| Link | Hover (read-only) | `Mod+K` | Click / `Mod+K` / `Cmd+Click` to open |
+| Image | Hover (read-only) | Click | `Mod+Shift+I` |
+| Math | — | Click | Direct edit |
+| Footnote | Hover | — | Direct edit |
+| Wiki Link | Hover | — | Click |
+| Table | — | Toolbar | Right-click menu |
+| Spell Check | — | Right-click | Right-click |
 
 ## Popup Navigation Tips
 
