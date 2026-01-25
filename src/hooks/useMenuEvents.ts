@@ -6,6 +6,7 @@ import { ask } from "@tauri-apps/plugin-dialog";
 import { useDocumentStore } from "@/stores/documentStore";
 import { useUIStore } from "@/stores/uiStore";
 import { useTabStore } from "@/stores/tabStore";
+import { useSettingsStore } from "@/stores/settingsStore";
 import { clearAllHistory } from "@/hooks/useHistoryRecovery";
 import { historyLog } from "@/utils/debug";
 import { withReentryGuard } from "@/utils/reentryGuard";
@@ -130,7 +131,6 @@ export function useMenuEvents(): void {
           const doc = useDocumentStore.getState().getDocument(tabId);
           if (!doc) return;
 
-          const { useSettingsStore } = await import("@/stores/settingsStore");
           const autoCleanupEnabled = useSettingsStore.getState().image.cleanupOrphansOnClose;
 
           await runOrphanCleanup(doc.filePath, doc.isDirty ? null : doc.content, autoCleanupEnabled);
