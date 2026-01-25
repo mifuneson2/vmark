@@ -8,7 +8,6 @@ import { useState, useRef } from "react";
 import {
   useShortcutsStore,
   DEFAULT_SHORTCUTS,
-  SHORTCUT_PRESETS,
   CATEGORY_LABELS,
   CATEGORY_ORDER,
   formatKeyForDisplay,
@@ -29,7 +28,6 @@ export function ShortcutsSettings() {
     resetShortcut,
     resetAllShortcuts,
     getConflict,
-    applyPreset,
     exportConfig,
     importConfig,
     isCustomized,
@@ -169,40 +167,6 @@ export function ShortcutsSettings() {
         Customize keyboard shortcuts. Click a shortcut to change it.
       </p>
 
-      {/* Shortcut schemes */}
-      <div className="mb-5 rounded border border-[var(--bg-tertiary)] p-3">
-        <div className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wide">
-          Shortcut Schemes
-        </div>
-        <div className="text-xs text-[var(--text-tertiary)] mt-1">
-          Apply a preset baseline before customizing individual keys.
-        </div>
-        <div className="flex flex-wrap gap-2 mt-3">
-          <button
-            onClick={() => {
-              if (confirm(`Apply "${SHORTCUT_PRESETS.default.name}" preset? This will replace all custom shortcuts.`)) {
-                applyPreset("default");
-              }
-            }}
-            className="px-3 py-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]
-                       rounded border border-gray-200 dark:border-gray-700"
-          >
-            {SHORTCUT_PRESETS.default.name}
-          </button>
-          <button
-            onClick={() => {
-              if (confirm(`Apply "${SHORTCUT_PRESETS.vscode.name}" preset? This will replace all custom shortcuts.`)) {
-                applyPreset("vscode");
-              }
-            }}
-            className="px-3 py-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]
-                       rounded border border-gray-200 dark:border-gray-700"
-          >
-            {SHORTCUT_PRESETS.vscode.name}
-          </button>
-        </div>
-      </div>
-
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-3 mb-4">
         {/* Search */}
@@ -217,30 +181,6 @@ export function ShortcutsSettings() {
                        placeholder:text-[var(--text-tertiary)]"
           />
         </div>
-
-        {/* Preset dropdown */}
-        <select
-          onChange={(e) => {
-            if (e.target.value) {
-              if (confirm(`Apply "${SHORTCUT_PRESETS[e.target.value].name}" preset? This will replace all custom shortcuts.`)) {
-                applyPreset(e.target.value);
-              }
-              e.target.value = "";
-            }
-          }}
-          className="px-3 py-2 text-sm rounded border border-gray-200 dark:border-gray-700
-                     bg-[var(--bg-primary)] text-[var(--text-primary)]"
-          defaultValue=""
-        >
-          <option value="" disabled>
-            Apply Preset...
-          </option>
-          {Object.entries(SHORTCUT_PRESETS).map(([id, preset]) => (
-            <option key={id} value={id}>
-              {preset.name}
-            </option>
-          ))}
-        </select>
 
         {/* Import/Export */}
         <button

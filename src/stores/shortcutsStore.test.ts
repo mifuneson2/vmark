@@ -8,7 +8,6 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import {
   useShortcutsStore,
   DEFAULT_SHORTCUTS,
-  SHORTCUT_PRESETS,
   CATEGORY_ORDER,
   CATEGORY_LABELS,
   getShortcutsByCategory,
@@ -204,33 +203,6 @@ describe("shortcutsStore", () => {
     });
   });
 
-  describe("applyPreset", () => {
-    it("applies preset bindings", () => {
-      const { applyPreset, getShortcut } = useShortcutsStore.getState();
-      applyPreset("vscode");
-
-      // VS Code preset overrides toggleSidebar
-      expect(getShortcut("toggleSidebar")).toBe("Mod-b");
-    });
-
-    it("does nothing for unknown preset", () => {
-      const { applyPreset, getShortcut } = useShortcutsStore.getState();
-      applyPreset("nonexistent");
-
-      // Should remain at default
-      expect(getShortcut("bold")).toBe("Mod-b");
-    });
-
-    it("clears previous customizations when applying preset", () => {
-      const { setShortcut, applyPreset, isCustomized } = useShortcutsStore.getState();
-      setShortcut("bold", "Ctrl-b");
-      expect(isCustomized("bold")).toBe(true);
-
-      applyPreset("default");
-      expect(isCustomized("bold")).toBe(false);
-    });
-  });
-
   describe("exportConfig / importConfig", () => {
     it("exports config as JSON", () => {
       const { setShortcut, exportConfig } = useShortcutsStore.getState();
@@ -305,18 +277,6 @@ describe("shortcutsStore", () => {
     it("returns undefined for unknown ID", () => {
       const { getDefinition } = useShortcutsStore.getState();
       expect(getDefinition("nonexistent")).toBeUndefined();
-    });
-  });
-
-  describe("SHORTCUT_PRESETS", () => {
-    it("has default preset", () => {
-      expect(SHORTCUT_PRESETS.default).toBeDefined();
-      expect(SHORTCUT_PRESETS.default.name).toBeDefined();
-    });
-
-    it("has vscode preset", () => {
-      expect(SHORTCUT_PRESETS.vscode).toBeDefined();
-      expect(SHORTCUT_PRESETS.vscode.name).toBe("VS Code");
     });
   });
 

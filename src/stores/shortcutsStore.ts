@@ -175,25 +175,6 @@ function resolveDefaultKey(def: ShortcutDefinition): string {
 }
 
 // ============================================================================
-// Presets
-// ============================================================================
-
-export const SHORTCUT_PRESETS: Record<string, { name: string; bindings: Record<string, string> }> = {
-  default: {
-    name: "Optimized (Recommended)",
-    bindings: {},
-  },
-  vscode: {
-    name: "VS Code",
-    bindings: {
-      // VS Code-style shortcuts
-      toggleSidebar: "Mod-b",
-      formatToolbar: "Mod-Shift-p",
-    },
-  },
-};
-
-// ============================================================================
 // Store
 // ============================================================================
 
@@ -216,8 +197,6 @@ interface ShortcutsActions {
   resetAllShortcuts: () => void;
   /** Check if key conflicts with any other shortcut */
   getConflict: (key: string, excludeId?: string) => ShortcutDefinition | null;
-  /** Apply a preset */
-  applyPreset: (presetId: string) => void;
   /** Export config as JSON string */
   exportConfig: () => string;
   /** Import config from JSON string */
@@ -287,13 +266,6 @@ export const useShortcutsStore = create<ShortcutsState & ShortcutsActions>()(
           }
         }
         return null;
-      },
-
-      applyPreset: (presetId) => {
-        const preset = SHORTCUT_PRESETS[presetId];
-        if (!preset) return;
-        set({ customBindings: { ...preset.bindings } });
-        syncMenuShortcuts(get().getAllShortcuts());
       },
 
       exportConfig: () => {
