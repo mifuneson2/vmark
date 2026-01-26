@@ -134,7 +134,7 @@ The port is auto-discovered — no `args` needed.
 AI Assistant <--stdio--> MCP Server <--WebSocket--> VMark Editor
 ```
 
-1. **VMark starts a WebSocket bridge** on port 9223 when launched
+1. **VMark starts a WebSocket bridge** on an available port when launched
 2. **The MCP server** connects to this WebSocket bridge
 3. **AI assistant** communicates with the MCP server via stdio
 4. **Commands are relayed** to VMark's editor through the bridge
