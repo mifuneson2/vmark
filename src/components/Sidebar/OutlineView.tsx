@@ -4,7 +4,7 @@
  * Displays document heading structure as a tree.
  */
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { ChevronRight, ChevronDown } from "lucide-react";
 import { emit } from "@tauri-apps/api/event";
 import { useUIStore } from "@/stores/uiStore";
@@ -62,6 +62,22 @@ function buildHeadingTree(headings: HeadingItem[]): HeadingNode[] {
   });
 
   return root;
+}
+
+/**
+ * Extract only heading lines from content for comparison.
+ * Used to avoid re-extracting headings when non-heading content changes.
+ */
+function getHeadingLinesKey(content: string): string {
+  const lines = content.split("\n");
+  const headingLines: string[] = [];
+  for (let i = 0; i < lines.length; i++) {
+    if (/^#{1,6}\s/.test(lines[i])) {
+      // Include line number to detect moved headings
+      headingLines.push(`${i}:${lines[i]}`);
+    }
+  }
+  return headingLines.join("\n");
 }
 
 function OutlineItem({
@@ -123,7 +139,26 @@ function OutlineItem({
 export function OutlineView() {
   const content = useDocumentContent();
   const activeHeadingIndex = useUIStore((state) => state.activeHeadingLine);
-  const headings = useMemo(() => extractHeadings(content), [content]);
+
+  // Create a stable key based only on heading lines.
+  // This prevents re-extraction when typing in non-heading content.
+  const headingLinesKey = useMemo(() => getHeadingLinesKey(content), [content]);
+
+  // Cache previous headings to maintain referential stability
+  const prevHeadingsRef = useRef<HeadingItem[]>([]);
+  const prevKeyRef = useRef<string>("");
+
+  // Only re-extract headings when heading lines actually change
+  const headings = useMemo(() => {
+    if (headingLinesKey === prevKeyRef.current) {
+      return prevHeadingsRef.current;
+    }
+    const newHeadings = extractHeadings(content);
+    prevHeadingsRef.current = newHeadings;
+    prevKeyRef.current = headingLinesKey;
+    return newHeadings;
+  }, [headingLinesKey, content]);
+
   const tree = useMemo(() => buildHeadingTree(headings), [headings]);
   // activeHeadingLine now stores the heading index directly
   const activeIndex = activeHeadingIndex ?? -1;

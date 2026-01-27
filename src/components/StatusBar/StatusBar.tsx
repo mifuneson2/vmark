@@ -60,13 +60,19 @@ function stripMarkdown(text: string): string {
   );
 }
 
-function countWords(text: string): number {
-  const plainText = stripMarkdown(text);
+/**
+ * Count words using alfaaz library (handles CJK and other languages).
+ * Expects pre-stripped plain text.
+ */
+function countWordsFromPlain(plainText: string): number {
   return alfaazCount(plainText);
 }
 
-function countCharacters(text: string): number {
-  const plainText = stripMarkdown(text);
+/**
+ * Count non-whitespace characters.
+ * Expects pre-stripped plain text.
+ */
+function countCharsFromPlain(plainText: string): number {
   return plainText.replace(/\s/g, "").length;
 }
 
@@ -158,8 +164,11 @@ export function StatusBar() {
     useDocumentStore.getState().initDocument(tabId, "", null);
   }, [windowLabel]);
 
-  const wordCount = useMemo(() => countWords(content), [content]);
-  const charCount = useMemo(() => countCharacters(content), [content]);
+  // Memoize stripped content once, then derive both counts from it
+  // This avoids running the expensive stripMarkdown regex twice per keystroke
+  const strippedContent = useMemo(() => stripMarkdown(content), [content]);
+  const wordCount = useMemo(() => countWordsFromPlain(strippedContent), [strippedContent]);
+  const charCount = useMemo(() => countCharsFromPlain(strippedContent), [strippedContent]);
 
   // Always show tabs when there's at least one tab
   const showTabs = isDocumentWindow && tabs.length >= 1;
