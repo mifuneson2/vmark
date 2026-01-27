@@ -100,6 +100,25 @@ describe("codePaste extension", () => {
       expect(handled).toBeFalsy();
     });
 
+    it("should not treat markdown prose as code", () => {
+      editor = createEditor();
+      const markdown = `Based on my research, here's a comprehensive analysis:
+
+---
+
+## **Mass-Market Newsletters**
+
+### **The Rundown AI** (1.75M+ subscribers)
+**Strengths:**
+- Largest reach; 50%+ open rates (industry-leading)
+- Distills complex topics into digestible summaries without jargon
+`;
+      const event = createClipboardEvent(markdown);
+
+      const handled = editor.view.someProp("handlePaste", (f) => f(editor.view, event, Slice.empty));
+      expect(handled).toBeFalsy();
+    });
+
     it("should handle multi-line JavaScript code", () => {
       editor = createEditor();
       const code = `function hello() {

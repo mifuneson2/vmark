@@ -69,8 +69,16 @@ export function shouldHandleMarkdownPaste(
   if (trimmed.length > MAX_MARKDOWN_PASTE_CHARS) return false;
   if (decision.pasteMode === "off") return false;
   // If HTML is present AND substantial, let htmlPaste handle it.
-  // If HTML is minimal (just wrapper tags), we should still try markdown parsing.
-  if (decision.html && isSubstantialHtml(decision.html)) return false;
+  // Exception: some sources provide HTML as a <pre>/<code> wrapper around markdown-ish plain text
+  // (which would otherwise paste as a code block). In that case, prefer markdown parsing.
+  if (decision.html && isSubstantialHtml(decision.html)) {
+    const isOnlyCodeWrapper =
+      /<(pre|code)[^>]*>/i.test(decision.html) &&
+      !/<(h[1-6]|ul|ol|li|table|tr|td|th|strong|b|em|i|u|s|del|mark|a|img|blockquote|hr)\b/i.test(
+        decision.html
+      );
+    if (!isOnlyCodeWrapper) return false;
+  }
   if (isMultiSelection(state)) return false;
   if (isSelectionInCode(state)) return false;
   if (!state.selection.empty && hasValidUrl(trimmed)) return false;

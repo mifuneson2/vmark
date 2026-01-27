@@ -12,6 +12,7 @@ import { Extension } from "@tiptap/core";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
 import type { EditorView } from "@tiptap/pm/view";
 import { shouldPasteAsCodeBlock } from "@/utils/codeDetection";
+import { isMarkdownPasteCandidate } from "@/utils/markdownPasteDetection";
 import { useSettingsStore, type PasteMode } from "@/stores/settingsStore";
 import { isViewSelectionInCodeBlock, isViewMultiSelection } from "@/utils/pasteUtils";
 
@@ -46,6 +47,12 @@ function handlePaste(view: EditorView, event: ClipboardEvent): boolean {
 
   const text = event.clipboardData?.getData("text/plain");
   if (!text) {
+    return false;
+  }
+
+  // If it looks like Markdown, prefer markdownPaste (or plain paste) over code block auto-conversion.
+  // This prevents markdown-heavy prose from being misclassified as code.
+  if (isMarkdownPasteCandidate(text)) {
     return false;
   }
 

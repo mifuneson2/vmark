@@ -160,6 +160,16 @@ describe("markdownPasteExtension", () => {
     expect(result).toBe(false);
   });
 
+  it("handles markdown when HTML is only a pre/code wrapper", () => {
+    const state = createState(createParagraphDoc(""));
+    const text = "# Title\n\n- first\n- second";
+    const result = shouldHandleMarkdownPaste(state, text, {
+      pasteMode: "auto",
+      html: "<pre><code># Title\n\n- first\n- second</code></pre>",
+    });
+    expect(result).toBe(true);
+  });
+
   it("pastes plain text from clipboard", async () => {
     vi.mocked(readText).mockResolvedValue("Plain");
     let state = createState(createParagraphDoc(""));
