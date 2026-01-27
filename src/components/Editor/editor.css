@@ -458,11 +458,20 @@
   transform: rotate(45deg);
 }
 
-/* Dim completed task text - use direct child selectors to avoid affecting nested tasks */
+/* Completed task: dim color on content container */
 .tiptap-editor .task-list-item:has(> .task-list-checkbox input[type="checkbox"]:checked) > .task-list-content {
   color: var(--text-tertiary);
+}
+
+/* Completed task: strike-through only direct paragraphs (text-decoration cannot be removed by children) */
+.tiptap-editor .task-list-item:has(> .task-list-checkbox input[type="checkbox"]:checked) > .task-list-content > p {
   text-decoration: line-through;
   text-decoration-color: var(--text-tertiary);
+}
+
+/* Nested task items: reset color - each item controls its own visual state */
+.tiptap-editor .task-list-content .task-list-item {
+  color: var(--text-color);
 }
 
 /* Images */
