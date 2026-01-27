@@ -7,7 +7,7 @@
 
 import { useEffect } from "react";
 import { listen } from "@tauri-apps/api/event";
-import type { McpRequestEvent } from "./types";
+import type { McpRequestEvent, McpRequestEventRaw } from "./types";
 import { respond } from "./utils";
 
 // Document handlers (read-only operations)
@@ -383,8 +383,23 @@ export function useMcpBridge(): void {
   useEffect(() => {
     let unlisten: (() => void) | undefined;
 
-    listen<McpRequestEvent>("mcp-bridge:request", (event) => {
-      handleRequest(event.payload);
+    listen<McpRequestEventRaw>("mcp-bridge:request", (event) => {
+      // Parse args_json to avoid Tauri IPC double-encoding issues
+      const raw = event.payload;
+
+      // Debug: log raw event to see actual field names
+      if (import.meta.env.DEV) {
+        console.log("[MCP Bridge DEBUG] Raw event payload:", JSON.stringify(raw));
+      }
+
+      // Try both snake_case and camelCase (Tauri might convert)
+      const argsJsonStr = raw.args_json ?? raw.argsJson ?? "{}";
+      const parsed: McpRequestEvent = {
+        id: raw.id,
+        type: raw.type,
+        args: JSON.parse(argsJsonStr),
+      };
+      handleRequest(parsed);
     }).then((fn) => {
       unlisten = fn;
     });

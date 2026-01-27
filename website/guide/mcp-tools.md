@@ -30,10 +30,14 @@ Insert text at the current cursor position.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `text` | string | Yes | Text to insert. |
+| `text` | string | Yes | Text to insert (markdown supported). |
 | `windowId` | string | No | Window identifier. |
 
 **Returns:** `{ message, position, suggestionId?, applied }`
+
+::: tip Markdown Support
+The `text` parameter supports markdown syntax. Content like `# Heading`, `**bold**`, `- list items`, and `` `code` `` will be parsed and rendered as rich formatted content.
+:::
 
 - `suggestionId` - Present when edit is staged (auto-approve disabled). Use with `suggestion_accept` to apply.
 - `applied` - `true` if immediately applied, `false` if staged as suggestion.
@@ -50,7 +54,7 @@ Insert text at a specific character position.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `text` | string | Yes | Text to insert. |
+| `text` | string | Yes | Text to insert (markdown supported). |
 | `position` | number | Yes | Character position (0-indexed). |
 | `windowId` | string | No | Window identifier. |
 
@@ -75,7 +79,7 @@ Replace text occurrences in the document.
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `search` | string | Yes | Text to find. |
-| `replace` | string | Yes | Replacement text. |
+| `replace` | string | Yes | Replacement text (markdown supported). |
 | `all` | boolean | No | Replace all occurrences. Default: false. |
 | `windowId` | string | No | Window identifier. |
 
@@ -121,7 +125,7 @@ Replace selected text with new text.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `text` | string | Yes | Replacement text. |
+| `text` | string | Yes | Replacement text (markdown supported). |
 | `windowId` | string | No | Window identifier. |
 
 **Returns:** `{ message, range, originalContent, suggestionId?, applied }`
