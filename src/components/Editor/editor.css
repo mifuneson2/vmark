@@ -445,17 +445,17 @@
   border-color: var(--primary-color);
 }
 
-/* Checkmark proportions relative to checkbox size */
+/* Checkmark proportions relative to checkbox size - centered using transform */
 .tiptap-editor .task-list-item input[type="checkbox"]:checked::after {
   content: '';
   position: absolute;
-  left: calc(var(--checkbox-size) * 0.18);
-  top: calc(var(--checkbox-size) * 0.02);
-  width: calc(var(--checkbox-size) * 0.22);
-  height: calc(var(--checkbox-size) * 0.44);
-  border: solid white;
-  border-width: 0 calc(var(--checkbox-size) * 0.11) calc(var(--checkbox-size) * 0.11) 0;
-  transform: rotate(45deg);
+  left: 50%;
+  top: 45%;
+  width: calc(var(--checkbox-size) * 0.25);
+  height: calc(var(--checkbox-size) * 0.5);
+  border: solid var(--contrast-text);
+  border-width: 0 calc(var(--checkbox-size) * 0.12) calc(var(--checkbox-size) * 0.12) 0;
+  transform: translate(-50%, -50%) rotate(45deg);
 }
 
 /* Completed task: dim color on content container */
