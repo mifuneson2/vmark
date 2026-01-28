@@ -171,7 +171,7 @@ const sampleText = {
           letterSpacing: cjkLetterSpacing === '0' ? 'normal' : cjkLetterSpacing + 'em',
         }"
       >
-        优秀的排版是<strong>无形的</strong>——它让读者专注于<em>内容</em>而非格式。字体、字号和间距的恰当组合，能够创造出流畅的阅读体验。
+        优秀的排版是<strong>无形的</strong> —— 它让读者专注于<mark>内容</mark>而非格式。字体、字号和间距的恰当组合，能够创造出流畅的阅读体验。
       </p>
       <p
         class="preview__p"
@@ -217,6 +217,13 @@ const sampleText = {
 
 .preview--colored em {
   color: var(--emphasis-color);
+}
+
+.preview mark {
+  background: var(--highlight-bg, #fff3a3);
+  color: inherit;
+  padding: 0 2px;
+  border-radius: 2px;
 }
 
 /* Toggle alignment */
