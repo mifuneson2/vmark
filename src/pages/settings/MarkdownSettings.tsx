@@ -8,6 +8,7 @@ import {
   useSettingsStore,
   type MediaBorderStyle,
   type MediaAlignment,
+  type BlockFontSize,
   type HtmlRenderingMode,
   type MarkdownPasteMode,
 } from "@/stores/settingsStore";
@@ -72,6 +73,21 @@ export function MarkdownSettings() {
               { value: "hover", label: "On hover" },
             ]}
             onChange={(v) => updateSetting("mediaBorderStyle", v)}
+          />
+        </SettingRow>
+        <SettingRow
+          label="Block element font size"
+          description="Font size for lists, blockquotes, tables, alerts, and details"
+        >
+          <Select<BlockFontSize>
+            value={markdown.blockFontSize}
+            options={[
+              { value: "1", label: "100% (default)" },
+              { value: "0.95", label: "95%" },
+              { value: "0.9", label: "90%" },
+              { value: "0.85", label: "85%" },
+            ]}
+            onChange={(v) => updateSetting("blockFontSize", v)}
           />
         </SettingRow>
       </SettingsGroup>

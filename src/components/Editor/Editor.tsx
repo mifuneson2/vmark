@@ -43,6 +43,7 @@ export function Editor() {
   const documentId = useDocumentId();
   const mediaBorderStyle = useSettingsStore((s) => s.markdown.mediaBorderStyle);
   const mediaAlignment = useSettingsStore((s) => s.markdown.mediaAlignment);
+  const blockFontSize = useSettingsStore((s) => s.markdown.blockFontSize);
   const htmlRenderingMode = useSettingsStore((s) => s.markdown.htmlRenderingMode);
 
   // Mount unified menu dispatcher (handles routing based on mode)
@@ -57,6 +58,7 @@ export function Editor() {
     <div
       className={containerClass}
       data-html-rendering-mode={htmlRenderingMode}
+      style={{ "--block-font-size": `${blockFontSize}em` } as React.CSSProperties}
     >
       <div className="editor-content">
         {sourceMode ? <SourceEditor key={editorKey} /> : <TiptapEditorInner key={editorKey} />}

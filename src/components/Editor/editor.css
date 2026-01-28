@@ -119,6 +119,17 @@
 .tiptap-editor .ProseMirror > h5 { margin-left: calc(2em / 0.875); margin-right: calc(2em / 0.875); }
 .tiptap-editor .ProseMirror > h6 { margin-left: calc(2em / 0.85); margin-right: calc(2em / 0.85); }
 
+/* Block elements: configurable font-size (lists, blockquotes, tables, alerts, details)
+   Uses --block-font-size CSS variable set by Editor component */
+.tiptap-editor ul,
+.tiptap-editor ol,
+.tiptap-editor blockquote,
+.tiptap-editor table,
+.tiptap-editor .alert-block,
+.tiptap-editor .details-block {
+  font-size: var(--block-font-size, 1em);
+}
+
 /* Performance optimization for large documents - DISABLED for testing
    content-visibility: auto tells the browser to skip layout/paint for off-screen content
    contain: layout style paint - enables optimization by isolating element's rendering

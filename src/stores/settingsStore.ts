@@ -151,6 +151,7 @@ export interface CJKFormattingSettings {
 
 export type MediaBorderStyle = "none" | "always" | "hover";
 export type MediaAlignment = "left" | "center";
+export type BlockFontSize = "0.85" | "0.9" | "0.95" | "1";
 
 // Quote style options for smart quote conversion
 // - curly: "" '' (Simplified Chinese, Western)
@@ -191,6 +192,7 @@ export interface MarkdownSettings {
   pasteMode: PasteMode; // How to handle clipboard content (smart/plain/rich)
   mediaBorderStyle: MediaBorderStyle; // Border style for images and diagrams
   mediaAlignment: MediaAlignment; // Alignment for block images and tables
+  blockFontSize: BlockFontSize; // Font size for lists, blockquotes, tables, etc.
   htmlRenderingMode: HtmlRenderingMode; // Rich text display for raw HTML
   hardBreakStyleOnSave: HardBreakStyleOnSave; // Preserve or normalize hard break output
   // Auto-pair
@@ -342,6 +344,7 @@ const initialState: SettingsState = {
     pasteMode: "smart", // Default: convert HTML to Markdown
     mediaBorderStyle: "none",
     mediaAlignment: "center",
+    blockFontSize: "1",
     htmlRenderingMode: "hidden",
     hardBreakStyleOnSave: "preserve",
     autoPairEnabled: true,
