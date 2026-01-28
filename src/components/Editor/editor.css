@@ -86,12 +86,6 @@
 /* Element-level horizontal margin - allows tables to span full width.
    All block elements except tables get 2em horizontal margin. */
 .tiptap-editor .ProseMirror > p,
-.tiptap-editor .ProseMirror > h1,
-.tiptap-editor .ProseMirror > h2,
-.tiptap-editor .ProseMirror > h3,
-.tiptap-editor .ProseMirror > h4,
-.tiptap-editor .ProseMirror > h5,
-.tiptap-editor .ProseMirror > h6,
 .tiptap-editor .ProseMirror > ul,
 .tiptap-editor .ProseMirror > ol,
 .tiptap-editor .ProseMirror > blockquote,
@@ -109,6 +103,15 @@
   margin-left: 2em;
   margin-right: 2em;
 }
+
+/* Headings: compensate for larger font-size so left edge aligns with paragraphs.
+   Formula: 2em / font-size-ratio = same absolute margin as paragraph */
+.tiptap-editor .ProseMirror > h1 { margin-left: calc(2em / 1.75); margin-right: calc(2em / 1.75); }
+.tiptap-editor .ProseMirror > h2 { margin-left: calc(2em / 1.5); margin-right: calc(2em / 1.5); }
+.tiptap-editor .ProseMirror > h3 { margin-left: calc(2em / 1.25); margin-right: calc(2em / 1.25); }
+.tiptap-editor .ProseMirror > h4 { margin-left: 2em; margin-right: 2em; }
+.tiptap-editor .ProseMirror > h5 { margin-left: calc(2em / 0.875); margin-right: calc(2em / 0.875); }
+.tiptap-editor .ProseMirror > h6 { margin-left: calc(2em / 0.85); margin-right: calc(2em / 0.85); }
 
 /* Performance optimization for large documents - DISABLED for testing
    content-visibility: auto tells the browser to skip layout/paint for off-screen content
@@ -181,6 +184,8 @@
 
 .tiptap-editor h1 {
   font-size: 1.75em;
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .tiptap-editor h2 {
