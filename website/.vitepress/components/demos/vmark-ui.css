@@ -233,6 +233,12 @@
   font-size: 13px;
   font-weight: 500;
   gap: 6px;
+  color: var(--text-secondary);
+}
+
+.vmark-btn--pill:hover:not(:disabled):not(.active) {
+  background: transparent;
+  color: var(--text-color);
 }
 
 .vmark-btn--pill.active {
