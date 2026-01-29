@@ -762,6 +762,8 @@ export function applyRules(
     text = collapseNewlines(text);
   }
 
-  // Remove trailing whitespace and markdown hard line breaks (\\)
-  return text.trimEnd().replace(/\\+$/, "");
+  // Note: Do NOT trimEnd() here - it breaks segment boundaries when protected
+  // regions (like thematic breaks) split the document. Final cleanup happens
+  // in formatMarkdown() after all segments are reconstructed.
+  return text;
 }

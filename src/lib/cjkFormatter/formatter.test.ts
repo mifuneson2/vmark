@@ -72,5 +72,57 @@ describe("cjkFormatter.formatMarkdown (table-safe)", () => {
     expect(out).toContain("> | --- | --- |");
     expect(out).toContain("> | 中文 Python | `x|y` and 中文 Python |");
   });
+
+  it("preserves horizontal rules (thematic breaks)", () => {
+    const input = [
+      "这是一段文字",
+      "",
+      "---",
+      "",
+      "这是另一段文字",
+    ].join("\n");
+
+    const out = formatMarkdown(input, makeConfig());
+
+    // Horizontal rule must be preserved
+    expect(out).toContain("\n---\n");
+    expect(out).toContain("这是一段文字");
+    expect(out).toContain("这是另一段文字");
+  });
+
+  it("preserves horizontal rules even with dashConversion enabled", () => {
+    const input = [
+      "这是一段文字",
+      "",
+      "---",
+      "",
+      "这是另一段文字",
+    ].join("\n");
+
+    const out = formatMarkdown(input, makeConfig({ dashConversion: true }));
+
+    // Horizontal rule must NOT be converted to em-dash
+    expect(out).toContain("\n---\n");
+    expect(out).not.toContain("——");
+  });
+
+  it("preserves alternative horizontal rule formats", () => {
+    const input = [
+      "文字",
+      "",
+      "***",
+      "",
+      "更多文字",
+      "",
+      "___",
+      "",
+      "结束",
+    ].join("\n");
+
+    const out = formatMarkdown(input, makeConfig());
+
+    expect(out).toContain("\n***\n");
+    expect(out).toContain("\n___\n");
+  });
 });
 

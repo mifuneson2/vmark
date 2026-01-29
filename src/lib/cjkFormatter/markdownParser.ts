@@ -18,7 +18,8 @@ export interface ProtectedRegion {
     | "footnote_ref"
     | "footnote_def"
     | "math_block"
-    | "math_inline";
+    | "math_inline"
+    | "thematic_break";
 }
 
 /**
@@ -36,6 +37,21 @@ export function findProtectedRegions(text: string): ProtectedRegion[] {
       end: frontmatterMatch[0].length,
       type: "frontmatter",
     });
+  }
+
+  // 1b. Thematic breaks (horizontal rules): ---, ***, ___ on their own line
+  // Must be 3+ of same char, optionally with spaces between, on its own line
+  const thematicBreakRegex = /^[ \t]*([-*_])(?:[ \t]*\1){2,}[ \t]*$/gm;
+  let thematicMatch;
+  while ((thematicMatch = thematicBreakRegex.exec(text)) !== null) {
+    // Skip if this is part of frontmatter (already protected)
+    if (!isInsideRegion(thematicMatch.index, regions)) {
+      regions.push({
+        start: thematicMatch.index,
+        end: thematicMatch.index + thematicMatch[0].length,
+        type: "thematic_break",
+      });
+    }
   }
 
   // 2. Fenced code blocks (``` or ~~~)

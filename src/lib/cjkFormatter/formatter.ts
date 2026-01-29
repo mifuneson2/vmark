@@ -246,27 +246,31 @@ export function formatMarkdown(
   // We must not treat pipes in code as delimiters, and must not rewrite the delimiter row.
   const protectedRegions = findProtectedRegions(text);
   const tableBlocks = detectTableBlocks(text, protectedRegions);
+
+  let out: string;
+
   if (tableBlocks.length === 0) {
-    return formatMarkdownWithoutTables(text, config, options);
-  }
+    out = formatMarkdownWithoutTables(text, config, options);
+  } else {
+    out = "";
+    let cursor = 0;
 
-  let out = "";
-  let cursor = 0;
+    for (const block of tableBlocks) {
+      if (block.start > cursor) {
+        out += formatMarkdownWithoutTables(text.slice(cursor, block.start), config, options);
+      }
 
-  for (const block of tableBlocks) {
-    if (block.start > cursor) {
-      out += formatMarkdownWithoutTables(text.slice(cursor, block.start), config, options);
+      out += formatTableBlock(text.slice(block.start, block.end), config, options);
+      cursor = block.end;
     }
 
-    out += formatTableBlock(text.slice(block.start, block.end), config, options);
-    cursor = block.end;
+    if (cursor < text.length) {
+      out += formatMarkdownWithoutTables(text.slice(cursor), config, options);
+    }
   }
 
-  if (cursor < text.length) {
-    out += formatMarkdownWithoutTables(text.slice(cursor), config, options);
-  }
-
-  return out;
+  // Final cleanup: trim trailing whitespace and remove trailing backslashes
+  return out.trimEnd().replace(/\\+$/, "");
 }
 
 /**
