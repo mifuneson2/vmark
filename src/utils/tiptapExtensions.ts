@@ -1,6 +1,7 @@
 import type { Extensions } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import Link from "@tiptap/extension-link";
+import { ListKeymap } from "@tiptap/extension-list";
 import {
   HeadingWithSourceLine,
   ParagraphWithSourceLine,
@@ -149,6 +150,8 @@ export function createTiptapExtensions(): Extensions {
     floatingMathPreviewExtension,
     blockMathKeymapExtension,
     listContinuationExtension,
+    // ListKeymap improves list navigation behavior (backspace, arrow keys in empty items)
+    ListKeymap,
     editorKeymapExtension,
     tabIndentExtension,
     multiCursorExtension,
