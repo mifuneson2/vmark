@@ -1,17 +1,17 @@
 <script setup lang="ts">
-// Alpha badge for VMark site title
+// Beta badge for VMark site title
 // Minimal outlined design with subtle pulse indicator
 </script>
 
 <template>
-  <span class="alpha-badge" title="Alpha Release - Features may change">
-    <span class="alpha-dot"></span>
-    <span class="alpha-text">alpha</span>
+  <span class="beta-badge" title="Beta Release - Stable but evolving">
+    <span class="beta-dot"></span>
+    <span class="beta-text">beta</span>
   </span>
 </template>
 
 <style scoped>
-.alpha-badge {
+.beta-badge {
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -34,13 +34,13 @@
   transition: all 0.2s ease;
 }
 
-.alpha-badge:hover {
+.beta-badge:hover {
   background: var(--vp-c-brand-soft);
   border-color: var(--vp-c-brand-2);
 }
 
 /* Pulsing dot indicator */
-.alpha-dot {
+.beta-dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
@@ -49,21 +49,21 @@
   flex-shrink: 0;
 }
 
-.alpha-dot::before {
+.beta-dot::before {
   content: '';
   position: absolute;
   inset: -2px;
   border-radius: 50%;
   background: var(--vp-c-brand-1);
   opacity: 0.4;
-  animation: alpha-pulse 2s ease-in-out infinite;
+  animation: beta-pulse 2s ease-in-out infinite;
 }
 
-.alpha-text {
+.beta-text {
   line-height: 1;
 }
 
-@keyframes alpha-pulse {
+@keyframes beta-pulse {
   0%, 100% {
     transform: scale(1);
     opacity: 0.4;
@@ -75,25 +75,25 @@
 }
 
 /* Theme adjustments */
-[data-vmark-theme="night"] .alpha-badge,
-.dark .alpha-badge {
+[data-vmark-theme="night"] .beta-badge,
+.dark .beta-badge {
   border-color: var(--vp-c-brand-1);
   color: var(--vp-c-brand-1);
 }
 
-[data-vmark-theme="night"] .alpha-dot,
-.dark .alpha-dot {
+[data-vmark-theme="night"] .beta-dot,
+.dark .beta-dot {
   background: var(--vp-c-brand-1);
 }
 
-[data-vmark-theme="night"] .alpha-dot::before,
-.dark .alpha-dot::before {
+[data-vmark-theme="night"] .beta-dot::before,
+.dark .beta-dot::before {
   background: var(--vp-c-brand-1);
 }
 
 /* Reduce motion for accessibility */
 @media (prefers-reduced-motion: reduce) {
-  .alpha-dot::before {
+  .beta-dot::before {
     animation: none;
     opacity: 0.3;
     transform: scale(1.5);
