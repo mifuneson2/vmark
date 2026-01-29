@@ -155,6 +155,12 @@ export function SourceEditor() {
       // Restore cursor position from previous mode if available
       if (initialCursorInfo) {
         restoreCursorInCodeMirror(view, initialCursorInfo);
+      } else {
+        // Fresh document load - set cursor to start of document
+        view.dispatch({
+          selection: { anchor: 0 },
+          scrollIntoView: true,
+        });
       }
     }, 50);
 
