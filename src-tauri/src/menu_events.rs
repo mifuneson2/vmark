@@ -213,6 +213,16 @@ pub fn handle_menu_event(app: &AppHandle, event: tauri::menu::MenuEvent) {
         return;
     }
 
+    // Save All and Quit (Alt+Cmd+Q) - emit to focused window to handle save-all logic
+    if id == "save-all-quit" {
+        if let Some(focused) = get_focused_window(app) {
+            let _ = focused.emit("menu:save-all-quit", focused.label());
+        } else if let Some(window) = get_any_document_window(app) {
+            let _ = window.emit("menu:save-all-quit", window.label());
+        }
+        return;
+    }
+
     // Handle recent file clicks specially - look up path from snapshot and emit
     // Emit to focused window with (path, windowLabel) tuple
     // Three cases: focused window, no windows, windows exist but not focused
