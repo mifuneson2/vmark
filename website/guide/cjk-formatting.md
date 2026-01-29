@@ -274,10 +274,9 @@ Corner bracket conversion triggers when the quoted content contains **Chinese ch
 
 ## Test Paragraph
 
-Use this paragraph to test the formatting features:
+Copy this unformatted text into VMark and press `Alt + Mod + Shift + F` to format:
 
----
-
+```text
 最近我在学习TypeScript和React,感觉收获很大.作为一个developer,掌握这些modern前端技术是必须的.
 
 目前已经完成了３个projects,代码量超过１０００行.其中最复杂的是一个dashboard应用,包含了数据可视化,用户认证,还有API集成等功能.
@@ -295,7 +294,39 @@ Use this paragraph to test the formatting features:
 - **Database**--PostgreSQL
 
 总共花费大约$２００美元购买了学习资源,包括书籍和online courses.虽然价格不便宜,但非常值得.
+```
+
+### Expected Result
+
+After formatting, the text will look like this:
 
 ---
 
-After formatting, this paragraph will have proper CJK-Latin spacing, correct punctuation, normalized characters, and protected technical constructs (URLs, versions, prices, times).
+最近我在学习 TypeScript 和 React，感觉收获很大。作为一个 developer，掌握这些 modern 前端技术是必须的。
+
+目前已经完成了 3 个 projects，代码量超过 1000 行。其中最复杂的是一个 dashboard 应用，包含了数据可视化，用户认证，还有 API 集成等功能。
+
+学习过程中遇到的最大挑战是 —— 状态管理。Redux 的概念... 说实话有点难理解。后来换成了 Zustand，简单多了！
+
+老师说 “don't give up” 然后继续讲 “写代码要注重可读性”，我觉得很有道理。
+
+访问 https://example.com/docs 获取 v2.0.0 版本文档，价格 $99.99，时间 12:30 开始。
+
+项目使用的技术栈如下：
+
+- **Frontend** —— React + TypeScript
+- **Backend** —— Node.js + Express
+- **Database** —— PostgreSQL
+
+总共花费大约 $200 美元购买了学习资源，包括书籍和 online courses。虽然价格不便宜，但非常值得。
+
+---
+
+**Changes applied:**
+- CJK-Latin spacing added (学习 TypeScript)
+- Fullwidth punctuation converted (，。！)
+- Fullwidth numbers normalized (３→3, １０００→1000, ２００→200)
+- Double hyphens converted to em-dashes (-- → ——)
+- Ellipsis normalized (. . . → ...)
+- Smart quotes applied, apostrophe preserved (don't)
+- Technical constructs protected (https://example.com/docs, v2.0.0, $99.99, 12:30)
