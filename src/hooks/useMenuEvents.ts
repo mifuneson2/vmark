@@ -3,6 +3,7 @@ import { type UnlistenFn } from "@tauri-apps/api/event";
 import { WebviewWindow, getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { LogicalPosition } from "@tauri-apps/api/dpi";
 import { ask } from "@tauri-apps/plugin-dialog";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import { useDocumentStore } from "@/stores/documentStore";
 import { useUIStore } from "@/stores/uiStore";
 import { useTabStore } from "@/stores/tabStore";
@@ -11,6 +12,10 @@ import { clearAllHistory } from "@/hooks/useHistoryRecovery";
 import { historyLog } from "@/utils/debug";
 import { withReentryGuard } from "@/utils/reentryGuard";
 import { runOrphanCleanup } from "@/utils/orphanAssetCleanup";
+
+const HELP_URL = "https://vmark.app/guide/";
+const SHORTCUTS_URL = "https://vmark.app/guide/shortcuts";
+const REPORT_ISSUE_URL = "https://github.com/xiaolai/vmark/issues/new";
 
 /**
  * Handles miscellaneous menu events: preferences, history, and cleanup.
@@ -138,6 +143,28 @@ export function useMenuEvents(): void {
       });
       if (cancelled) { unlistenCleanupImages(); return; }
       unlistenRefs.current.push(unlistenCleanupImages);
+
+      // Help menu items
+      const unlistenVMarkHelp = await currentWindow.listen<string>("menu:vmark-help", async (event) => {
+        if (event.payload !== windowLabel) return;
+        await openUrl(HELP_URL);
+      });
+      if (cancelled) { unlistenVMarkHelp(); return; }
+      unlistenRefs.current.push(unlistenVMarkHelp);
+
+      const unlistenKeyboardShortcuts = await currentWindow.listen<string>("menu:keyboard-shortcuts", async (event) => {
+        if (event.payload !== windowLabel) return;
+        await openUrl(SHORTCUTS_URL);
+      });
+      if (cancelled) { unlistenKeyboardShortcuts(); return; }
+      unlistenRefs.current.push(unlistenKeyboardShortcuts);
+
+      const unlistenReportIssue = await currentWindow.listen<string>("menu:report-issue", async (event) => {
+        if (event.payload !== windowLabel) return;
+        await openUrl(REPORT_ISSUE_URL);
+      });
+      if (cancelled) { unlistenReportIssue(); return; }
+      unlistenRefs.current.push(unlistenReportIssue);
     };
 
     setupListeners().catch((error) => {

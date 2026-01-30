@@ -128,6 +128,9 @@ export const DEFAULT_SHORTCUTS: ShortcutDefinition[] = [
   { id: "lineNumbers", label: "Toggle Line Numbers", category: "view", defaultKey: "Alt-Mod-l", menuId: "line-numbers", description: "Show/hide line numbers in code blocks" },
   { id: "viewHistory", label: "View History", category: "view", defaultKey: "Mod-Shift-h", menuId: "view-history" },
   { id: "toggleHiddenFiles", label: "Toggle Hidden Files", category: "view", defaultKey: "Mod-Shift-.", defaultKeyOther: "Ctrl-h", description: "Show or hide hidden files in the file explorer" },
+  { id: "zoomActual", label: "Actual Size", category: "view", defaultKey: "Mod-0", menuId: "zoom-actual", scope: "global", description: "Reset font size to default" },
+  { id: "zoomIn", label: "Zoom In", category: "view", defaultKey: "Mod-=", menuId: "zoom-in", scope: "global", description: "Increase font size" },
+  { id: "zoomOut", label: "Zoom Out", category: "view", defaultKey: "Mod--", menuId: "zoom-out", scope: "global", description: "Decrease font size" },
 
   // === File ===
   { id: "newTab", label: "New Tab", category: "file", defaultKey: "Mod-t", description: "Create a new tab", scope: "global" },

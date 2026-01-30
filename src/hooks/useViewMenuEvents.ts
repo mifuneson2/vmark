@@ -5,10 +5,16 @@ import { useEditorStore } from "@/stores/editorStore";
 import { useUIStore } from "@/stores/uiStore";
 import { useTabStore } from "@/stores/tabStore";
 import { useDocumentStore } from "@/stores/documentStore";
+import { useSettingsStore } from "@/stores/settingsStore";
 import { useImagePasteToastStore } from "@/stores/imagePasteToastStore";
 import { FEATURE_FLAGS } from "@/stores/featureFlagsStore";
 import { flushActiveWysiwygNow } from "@/utils/wysiwygFlush";
 import { normalizeLineEndings } from "@/utils/linebreaks";
+
+const DEFAULT_FONT_SIZE = 18;
+const MIN_FONT_SIZE = 12;
+const MAX_FONT_SIZE = 32;
+const FONT_SIZE_STEP = 2;
 
 /**
  * Handles View menu events: source mode, focus mode, typewriter mode,
@@ -117,6 +123,32 @@ export function useViewMenuEvents(): void {
       });
       if (cancelled) { unlistenLineEndingsCrlf(); return; }
       unlistenRefs.current.push(unlistenLineEndingsCrlf);
+
+      // Zoom controls
+      const unlistenZoomActual = await currentWindow.listen<string>("menu:zoom-actual", (event) => {
+        if (event.payload !== windowLabel) return;
+        useSettingsStore.getState().updateAppearanceSetting("fontSize", DEFAULT_FONT_SIZE);
+      });
+      if (cancelled) { unlistenZoomActual(); return; }
+      unlistenRefs.current.push(unlistenZoomActual);
+
+      const unlistenZoomIn = await currentWindow.listen<string>("menu:zoom-in", (event) => {
+        if (event.payload !== windowLabel) return;
+        const current = useSettingsStore.getState().appearance.fontSize;
+        const newSize = Math.min(current + FONT_SIZE_STEP, MAX_FONT_SIZE);
+        useSettingsStore.getState().updateAppearanceSetting("fontSize", newSize);
+      });
+      if (cancelled) { unlistenZoomIn(); return; }
+      unlistenRefs.current.push(unlistenZoomIn);
+
+      const unlistenZoomOut = await currentWindow.listen<string>("menu:zoom-out", (event) => {
+        if (event.payload !== windowLabel) return;
+        const current = useSettingsStore.getState().appearance.fontSize;
+        const newSize = Math.max(current - FONT_SIZE_STEP, MIN_FONT_SIZE);
+        useSettingsStore.getState().updateAppearanceSetting("fontSize", newSize);
+      });
+      if (cancelled) { unlistenZoomOut(); return; }
+      unlistenRefs.current.push(unlistenZoomOut);
     };
 
     setupListeners();
