@@ -180,25 +180,18 @@ This is a native macOS system shortcut that searches all menu items. Type a keyw
 
 ## Smart Tab Navigation
 
-Tab has context-aware behavior throughout the editor:
-
-### In Formatted Text (WYSIWYG)
+Tab is context-aware — it escapes brackets, quotes, formatting marks, and navigates links.
 
 | Context | Tab Action |
 |---------|------------|
-| Inside **bold**/`code`/*italic*/~~strike~~ | Jump after the formatting |
-| Inside a link | Jump after the link |
+| Before `)`, `]`, `}`, quotes | Jump past closing character |
+| Before CJK brackets `」`, `』`, etc. | Jump past closing bracket |
+| Inside **bold**, *italic*, `code` | Jump after formatting |
+| Inside a link | Jump after link |
 
-### In Markdown Links (Source Mode)
-
-| Context | Tab Action |
-|---------|------------|
-| Inside `[text]` | Jump to `(url)` |
-| Inside `(url)` | Jump after `)` |
-
-### Before Closing Characters (Source Mode)
-
-Tab jumps over: `)`, `]`, `}`, `*`, `_`, `` ` ``, `~~`, `==`, and quotes.
+::: tip
+See [Smart Tab Navigation](/guide/tab-navigation) for the complete guide including CJK brackets, curly quotes, and settings.
+:::
 
 ## Table Editing
 

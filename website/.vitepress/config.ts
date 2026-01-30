@@ -30,6 +30,7 @@ export default defineConfig({
             { text: 'Getting Started', link: '/guide/' },
             { text: 'Features', link: '/guide/features' },
             { text: 'Keyboard Shortcuts', link: '/guide/shortcuts' },
+            { text: 'Smart Tab Navigation', link: '/guide/tab-navigation' },
             { text: 'Multi-Cursor Editing', link: '/guide/multi-cursor' },
             { text: 'Inline Popups', link: '/guide/popups' },
             { text: 'Mermaid Diagrams', link: '/guide/mermaid' },
