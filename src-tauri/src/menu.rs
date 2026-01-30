@@ -174,6 +174,9 @@ pub fn create_menu(app: &tauri::AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
             &history_submenu,
             &PredefinedMenuItem::separator(app)?,
             &MenuItem::with_id(app, "preferences", "Settings...", true, Some("CmdOrCtrl+,"))?,
+            &PredefinedMenuItem::separator(app)?,
+            &MenuItem::with_id(app, "save-all-quit", "Save All and Exit", true, Some("Alt+Shift+CmdOrCtrl+Q"))?,
+            &MenuItem::with_id(app, "quit", "Exit", true, Some("CmdOrCtrl+Q"))?,
         ],
     )?;
 
@@ -468,6 +471,7 @@ pub fn create_menu(app: &tauri::AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
     // ========================================================================
     // Window menu
     // ========================================================================
+    #[cfg(target_os = "macos")]
     let window_menu = Submenu::with_items(
         app,
         "Window",
@@ -477,6 +481,17 @@ pub fn create_menu(app: &tauri::AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
             &PredefinedMenuItem::maximize(app, Some("Zoom"))?,
             &PredefinedMenuItem::separator(app)?,
             &MenuItem::with_id(app, "bring-all-to-front", "Bring All to Front", true, None::<&str>)?,
+        ],
+    )?;
+
+    #[cfg(not(target_os = "macos"))]
+    let window_menu = Submenu::with_items(
+        app,
+        "Window",
+        true,
+        &[
+            &PredefinedMenuItem::minimize(app, Some("Minimize"))?,
+            &PredefinedMenuItem::maximize(app, Some("Maximize"))?,
         ],
     )?;
 
@@ -830,6 +845,9 @@ fn create_menu_with_shortcuts(
             &history_submenu,
             &PredefinedMenuItem::separator(app)?,
             &MenuItem::with_id(app, "preferences", "Settings...", true, get_accel("preferences", "CmdOrCtrl+,"))?,
+            &PredefinedMenuItem::separator(app)?,
+            &MenuItem::with_id(app, "save-all-quit", "Save All and Exit", true, get_accel("save-all-quit", "Alt+Shift+CmdOrCtrl+Q"))?,
+            &MenuItem::with_id(app, "quit", "Exit", true, get_accel("quit", "CmdOrCtrl+Q"))?,
         ],
     )?;
 
@@ -1126,6 +1144,7 @@ fn create_menu_with_shortcuts(
     // ========================================================================
     // Window menu
     // ========================================================================
+    #[cfg(target_os = "macos")]
     let window_menu = Submenu::with_items(
         app,
         "Window",
@@ -1135,6 +1154,17 @@ fn create_menu_with_shortcuts(
             &PredefinedMenuItem::maximize(app, Some("Zoom"))?,
             &PredefinedMenuItem::separator(app)?,
             &MenuItem::with_id(app, "bring-all-to-front", "Bring All to Front", true, None::<&str>)?,
+        ],
+    )?;
+
+    #[cfg(not(target_os = "macos"))]
+    let window_menu = Submenu::with_items(
+        app,
+        "Window",
+        true,
+        &[
+            &PredefinedMenuItem::minimize(app, Some("Minimize"))?,
+            &PredefinedMenuItem::maximize(app, Some("Maximize"))?,
         ],
     )?;
 
