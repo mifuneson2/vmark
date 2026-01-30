@@ -63,6 +63,13 @@ pub fn run() {
         .plugin(
             tauri_plugin_window_state::Builder::new()
                 .with_denylist(&["settings"])
+                // Exclude VISIBLE from state restoration to prevent flash.
+                // Windows start hidden (visible: false) and are shown only
+                // after frontend emits "ready" event in mark_window_ready().
+                .with_state_flags(
+                    tauri_plugin_window_state::StateFlags::all()
+                        - tauri_plugin_window_state::StateFlags::VISIBLE,
+                )
                 .build(),
         )
         .invoke_handler(tauri::generate_handler![

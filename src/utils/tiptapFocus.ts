@@ -57,9 +57,11 @@ export function scheduleTiptapFocusAndRestore(
       }
       restoreCursor(view, info);
     } else {
-      // Fresh document load: prevent unwanted scroll to middle
-      const scrollContainer = getScrollContainer(view);
-      const savedScrollTop = scrollContainer?.scrollTop ?? 0;
+      // Fresh document load: ensure cursor at start and scroll to top.
+      // Note: We don't save/restore scroll position because content may have
+      // been loaded asynchronously (e.g., via useFinderFileOpen for cold start),
+      // which could cause the browser to auto-scroll before this RAF runs.
+      // Always scrolling to 0 ensures a consistent initial view.
 
       try {
         view.focus();
@@ -75,9 +77,10 @@ export function scheduleTiptapFocusAndRestore(
         // Ignore selection errors
       }
 
-      // Restore scroll position (browser may have scrolled on focus)
+      // Always scroll to top for fresh document loads
+      const scrollContainer = getScrollContainer(view);
       if (scrollContainer) {
-        scrollContainer.scrollTop = savedScrollTop;
+        scrollContainer.scrollTop = 0;
       }
     }
   };

@@ -268,10 +268,14 @@ describe("scheduleTiptapFocusAndRestore", () => {
     expect(dispatch).not.toHaveBeenCalled();
   });
 
-  it("preserves scroll position on fresh document load", () => {
+  it("scrolls to top on fresh document load", () => {
+    // For fresh document loads, we always scroll to 0 to ensure a consistent
+    // initial view. This handles cases where content is loaded asynchronously
+    // (e.g., via useFinderFileOpen for cold start), which could cause the
+    // browser to auto-scroll before this RAF runs.
     const focus = vi.fn();
     const dispatch = vi.fn();
-    let scrollTop = 100; // Simulated scroll position
+    let scrollTop = 100; // Simulated scroll position (might be non-zero if content loaded before RAF)
     const scrollContainer = {
       get scrollTop() {
         return scrollTop;
@@ -314,8 +318,8 @@ describe("scheduleTiptapFocusAndRestore", () => {
 
     globalThis.requestAnimationFrame = originalRaf;
 
-    // Scroll position should be preserved
-    expect(scrollTop).toBe(100);
+    // Fresh document loads should always start at top
+    expect(scrollTop).toBe(0);
   });
 
   it("handles setSelection throwing an error gracefully", () => {
