@@ -215,10 +215,13 @@ export function useUpdateChecker() {
     };
   }, [EVENTS.REQUEST_STATE]);
 
-  // Listen for menu "Check for Updates..." event - opens Settings at Updates section
+  // Listen for menu "Check for Updates..." event - starts check immediately, then opens Settings
   // Event payload contains the focused window label from Rust
   useEffect(() => {
     const unlistenPromise = listen<string>("menu:check-updates", async (event) => {
+      // Immediately start checking for updates (don't wait for user to click button)
+      await emit(EVENTS.REQUEST_CHECK);
+
       const settingsWidth = 760;
       const settingsHeight = 540;
 
@@ -273,7 +276,7 @@ export function useUpdateChecker() {
     return () => {
       unlistenPromise.then((fn) => fn());
     };
-  }, []);
+  }, [EVENTS.REQUEST_CHECK]);
 
   // Listen for restart request (from Settings page) - check dirty files first
   useEffect(() => {
