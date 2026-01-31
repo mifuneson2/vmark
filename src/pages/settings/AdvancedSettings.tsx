@@ -60,9 +60,9 @@ export function AdvancedSettings() {
               <button
                 onClick={async () => {
                   try {
-                    const session: SessionData = await invoke("hot_exit_test_capture");
+                    const session = await invoke<SessionData>("hot_exit_capture");
                     toast.success(`Captured ${session.windows.length} window(s)`, {
-                      description: `Version ${session.vmark_version}`,
+                      description: `v${session.vmark_version}`,
                     });
                   } catch (error) {
                     toast.error("Capture failed", {
@@ -78,12 +78,12 @@ export function AdvancedSettings() {
               <button
                 onClick={async () => {
                   try {
-                    const session: SessionData | null = await invoke("hot_exit_inspect_session");
+                    const session = await invoke<SessionData | null>("hot_exit_inspect_session");
                     if (!session) {
                       toast.info("No saved session found");
                       return;
                     }
-                    const age = Math.floor((Date.now() - session.timestamp * 1000) / 1000);
+                    const age = Math.max(0, Math.floor((Date.now() - session.timestamp * 1000) / 1000));
                     toast.info(`Session found (${age}s ago)`, {
                       description: `${session.windows.length} windows, v${session.vmark_version}`,
                     });
@@ -101,12 +101,12 @@ export function AdvancedSettings() {
               <button
                 onClick={async () => {
                   try {
-                    const session: SessionData | null = await invoke("hot_exit_inspect_session");
+                    const session = await invoke<SessionData | null>("hot_exit_inspect_session");
                     if (!session) {
                       toast.info("No saved session to restore");
                       return;
                     }
-                    await invoke("hot_exit_test_restore", { session });
+                    await invoke<void>("hot_exit_restore", { session });
                     toast.success("Session restored successfully");
                   } catch (error) {
                     toast.error("Restore failed", {
@@ -122,7 +122,7 @@ export function AdvancedSettings() {
               <button
                 onClick={async () => {
                   try {
-                    await invoke("hot_exit_clear_session");
+                    await invoke<void>("hot_exit_clear_session");
                     toast.success("Session cleared");
                   } catch (error) {
                     toast.error("Clear failed", {

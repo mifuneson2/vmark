@@ -2,6 +2,7 @@
 ///
 /// Orchestrates multi-window capture with timeout and restore logic.
 
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use tokio::time::{timeout, Duration};
@@ -21,8 +22,8 @@ pub struct CaptureResponse {
 
 /// Coordinator state for collecting window responses
 struct CaptureState {
-    expected_windows: Vec<String>,
-    responses: Vec<WindowState>,
+    expected_windows: HashSet<String>,
+    responses: HashMap<String, WindowState>,
 }
 
 /// Capture session from all windows
@@ -45,16 +46,53 @@ pub async fn capture_session(app: &AppHandle) -> Result<SessionData, String> {
     }
 
     let state = Arc::new(Mutex::new(CaptureState {
-        expected_windows: windows.clone(),
-        responses: Vec::new(),
+        expected_windows: windows.iter().cloned().collect(),
+        responses: HashMap::new(),
     }));
 
     // Listen for responses
     let state_clone = state.clone();
     let unlisten = app.listen(EVENT_CAPTURE_RESPONSE, move |event| {
-        if let Ok(response) = serde_json::from_str::<CaptureResponse>(event.payload()) {
-            let mut state = state_clone.blocking_lock();
-            state.responses.push(response.state);
+        match serde_json::from_str::<CaptureResponse>(event.payload()) {
+            Ok(response) => {
+                let mut state = state_clone.blocking_lock();
+
+                // Only accept responses from expected windows
+                if !state.expected_windows.contains(&response.window_label) {
+                    eprintln!(
+                        "[HotExit] Ignoring response from unexpected window: {}",
+                        response.window_label
+                    );
+                    return;
+                }
+
+                // Ignore duplicate responses from the same window
+                if state.responses.contains_key(&response.window_label) {
+                    eprintln!(
+                        "[HotExit] Ignoring duplicate response from window: {}",
+                        response.window_label
+                    );
+                    return;
+                }
+
+                // Verify window_label matches state.window_label
+                if response.window_label != response.state.window_label {
+                    eprintln!(
+                        "[HotExit] Warning: response.window_label ({}) != state.window_label ({})",
+                        response.window_label,
+                        response.state.window_label
+                    );
+                }
+
+                state.responses.insert(response.window_label.clone(), response.state);
+            }
+            Err(e) => {
+                eprintln!(
+                    "[HotExit] Failed to parse capture response ({}): {}",
+                    event.payload().len(),
+                    e
+                );
+            }
         }
     });
 
@@ -74,16 +112,20 @@ pub async fn capture_session(app: &AppHandle) -> Result<SessionData, String> {
 
     let final_state = state.lock().await;
 
+    // Build session from collected responses
+    let windows_vec: Vec<WindowState> = final_state.responses.values().cloned().collect();
+
+    let session = SessionData {
+        version: SCHEMA_VERSION,
+        timestamp: chrono::Utc::now().timestamp(),
+        vmark_version: env!("CARGO_PKG_VERSION").to_string(),
+        windows: windows_vec,
+        workspace: None, // Workspace capture not yet implemented
+    };
+
     match result {
         Ok(_) => {
             // All windows responded
-            let session = SessionData {
-                version: SCHEMA_VERSION,
-                timestamp: chrono::Utc::now().timestamp(),
-                vmark_version: env!("CARGO_PKG_VERSION").to_string(),
-                windows: final_state.responses.clone(),
-                workspace: None, // TODO: Capture workspace state
-            };
             Ok(session)
         }
         Err(_) => {
@@ -94,14 +136,6 @@ pub async fn capture_session(app: &AppHandle) -> Result<SessionData, String> {
                 final_state.expected_windows.len()
             );
             let _ = app.emit(EVENT_CAPTURE_TIMEOUT, ());
-
-            let session = SessionData {
-                version: SCHEMA_VERSION,
-                timestamp: chrono::Utc::now().timestamp(),
-                vmark_version: env!("CARGO_PKG_VERSION").to_string(),
-                windows: final_state.responses.clone(),
-                workspace: None,
-            };
             Ok(session)
         }
     }

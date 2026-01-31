@@ -14,38 +14,69 @@ import { useUIStore } from '@/stores/uiStore';
 import { useEditorStore } from '@/stores/editorStore';
 import type { WindowState, TabState, CaptureResponse } from './types';
 import { HOT_EXIT_EVENTS } from './types';
+import type { LineEnding as StoreLineEnding } from '@/utils/linebreakDetection';
+
+/**
+ * Convert store line ending format to hot exit format
+ */
+function toHotExitLineEnding(lineEnding: StoreLineEnding): '\n' | '\r\n' | 'unknown' {
+  switch (lineEnding) {
+    case 'lf':
+      return '\n';
+    case 'crlf':
+      return '\r\n';
+    case 'unknown':
+      return 'unknown';
+  }
+}
 
 export function useHotExitCapture() {
   useEffect(() => {
     const unlistenPromise = listen(HOT_EXIT_EVENTS.CAPTURE_REQUEST, async () => {
+      const windowLabel = getCurrentWebviewWindow().label;
+      const isMainWindow = windowLabel === 'main';
+
       try {
-        const windowState = await captureWindowState();
+        const windowState = captureWindowState(windowLabel, isMainWindow);
         const response: CaptureResponse = {
-          window_label: getCurrentWebviewWindow().label,
+          window_label: windowLabel,
           state: windowState,
         };
-        await emit(HOT_EXIT_EVENTS.CAPTURE_RESPONSE, response);
+
+        // Emit response (with fallback error handling)
+        try {
+          await emit(HOT_EXIT_EVENTS.CAPTURE_RESPONSE, response);
+        } catch (emitError) {
+          console.error('[HotExit] Failed to emit capture response:', emitError);
+        }
       } catch (error) {
         console.error('[HotExit] Failed to capture window state:', error);
+
         // Still respond with partial state to avoid blocking coordinator
         const fallbackState: WindowState = {
-          window_label: getCurrentWebviewWindow().label,
-          is_main_window: getCurrentWebviewWindow().label === 'main',
+          window_label: windowLabel,
+          is_main_window: isMainWindow,
           active_tab_id: null,
           tabs: [],
           ui_state: getUiState(),
           geometry: null,
         };
         const response: CaptureResponse = {
-          window_label: getCurrentWebviewWindow().label,
+          window_label: windowLabel,
           state: fallbackState,
         };
-        await emit(HOT_EXIT_EVENTS.CAPTURE_RESPONSE, response);
+
+        // Best-effort emit for fallback
+        void emit(HOT_EXIT_EVENTS.CAPTURE_RESPONSE, response).catch((e) => {
+          console.error('[HotExit] Failed to emit fallback response:', e);
+        });
       }
     });
 
     return () => {
-      unlistenPromise.then((unlisten) => unlisten());
+      void unlistenPromise.then((unlisten) => unlisten()).catch(() => {
+        // Ignore cleanup errors
+      });
     };
   }, []);
 }
@@ -53,8 +84,7 @@ export function useHotExitCapture() {
 /**
  * Capture complete window state
  */
-async function captureWindowState(): Promise<WindowState> {
-  const windowLabel = getCurrentWebviewWindow().label;
+function captureWindowState(windowLabel: string, isMainWindow: boolean): WindowState {
   const tabStore = useTabStore.getState();
   const documentStore = useDocumentStore.getState();
 
@@ -69,29 +99,31 @@ async function captureWindowState(): Promise<WindowState> {
       file_path: tab.filePath,
       title: tab.title,
       is_pinned: tab.isPinned,
-      document: doc ? {
-        content: doc.content,
-        saved_content: doc.savedContent,
-        is_dirty: doc.isDirty,
-        is_missing: doc.isMissing,
-        is_divergent: doc.isDivergent,
-        line_ending: doc.lineEnding === 'unknown' ? '\n' : doc.lineEnding,
-        cursor_info: doc.cursorInfo
-          ? {
-              source_line: doc.cursorInfo.sourceLine,
-              word_at_cursor: doc.cursorInfo.wordAtCursor,
-              offset_in_word: doc.cursorInfo.offsetInWord,
-              node_type: doc.cursorInfo.nodeType,
-              percent_in_line: doc.cursorInfo.percentInLine,
-              context_before: doc.cursorInfo.contextBefore,
-              context_after: doc.cursorInfo.contextAfter,
-              block_anchor: doc.cursorInfo.blockAnchor,
-            }
-          : null,
-        last_modified_timestamp: doc.lastAutoSave,
-        is_untitled: !tab.filePath,
-        untitled_number: tab.filePath ? null : extractUntitledNumber(tab.title),
-      } : {
+      document: doc
+        ? {
+            content: doc.content,
+            saved_content: doc.savedContent,
+            is_dirty: doc.isDirty,
+            is_missing: doc.isMissing,
+            is_divergent: doc.isDivergent,
+            line_ending: toHotExitLineEnding(doc.lineEnding),
+            cursor_info: doc.cursorInfo
+              ? {
+                  source_line: doc.cursorInfo.sourceLine,
+                  word_at_cursor: doc.cursorInfo.wordAtCursor,
+                  offset_in_word: doc.cursorInfo.offsetInWord,
+                  node_type: doc.cursorInfo.nodeType,
+                  percent_in_line: doc.cursorInfo.percentInLine,
+                  context_before: doc.cursorInfo.contextBefore,
+                  context_after: doc.cursorInfo.contextAfter,
+                  block_anchor: doc.cursorInfo.blockAnchor,
+                }
+              : null,
+            last_modified_timestamp: doc.lastAutoSave,
+            is_untitled: !tab.filePath,
+            untitled_number: tab.filePath ? null : extractUntitledNumber(tab.title),
+          }
+        : {
         // Fallback if document not found
         content: '',
         saved_content: '',
@@ -109,16 +141,14 @@ async function captureWindowState(): Promise<WindowState> {
 
   const activeTab = tabStore.getActiveTab(windowLabel);
 
-  const windowState: WindowState = {
+  return {
     window_label: windowLabel,
-    is_main_window: windowLabel === 'main',
+    is_main_window: isMainWindow,
     active_tab_id: activeTab?.id || null,
     tabs,
     ui_state: getUiState(),
-    geometry: null, // TODO: Capture window geometry
+    geometry: null, // Window geometry capture not yet implemented
   };
-
-  return windowState;
 }
 
 /**

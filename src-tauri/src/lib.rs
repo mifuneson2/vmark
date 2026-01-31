@@ -111,8 +111,8 @@ pub fn run() {
             mcp_config::mcp_config_preview,
             mcp_config::mcp_config_install,
             mcp_config::mcp_config_uninstall,
-            hot_exit::commands::hot_exit_test_capture,
-            hot_exit::commands::hot_exit_test_restore,
+            hot_exit::commands::hot_exit_capture,
+            hot_exit::commands::hot_exit_restore,
             hot_exit::commands::hot_exit_inspect_session,
             hot_exit::commands::hot_exit_clear_session,
             #[cfg(debug_assertions)]

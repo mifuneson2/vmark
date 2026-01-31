@@ -13,32 +13,40 @@ import type { SessionData } from './types';
  * Session will be automatically restored on next startup via useHotExitRestore.
  */
 export async function restartWithHotExit(): Promise<void> {
+  let captureError: Error | null = null;
+
   try {
     // Capture session from all windows and write atomically to disk
     // This command waits for all windows to respond with 5s timeout
-    const session: SessionData = await invoke('hot_exit_test_capture');
+    const session = await invoke<SessionData>('hot_exit_capture');
 
-    console.log('[HotExit] Session captured successfully:', {
+    console.log('[HotExit] Session captured and persisted:', {
       windows: session.windows.length,
       version: session.vmark_version,
     });
+  } catch (error) {
+    captureError = error instanceof Error ? error : new Error(String(error));
+    console.error('[HotExit] Failed to capture session before restart:', captureError);
+    // Continue to relaunch - user already confirmed restart
+  }
 
-    // Relaunch app - session will be restored on startup
+  // Relaunch regardless of capture success (user confirmed restart)
+  try {
     await relaunch();
   } catch (error) {
-    console.error('[HotExit] Failed to capture session before restart:', error);
-    // Fallback: restart anyway (user already confirmed)
-    await relaunch();
+    console.error('[HotExit] Failed to relaunch:', error);
+    throw error;
   }
 }
 
 /**
  * Check for saved session on startup and restore if present.
  * Called from App.tsx during initialization.
+ * MUST only be called from the main window to avoid concurrent restore attempts.
  */
 export async function checkAndRestoreSession(): Promise<boolean> {
   try {
-    const session: SessionData | null = await invoke('hot_exit_inspect_session');
+    const session = await invoke<SessionData | null>('hot_exit_inspect_session');
 
     if (!session) {
       console.log('[HotExit] No saved session found');
@@ -53,12 +61,17 @@ export async function checkAndRestoreSession(): Promise<boolean> {
 
     // Restore session to main window
     // The useHotExitRestore hook will handle the actual restoration
-    await invoke('hot_exit_test_restore', { session });
+    await invoke<void>('hot_exit_restore', { session });
 
-    // Delete session file after successful restore
-    await invoke('hot_exit_clear_session');
+    // Delete session file after successful restore (best-effort)
+    try {
+      await invoke<void>('hot_exit_clear_session');
+      console.log('[HotExit] Session restored and cleared successfully');
+    } catch (clearError) {
+      console.warn('[HotExit] Failed to clear session file:', clearError);
+      // Session was restored successfully, so we still return true
+    }
 
-    console.log('[HotExit] Session restored and cleared successfully');
     return true;
   } catch (error) {
     console.error('[HotExit] Failed to restore session:', error);
