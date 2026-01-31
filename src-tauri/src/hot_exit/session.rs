@@ -52,10 +52,14 @@ pub struct DocumentState {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct CursorInfo {
-    pub from: u32,
-    pub to: u32,
+    pub source_line: u32,
+    pub word_at_cursor: String,
+    pub offset_in_word: u32,
     pub node_type: String,
-    pub heading_level: Option<u8>,
+    pub percent_in_line: f32,
+    pub context_before: String,
+    pub context_after: String,
+    pub block_anchor: Option<serde_json::Value>, // Polymorphic - can be TableAnchor or CodeBlockAnchor
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

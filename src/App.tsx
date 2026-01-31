@@ -86,6 +86,8 @@ import { useImagePasteToast } from "@/hooks/useImagePasteToast";
 import { useUpdateChecker } from "@/hooks/useUpdateChecker";
 import { useUpdateBroadcast } from "@/hooks/useUpdateSync";
 import { useFinderFileOpen } from "@/hooks/useFinderFileOpen";
+import { useHotExitCapture } from "@/utils/hotExit/useHotExitCapture";
+import { useHotExitRestore } from "@/utils/hotExit/useHotExitRestore";
 
 /** Height of the title bar area in pixels */
 const TITLEBAR_HEIGHT = 40;
@@ -135,6 +137,8 @@ function DocumentWindowHooks() {
   useDragDropOpen(); // Open dropped markdown files
   useWindowFileWatcher(); // Start file watcher for this window
   useExternalFileChanges(); // Handle external file changes (auto-reload or prompt)
+  useHotExitCapture(); // Respond to hot exit capture requests
+  useHotExitRestore(); // Handle hot exit restore on restart
   return null;
 }
 
