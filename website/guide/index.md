@@ -34,7 +34,7 @@ VMark supports two editing modes that you can switch between:
 | Mode | Description | Shortcut |
 |------|-------------|----------|
 | Rich Text | WYSIWYG editing with live formatting | Default |
-| Source | Raw Markdown with syntax highlighting | `Cmd/Ctrl + /` |
+| Source | Raw Markdown with syntax highlighting | `F6` |
 
 ### View Modes
 
