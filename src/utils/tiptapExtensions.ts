@@ -32,7 +32,6 @@ import { imagePopupExtension } from "@/plugins/imagePopup/tiptap";
 import { imageTooltipExtension } from "@/plugins/imageTooltip";
 import { imageHandlerExtension } from "@/plugins/imageHandler/tiptap";
 import { codePreviewExtension } from "@/plugins/codePreview/tiptap";
-import { floatingMathPreviewExtension } from "@/plugins/codePreview/floatingMathPreview";
 import { blockMathKeymapExtension } from "@/plugins/codePreview/blockMathKeymap";
 import { listContinuationExtension } from "@/plugins/listContinuation/tiptap";
 import { tableUIExtension } from "@/plugins/tableUI/tiptap";
@@ -147,7 +146,6 @@ export function createTiptapExtensions(): Extensions {
     imagePopupExtension,
     imageTooltipExtension,
     codePreviewExtension,
-    floatingMathPreviewExtension,
     blockMathKeymapExtension,
     listContinuationExtension,
     // ListKeymap improves list navigation behavior (backspace, arrow keys in empty items)
