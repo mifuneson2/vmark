@@ -83,7 +83,7 @@ function handleClick(index: number) {
   color: #c8c8c8;
 }
 
-.dark .content--focus .paragraph {
+[data-vmark-theme="night"] .content--focus .paragraph {
   color: #4a4f56;
 }
 

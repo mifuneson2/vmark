@@ -104,7 +104,7 @@ const icons: Record<string, string> = {
   background: color-mix(in srgb, var(--alert-color) 8%, transparent);
 }
 
-.dark .alert {
+[data-vmark-theme="night"] .alert {
   --alert-color: var(--alert-color-dark);
   background: color-mix(in srgb, var(--alert-color-dark) 12%, transparent);
 }
@@ -122,7 +122,7 @@ const icons: Record<string, string> = {
   align-items: center;
 }
 
-.dark .alert__icon {
+[data-vmark-theme="night"] .alert__icon {
   color: var(--alert-color-dark);
 }
 
@@ -132,7 +132,7 @@ const icons: Record<string, string> = {
   color: var(--alert-color);
 }
 
-.dark .alert__title {
+[data-vmark-theme="night"] .alert__title {
   color: var(--alert-color-dark);
 }
 
