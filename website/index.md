@@ -82,25 +82,6 @@ import DetailsBlockDemo from './.vitepress/components/demos/DetailsBlockDemo.vue
 
 <div class="home-content">
 
-## See It in Action
-
-<div class="screenshots-section">
-<div class="screenshots-grid">
-  <div class="screenshot-card">
-    <img src="/screenshots/editor-main.png" alt="VMark Rich Text Editor" loading="lazy" />
-    <div class="caption">Rich Text Mode</div>
-  </div>
-  <div class="screenshot-card">
-    <img src="/screenshots/source-mode.png" alt="VMark Source Mode" loading="lazy" />
-    <div class="caption">Source Mode</div>
-  </div>
-  <div class="screenshot-card">
-    <img src="/screenshots/dark-theme.png" alt="VMark Night Theme" loading="lazy" />
-    <div class="caption">Night Theme</div>
-  </div>
-</div>
-</div>
-
 ## AI-Powered Writing
 
 Claude Code, Claude Desktop, Codex CLI, Gemini CLI... can write directly to your documents via MCP integration:
@@ -123,6 +104,25 @@ Claude Code, Claude Desktop, Codex CLI, Gemini CLI... can write directly to your
 </div>
 
 [Learn how to set up MCP →](/guide/mcp-setup)
+
+## See It in Action
+
+<div class="screenshots-section">
+<div class="screenshots-grid">
+  <div class="screenshot-card">
+    <img src="/screenshots/editor-main.png" alt="VMark Rich Text Editor" loading="lazy" />
+    <div class="caption">Rich Text Mode</div>
+  </div>
+  <div class="screenshot-card">
+    <img src="/screenshots/source-mode.png" alt="VMark Source Mode" loading="lazy" />
+    <div class="caption">Source Mode</div>
+  </div>
+  <div class="screenshot-card">
+    <img src="/screenshots/dark-theme.png" alt="VMark Night Theme" loading="lazy" />
+    <div class="caption">Night Theme</div>
+  </div>
+</div>
+</div>
 
 ## Part of Features:
 
