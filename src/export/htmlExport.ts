@@ -152,12 +152,20 @@ function getEditorContentCSS(): string {
   margin-bottom: 0.5em;
 }
 
-.export-surface-editor h1 { font-size: 2em; }
+.export-surface-editor h1 {
+  font-size: 1.8em;
+  margin-top: 1.75em;
+  padding-bottom: 0.25em;
+  border-bottom: 1px solid var(--border-color);
+}
 .export-surface-editor h2 { font-size: 1.5em; }
 .export-surface-editor h3 { font-size: 1.25em; }
 .export-surface-editor h4 { font-size: 1em; }
 .export-surface-editor h5 { font-size: 0.875em; }
-.export-surface-editor h6 { font-size: 0.85em; }
+.export-surface-editor h6 {
+  font-size: 0.85em;
+  color: var(--text-tertiary);
+}
 
 .export-surface-editor p {
   margin: 0 0 1em 0;
@@ -265,11 +273,17 @@ function getEditorContentCSS(): string {
 /* Lists */
 .export-surface-editor ul,
 .export-surface-editor ol {
-  margin: 0 0 1em 0;
-  padding-left: 2em;
+  --list-indent: 1em;
+  margin: 0 0 var(--editor-block-spacing, 1em) 0;
+  padding-left: var(--list-indent);
 }
 
 .export-surface-editor li {
+  margin: 0.25em 0;
+}
+
+.export-surface-editor li > ul,
+.export-surface-editor li > ol {
   margin: 0.25em 0;
 }
 
@@ -296,10 +310,33 @@ function getEditorContentCSS(): string {
 }
 
 .export-surface-editor .task-list-checkbox input[type="checkbox"] {
-  width: 1em;
-  height: 1em;
+  appearance: none;
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border: 1px solid var(--border-color);
+  border-radius: 3px;
+  background: var(--bg-color);
   cursor: default;
-  accent-color: var(--primary-color);
+  position: relative;
+  vertical-align: middle;
+}
+
+.export-surface-editor .task-list-checkbox input[type="checkbox"]:checked {
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+.export-surface-editor .task-list-checkbox input[type="checkbox"]:checked::after {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 1px;
+  width: 4px;
+  height: 8px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
 }
 
 .export-surface-editor .task-list-content {
@@ -408,8 +445,9 @@ function getEditorContentCSS(): string {
 /* Horizontal rule */
 .export-surface-editor hr {
   border: none;
-  border-top: 1px solid var(--border-color);
-  margin: 2em 0;
+  height: 2px;
+  background-color: var(--border-color);
+  margin: var(--editor-block-spacing, 1em) 0;
 }
 
 /* Marks */
@@ -431,8 +469,11 @@ function getEditorContentCSS(): string {
   border-radius: 2px;
 }
 
-.export-surface-editor s {
+.export-surface-editor s,
+.export-surface-editor del,
+.export-surface-editor .md-strikethrough {
   text-decoration: line-through;
+  color: var(--meta-content-color, var(--text-secondary));
 }
 
 .export-surface-editor sub,
@@ -654,33 +695,64 @@ function getEditorContentCSS(): string {
 }
 
 /* Footnotes */
-.export-surface-editor [data-type="footnote_reference"] {
+.export-surface-editor [data-type="footnote_reference"],
+.export-surface-editor .footnote-ref {
   font-size: 0.75em;
   vertical-align: super;
   color: var(--primary-color);
   cursor: default;
 }
 
-.export-surface-editor [data-type="footnote_definition"] {
+.export-surface-editor .footnote-ref::before {
+  content: "[";
+}
+
+.export-surface-editor .footnote-ref::after {
+  content: "]";
+}
+
+.export-surface-editor [data-type="footnote_definition"],
+.export-surface-editor .footnote-def {
   font-size: 0.9em;
   margin: 0.5em 0;
   padding: 0.5em 0;
   border-bottom: 1px solid var(--border-color);
 }
 
-.export-surface-editor [data-type="footnote_definition"] dt {
+.export-surface-editor [data-type="footnote_definition"] dt,
+.export-surface-editor .footnote-def-label {
   display: inline;
   font-weight: 600;
   color: var(--primary-color);
   margin-right: 0.5em;
 }
 
-.export-surface-editor [data-type="footnote_definition"] dd {
+.export-surface-editor .footnote-def-label::before {
+  content: "[";
+}
+
+.export-surface-editor .footnote-def-label::after {
+  content: "]:";
+}
+
+.export-surface-editor [data-type="footnote_definition"] dd,
+.export-surface-editor .footnote-def-content {
   display: inline;
   margin: 0;
 }
 
-.export-surface-editor [data-type="footnote_definition"]:first-of-type {
+.export-surface-editor .footnote-backref {
+  color: var(--primary-color);
+  text-decoration: none;
+  margin-left: 0.25em;
+}
+
+.export-surface-editor .footnote-backref::after {
+  content: "↩";
+}
+
+.export-surface-editor [data-type="footnote_definition"]:first-of-type,
+.export-surface-editor .footnote-def:first-of-type {
   margin-top: 2em;
   padding-top: 1em;
   border-top: 1px solid var(--border-color);
@@ -705,7 +777,7 @@ function getEditorContentCSS(): string {
   letter-spacing: 0;
 }
 
-/* Syntax highlighting (Highlight.js) */
+/* Syntax highlighting (Highlight.js) - Light theme */
 .export-surface-editor .hljs-keyword { color: #d73a49; }
 .export-surface-editor .hljs-string { color: #032f62; }
 .export-surface-editor .hljs-number { color: #005cc5; }
@@ -728,6 +800,61 @@ function getEditorContentCSS(): string {
 .export-surface-editor .hljs-name { color: #22863a; }
 .export-surface-editor .hljs-punctuation { color: #24292e; }
 .export-surface-editor .hljs-subst { color: #24292e; }
+
+/* Syntax highlighting - Dark theme */
+.dark-theme .export-surface-editor .hljs-keyword { color: #ff7b72; }
+.dark-theme .export-surface-editor .hljs-string { color: #a5d6ff; }
+.dark-theme .export-surface-editor .hljs-number { color: #79c0ff; }
+.dark-theme .export-surface-editor .hljs-comment { color: #8b949e; font-style: italic; }
+.dark-theme .export-surface-editor .hljs-function { color: #d2a8ff; }
+.dark-theme .export-surface-editor .hljs-title { color: #d2a8ff; }
+.dark-theme .export-surface-editor .hljs-params { color: #c9d1d9; }
+.dark-theme .export-surface-editor .hljs-built_in { color: #79c0ff; }
+.dark-theme .export-surface-editor .hljs-literal { color: #79c0ff; }
+.dark-theme .export-surface-editor .hljs-type { color: #ff7b72; }
+.dark-theme .export-surface-editor .hljs-meta { color: #8b949e; }
+.dark-theme .export-surface-editor .hljs-attr { color: #79c0ff; }
+.dark-theme .export-surface-editor .hljs-attribute { color: #79c0ff; }
+.dark-theme .export-surface-editor .hljs-selector-tag { color: #7ee787; }
+.dark-theme .export-surface-editor .hljs-selector-class { color: #d2a8ff; }
+.dark-theme .export-surface-editor .hljs-selector-id { color: #79c0ff; }
+.dark-theme .export-surface-editor .hljs-variable { color: #ffa657; }
+.dark-theme .export-surface-editor .hljs-template-variable { color: #ffa657; }
+.dark-theme .export-surface-editor .hljs-tag { color: #7ee787; }
+.dark-theme .export-surface-editor .hljs-name { color: #7ee787; }
+.dark-theme .export-surface-editor .hljs-punctuation { color: #c9d1d9; }
+.dark-theme .export-surface-editor .hljs-subst { color: #c9d1d9; }
+
+/* Dark theme alert backgrounds */
+.dark-theme .export-surface-editor .alert-note {
+  --alert-border: var(--alert-note-dark, #58a6ff);
+  --alert-bg: color-mix(in srgb, var(--alert-note-dark, #58a6ff) 8%, transparent);
+  --alert-title: var(--alert-note-dark, #58a6ff);
+}
+
+.dark-theme .export-surface-editor .alert-tip {
+  --alert-border: var(--alert-tip-dark, #3fb950);
+  --alert-bg: color-mix(in srgb, var(--alert-tip-dark, #3fb950) 8%, transparent);
+  --alert-title: var(--alert-tip-dark, #3fb950);
+}
+
+.dark-theme .export-surface-editor .alert-important {
+  --alert-border: var(--alert-important-dark, #a371f7);
+  --alert-bg: color-mix(in srgb, var(--alert-important-dark, #a371f7) 8%, transparent);
+  --alert-title: var(--alert-important-dark, #a371f7);
+}
+
+.dark-theme .export-surface-editor .alert-warning {
+  --alert-border: var(--alert-warning-dark, #d29922);
+  --alert-bg: color-mix(in srgb, var(--alert-warning-dark, #d29922) 8%, transparent);
+  --alert-title: var(--alert-warning-dark, #d29922);
+}
+
+.dark-theme .export-surface-editor .alert-caution {
+  --alert-border: var(--alert-caution-dark, #f85149);
+  --alert-bg: color-mix(in srgb, var(--alert-caution-dark, #f85149) 8%, transparent);
+  --alert-title: var(--alert-caution-dark, #f85149);
+}
 `.trim();
 }
 
