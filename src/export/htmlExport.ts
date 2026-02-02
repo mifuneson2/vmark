@@ -298,31 +298,35 @@ function getEditorContentCSS(): string {
   margin-top: 0.5em;
 }
 
-/* Task lists */
+/* Task lists - checkbox aligned to line height like editor */
 .export-surface-editor .task-list-item {
+  --checkbox-size: 0.85em;
+  --checkbox-gap: calc(var(--checkbox-size) * 0.4);
+  list-style-type: none;
   display: flex;
   align-items: flex-start;
-  gap: 0.5em;
-  list-style: none;
-  margin-left: -1.5em;
+  gap: var(--checkbox-gap);
+  margin-left: calc(-1 * var(--list-indent, 1em));
 }
 
 .export-surface-editor .task-list-checkbox {
   flex-shrink: 0;
-  margin-top: 0.3em;
+  display: flex;
+  align-items: center;
+  height: var(--editor-line-height-px, 28.8px);
 }
 
 .export-surface-editor .task-list-checkbox input[type="checkbox"] {
   appearance: none;
   -webkit-appearance: none;
-  width: 14px;
-  height: 14px;
+  box-sizing: border-box;
+  width: var(--checkbox-size);
+  height: var(--checkbox-size);
   border: 1px solid var(--border-color);
-  border-radius: 3px;
+  border-radius: calc(var(--checkbox-size) * 0.2);
   background: var(--bg-color);
   cursor: default;
   position: relative;
-  vertical-align: middle;
 }
 
 .export-surface-editor .task-list-checkbox input[type="checkbox"]:checked {
@@ -333,22 +337,24 @@ function getEditorContentCSS(): string {
 .export-surface-editor .task-list-checkbox input[type="checkbox"]:checked::after {
   content: "";
   position: absolute;
-  left: 4px;
-  top: 1px;
-  width: 4px;
-  height: 8px;
+  left: 50%;
+  top: 45%;
+  width: calc(var(--checkbox-size) * 0.25);
+  height: calc(var(--checkbox-size) * 0.5);
   border: solid white;
   border-width: 0 2px 2px 0;
-  transform: rotate(45deg);
+  transform: translate(-50%, -50%) rotate(45deg);
 }
 
 .export-surface-editor .task-list-content {
   flex: 1;
   min-width: 0;
+  line-height: var(--editor-line-height-px, 28.8px);
 }
 
 .export-surface-editor .task-list-content > p {
   margin: 0;
+  line-height: inherit;
 }
 
 /* Blockquotes */
