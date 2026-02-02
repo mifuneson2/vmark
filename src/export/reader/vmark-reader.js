@@ -555,8 +555,46 @@
   // TOC state
   let tocSidebar = null;
   let tocBackdrop = null;
+  let tocToggleTab = null;
   let tocHeadings = [];
   let scrollSpyActive = false;
+
+  /**
+   * Toggle TOC visibility
+   */
+  function toggleToc() {
+    settings.showToc = !settings.showToc;
+    saveSettings();
+    applyToc();
+    updatePanelUI();
+  }
+
+  /**
+   * Create TOC toggle tab (always visible on left edge)
+   */
+  function createTocToggleTab() {
+    if (tocToggleTab) return;
+
+    tocToggleTab = document.createElement('button');
+    tocToggleTab.className = 'vmark-toc-toggle-tab';
+    tocToggleTab.setAttribute('aria-label', 'Toggle Table of Contents');
+    tocToggleTab.title = 'Table of Contents (T)';
+    // Chevron icon pointing right (expand) or left (collapse)
+    tocToggleTab.innerHTML = `<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+      <path d="M6.22 3.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.751.751 0 0 1-1.042-.018.751.751 0 0 1-.018-1.042L9.94 8 6.22 4.28a.75.75 0 0 1 0-1.06Z"/>
+    </svg>`;
+
+    tocToggleTab.addEventListener('click', toggleToc);
+    document.body.appendChild(tocToggleTab);
+  }
+
+  /**
+   * Update TOC toggle tab appearance
+   */
+  function updateTocToggleTab() {
+    if (!tocToggleTab) return;
+    tocToggleTab.classList.toggle('expanded', settings.showToc);
+  }
 
   /**
    * Generate and apply Table of Contents sidebar
@@ -565,6 +603,14 @@
     const editor = document.querySelector('.export-surface-editor');
     const surface = document.querySelector('.export-surface');
     if (!editor || !surface) return;
+
+    // Create toggle tab if headings exist (check once)
+    if (!tocToggleTab) {
+      const headings = editor.querySelectorAll('h1, h2, h3');
+      if (headings.length > 0) {
+        createTocToggleTab();
+      }
+    }
 
     if (!settings.showToc) {
       // Hide TOC sidebar
@@ -575,6 +621,7 @@
       if (tocBackdrop) {
         tocBackdrop.classList.remove('visible');
       }
+      updateTocToggleTab();
       disableScrollSpy();
       return;
     }
@@ -586,6 +633,7 @@
       if (tocBackdrop && window.innerWidth < 768) {
         tocBackdrop.classList.add('visible');
       }
+      updateTocToggleTab();
       enableScrollSpy();
       return;
     }
@@ -680,6 +728,9 @@
 
     // Enable scroll spy
     enableScrollSpy();
+
+    // Update toggle tab state
+    updateTocToggleTab();
   }
 
   /**

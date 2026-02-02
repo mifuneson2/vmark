@@ -429,6 +429,80 @@
   background: var(--bg-color, #23262b);
 }
 
+/* TOC Toggle Tab - Hidden by default, shown on hover near edge */
+.vmark-toc-toggle-tab {
+  position: fixed;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 24px;
+  height: 48px;
+  border: none;
+  border-radius: 0 6px 6px 0;
+  background: var(--bg-secondary, #e5e4e4);
+  border: 1px solid var(--border-color, #d5d4d4);
+  border-left: none;
+  color: var(--text-secondary, #666);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 101;
+  transition: background 0.15s, color 0.15s, left 0.25s ease, opacity 0.2s ease;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.08);
+  /* Hidden by default but pointer events enabled for hover detection */
+  opacity: 0;
+}
+
+/* Invisible hover zone to detect mouse near edge */
+.vmark-toc-toggle-tab::before {
+  content: '';
+  position: absolute;
+  top: -60px;
+  bottom: -60px;
+  left: -20px;
+  width: 60px;
+  cursor: pointer;
+}
+
+/* Show tab when hovering the zone */
+.vmark-toc-toggle-tab:hover,
+.vmark-toc-toggle-tab:focus-visible {
+  opacity: 1;
+  background: var(--bg-color, #eeeded);
+  color: var(--text-color, #1a1a1a);
+}
+
+.vmark-toc-toggle-tab svg {
+  transition: transform 0.25s ease;
+}
+
+/* When TOC is expanded, move tab to sidebar edge and flip chevron */
+.vmark-toc-toggle-tab.expanded {
+  left: 260px;
+}
+
+.vmark-toc-toggle-tab.expanded svg {
+  transform: rotate(180deg);
+}
+
+/* Dark theme toggle tab */
+.dark-theme .vmark-toc-toggle-tab {
+  background: var(--bg-secondary, #2a2e34);
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.3);
+}
+
+.dark-theme .vmark-toc-toggle-tab:hover {
+  background: var(--bg-color, #23262b);
+}
+
+/* Mobile: hide toggle tab, use header close button instead */
+@media (max-width: 767px) {
+  .vmark-toc-toggle-tab {
+    display: none;
+  }
+}
+
 /* TOC Backdrop (mobile) */
 .vmark-toc-backdrop {
   position: fixed;
