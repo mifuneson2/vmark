@@ -75,18 +75,27 @@ export function UpdateIndicator() {
 
   const Icon = config.icon;
 
+  // Calculate download percentage
+  const downloadPercent =
+    status === "downloading" && downloadProgress?.total
+      ? Math.round((downloadProgress.downloaded / downloadProgress.total) * 100)
+      : null;
+
   // Build title with additional context
   let title = config.title;
   if (status === "available" && updateInfo) {
     title = `Update available: v${updateInfo.version} — click to download`;
-  } else if (status === "downloading" && downloadProgress) {
-    const percent = downloadProgress.total
-      ? Math.round((downloadProgress.downloaded / downloadProgress.total) * 100)
-      : null;
-    title = percent !== null ? `Downloading update: ${percent}%` : "Downloading update...";
+  } else if (status === "downloading") {
+    title = downloadPercent !== null ? `Downloading update: ${downloadPercent}%` : "Downloading update...";
   } else if (status === "ready" && updateInfo) {
     title = `v${updateInfo.version} ready — click to restart`;
   }
+
+  // Build label (show percentage when downloading)
+  const label =
+    status === "downloading" && downloadPercent !== null
+      ? `${downloadPercent}%`
+      : config.label;
 
   const handleClick = () => {
     switch (status) {
@@ -114,7 +123,7 @@ export function UpdateIndicator() {
       style={{ cursor: isClickable ? "pointer" : "default" }}
     >
       <Icon size={12} />
-      <span className="status-update-label">{config.label}</span>
+      <span className="status-update-label">{label}</span>
       {config.showDot && <span className="status-update-dot" />}
     </button>
   );
