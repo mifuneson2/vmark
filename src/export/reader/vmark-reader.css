@@ -709,12 +709,12 @@
 }
 
 /* Adjust back-to-top when panel is open */
-.vmark-reader-panel.open ~ .vmark-back-to-top {
+.vmark-panel-open .vmark-back-to-top {
   bottom: 340px;
 }
 
 @media (max-width: 480px) {
-  .vmark-reader-panel.open ~ .vmark-back-to-top {
+  .vmark-panel-open .vmark-back-to-top {
     bottom: 400px;
   }
 }

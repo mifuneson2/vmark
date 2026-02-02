@@ -490,6 +490,7 @@
         const lineNumBtn = document.createElement('button');
         lineNumBtn.className = 'vmark-code-btn';
         lineNumBtn.title = 'Show line numbers';
+        lineNumBtn.setAttribute('aria-label', 'Show line numbers');
         lineNumBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <line x1="4" y1="6" x2="4" y2="6.01"></line>
           <line x1="4" y1="12" x2="4" y2="12.01"></line>
@@ -502,7 +503,9 @@
         lineNumBtn.addEventListener('click', () => {
           const isHidden = lineNumbers.style.display === 'none';
           lineNumbers.style.display = isHidden ? 'flex' : 'none';
-          lineNumBtn.title = isHidden ? 'Hide line numbers' : 'Show line numbers';
+          const label = isHidden ? 'Hide line numbers' : 'Show line numbers';
+          lineNumBtn.title = label;
+          lineNumBtn.setAttribute('aria-label', label);
         });
 
         btnContainer.appendChild(lineNumBtn);
@@ -512,6 +515,7 @@
       const copyBtn = document.createElement('button');
       copyBtn.className = 'vmark-code-btn';
       copyBtn.title = 'Copy code';
+      copyBtn.setAttribute('aria-label', 'Copy code');
       copyBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
         <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
@@ -868,6 +872,7 @@
   function togglePanel() {
     isOpen = !isOpen;
     panel.classList.toggle('open', isOpen);
+    document.body.classList.toggle('vmark-panel-open', isOpen);
   }
 
   /**
@@ -877,19 +882,7 @@
     const btn = e.currentTarget;
     const action = btn.dataset.action;
     const dir = parseInt(btn.dataset.dir, 10);
-    const bounds = BOUNDS[action];
-
-    if (!bounds) return;
-
-    let value = settings[action] + (dir * bounds.step);
-    value = Math.max(bounds.min, Math.min(bounds.max, value));
-    // Round to appropriate precision based on step
-    const precision = bounds.step < 0.1 ? 100 : 10;
-    value = Math.round(value * precision) / precision;
-
-    settings[action] = value;
-    saveSettings();
-    applySettings();
+    adjustSetting(action, dir);
   }
 
   /**
@@ -1129,8 +1122,9 @@
     const editor = document.querySelector('.export-surface-editor');
     if (editor) {
       editor.querySelectorAll('img').forEach(img => {
-        // Skip broken images and tiny images
-        if (img.classList.contains('broken-image') || img.width < 50) return;
+        // Skip broken images and tiny images (use naturalWidth for accurate check)
+        if (img.classList.contains('broken-image') ||
+            (img.complete && img.naturalWidth < 50)) return;
 
         img.style.cursor = 'zoom-in';
         img.setAttribute('tabindex', '0');
