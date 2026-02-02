@@ -324,13 +324,13 @@
   font-size: var(--editor-font-size-mono);
   background-color: var(--code-bg-color);
   color: var(--code-text-color);
-  padding: 16px;
+  padding: var(--code-padding, 18px);
   border-radius: var(--radius-md);
   overflow-x: auto;
   margin: 0 0 var(--editor-block-spacing, 1em) 0;
   max-width: 100%;
   white-space: pre;
-  line-height: 1.45;
+  line-height: var(--code-line-height, 1.45);
 }
 
 .tiptap-editor pre code {

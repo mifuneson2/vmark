@@ -184,21 +184,23 @@ function getEditorContentCSS(): string {
 /* Inline code */
 .export-surface-editor code {
   font-family: var(--font-mono);
-  font-size: 0.9em;
+  font-size: var(--editor-font-size-mono, 0.85em);
   background: var(--code-bg-color);
+  color: var(--code-text-color);
   padding: 0.2em 0.4em;
-  border-radius: 3px;
+  border-radius: var(--radius-sm, 3px);
 }
 
 /* Code blocks */
 .export-surface-editor pre {
   font-family: var(--font-mono);
-  font-size: 0.9em;
+  font-size: var(--editor-font-size-mono, 0.85em);
   background: var(--code-bg-color);
-  padding: 1em;
-  border-radius: 6px;
+  padding: var(--code-padding, 18px);
+  border-radius: var(--radius-md, 6px);
   overflow-x: auto;
-  margin: 1em 0;
+  margin: 0 0 var(--editor-block-spacing, 1em) 0;
+  line-height: var(--code-line-height, 1.45);
 }
 
 .export-surface-editor pre code {
@@ -218,11 +220,12 @@ function getEditorContentCSS(): string {
 
 .export-surface-editor .code-block-wrapper pre {
   margin: 0;
-  padding: 1em;
+  padding: var(--code-padding, 18px);
   flex: 1;
   min-width: 0;
   border-radius: 0;
   background: transparent;
+  line-height: var(--code-line-height, 1.45);
 }
 
 .export-surface-editor .code-line-numbers {
@@ -230,12 +233,12 @@ function getEditorContentCSS(): string {
   flex-direction: column;
   flex-shrink: 0;
   min-width: 2em;
-  padding: 1em 0.5em;
+  padding: var(--code-padding, 18px) 0.5em;
   text-align: right;
   color: var(--text-tertiary);
   font-family: var(--font-mono);
   font-size: var(--editor-font-size-mono, 0.85em);
-  line-height: var(--editor-line-height, 1.6);
+  line-height: var(--code-line-height, 1.45);
   user-select: none;
   border-right: 1px solid var(--border-color);
   background: var(--code-bg-color);

@@ -25,7 +25,7 @@
   display: none;
   flex-direction: column;
   flex-shrink: 0;
-  padding: 8px 8px 6px 8px;
+  padding: var(--code-padding, 18px) 0.5em;
   font-family: var(--font-mono);
   font-size: var(--editor-font-size-mono);
   color: var(--text-tertiary);
@@ -38,7 +38,7 @@
 
 /* Individual line number */
 .tiptap-editor .code-line-numbers .line-num {
-  line-height: var(--editor-line-height);
+  line-height: var(--code-line-height, 1.45);
 }
 
 /* Show line numbers when enabled */
