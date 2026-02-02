@@ -100,13 +100,17 @@ export interface Alert {
 }
 
 // Details block types (HTML <details>/<summary>)
+// Note: children uses the extended BlockContent type to support nested details
 export interface Details {
   type: "details";
   open?: boolean;
   summary?: string;
-  children: import("mdast").BlockContent[];
+  children: BlockContentBase[];
   position?: UnistPosition;
 }
+
+// Base BlockContent type from mdast (used before our extended type is defined)
+type BlockContentBase = import("mdast").BlockContent | Details;
 
 // Union type for all phrasing (inline) content
 // Note: mdast PhrasingContent already includes InlineMath via mdast-util-math augmentation

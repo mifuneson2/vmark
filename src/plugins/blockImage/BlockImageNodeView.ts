@@ -152,7 +152,12 @@ export class BlockImageNodeView implements NodeView {
     // Reset states
     this.img.style.opacity = "1";
     this.dom.classList.remove("image-loading", "image-error");
-    this.img.removeAttribute("title");
+    // Restore original title if it was overwritten by error message
+    const originalTitle = this.img.getAttribute("data-original-title");
+    if (originalTitle !== null) {
+      this.img.title = originalTitle;
+      this.img.removeAttribute("data-original-title");
+    }
 
     if (!src) {
       this.img.src = "";

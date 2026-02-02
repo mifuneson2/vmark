@@ -144,5 +144,33 @@ Another paragraph.`;
 
       expect(result.children[0].type).toBe("blockquote");
     });
+
+    it("handles nested details within details", () => {
+      const md = `<details>
+<summary>Outer details</summary>
+
+Outer content.
+
+<details>
+<summary>Inner details</summary>
+
+Inner hidden content.
+</details>
+
+Back to outer content.
+
+</details>`;
+      const result = parseWithDetails(md);
+
+      const outerDetails = result.children[0] as Details;
+      expect(outerDetails.type).toBe("details");
+      expect(outerDetails.summary).toBe("Outer details");
+
+      // Check for nested details in children
+      const innerDetails = outerDetails.children.find(c => c.type === "details") as Details | undefined;
+      expect(innerDetails).toBeDefined();
+      expect(innerDetails?.type).toBe("details");
+      expect(innerDetails?.summary).toBe("Inner details");
+    });
   });
 });

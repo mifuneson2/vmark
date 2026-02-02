@@ -30,9 +30,10 @@ export const footnoteReferenceExtension = Node.create({
       mergeAttributes(HTMLAttributes, {
         "data-type": "footnote_reference",
         "data-label": label,
+        id: `fnref-${label}`,
         contenteditable: "false",
       }),
-      label,
+      ["a", { href: `#fndef-${label}` }, label],
     ];
   },
 });
@@ -65,6 +66,7 @@ export const footnoteDefinitionExtension = Node.create({
       mergeAttributes(HTMLAttributes, {
         "data-type": "footnote_definition",
         "data-label": label,
+        id: `fndef-${label}`,
       }),
       ["dt", { "data-label": label, contenteditable: "false" }, label],
       ["dd", { "data-label": label }, 0],

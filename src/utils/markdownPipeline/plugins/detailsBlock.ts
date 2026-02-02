@@ -98,13 +98,26 @@ function transformDetailsBlocks(children: Content[]): Content[] {
     const openInfo = parseDetailsOpen(node.value ?? "");
     const inner: Content[] = [];
     let closed = false;
+    let depth = 1; // Track nesting depth for nested <details> blocks
 
     for (let cursor = index + 1; cursor < children.length; cursor += 1) {
       const next = children[cursor];
-      if (next?.type === "html" && isDetailsClose(next.value ?? "")) {
-        index = cursor;
-        closed = true;
-        break;
+      if (next?.type === "html") {
+        const htmlValue = next.value ?? "";
+        // Track nested <details> opening tags
+        if (isDetailsOpen(htmlValue)) {
+          depth += 1;
+        }
+        // Check for closing tag
+        if (isDetailsClose(htmlValue)) {
+          depth -= 1;
+          if (depth === 0) {
+            // This closes the outer details block
+            index = cursor;
+            closed = true;
+            break;
+          }
+        }
       }
       inner.push(next);
     }

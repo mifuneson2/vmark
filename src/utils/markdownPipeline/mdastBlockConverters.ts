@@ -15,6 +15,7 @@ import type {
 import type { Math } from "mdast-util-math";
 import type { Alert, Details, WikiLink, Yaml } from "./types";
 import * as inlineConverters from "./mdastInlineConverters";
+import { parseInlineMarkdown } from "./inlineParser";
 export type ContentContext = "block" | "inline";
 
 export interface MdastToPmContext {
@@ -221,9 +222,14 @@ export function convertDetails(
 
   const sourceLine = getSourceLine(node);
   const summaryText = node.summary ?? "Details";
+
+  // Parse summary text as inline markdown to support **bold**, *italic*, etc.
+  const summaryInlineContent = parseInlineMarkdown(summaryText);
+  const summaryPmNodes = context.convertChildren(summaryInlineContent, marks, "inline");
+
   const summaryNode = summaryType.create(
     { sourceLine },
-    summaryText ? [context.schema.text(summaryText)] : []
+    summaryPmNodes.length > 0 ? summaryPmNodes : []
   );
   const children = ensureNonEmptyBlocks(
     context.convertChildren(node.children as Content[], marks, "block"),
