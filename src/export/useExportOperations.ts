@@ -154,17 +154,23 @@ export async function exportToHtml(
 
   try {
     // User picks/creates a folder
+    // Note: On macOS, the save panel requires a file-like path to populate the filename field.
+    // We append a placeholder extension that will be stripped from the final folder name.
+    const safeName = `${defaultName}.html`;
     const defaultPath = defaultDirectory
-      ? joinPath(defaultDirectory, defaultName)
-      : defaultName;
+      ? joinPath(defaultDirectory, safeName)
+      : safeName;
 
-    const folderPath = await save({
+    const selectedPath = await save({
       defaultPath,
       title: "Export HTML",
-      // No file filters — we're creating a folder
+      filters: [{ name: "HTML Export", extensions: ["html"] }],
     });
 
-    if (!folderPath) return false;
+    if (!selectedPath) return false;
+
+    // Strip the .html extension if present (user might have edited the name)
+    const folderPath = selectedPath.replace(/\.html$/i, "");
 
     // Render markdown to HTML
     const html = await renderMarkdownToHtml(markdown, true);
