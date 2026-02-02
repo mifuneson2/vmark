@@ -108,7 +108,8 @@
     cjkLetterSpacing: 0.05,
     theme: 'paper',
     cjkLatinSpacing: true,
-    expandDetails: false
+    expandDetails: false,
+    showToc: false
   };
 
   // Settings bounds
@@ -191,6 +192,9 @@
 
     // Expand details
     applyExpandDetails();
+
+    // Table of Contents
+    applyToc();
 
     // Update UI if panel exists
     updatePanelUI();
@@ -457,6 +461,193 @@
     });
   }
 
+  // TOC state
+  let tocSidebar = null;
+  let tocBackdrop = null;
+  let tocHeadings = [];
+  let scrollSpyActive = false;
+
+  /**
+   * Generate and apply Table of Contents sidebar
+   */
+  function applyToc() {
+    const editor = document.querySelector('.export-surface-editor');
+    const surface = document.querySelector('.export-surface');
+    if (!editor || !surface) return;
+
+    if (!settings.showToc) {
+      // Hide TOC sidebar
+      if (tocSidebar) {
+        tocSidebar.classList.remove('visible');
+        document.body.classList.remove('vmark-toc-open');
+      }
+      if (tocBackdrop) {
+        tocBackdrop.classList.remove('visible');
+      }
+      disableScrollSpy();
+      return;
+    }
+
+    // Show existing sidebar or create new one
+    if (tocSidebar) {
+      tocSidebar.classList.add('visible');
+      document.body.classList.add('vmark-toc-open');
+      if (tocBackdrop && window.innerWidth < 768) {
+        tocBackdrop.classList.add('visible');
+      }
+      enableScrollSpy();
+      return;
+    }
+
+    // Extract headings (h1-h3)
+    const headings = editor.querySelectorAll('h1, h2, h3');
+    if (headings.length === 0) return;
+
+    // Build TOC items and ensure IDs
+    tocHeadings = [];
+    let idCounter = 0;
+
+    headings.forEach(heading => {
+      if (!heading.id) {
+        heading.id = `heading-${++idCounter}`;
+      }
+
+      tocHeadings.push({
+        id: heading.id,
+        level: parseInt(heading.tagName[1], 10),
+        text: heading.textContent.trim(),
+        element: heading
+      });
+    });
+
+    // Create sidebar
+    tocSidebar = document.createElement('aside');
+    tocSidebar.className = 'vmark-toc-sidebar visible';
+
+    // Header with close button (for mobile only)
+    const header = document.createElement('div');
+    header.className = 'vmark-toc-header';
+    header.innerHTML = `<button class="vmark-toc-close" title="Close">&times;</button>`;
+    tocSidebar.appendChild(header);
+
+    // Navigation
+    const nav = document.createElement('nav');
+    nav.className = 'vmark-toc-nav';
+
+    tocHeadings.forEach((item, index) => {
+      const link = document.createElement('a');
+      link.href = `#${item.id}`;
+      link.className = `vmark-toc-item vmark-toc-level-${item.level}`;
+      link.dataset.index = index;
+      link.textContent = item.text;
+
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        const target = document.getElementById(item.id);
+        if (target) {
+          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          history.pushState(null, '', `#${item.id}`);
+          // On mobile, close sidebar after click
+          if (window.innerWidth < 768) {
+            settings.showToc = false;
+            saveSettings();
+            applyToc();
+            updatePanelUI();
+          }
+        }
+      });
+
+      nav.appendChild(link);
+    });
+
+    tocSidebar.appendChild(nav);
+
+    // Close button handler
+    const closeToc = () => {
+      settings.showToc = false;
+      saveSettings();
+      applyToc();
+      updatePanelUI();
+    };
+
+    tocSidebar.querySelector('.vmark-toc-close').addEventListener('click', closeToc);
+
+    // Create backdrop for mobile
+    tocBackdrop = document.createElement('div');
+    tocBackdrop.className = 'vmark-toc-backdrop';
+    tocBackdrop.addEventListener('click', closeToc);
+    document.body.appendChild(tocBackdrop);
+
+    // Insert sidebar
+    document.body.appendChild(tocSidebar);
+    document.body.classList.add('vmark-toc-open');
+
+    // Show backdrop on mobile
+    if (window.innerWidth < 768) {
+      tocBackdrop.classList.add('visible');
+    }
+
+    // Enable scroll spy
+    enableScrollSpy();
+  }
+
+  /**
+   * Enable scroll spy to highlight current section
+   */
+  function enableScrollSpy() {
+    if (scrollSpyActive || tocHeadings.length === 0) return;
+    scrollSpyActive = true;
+    window.addEventListener('scroll', handleScrollSpy, { passive: true });
+    handleScrollSpy(); // Initial highlight
+  }
+
+  /**
+   * Disable scroll spy
+   */
+  function disableScrollSpy() {
+    if (!scrollSpyActive) return;
+    scrollSpyActive = false;
+    window.removeEventListener('scroll', handleScrollSpy);
+  }
+
+  /**
+   * Handle scroll spy - highlight current section in TOC
+   */
+  function handleScrollSpy() {
+    if (!tocSidebar || tocHeadings.length === 0) return;
+
+    const scrollTop = window.scrollY;
+    const offset = 100; // Offset from top to trigger highlight
+
+    // Find current heading
+    let currentIndex = 0;
+    for (let i = tocHeadings.length - 1; i >= 0; i--) {
+      const heading = tocHeadings[i].element;
+      if (heading.offsetTop <= scrollTop + offset) {
+        currentIndex = i;
+        break;
+      }
+    }
+
+    // Update active state
+    const links = tocSidebar.querySelectorAll('.vmark-toc-item');
+    links.forEach((link, index) => {
+      link.classList.toggle('active', index === currentIndex);
+    });
+
+    // Scroll TOC to keep active item visible
+    const activeLink = tocSidebar.querySelector('.vmark-toc-item.active');
+    if (activeLink) {
+      const nav = tocSidebar.querySelector('.vmark-toc-nav');
+      const linkRect = activeLink.getBoundingClientRect();
+      const navRect = nav.getBoundingClientRect();
+
+      if (linkRect.top < navRect.top || linkRect.bottom > navRect.bottom) {
+        activeLink.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
+    }
+  }
+
   /**
    * Create the settings panel
    */
@@ -533,6 +724,12 @@
             <span class="vmark-reader-value" data-value="cjkLetterSpacing">${settings.cjkLetterSpacing}em</span>
             <button class="vmark-reader-btn" data-action="cjkLetterSpacing" data-dir="1">+</button>
           </div>
+        </div>
+        <div class="vmark-reader-group">
+          <label class="vmark-reader-checkbox-label">
+            <input type="checkbox" ${settings.showToc ? 'checked' : ''} data-setting="showToc">
+            <span>Table of Contents</span>
+          </label>
         </div>
         <div class="vmark-reader-group">
           <label class="vmark-reader-checkbox-label">
@@ -672,6 +869,7 @@
     });
 
     // Update checkboxes
+    panel.querySelector('[data-setting="showToc"]').checked = settings.showToc;
     panel.querySelector('[data-setting="cjkLatinSpacing"]').checked = settings.cjkLatinSpacing;
     panel.querySelector('[data-setting="expandDetails"]').checked = settings.expandDetails;
 
