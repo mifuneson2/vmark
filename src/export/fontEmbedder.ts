@@ -115,6 +115,33 @@ export function generateLocalFontCSS(fonts: FontFile[], basePath: string = "asse
 }`).join("\n\n");
 }
 
+/** Font with embedded data */
+export interface EmbeddedFont {
+  file: FontFile;
+  dataUri: string;
+}
+
+/**
+ * Generate @font-face CSS with embedded data URIs.
+ * For standalone HTML that needs no external dependencies.
+ */
+export function generateEmbeddedFontCSS(fonts: EmbeddedFont[]): string {
+  return fonts.map(({ file, dataUri }) => `@font-face {
+  font-family: '${file.family}';
+  src: url('${dataUri}') format('woff2');
+  font-weight: ${file.weight};
+  font-style: ${file.style};
+}`).join("\n\n");
+}
+
+/**
+ * Convert font binary data to base64 data URI.
+ */
+export function fontDataToDataUri(data: Uint8Array): string {
+  const base64 = btoa(String.fromCharCode(...data));
+  return `data:font/woff2;base64,${base64}`;
+}
+
 /**
  * Get the KaTeX font CSS.
  * KaTeX fonts are loaded from CDN in exports since they're not bundled.

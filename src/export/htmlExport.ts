@@ -35,7 +35,10 @@ import {
   getUserFontFile,
   downloadFont,
   generateLocalFontCSS,
+  generateEmbeddedFontCSS,
+  fontDataToDataUri,
   type FontFile,
+  type EmbeddedFont,
 } from "./fontEmbedder";
 import { getReaderCSS, getReaderJS } from "./reader";
 
@@ -1147,25 +1150,36 @@ export async function exportHtml(
     }
 
     // Download and save fonts
-    let fontCSS = "";
+    let fontCSS = "";          // For index.html (references local files)
+    let embeddedFontCSS = "";  // For standalone.html (data URIs)
     if (fontsToExport.length > 0) {
       await mkdir(fontsPath, { recursive: true });
 
       const downloadedFonts: FontFile[] = [];
+      const embeddedFonts: EmbeddedFont[] = [];
       for (const font of fontsToExport) {
         const data = await downloadFont(font.url);
         if (data) {
           await writeFile(`${fontsPath}/${font.filename}`, data);
           totalSize += data.length;
           downloadedFonts.push(font);
+          // Also create embedded version for standalone
+          embeddedFonts.push({
+            file: font,
+            dataUri: fontDataToDataUri(data),
+          });
         } else {
           warnings.push(`Failed to download font: ${font.filename}`);
         }
       }
 
-      // Generate CSS pointing to local font files
+      // Generate CSS pointing to local font files (for index.html)
       if (downloadedFonts.length > 0) {
         fontCSS = generateLocalFontCSS(downloadedFonts, "assets/fonts");
+      }
+      // Generate CSS with embedded data URIs (for standalone.html)
+      if (embeddedFonts.length > 0) {
+        embeddedFontCSS = generateEmbeddedFontCSS(embeddedFonts);
       }
     }
 
@@ -1201,11 +1215,11 @@ export async function exportHtml(
     await writeTextFile(indexPath, indexHtml);
     totalSize += new TextEncoder().encode(indexHtml).length;
 
-    // Generate and write standalone.html (with embedded images)
+    // Generate and write standalone.html (with embedded images and fonts)
     const standaloneHtml = generateStandaloneHtml(standaloneContent, {
       title,
       themeCSS,
-      fontCSS,
+      fontCSS: embeddedFontCSS || fontCSS, // Use embedded fonts for standalone
       contentCSS,
       readerCSS,
       readerJS,

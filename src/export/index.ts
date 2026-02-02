@@ -53,9 +53,11 @@ export {
   getUserFontFile,
   downloadFont,
   generateLocalFontCSS,
+  generateEmbeddedFontCSS,
+  fontDataToDataUri,
   KATEX_FONTS,
 } from "./fontEmbedder";
-export type { FontConfig, FontEmbedResult, FontFile, DownloadedFont } from "./fontEmbedder";
+export type { FontConfig, FontEmbedResult, FontFile, DownloadedFont, EmbeddedFont } from "./fontEmbedder";
 
 // HTML Export
 export { exportHtml, copyHtmlToClipboard } from "./htmlExport";
