@@ -22,6 +22,7 @@ export const WRITER_MODE_TOOLS = [
   'insert_section', // Add new section
   'move_section', // Reorder sections
   'write_paragraph', // Modify paragraph (for flat documents)
+  'smart_insert', // Insert at common locations (end, after paragraph/section)
 
   // === Control ===
   'editor_undo', // Fix mistakes

@@ -48,6 +48,7 @@ export { registerMutationTools } from './tools/mutations.js';
 export { registerSectionTools } from './tools/sections.js';
 export { registerBatchOpTools } from './tools/batch-ops.js';
 export { registerParagraphTools } from './tools/paragraphs.js';
+export { registerSmartInsertTool } from './tools/smart-insert.js';
 
 // Resource registrations
 export { registerDocumentResources } from './resources/document.js';
@@ -121,6 +122,9 @@ export type {
   ParagraphInfo,
   ParagraphOperation,
   WriteParagraphResult,
+  // Smart insert types
+  SmartInsertDestination,
+  SmartInsertResult,
 } from './bridge/types.js';
 
 export type {
@@ -151,6 +155,7 @@ import { registerMutationTools } from './tools/mutations.js';
 import { registerSectionTools } from './tools/sections.js';
 import { registerBatchOpTools } from './tools/batch-ops.js';
 import { registerParagraphTools } from './tools/paragraphs.js';
+import { registerSmartInsertTool } from './tools/smart-insert.js';
 import { registerDocumentResources } from './resources/document.js';
 import type { Bridge } from './bridge/types.js';
 
@@ -180,6 +185,7 @@ export function createVMarkMcpServer(bridge: Bridge): VMarkMcpServer {
   registerSectionTools(server);
   registerBatchOpTools(server);
   registerParagraphTools(server);
+  registerSmartInsertTool(server);
 
   // Register resources
   registerDocumentResources(server);
@@ -242,6 +248,7 @@ export const TOOL_CATEGORIES = [
     tools: [
       'read_paragraph',
       'write_paragraph',
+      'smart_insert',
     ],
   },
   {

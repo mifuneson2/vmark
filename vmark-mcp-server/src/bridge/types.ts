@@ -376,6 +376,36 @@ export interface WriteParagraphResult {
 }
 
 // =============================================================================
+// Smart Insert Types
+// =============================================================================
+
+/**
+ * Smart insert destination specification.
+ * Provides intuitive insertion points for common scenarios.
+ */
+export type SmartInsertDestination =
+  | 'end_of_document'
+  | 'start_of_document'
+  | { after_paragraph: number }
+  | { after_paragraph_containing: string }
+  | { after_section: string };
+
+/**
+ * Smart insert result.
+ */
+export interface SmartInsertResult {
+  success: boolean;
+  message: string;
+  suggestionId?: string;
+  applied: boolean;
+  newRevision?: string;
+  insertedAt?: {
+    from: number;
+    to: number;
+  };
+}
+
+// =============================================================================
 // Table Batch Operation Types
 // =============================================================================
 
@@ -660,7 +690,9 @@ export type BridgeRequest =
   | { type: 'list.batchModify'; baseRevision: string; target: ListTarget; operations: ListOperation[]; mode?: OperationMode; windowId?: WindowId }
   // Paragraph commands
   | { type: 'paragraph.read'; target: ParagraphTarget; includeContext?: boolean; windowId?: WindowId }
-  | { type: 'paragraph.write'; baseRevision: string; target: ParagraphTarget; operation: ParagraphOperation; content?: string; mode?: OperationMode; windowId?: WindowId };
+  | { type: 'paragraph.write'; baseRevision: string; target: ParagraphTarget; operation: ParagraphOperation; content?: string; mode?: OperationMode; windowId?: WindowId }
+  // Smart insert command
+  | { type: 'smartInsert'; baseRevision: string; destination: SmartInsertDestination; content: string; mode?: OperationMode; windowId?: WindowId };
 
 /**
  * Bridge response types - responses from VMark.

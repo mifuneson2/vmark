@@ -144,6 +144,9 @@ import {
   handleParagraphWrite,
 } from "./paragraphHandlers";
 
+// Smart insert handlers
+import { handleSmartInsert } from "./smartInsertHandlers";
+
 // Batch operation handlers (AI-Oriented MCP Design)
 import {
   handleTableBatchModify,
@@ -443,6 +446,11 @@ async function handleRequest(event: McpRequestEvent): Promise<void> {
         break;
       case "paragraph.write":
         await handleParagraphWrite(id, args);
+        break;
+
+      // Smart insert (intuitive insertion at common locations)
+      case "smartInsert":
+        await handleSmartInsert(id, args);
         break;
 
       // Batch operations (AI-Oriented MCP Design)
