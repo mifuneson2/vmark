@@ -20,7 +20,6 @@ import {
   getSourcePeekRange,
   serializeSourcePeekRange,
   applySourcePeekMarkdown,
-  getSourcePeekAnchorRect,
 } from "./sourcePeek";
 
 function createSchema() {
@@ -139,61 +138,6 @@ describe("sourcePeek helpers", () => {
     // Should fall back to selection from/to
     expect(range.from).toBe(0);
     expect(range.to).toBe(doc.content.size);
-  });
-});
-
-describe("getSourcePeekAnchorRect", () => {
-  it("returns null when coordsAtPos throws", () => {
-    const mockView = {
-      coordsAtPos: vi.fn(() => {
-        throw new Error("Position not valid");
-      }),
-    } as unknown as EditorView;
-
-    const result = getSourcePeekAnchorRect(mockView, { from: 0, to: 10 });
-
-    expect(result).toBeNull();
-  });
-
-  it("calculates correct bounding rect from view coordinates", () => {
-    const mockView = {
-      coordsAtPos: vi.fn((pos: number) => {
-        if (pos === 0) {
-          return { top: 100, left: 50, right: 150, bottom: 120 };
-        }
-        // to - 1 = 9
-        return { top: 100, left: 100, right: 200, bottom: 120 };
-      }),
-    } as unknown as EditorView;
-
-    const result = getSourcePeekAnchorRect(mockView, { from: 0, to: 10 });
-
-    expect(result).toEqual({
-      top: 100,
-      left: 50,
-      right: 200,
-      bottom: 120,
-    });
-  });
-
-  it("handles same from and to position", () => {
-    const mockView = {
-      coordsAtPos: vi.fn(() => ({
-        top: 100,
-        left: 50,
-        right: 60,
-        bottom: 120,
-      })),
-    } as unknown as EditorView;
-
-    const result = getSourcePeekAnchorRect(mockView, { from: 5, to: 5 });
-
-    expect(result).toEqual({
-      top: 100,
-      left: 50,
-      right: 60,
-      bottom: 120,
-    });
   });
 });
 

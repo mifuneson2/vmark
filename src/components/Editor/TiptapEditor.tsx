@@ -29,8 +29,8 @@ import { useTiptapSelectionCommands } from "@/hooks/useTiptapSelectionCommands";
 import { useTiptapTableCommands } from "@/hooks/useTiptapTableCommands";
 import { useImageDragDrop } from "@/hooks/useImageDragDrop";
 import { ImageContextMenu } from "./ImageContextMenu";
-import { SourcePeek } from "./SourcePeek";
 import "@/plugins/codeBlockLineNumbers/code-block-line-numbers.css";
+import "@/plugins/sourcePeekInline/source-peek-inline.css";
 
 /**
  * Delay before enabling cursor tracking after editor creation.
@@ -391,7 +391,6 @@ export function TiptapEditorInner() {
         <EditorContent editor={editor} />
       </div>
       <ImageContextMenu onAction={handleImageContextMenuAction} />
-      <SourcePeek getEditorView={getEditorView} />
     </>
   );
 }

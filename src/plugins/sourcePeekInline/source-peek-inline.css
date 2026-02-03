@@ -1,0 +1,228 @@
+/**
+ * Inline Source Peek Styles
+ *
+ * Split view layout:
+ * ┌─────────────────────────────────────┐
+ * │  Header                             │  ← Block type | Cancel | Save
+ * ├─────────────────────────────────────┤
+ * │  CodeMirror Editor                  │  ← Markdown source
+ * ├─────────────────────────────────────┤
+ * │  Rendered Preview                   │  ← Live Tiptap block (dimmed)
+ * └─────────────────────────────────────┘
+ */
+
+/* Container wrapping the entire Source Peek inline widget */
+.source-peek-inline {
+  display: flex;
+  flex-direction: column;
+  margin: 0.5em 0;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-color);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+/* Header bar with block type label and action buttons */
+.source-peek-inline-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  font-size: 11px;
+}
+
+.source-peek-inline-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.source-peek-inline-block-type {
+  padding: 2px 6px;
+  background: var(--hover-bg);
+  border-radius: var(--radius-sm);
+  font-weight: 500;
+  font-size: 10px;
+  text-transform: capitalize;
+  color: var(--text-secondary);
+}
+
+.source-peek-inline-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Header action buttons */
+.source-peek-inline-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.source-peek-inline-btn:hover {
+  background: var(--hover-bg);
+  color: var(--text-primary);
+}
+
+.source-peek-inline-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* Cancel button */
+.source-peek-inline-btn--cancel:hover {
+  color: var(--error-color);
+}
+
+/* Save button */
+.source-peek-inline-btn--save:hover {
+  color: var(--success-color);
+}
+
+/* Live preview toggle */
+.source-peek-inline-btn--live.active {
+  background: var(--accent-bg);
+  color: var(--accent-primary);
+}
+
+/* Focus indicator for buttons */
+.source-peek-inline-btn:focus-visible {
+  outline: none;
+  position: relative;
+}
+
+.source-peek-inline-btn:focus-visible::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  left: 4px;
+  right: 4px;
+  height: 2px;
+  background: var(--primary-color);
+  border-radius: 1px;
+}
+
+/* Hint text (keyboard shortcuts) */
+.source-peek-inline-hint {
+  color: var(--text-tertiary);
+  font-size: 10px;
+  margin-right: 4px;
+}
+
+/* CodeMirror editor container */
+.source-peek-inline-editor {
+  padding: 8px 10px;
+  background: var(--source-mode-bg);
+  border-bottom: 1px solid var(--border-color);
+  min-height: 60px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.source-peek-inline-editor .cm-editor {
+  height: 100%;
+  background: transparent;
+}
+
+.source-peek-inline-editor .cm-content {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.5;
+  padding: 0;
+}
+
+.source-peek-inline-editor .cm-line {
+  padding: 0;
+}
+
+.source-peek-inline-editor .cm-editor.cm-focused {
+  outline: none;
+}
+
+.source-peek-inline-editor .cm-selectionBackground,
+.source-peek-inline-editor .cm-content ::selection {
+  background-color: var(--selection-color) !important;
+}
+
+.source-peek-inline-editor .cm-scroller {
+  font-family: var(--font-mono);
+}
+
+/* Preview section (dimmed rendered block) */
+.source-peek-inline-preview {
+  padding: 8px 10px;
+  background: var(--bg-color);
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.source-peek-inline-preview-label {
+  font-size: 10px;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+/* Error state */
+.source-peek-inline-error {
+  padding: 6px 10px;
+  background: var(--error-bg);
+  color: var(--error-color);
+  font-size: 12px;
+  border-top: 1px solid color-mix(in srgb, var(--error-color) 30%, transparent);
+}
+
+/* Unsaved changes indicator */
+.source-peek-inline-header.has-changes .source-peek-inline-title::after {
+  content: '•';
+  color: var(--warning-color);
+  margin-left: 4px;
+}
+
+/* Dark theme adjustments */
+.dark-theme .source-peek-inline {
+  box-shadow: var(--popup-shadow-dark);
+}
+
+.dark-theme .source-peek-inline-error {
+  background: color-mix(in srgb, var(--error-color) 15%, transparent);
+}
+
+/* Animation for appearing */
+@keyframes source-peek-inline-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.source-peek-inline {
+  animation: source-peek-inline-fade-in 0.15s ease-out;
+}
+
+/* Mark the block being edited with a subtle highlight */
+.source-peek-editing {
+  /* Editing block is hidden - we show our preview instead */
+  display: none;
+}

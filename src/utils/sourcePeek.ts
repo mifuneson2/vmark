@@ -3,7 +3,7 @@ import type { EditorView } from "@tiptap/pm/view";
 import { Fragment, Slice, type Schema, type Node as PMNode, type NodeType } from "@tiptap/pm/model";
 import { parseMarkdown, serializeMarkdown } from "@/utils/markdownPipeline";
 import type { MarkdownPipelineOptions } from "@/utils/markdownPipeline/types";
-import { useSourcePeekStore, type SourcePeekAnchorRect, type SourcePeekRange } from "@/stores/sourcePeekStore";
+import { type SourcePeekRange } from "@/stores/sourcePeekStore";
 
 /**
  * Ensures content has at least one block node.
@@ -31,6 +31,27 @@ function createDocFromSlice(schema: Schema, slice: Slice): PMNode {
   }
 }
 
+/**
+ * Block types that should be edited as a complete unit.
+ * When cursor is inside one of these, expand to include the entire block.
+ */
+const COMPOUND_BLOCK_TYPES = new Set([
+  "table",
+  "bulletList",
+  "orderedList",
+  "blockquote",
+  "detailsBlock",
+  "taskList",
+]);
+
+/**
+ * Get the range for Source Peek editing.
+ * Returns the boundaries of the topmost block at cursor position.
+ *
+ * IMPORTANT: Uses before/after (not start/end) to include wrapper nodes.
+ * - start/end: positions inside the node content
+ * - before/after: positions including the node itself
+ */
 export function getSourcePeekRange(state: EditorState): SourcePeekRange {
   const { selection } = state;
 
@@ -40,13 +61,56 @@ export function getSourcePeekRange(state: EditorState): SourcePeekRange {
 
   const { $from, $to } = selection;
   if ($from.depth >= 1 && $to.depth >= 1) {
+    // Use before/after to include the wrapper node (not start/end)
     return {
-      from: $from.start(1),
-      to: $to.end(1),
+      from: $from.before(1),
+      to: $to.after(1),
     };
   }
 
   return { from: selection.from, to: selection.to };
+}
+
+/**
+ * Get expanded range for Source Peek that includes compound blocks.
+ * When cursor is inside a table, list, blockquote, etc., returns the
+ * entire structure rather than just the immediate block.
+ *
+ * @returns Range expanded to include compound block ancestors
+ */
+export function getExpandedSourcePeekRange(state: EditorState): SourcePeekRange {
+  const { selection } = state;
+  const { $from, $to } = selection;
+
+  // For node selections, use the node directly
+  if (selection instanceof NodeSelection && selection.node.isBlock) {
+    return { from: selection.from, to: selection.to };
+  }
+
+  // Find the topmost compound block ancestor that should be edited as a unit
+  let targetDepth = 1;
+
+  for (let d = 1; d <= $from.depth; d++) {
+    const node = $from.node(d);
+    if (COMPOUND_BLOCK_TYPES.has(node.type.name)) {
+      targetDepth = d;
+      break; // Stop at first compound block (outermost)
+    }
+  }
+
+  // Ensure we have valid depth
+  if ($from.depth < targetDepth || $to.depth < targetDepth) {
+    targetDepth = Math.min($from.depth, $to.depth);
+  }
+
+  if (targetDepth < 1) {
+    return { from: selection.from, to: selection.to };
+  }
+
+  return {
+    from: $from.before(targetDepth),
+    to: $to.after(targetDepth),
+  };
 }
 
 export function serializeSourcePeekRange(
@@ -88,38 +152,4 @@ export function applySourcePeekMarkdown(
     console.error("[SourcePeek] Failed to apply markdown:", error);
     return false;
   }
-}
-
-export function getSourcePeekAnchorRect(
-  view: EditorView,
-  range: SourcePeekRange
-): SourcePeekAnchorRect | null {
-  try {
-    const safeTo = range.to > range.from ? range.to - 1 : range.to;
-    const start = view.coordsAtPos(range.from);
-    const end = view.coordsAtPos(safeTo);
-
-    return {
-      top: Math.min(start.top, end.top),
-      left: Math.min(start.left, end.left),
-      right: Math.max(start.right, end.right),
-      bottom: Math.max(start.bottom, end.bottom),
-    };
-  } catch {
-    // Position may be stale or view not rendered - return null to skip popup
-    return null;
-  }
-}
-
-export function openSourcePeek(
-  view: EditorView,
-  options: MarkdownPipelineOptions = {}
-): void {
-  const range = getSourcePeekRange(view.state);
-  const anchorRect = getSourcePeekAnchorRect(view, range);
-  // Skip if coordinates couldn't be resolved (stale view or empty doc)
-  if (!anchorRect) return;
-
-  const markdown = serializeSourcePeekRange(view.state, range, options);
-  useSourcePeekStore.getState().open({ markdown, range, anchorRect });
 }

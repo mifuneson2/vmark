@@ -11,10 +11,7 @@ import {
 import { useUIStore } from "@/stores/uiStore";
 import { useShortcutsStore } from "@/stores/shortcutsStore";
 import { useSourcePeekStore } from "@/stores/sourcePeekStore";
-import { useSettingsStore } from "@/stores/settingsStore";
-import { useTabStore } from "@/stores/tabStore";
-import { useDocumentStore } from "@/stores/documentStore";
-import { openSourcePeek } from "@/utils/sourcePeek";
+import { openSourcePeekInline, revertAndCloseSourcePeek } from "@/plugins/sourcePeekInline";
 import { guardProseMirrorCommand } from "@/utils/imeGuard";
 import { canRunActionInMultiSelection } from "@/plugins/toolbarActions/multiSelectionPolicy";
 import { getWysiwygMultiSelectionContext } from "@/plugins/toolbarActions/multiSelectionContext";
@@ -26,7 +23,6 @@ import { useLinkCreatePopupStore } from "@/stores/linkCreatePopupStore";
 import { useWikiLinkPopupStore } from "@/stores/wikiLinkPopupStore";
 import { extractHeadingsWithIds } from "@/utils/headingSlug";
 import { getBoundaryRects, getViewportBounds } from "@/utils/popupPosition";
-import { resolveHardBreakStyle } from "@/utils/linebreaks";
 import { triggerPastePlainText } from "@/plugins/markdownPaste/tiptap";
 import { getCurrentWindowLabel } from "@/utils/workspaceStorage";
 import { performUnifiedUndo, performUnifiedRedo } from "@/hooks/useUnifiedHistory";
@@ -940,16 +936,12 @@ export function buildEditorKeymapBindings(): Record<string, Command> {
     if (!view) return false;
     const sourcePeek = useSourcePeekStore.getState();
     if (sourcePeek.isOpen) {
-      sourcePeek.close();
+      // Close inline Source Peek with revert
+      revertAndCloseSourcePeek(view);
       return true;
     }
-    const preserveLineBreaks = useSettingsStore.getState().markdown.preserveLineBreaks;
-    const hardBreakStyleOnSave = useSettingsStore.getState().markdown.hardBreakStyleOnSave;
-    const windowLabel = getCurrentWebviewWindow().label;
-    const tabId = useTabStore.getState().activeTabId[windowLabel];
-    const doc = tabId ? useDocumentStore.getState().getDocument(tabId) : null;
-    const hardBreakStyle = resolveHardBreakStyle(doc?.hardBreakStyle ?? "unknown", hardBreakStyleOnSave);
-    openSourcePeek(view, { preserveLineBreaks, hardBreakStyle });
+    // Open inline Source Peek
+    openSourcePeekInline(view);
     return true;
   });
 
@@ -957,7 +949,8 @@ export function buildEditorKeymapBindings(): Record<string, Command> {
     if (!view) return false;
     const sourcePeek = useSourcePeekStore.getState();
     if (sourcePeek.isOpen) {
-      sourcePeek.close();
+      // Close inline Source Peek with revert
+      revertAndCloseSourcePeek(view);
       return true;
     }
     const uiStore = useUIStore.getState();

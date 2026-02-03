@@ -13,33 +13,126 @@ export interface SourcePeekAnchorRect {
 }
 
 interface SourcePeekState {
+  /** Whether Source Peek is currently open */
   isOpen: boolean;
-  markdown: string;
+
+  /** Position in document where editing block starts */
+  editingPos: number | null;
+
+  /** Range of the block being edited */
   range: SourcePeekRange | null;
+
+  /** Anchor rect for popup positioning (legacy, may be removed) */
   anchorRect: SourcePeekAnchorRect | null;
+
+  /** Current markdown content in the editor */
+  markdown: string;
+
+  /** Original markdown content for checkpoint revert */
+  originalMarkdown: string | null;
+
+  /** Whether live preview is enabled (sync on each keystroke) */
+  livePreview: boolean;
+
+  /** Current parse error, if any */
+  parseError: string | null;
+
+  /** Whether there are unsaved changes */
+  hasUnsavedChanges: boolean;
+
+  /** Block type name being edited (for header display) */
+  blockTypeName: string | null;
 }
 
 interface SourcePeekActions {
-  open: (payload: { markdown: string; range: SourcePeekRange; anchorRect: SourcePeekAnchorRect }) => void;
+  /**
+   * Open Source Peek for a block.
+   * Creates a checkpoint with the original content for revert.
+   */
+  open: (payload: {
+    markdown: string;
+    range: SourcePeekRange;
+    anchorRect?: SourcePeekAnchorRect;
+    blockTypeName?: string;
+  }) => void;
+
+  /**
+   * Close Source Peek without applying changes.
+   * Call revert() first if you want to restore original content.
+   */
   close: () => void;
+
+  /**
+   * Update the markdown content.
+   * Sets hasUnsavedChanges if different from original.
+   */
   setMarkdown: (markdown: string) => void;
+
+  /**
+   * Set parse error message (or null to clear).
+   */
+  setParseError: (error: string | null) => void;
+
+  /**
+   * Toggle live preview mode.
+   */
+  toggleLivePreview: () => void;
+
+  /**
+   * Mark changes as saved (clears hasUnsavedChanges).
+   */
+  markSaved: () => void;
+
+  /**
+   * Get the original markdown for revert.
+   */
+  getOriginalMarkdown: () => string | null;
 }
 
 const initialState: SourcePeekState = {
   isOpen: false,
-  markdown: "",
+  editingPos: null,
   range: null,
   anchorRect: null,
+  markdown: "",
+  originalMarkdown: null,
+  livePreview: false,
+  parseError: null,
+  hasUnsavedChanges: false,
+  blockTypeName: null,
 };
 
-export const useSourcePeekStore = create<SourcePeekState & SourcePeekActions>((set) => ({
+export const useSourcePeekStore = create<SourcePeekState & SourcePeekActions>((set, get) => ({
   ...initialState,
-  open: ({ markdown, range, anchorRect }) => set({
+
+  open: ({ markdown, range, anchorRect, blockTypeName }) => set({
     isOpen: true,
-    markdown,
+    editingPos: range.from,
     range,
-    anchorRect,
+    anchorRect: anchorRect ?? null,
+    markdown,
+    originalMarkdown: markdown,
+    parseError: null,
+    hasUnsavedChanges: false,
+    blockTypeName: blockTypeName ?? null,
   }),
+
   close: () => set({ ...initialState }),
-  setMarkdown: (markdown) => set({ markdown }),
+
+  setMarkdown: (markdown) => {
+    const { originalMarkdown } = get();
+    set({
+      markdown,
+      hasUnsavedChanges: markdown !== originalMarkdown,
+      parseError: null, // Clear error when content changes
+    });
+  },
+
+  setParseError: (error) => set({ parseError: error }),
+
+  toggleLivePreview: () => set((state) => ({ livePreview: !state.livePreview })),
+
+  markSaved: () => set({ hasUnsavedChanges: false }),
+
+  getOriginalMarkdown: () => get().originalMarkdown,
 }));

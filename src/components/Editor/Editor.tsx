@@ -8,7 +8,6 @@ import { HeadingPicker } from "./HeadingPicker";
 import { DropZoneIndicator } from "./DropZoneIndicator";
 import "./editor.css";
 import "./heading-picker.css";
-import "./source-peek.css";
 import "@/plugins/linkPopup/link-popup.css";
 import "@/plugins/imagePopup/image-popup.css";
 import "@/plugins/sourceImagePopup/source-image-popup.css";

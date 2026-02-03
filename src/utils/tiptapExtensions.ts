@@ -60,6 +60,7 @@ import {
 } from "@/plugins/markdownArtifacts";
 import { wikiLinkPopupExtension } from "@/plugins/wikiLinkPopup";
 import { CJKLetterSpacing } from "@/plugins/cjkLetterSpacing";
+import { sourcePeekInlineExtension } from "@/plugins/sourcePeekInline";
 
 /**
  * Creates the array of Tiptap extensions for the WYSIWYG editor.
@@ -162,5 +163,6 @@ export function createTiptapExtensions(): Extensions {
     multiCursorExtension,
     aiSuggestionExtension,
     CJKLetterSpacing,
+    sourcePeekInlineExtension,
   ];
 }
