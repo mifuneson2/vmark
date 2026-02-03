@@ -34,7 +34,7 @@ async function updateNativeMenu(files: RecentFile[]) {
   }
 }
 
-// Register file with macOS Dock recent documents (silently ignored on other platforms)
+/** Register file with macOS Dock recent documents (silently ignored on other platforms) */
 async function registerDockRecent(path: string) {
   try {
     await invoke("register_dock_recent", { path });
