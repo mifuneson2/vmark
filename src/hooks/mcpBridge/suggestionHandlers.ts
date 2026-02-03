@@ -52,8 +52,11 @@ export async function handleSetContent(
     }
 
     // Parse markdown and set as document content
+    // Don't add to history — content loading shouldn't be undoable
     const slice = createMarkdownPasteSlice(editor.state, content);
-    const tr = editor.state.tr.replaceWith(0, editor.state.doc.content.size, slice.content);
+    const tr = editor.state.tr
+      .replaceWith(0, editor.state.doc.content.size, slice.content)
+      .setMeta("addToHistory", false);
     editor.view.dispatch(tr);
 
     await respond({

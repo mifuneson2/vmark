@@ -67,6 +67,7 @@ function createMockEditor(options: {
     insert: vi.fn().mockReturnThis(),
     replaceRange: vi.fn().mockReturnThis(),
     delete: vi.fn().mockReturnThis(),
+    setMeta: vi.fn().mockReturnThis(),
   };
 
   return {

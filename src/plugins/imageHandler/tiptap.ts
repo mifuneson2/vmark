@@ -726,7 +726,10 @@ function handleDrop(view: EditorView, event: DragEvent, _slice: unknown, moved: 
             const insertPos = dropPos ? dropPos.pos : view.state.selection.from;
 
             const { state, dispatch } = view;
-            const tr = state.tr.setSelection(Selection.near(state.doc.resolve(insertPos)));
+            // Selection for drop position — don't create separate undo step
+            const tr = state.tr
+              .setSelection(Selection.near(state.doc.resolve(insertPos)))
+              .setMeta("addToHistory", false);
             dispatch(tr);
 
             insertMultipleImages(view, detection.results, insertPos, insertPos).catch((error) => {
