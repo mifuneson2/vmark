@@ -164,21 +164,6 @@
   font-family: var(--font-mono);
 }
 
-/* Preview section (dimmed rendered block) */
-.source-peek-inline-preview {
-  padding: 8px 10px;
-  background: var(--bg-color);
-  opacity: 0.6;
-  pointer-events: none;
-}
-
-.source-peek-inline-preview-label {
-  font-size: 10px;
-  color: var(--text-tertiary);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 4px;
-}
 
 /* Error state */
 .source-peek-inline-error {

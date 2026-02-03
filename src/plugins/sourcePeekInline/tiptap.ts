@@ -231,15 +231,6 @@ function createCodeMirrorEditor(
   return container;
 }
 
-/**
- * Create preview label.
- */
-function createPreviewLabel(): HTMLElement {
-  const label = document.createElement("div");
-  label.className = "source-peek-inline-preview-label";
-  label.textContent = "Preview";
-  return label;
-}
 
 /**
  * Get current tab ID for unified history.
@@ -477,10 +468,6 @@ export const sourcePeekInlineExtension = Extension.create({
                   }
                 );
                 wrapper.appendChild(editor);
-
-                // Preview label (the actual preview is the node itself)
-                const previewLabel = createPreviewLabel();
-                wrapper.appendChild(previewLabel);
 
                 return wrapper;
               },
