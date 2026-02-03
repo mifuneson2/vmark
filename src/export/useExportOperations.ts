@@ -14,6 +14,7 @@ import React from "react";
 
 import { ExportSurface, type ExportSurfaceRef } from "./ExportSurface";
 import { exportHtml } from "./htmlExport";
+import { exportToPdf as exportToPdfWithWeasyprint, checkWeasyprint } from "./pdf/pdfExport";
 import { waitForAssets } from "./waitForAssets";
 import { captureThemeCSS } from "./themeSnapshot";
 import { useSettingsStore } from "@/stores/settingsStore";
@@ -241,6 +242,98 @@ export async function exportToPdf(markdown: string): Promise<void> {
   } catch (error) {
     console.error("[Print] Failed to print:", error);
     toast.error("Failed to open print dialog");
+  }
+}
+
+export interface ExportToPdfFileOptions {
+  /** Markdown content */
+  markdown: string;
+  /** Default filename */
+  defaultName?: string;
+  /** Default parent directory */
+  defaultDirectory?: string;
+  /** Source file path for resource resolution */
+  sourceFilePath?: string | null;
+  /** Include table of contents */
+  includeToc?: boolean;
+}
+
+/**
+ * Export markdown to PDF file using WeasyPrint.
+ *
+ * Generates PDF-compatible HTML with WeasyPrint CSS transformations,
+ * then converts to PDF via the WeasyPrint CLI.
+ */
+export async function exportToPdfFile(
+  options: ExportToPdfFileOptions
+): Promise<boolean> {
+  const {
+    markdown,
+    defaultName = "document",
+    defaultDirectory,
+    sourceFilePath,
+    includeToc = false,
+  } = options;
+
+  // Check for empty content
+  const trimmedContent = markdown.trim();
+  if (!trimmedContent) {
+    toast.error("No content to export!");
+    return false;
+  }
+
+  // Check if WeasyPrint is available
+  const weasyprintAvailable = await checkWeasyprint();
+  if (!weasyprintAvailable) {
+    toast.error("WeasyPrint not installed. Install with: pip install weasyprint");
+    return false;
+  }
+
+  try {
+    // User picks output path
+    const safeName = `${defaultName}.pdf`;
+    const defaultPath = defaultDirectory
+      ? joinPath(defaultDirectory, safeName)
+      : safeName;
+
+    const selectedPath = await save({
+      defaultPath,
+      title: "Export PDF",
+      filters: [{ name: "PDF Document", extensions: ["pdf"] }],
+    });
+
+    if (!selectedPath) return false;
+
+    // Render markdown to HTML
+    const html = await renderMarkdownToHtml(markdown, true);
+
+    // Export to PDF via WeasyPrint
+    const result = await exportToPdfWithWeasyprint(html, selectedPath, {
+      title: defaultName.replace(/\.[^.]+$/, ""),
+      sourceFilePath,
+      includeToc,
+    });
+
+    if (!result.success) {
+      throw new Error(result.error ?? "PDF export failed");
+    }
+
+    if (result.warnings.length > 0) {
+      console.warn("[PDF Export] Warnings:", result.warnings);
+      const count = result.warnings.length;
+      toast.warning(
+        count === 1
+          ? "1 resource could not be included"
+          : `${count} resources could not be included`
+      );
+    }
+
+    toast.success("Exported to PDF");
+    return true;
+  } catch (error) {
+    console.error("[PDF Export] Failed to export PDF:", error);
+    await showError(FileErrors.exportFailed("PDF"));
+    return false;
   }
 }
 

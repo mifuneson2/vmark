@@ -3,6 +3,7 @@ mod mcp_config;
 mod mcp_server;
 mod menu;
 mod menu_events;
+mod pdf_export;
 mod quit;
 mod watcher;
 mod window_manager;
@@ -115,6 +116,10 @@ pub fn run() {
             hot_exit::commands::hot_exit_restore,
             hot_exit::commands::hot_exit_inspect_session,
             hot_exit::commands::hot_exit_clear_session,
+            pdf_export::check_weasyprint,
+            pdf_export::get_weasyprint_version,
+            pdf_export::convert_html_to_pdf,
+            pdf_export::convert_html_string_to_pdf,
             #[cfg(debug_assertions)]
             debug_log,
             print_webview,
