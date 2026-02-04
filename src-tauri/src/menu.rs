@@ -55,7 +55,7 @@ pub fn create_menu(app: &tauri::AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
         "VMark",
         true,
         &[
-            &PredefinedMenuItem::about(app, Some("About VMark"), None)?,
+            &MenuItem::with_id(app, "about", "About VMark", true, None::<&str>)?,
             &PredefinedMenuItem::separator(app)?,
             &MenuItem::with_id(app, "preferences", "Settings...", true, Some("CmdOrCtrl+,"))?,
             &PredefinedMenuItem::separator(app)?,
@@ -521,7 +521,7 @@ pub fn create_menu(app: &tauri::AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
             &PredefinedMenuItem::separator(app)?,
             &MenuItem::with_id(app, "report-issue", "Report an Issue...", true, None::<&str>)?,
             &PredefinedMenuItem::separator(app)?,
-            &PredefinedMenuItem::about(app, Some("About VMark"), None)?,
+            &MenuItem::with_id(app, "about", "About VMark", true, None::<&str>)?,
         ],
     )?;
 
@@ -720,7 +720,7 @@ fn create_menu_with_shortcuts(
         "VMark",
         true,
         &[
-            &PredefinedMenuItem::about(app, Some("About VMark"), None)?,
+            &MenuItem::with_id(app, "about", "About VMark", true, None::<&str>)?,
             &PredefinedMenuItem::separator(app)?,
             &MenuItem::with_id(app, "preferences", "Settings...", true, get_accel("preferences", "CmdOrCtrl+,"))?,
             &PredefinedMenuItem::separator(app)?,
@@ -1188,7 +1188,7 @@ fn create_menu_with_shortcuts(
             &PredefinedMenuItem::separator(app)?,
             &MenuItem::with_id(app, "report-issue", "Report an Issue...", true, None::<&str>)?,
             &PredefinedMenuItem::separator(app)?,
-            &PredefinedMenuItem::about(app, Some("About VMark"), None)?,
+            &MenuItem::with_id(app, "about", "About VMark", true, None::<&str>)?,
         ],
     )?;
 

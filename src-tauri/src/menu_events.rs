@@ -308,6 +308,22 @@ pub fn handle_menu_event(app: &AppHandle, event: tauri::menu::MenuEvent) {
         return;
     }
 
+    // "about" - open Settings window at About section
+    if id == "about" {
+        #[cfg(debug_assertions)]
+        eprintln!("[menu_events] Handling 'about' menu event");
+        match crate::window_manager::show_settings_window_section(app, Some("about")) {
+            Ok(label) => {
+                #[cfg(debug_assertions)]
+                eprintln!("[menu_events] Settings window (about) ready: {}", label);
+            }
+            Err(e) => {
+                eprintln!("[menu_events] ERROR: Failed to show about: {}", e);
+            }
+        }
+        return;
+    }
+
     // "new" creates a tab in current window, but if no windows exist, create a new window
     // (Cmd+N when last window closed should open a new window)
     if id == "new" {

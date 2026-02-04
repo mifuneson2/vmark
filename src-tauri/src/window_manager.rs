@@ -222,13 +222,22 @@ pub fn close_window(app: AppHandle, label: String) -> Result<(), String> {
 /// If settings window exists, focuses it. Otherwise creates a new one.
 /// Returns the window label on success.
 pub fn show_settings_window(app: &AppHandle) -> Result<String, tauri::Error> {
+    show_settings_window_section(app, None)
+}
+
+/// Create or focus the settings window, optionally navigating to a specific section.
+/// If settings window exists, focuses it and navigates to the section.
+/// Otherwise creates a new one with the section in the URL.
+pub fn show_settings_window_section(app: &AppHandle, section: Option<&str>) -> Result<String, tauri::Error> {
+    use tauri::Emitter;
+
     const SETTINGS_LABEL: &str = "settings";
     const SETTINGS_WIDTH: f64 = 760.0;
     const SETTINGS_HEIGHT: f64 = 540.0;
     const SETTINGS_MIN_WIDTH: f64 = 600.0;
     const SETTINGS_MIN_HEIGHT: f64 = 400.0;
 
-    // If settings window exists, bring it to front and focus it
+    // If settings window exists, bring it to front, focus, and navigate to section
     if let Some(window) = app.get_webview_window(SETTINGS_LABEL) {
         #[cfg(debug_assertions)]
         eprintln!("[window_manager] Settings window exists, focusing it");
@@ -241,11 +250,21 @@ pub fn show_settings_window(app: &AppHandle) -> Result<String, tauri::Error> {
         // Show and focus
         let _ = window.show();
         let _ = window.set_focus();
+        // Navigate to section if specified
+        if let Some(s) = section {
+            let _ = window.emit("settings:navigate", s);
+        }
         return Ok(SETTINGS_LABEL.to_string());
     }
 
     #[cfg(debug_assertions)]
     eprintln!("[window_manager] Creating new settings window");
+
+    // Build URL with optional section query param
+    let url = match section {
+        Some(s) => format!("/settings?section={}", s),
+        None => "/settings".to_string(),
+    };
 
     // Create new settings window
     // Note: Don't use .center() here as the window-state plugin may override it.
@@ -253,7 +272,7 @@ pub fn show_settings_window(app: &AppHandle) -> Result<String, tauri::Error> {
     let mut builder = WebviewWindowBuilder::new(
         app,
         SETTINGS_LABEL,
-        WebviewUrl::App("/settings".into()),
+        WebviewUrl::App(url.into()),
     )
     .title("Settings")
     .inner_size(SETTINGS_WIDTH, SETTINGS_HEIGHT)
