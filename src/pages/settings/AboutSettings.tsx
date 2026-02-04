@@ -8,8 +8,9 @@ import { useState, useEffect } from "react";
 import { getVersion } from "@tauri-apps/api/app";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { listen } from "@tauri-apps/api/event";
-import { SettingRow, SettingsGroup, Button } from "./components";
+import { SettingRow, SettingsGroup, Button, Toggle } from "./components";
 import { useUpdateStore } from "@/stores/updateStore";
+import { useSettingsStore } from "@/stores/settingsStore";
 import { useUpdateOperations } from "@/hooks/useUpdateOperations";
 import {
   Loader2,
@@ -285,6 +286,8 @@ function UpdateAvailableCard() {
 
 export function AboutSettings() {
   const status = useUpdateStore((state) => state.status);
+  const autoCheckEnabled = useSettingsStore((state) => state.update.autoCheckEnabled);
+  const updateUpdateSetting = useSettingsStore((state) => state.updateUpdateSetting);
   const { checkForUpdates } = useUpdateOperations();
   const [isChecking, setIsChecking] = useState(false);
 
@@ -319,6 +322,15 @@ export function AboutSettings() {
 
       {/* Check for updates */}
       <SettingsGroup title="Updates">
+        <SettingRow
+          label="Automatic updates"
+          description="Check for updates on startup"
+        >
+          <Toggle
+            checked={autoCheckEnabled}
+            onChange={(v) => updateUpdateSetting("autoCheckEnabled", v)}
+          />
+        </SettingRow>
         <SettingRow label="Check for updates">
           <div className="flex items-center gap-3">
             <StatusIndicator />

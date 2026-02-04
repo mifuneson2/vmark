@@ -24,6 +24,10 @@ const ONE_DAY = 24 * 60 * 60 * 1000;
 const ONE_WEEK = 7 * ONE_DAY;
 const STARTUP_CHECK_DELAY_MS = 2000; // Delay to let app initialize before checking
 
+// Retry constants
+const MAX_RETRIES = 3;
+const BASE_RETRY_DELAY_MS = 5000; // 5 seconds base delay
+
 /**
  * Determine if we should check for updates based on settings and last check time.
  */
@@ -58,6 +62,8 @@ function shouldCheckNow(
 export function useUpdateChecker() {
   const hasChecked = useRef(false);
   const hasAutoDownloaded = useRef(false);
+  const retryCount = useRef(0);
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { doCheckForUpdates, doDownloadAndInstall, EVENTS } = useUpdateOperationHandler();
 
   const autoCheckEnabled = useSettingsStore((state) => state.update.autoCheckEnabled);
@@ -68,7 +74,6 @@ export function useUpdateChecker() {
 
   const status = useUpdateStore((state) => state.status);
   const updateInfo = useUpdateStore((state) => state.updateInfo);
-  const error = useUpdateStore((state) => state.error);
   const dismiss = useUpdateStore((state) => state.dismiss);
 
   // Track previous status for toast notifications
@@ -92,6 +97,8 @@ export function useUpdateChecker() {
   }, [autoCheckEnabled, checkFrequency, lastCheckTimestamp, doCheckForUpdates]);
 
   // Show toast notifications on status changes
+  // Only show toasts for actionable states or manual check feedback
+  // "available", "downloading", "error" are handled silently via StatusBar
   useEffect(() => {
     const prevStatus = prevStatusRef.current;
     prevStatusRef.current = status;
@@ -100,28 +107,10 @@ export function useUpdateChecker() {
     if (prevStatus === null || prevStatus === status) return;
 
     switch (status) {
-      case "available":
-        if (updateInfo) {
-          toast.info(`Update available: v${updateInfo.version}`, {
-            duration: 5000,
-          });
-        }
-        break;
-      case "downloading":
-        toast("Downloading update...", {
-          duration: 3000,
-        });
-        break;
       case "ready":
+        // Actionable: user can restart to apply update
         if (updateInfo) {
           toast.success(`v${updateInfo.version} ready to install`, {
-            duration: 5000,
-          });
-        }
-        break;
-      case "error":
-        if (error) {
-          toast.error(`Update check failed: ${error}`, {
             duration: 5000,
           });
         }
@@ -135,7 +124,46 @@ export function useUpdateChecker() {
         }
         break;
     }
-  }, [status, updateInfo, error]);
+  }, [status, updateInfo]);
+
+  // Auto-retry on error with exponential backoff
+  useEffect(() => {
+    const prevStatus = prevStatusRef.current;
+
+    // Reset retry count on successful check
+    if (status === "up-to-date" || status === "available") {
+      retryCount.current = 0;
+    }
+
+    // Retry on error if we haven't exceeded max retries
+    if (status === "error" && prevStatus === "checking" && autoCheckEnabled) {
+      if (retryCount.current < MAX_RETRIES) {
+        // Exponential backoff: 5s, 10s, 20s
+        const delay = BASE_RETRY_DELAY_MS * Math.pow(2, retryCount.current);
+        retryCount.current += 1;
+
+        console.log(
+          `[UpdateChecker] Retry ${retryCount.current}/${MAX_RETRIES} in ${delay / 1000}s`
+        );
+
+        retryTimerRef.current = setTimeout(() => {
+          doCheckForUpdates().catch((err) => {
+            console.error("[UpdateChecker] Retry failed:", err);
+          });
+        }, delay);
+      } else {
+        console.log("[UpdateChecker] Max retries reached, giving up");
+      }
+    }
+
+    // Cleanup timer on unmount or status change
+    return () => {
+      if (retryTimerRef.current) {
+        clearTimeout(retryTimerRef.current);
+        retryTimerRef.current = null;
+      }
+    };
+  }, [status, autoCheckEnabled, doCheckForUpdates]);
 
   // Auto-dismiss if the available version matches skipVersion
   useEffect(() => {
