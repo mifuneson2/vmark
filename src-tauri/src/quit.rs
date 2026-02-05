@@ -62,7 +62,7 @@ pub fn start_quit(app: &AppHandle) {
     if targets.is_empty() {
         // Keep QUIT_IN_PROGRESS true so ExitRequested handler allows exit
         set_exit_allowed(true);
-        mcp_server::cleanup();
+        mcp_server::cleanup(app);
         app.exit(0);
         return;
     }
@@ -97,7 +97,7 @@ pub fn handle_window_destroyed(app: &AppHandle, label: &str) {
         eprintln!("[Tauri] handle_window_destroyed: all targets done, calling app.exit(0)");
         // Allow the ExitRequested handler through (some platforms trigger it again during quit).
         set_exit_allowed(true);
-        mcp_server::cleanup();
+        mcp_server::cleanup(app);
         app.exit(0);
     }
 }

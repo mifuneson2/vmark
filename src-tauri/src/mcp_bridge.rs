@@ -8,19 +8,20 @@
  *
  * Port discovery:
  * - Server binds to port 0 (OS assigns available port)
- * - Actual port written to ~/.vmark/mcp-port
- * - MCP sidecar reads port from this file (no user configuration needed)
+ * - Actual port written to Tauri's app data directory (platform-specific)
+ * - MCP sidecar reads app data path from ~/.vmark/app-data-path bootstrap file
  */
 
+use crate::app_paths;
 use futures_util::{SinkExt, StreamExt};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::net::SocketAddr;
-use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Instant;
-use tauri::{AppHandle, Emitter};
+use tauri::AppHandle;
+use tauri::Emitter;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::{mpsc, oneshot, Mutex, RwLock};
 use tokio_tungstenite::{accept_async, tungstenite::Message};
@@ -195,24 +196,23 @@ fn get_write_lock() -> Arc<tokio::sync::Mutex<()>> {
         .clone()
 }
 
-/// Get the path to the port file (~/.vmark/mcp-port)
-fn get_port_file_path() -> Option<PathBuf> {
-    dirs::home_dir().map(|home| home.join(".vmark").join("mcp-port"))
-}
+/// Write the port to the port file for MCP sidecar discovery.
+/// Uses atomic write to prevent partial reads by the sidecar.
+fn write_port_file(app: &AppHandle, port: u16) -> Result<(), String> {
+    let path = app_paths::get_port_file_path(app)?;
 
-/// Write the port to the port file for MCP sidecar discovery
-fn write_port_file(port: u16) -> Result<(), String> {
-    let path = get_port_file_path().ok_or("Cannot determine home directory")?;
-
-    // Create ~/.vmark directory if it doesn't exist
+    // Create app data directory if it doesn't exist
     if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent)
-            .map_err(|e| format!("Failed to create ~/.vmark directory: {}", e))?;
+        fs::create_dir_all(parent).map_err(|e| {
+            format!(
+                "Failed to create app data directory {:?}: {}",
+                parent, e
+            )
+        })?;
     }
 
-    // Write port to file
-    fs::write(&path, port.to_string())
-        .map_err(|e| format!("Failed to write port file: {}", e))?;
+    // Write port atomically to prevent partial reads
+    app_paths::atomic_write_file(&path, port.to_string().as_bytes())?;
 
     #[cfg(debug_assertions)]
     eprintln!("[MCP Bridge] Port {} written to {:?}", port, path);
@@ -220,12 +220,31 @@ fn write_port_file(port: u16) -> Result<(), String> {
     Ok(())
 }
 
-/// Remove the port file when bridge stops
-fn remove_port_file() {
-    if let Some(path) = get_port_file_path() {
-        let _ = fs::remove_file(&path);
-        #[cfg(debug_assertions)]
-        eprintln!("[MCP Bridge] Port file removed: {:?}", path);
+/// Remove the port file when bridge stops.
+/// Logs errors for non-NotFound failures (permission issues, etc.)
+fn remove_port_file(app: &AppHandle) {
+    match app_paths::get_port_file_path(app) {
+        Ok(path) => {
+            match fs::remove_file(&path) {
+                Ok(()) => {
+                    #[cfg(debug_assertions)]
+                    eprintln!("[MCP Bridge] Port file removed: {:?}", path);
+                }
+                Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+                    // Already removed - not an error
+                }
+                Err(e) => {
+                    // Real error - log it
+                    eprintln!(
+                        "[MCP Bridge] Warning: Failed to remove port file {:?}: {}",
+                        path, e
+                    );
+                }
+            }
+        }
+        Err(e) => {
+            eprintln!("[MCP Bridge] Warning: Cannot determine port file path: {}", e);
+        }
     }
 }
 
@@ -286,7 +305,7 @@ pub async fn start_bridge(app: AppHandle, _port: u16) -> Result<u16, String> {
         .port();
 
     // Write port to file for MCP sidecar discovery
-    write_port_file(actual_port)?;
+    write_port_file(&app, actual_port)?;
 
     #[cfg(debug_assertions)]
     eprintln!(
@@ -331,9 +350,9 @@ pub async fn start_bridge(app: AppHandle, _port: u16) -> Result<u16, String> {
 }
 
 /// Stop the MCP bridge WebSocket server.
-pub async fn stop_bridge() {
+pub async fn stop_bridge(app: &AppHandle) {
     // Remove port file so MCP sidecar knows bridge is stopped
-    remove_port_file();
+    remove_port_file(app);
 
     // Send shutdown signal to server loop
     let holder = get_shutdown_holder();

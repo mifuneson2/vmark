@@ -12,10 +12,10 @@
  * but this should NOT be used when AI clients are configured to use VMark.
  */
 
+use crate::app_paths;
 use crate::mcp_bridge;
 use serde::{Deserialize, Serialize};
 use std::fs;
-use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
 use tauri::{command, AppHandle, Emitter};
@@ -100,7 +100,7 @@ pub async fn mcp_bridge_start(app: AppHandle, port: u16) -> Result<McpServerStat
 #[command]
 pub async fn mcp_bridge_stop(app: AppHandle) -> Result<McpServerStatus, String> {
     // Stop the bridge
-    mcp_bridge::stop_bridge().await;
+    mcp_bridge::stop_bridge(&app).await;
 
     // Mark bridge as stopped
     BRIDGE_RUNNING.store(false, Ordering::SeqCst);
@@ -274,11 +274,6 @@ pub async fn mcp_bridge_client_count() -> Result<usize, String> {
     Ok(mcp_bridge::client_count().await)
 }
 
-/// Get the path to the MCP settings file (~/.vmark/mcp-settings.json)
-fn get_mcp_settings_path() -> Option<PathBuf> {
-    dirs::home_dir().map(|home| home.join(".vmark").join("mcp-settings.json"))
-}
-
 /// MCP settings file content
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -288,14 +283,20 @@ struct McpSettings {
 
 /// Write tool mode to config file for MCP server to read.
 /// The MCP server reads this file at startup to filter tools.
+///
+/// Note: `app: AppHandle` is injected by Tauri commands; frontend only passes `mode`.
 #[command]
-pub fn write_mcp_tool_mode(mode: String) -> Result<(), String> {
-    let path = get_mcp_settings_path().ok_or("Cannot determine home directory")?;
+pub fn write_mcp_tool_mode(app: AppHandle, mode: String) -> Result<(), String> {
+    let path = app_paths::get_mcp_settings_path(&app)?;
 
-    // Create ~/.vmark directory if it doesn't exist
+    // Create app data directory if it doesn't exist
     if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent)
-            .map_err(|e| format!("Failed to create ~/.vmark directory: {}", e))?;
+        fs::create_dir_all(parent).map_err(|e| {
+            format!(
+                "Failed to create app data directory {:?}: {}",
+                parent, e
+            )
+        })?;
     }
 
     // Read existing settings or create new
@@ -315,11 +316,11 @@ pub fn write_mcp_tool_mode(mode: String) -> Result<(), String> {
     // Update tool mode
     settings.tool_mode = mode.clone();
 
-    // Write to file
+    // Write to file atomically
     let content = serde_json::to_string_pretty(&settings)
         .map_err(|e| format!("Failed to serialize settings: {}", e))?;
 
-    fs::write(&path, content).map_err(|e| format!("Failed to write settings file: {}", e))?;
+    app_paths::atomic_write_file(&path, content.as_bytes())?;
 
     #[cfg(debug_assertions)]
     eprintln!(
@@ -331,10 +332,12 @@ pub fn write_mcp_tool_mode(mode: String) -> Result<(), String> {
 }
 
 /// Cleanup function to kill the MCP server on app exit.
-pub fn cleanup() {
-    // Stop the bridge
-    tauri::async_runtime::spawn(async {
-        mcp_bridge::stop_bridge().await;
+/// Uses block_on to ensure cleanup completes before app exits.
+pub fn cleanup(app: &AppHandle) {
+    // Stop the bridge synchronously - must complete before exit
+    let app_clone = app.clone();
+    tauri::async_runtime::block_on(async move {
+        mcp_bridge::stop_bridge(&app_clone).await;
     });
 
     BRIDGE_RUNNING.store(false, Ordering::SeqCst);

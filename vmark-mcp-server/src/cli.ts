@@ -109,9 +109,9 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z, ZodTypeAny } from 'zod';
 import { execSync } from 'child_process';
-import { readFileSync, existsSync } from 'fs';
+import { readFileSync } from 'fs';
 import { join } from 'path';
-import { homedir } from 'os';
+import { homedir, platform } from 'os';
 
 /**
  * Tool mode setting.
@@ -121,17 +121,96 @@ import { homedir } from 'os';
 type ToolMode = 'writer' | 'full';
 
 /**
- * MCP settings stored in ~/.vmark/mcp-settings.json
+ * MCP settings stored in app data directory.
  */
 interface McpSettings {
   toolMode?: ToolMode;
 }
 
 /**
- * Get the path to the MCP settings file (~/.vmark/mcp-settings.json).
+ * Tauri app identifier for path resolution.
+ * Must match the identifier in tauri.conf.json.
+ */
+const APP_IDENTIFIER = process.env.VMARK_APP_IDENTIFIER || 'app.vmark';
+
+/** Cached home directory to avoid repeated syscalls. */
+const HOME_DIR = homedir();
+
+/**
+ * Get the legacy directory path (~/.vmark/).
+ * Used for reading the bootstrap file.
+ */
+function getLegacyDir(): string {
+  return join(HOME_DIR, '.vmark');
+}
+
+/**
+ * Check if an error is ENOENT (file not found).
+ */
+function isNotFoundError(err: unknown): boolean {
+  return (
+    err !== null &&
+    typeof err === 'object' &&
+    'code' in err &&
+    err.code === 'ENOENT'
+  );
+}
+
+/**
+ * Get the app data directory path.
+ *
+ * Resolution order:
+ * 1. Read from bootstrap file (~/.vmark/app-data-path) written by VMark Rust
+ * 2. Fall back to platform-specific path
+ *
+ * The bootstrap file is the source of truth - if it contains a path, we use it
+ * even if the directory doesn't exist yet (it will be created by VMark).
+ */
+function getAppDataDir(): string {
+  // 1. Try bootstrap file (written by Rust on app startup)
+  const bootstrapPath = join(getLegacyDir(), 'app-data-path');
+  try {
+    const appDataPath = readFileSync(bootstrapPath, 'utf8').trim();
+    // Trust the bootstrap file if it contains an absolute path
+    if (appDataPath && appDataPath.startsWith('/')) {
+      return appDataPath;
+    }
+    // On Windows, check for drive letter (C:\...)
+    if (appDataPath && /^[A-Za-z]:[\\/]/.test(appDataPath)) {
+      return appDataPath;
+    }
+  } catch (err) {
+    if (!isNotFoundError(err)) {
+      // Real error (permission denied, etc.) - log for debugging
+      if (process.env.VMARK_DEBUG) {
+        console.error('[VMark MCP] Failed to read bootstrap file:', err);
+      }
+    }
+    // ENOENT is expected if VMark hasn't started yet - fall through
+  }
+
+  // 2. Platform-specific fallback
+  const xdgDataHome = process.env.XDG_DATA_HOME || join(HOME_DIR, '.local', 'share');
+  const appDataRoaming = process.env.APPDATA || join(HOME_DIR, 'AppData', 'Roaming');
+
+  switch (platform()) {
+    case 'darwin':
+      return join(HOME_DIR, 'Library', 'Application Support', APP_IDENTIFIER);
+    case 'linux':
+      return join(xdgDataHome, APP_IDENTIFIER);
+    case 'win32':
+      return join(appDataRoaming, APP_IDENTIFIER);
+    default:
+      // Unknown platform - fall back to legacy directory
+      return getLegacyDir();
+  }
+}
+
+/**
+ * Get the path to the MCP settings file in the app data directory.
  */
 function getMcpSettingsPath(): string {
-  return join(homedir(), '.vmark', 'mcp-settings.json');
+  return join(getAppDataDir(), 'mcp-settings.json');
 }
 
 /**
@@ -141,10 +220,6 @@ function getMcpSettingsPath(): string {
 function readToolMode(): ToolMode {
   const settingsPath = getMcpSettingsPath();
 
-  if (!existsSync(settingsPath)) {
-    return 'writer'; // Default to writer mode
-  }
-
   try {
     const content = readFileSync(settingsPath, 'utf8');
     const settings: McpSettings = JSON.parse(content);
@@ -152,18 +227,24 @@ function readToolMode(): ToolMode {
     if (settings.toolMode === 'full' || settings.toolMode === 'writer') {
       return settings.toolMode;
     }
-  } catch {
-    // File read/parse error - use default
+  } catch (err) {
+    if (!isNotFoundError(err)) {
+      // Real error (not just missing file) - log for debugging
+      if (process.env.VMARK_DEBUG) {
+        console.error('[VMark MCP] Failed to read settings file:', err);
+      }
+    }
+    // ENOENT or parse error - use default
   }
 
   return 'writer'; // Default to writer mode
 }
 
 /**
- * Get the path to the port file (~/.vmark/mcp-port).
+ * Get the path to the port file in the app data directory.
  */
 function getPortFilePath(): string {
-  return join(homedir(), '.vmark', 'mcp-port');
+  return join(getAppDataDir(), 'mcp-port');
 }
 
 /**
@@ -173,10 +254,6 @@ function getPortFilePath(): string {
 function readPortFromFile(): number | undefined {
   const portFilePath = getPortFilePath();
 
-  if (!existsSync(portFilePath)) {
-    return undefined;
-  }
-
   try {
     const content = readFileSync(portFilePath, 'utf8').trim();
     const port = parseInt(content, 10);
@@ -184,8 +261,14 @@ function readPortFromFile(): number | undefined {
     if (!isNaN(port) && port > 0 && port < 65536) {
       return port;
     }
-  } catch {
-    // File read error - return undefined
+  } catch (err) {
+    if (!isNotFoundError(err)) {
+      // Real error (permission denied, etc.) - log for debugging
+      if (process.env.VMARK_DEBUG) {
+        console.error('[VMark MCP] Failed to read port file:', err);
+      }
+    }
+    // ENOENT is expected if VMark hasn't started yet
   }
 
   return undefined;
