@@ -58,12 +58,12 @@ export function TerminalPanel() {
     const store = useTerminalSessionStore.getState();
     if (!store.activeSessionId) return;
 
-    if (store.sessions.length <= 1) {
-      // Last session — just hide the panel, keep the session alive
+    const isLast = store.sessions.length <= 1;
+    store.removeSession(store.activeSessionId);
+
+    // Last session — also hide the panel
+    if (isLast) {
       useUIStore.getState().toggleTerminal();
-    } else {
-      // Multiple sessions — kill and remove the active one
-      store.removeSession(store.activeSessionId);
     }
   }, []);
 
