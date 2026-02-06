@@ -58,6 +58,12 @@ fn print_webview(window: tauri::WebviewWindow) -> Result<(), String> {
     window.print().map_err(|e| e.to_string())
 }
 
+/// Return the user's default shell from $SHELL (fallback: /bin/sh)
+#[tauri::command]
+fn get_default_shell() -> String {
+    std::env::var("SHELL").unwrap_or_else(|_| "/bin/sh".to_string())
+}
+
 /// Register a file with macOS Dock recent documents
 #[cfg(target_os = "macos")]
 #[tauri::command]
@@ -136,6 +142,7 @@ pub fn run() {
             pdf_export::get_weasyprint_version,
             pdf_export::convert_html_to_pdf,
             pdf_export::convert_html_string_to_pdf,
+            get_default_shell,
             #[cfg(debug_assertions)]
             debug_log,
             print_webview,

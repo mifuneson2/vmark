@@ -48,9 +48,7 @@ export function createFileLinkProvider(
       const text = line.translateToString(true);
       const links: ILink[] = [];
 
-      FILE_PATH_RE.lastIndex = 0;
-      let match: RegExpExecArray | null;
-      while ((match = FILE_PATH_RE.exec(text)) !== null) {
+      for (const match of text.matchAll(FILE_PATH_RE)) {
         const rawPath = match[1];
         if (!looksLikeFilePath(rawPath)) continue;
 

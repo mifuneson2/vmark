@@ -4,6 +4,7 @@ import { FitAddon } from "@xterm/addon-fit";
 import { WebglAddon } from "@xterm/addon-webgl";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { spawn, type IPty } from "tauri-pty";
+import { invoke } from "@tauri-apps/api/core";
 import { useSettingsStore, themes } from "@/stores/settingsStore";
 import { useWorkspaceStore } from "@/stores/workspaceStore";
 import { useTabStore } from "@/stores/tabStore";
@@ -31,11 +32,6 @@ function buildXtermTheme() {
     cursorAccent: colors.background,
     selectionBackground: colors.selection ?? "rgba(0,102,204,0.25)",
   };
-}
-
-/** Detect default shell on macOS/Linux. */
-function getDefaultShell(): string {
-  return "/bin/zsh";
 }
 
 /**
@@ -146,37 +142,50 @@ export function useTerminal(containerRef: React.RefObject<HTMLDivElement | null>
     // Initial fit (after layout settles)
     requestAnimationFrame(() => fit());
 
-    // Spawn PTY
-    try {
-      const pty = spawn(getDefaultShell(), [], {
-        cols: term.cols || 80,
-        rows: term.rows || 24,
-        cwd: resolveTerminalCwd(),
-      });
-      ptyRef.current = pty;
+    // Track disposal so async PTY callbacks don't write to a dead terminal
+    let disposed = false;
 
-      // PTY → xterm (onData sends Uint8Array)
-      pty.onData((data) => {
-        term.write(data);
-      });
+    // Spawn PTY (async — resolves shell from $SHELL env var via Tauri)
+    (async () => {
+      try {
+        const shell = await invoke<string>("get_default_shell");
+        if (disposed) return;
 
-      // PTY exit
-      pty.onExit(({ exitCode }) => {
-        term.write(`\r\n[Process exited with code ${exitCode}]\r\n`);
-        ptyRef.current = null;
-      });
+        const pty = spawn(shell, [], {
+          cols: term.cols || 80,
+          rows: term.rows || 24,
+          cwd: resolveTerminalCwd(),
+        });
+        ptyRef.current = pty;
 
-      // xterm → PTY
-      term.onData((data) => {
-        if (ptyRef.current) {
-          ptyRef.current.write(data);
+        // PTY → xterm (onData sends Uint8Array)
+        pty.onData((data) => {
+          if (!disposed) term.write(data);
+        });
+
+        // PTY exit
+        pty.onExit(({ exitCode }) => {
+          if (!disposed) {
+            term.write(`\r\n[Process exited with code ${exitCode}]\r\n`);
+          }
+          ptyRef.current = null;
+        });
+
+        // xterm → PTY
+        term.onData((data) => {
+          if (ptyRef.current) {
+            ptyRef.current.write(data);
+          }
+        });
+      } catch (err) {
+        if (!disposed) {
+          term.write(`\r\nFailed to start shell: ${err}\r\n`);
         }
-      });
-    } catch (err) {
-      term.write(`\r\nFailed to start shell: ${err}\r\n`);
-    }
+      }
+    })();
 
     return () => {
+      disposed = true;
       if (ptyRef.current) {
         try { ptyRef.current.kill(); } catch { /* ignore */ }
         ptyRef.current = null;

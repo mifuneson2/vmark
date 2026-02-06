@@ -1,8 +1,10 @@
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState, type RefObject } from "react";
 import { useUIStore } from "@/stores/uiStore";
 import { useTerminal } from "./useTerminal";
 import { useTerminalResize } from "./useTerminalResize";
 import "./terminal-panel.css";
+
+const NULL_REF: RefObject<HTMLDivElement | null> = { current: null };
 
 export function TerminalPanel() {
   const visible = useUIStore((s) => s.terminalVisible);
@@ -15,7 +17,7 @@ export function TerminalPanel() {
     if (visible && !activated) setActivated(true);
   }, [visible, activated]);
 
-  const { fit } = useTerminal(activated ? containerRef : { current: null });
+  const { fit } = useTerminal(activated ? containerRef : NULL_REF);
 
   // Refit when shown or resized
   useEffect(() => {
