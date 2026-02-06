@@ -37,7 +37,7 @@ export function usePromptShortcuts() {
     });
 
     return () => {
-      unlisten.then((fn) => fn());
+      unlisten.then((fn) => fn()).catch(() => {});
     };
   }, []);
 }

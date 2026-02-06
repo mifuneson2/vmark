@@ -153,6 +153,14 @@ export function registerPromptTools(server: VMarkMcpServer): void {
       const scope = getStringArg(args, 'scope') ?? 'selection';
       const windowId = resolveWindowId(args.windowId as string | undefined);
 
+      // Validate scope
+      const validScopes = ['selection', 'block', 'document'];
+      if (!validScopes.includes(scope)) {
+        return VMarkMcpServer.errorResult(
+          `Invalid scope "${scope}". Must be one of: ${validScopes.join(', ')}`
+        );
+      }
+
       try {
         const result = await server.sendBridgeRequest<{ status: string }>({
           type: 'prompts.invoke',

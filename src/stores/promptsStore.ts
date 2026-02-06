@@ -45,6 +45,9 @@ interface PromptsActions {
 
 const MAX_RECENTS = 10;
 
+// Race guard counter for loadPrompts — prevents stale results from overwriting
+let _loadId = 0;
+
 // ============================================================================
 // Store
 // ============================================================================
@@ -58,17 +61,22 @@ export const usePromptsStore = create<PromptsState & PromptsActions>()(
       favoritePromptNames: [],
 
       loadPrompts: async (workspaceRoot) => {
+        const thisLoadId = ++_loadId;
         set({ loading: true });
         try {
           const entries: PromptEntry[] = await invoke("list_prompts", {
             workspaceRoot: workspaceRoot ?? null,
           });
 
+          // Stale check
+          if (thisLoadId !== _loadId) return;
+
           const prompts: PromptDefinition[] = [];
           for (const entry of entries) {
             try {
               const content: PromptContent = await invoke("read_prompt", {
                 path: entry.path,
+                workspaceRoot: workspaceRoot ?? null,
               });
               prompts.push({
                 metadata: content.metadata,
@@ -81,10 +89,26 @@ export const usePromptsStore = create<PromptsState & PromptsActions>()(
             }
           }
 
-          set({ prompts, loading: false });
+          // Stale check after reading all prompts
+          if (thisLoadId !== _loadId) return;
+
+          // Prune stale recents/favorites
+          const promptNames = new Set(prompts.map((p) => p.metadata.name));
+          const { recentPromptNames, favoritePromptNames } = get();
+          const prunedRecents = recentPromptNames.filter((n) => promptNames.has(n));
+          const prunedFavorites = favoritePromptNames.filter((n) => promptNames.has(n));
+
+          set({
+            prompts,
+            loading: false,
+            recentPromptNames: prunedRecents,
+            favoritePromptNames: prunedFavorites,
+          });
         } catch (e) {
           console.error("Failed to load prompts:", e);
-          set({ loading: false });
+          if (thisLoadId === _loadId) {
+            set({ loading: false });
+          }
         }
       },
 

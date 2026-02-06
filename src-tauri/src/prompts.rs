@@ -6,7 +6,8 @@
 
 use serde::Serialize;
 use std::collections::HashMap;
-use std::fs;
+use std::fs::{self, OpenOptions};
+use std::io::Write as IoWrite;
 use std::path::{Path, PathBuf};
 use tauri::{command, AppHandle, Manager};
 
@@ -78,8 +79,39 @@ pub fn list_prompts(
 }
 
 /// Read a single prompt file — parse frontmatter and return metadata + template.
+/// Validates the path is within allowed prompt directories to prevent traversal.
 #[command]
-pub fn read_prompt(path: String) -> Result<PromptContent, String> {
+pub fn read_prompt(
+    app: AppHandle,
+    path: String,
+    workspace_root: Option<String>,
+) -> Result<PromptContent, String> {
+    // Canonicalize requested path
+    let requested = fs::canonicalize(&path)
+        .map_err(|e| format!("Invalid prompt path {}: {}", path, e))?;
+
+    // Build allowed roots
+    let global_dir = fs::canonicalize(global_prompts_dir(&app)?)
+        .unwrap_or_else(|_| global_prompts_dir(&app).unwrap_or_default());
+
+    let mut allowed = false;
+    if requested.starts_with(&global_dir) {
+        allowed = true;
+    }
+
+    if let Some(root) = &workspace_root {
+        let ws_dir = Path::new(root).join(".vmark").join("prompts");
+        if let Ok(ws_canonical) = fs::canonicalize(&ws_dir) {
+            if requested.starts_with(&ws_canonical) {
+                allowed = true;
+            }
+        }
+    }
+
+    if !allowed {
+        return Err("Prompt path is outside allowed directories".to_string());
+    }
+
     let content = fs::read_to_string(&path)
         .map_err(|e| format!("Failed to read prompt file {}: {}", path, e))?;
 
@@ -108,10 +140,19 @@ fn scan_prompts_dir(
     };
 
     for entry in read_dir.flatten() {
+        // Skip symlinks for safety
+        let ft = match entry.file_type() {
+            Ok(ft) => ft,
+            Err(_) => continue,
+        };
+        if ft.is_symlink() {
+            continue;
+        }
+
         let path = entry.path();
-        if path.is_dir() {
+        if ft.is_dir() {
             scan_prompts_dir(&path, base, source, entries);
-        } else if path.extension().is_some_and(|ext| ext == "md") {
+        } else if path.extension().is_some_and(|ext| ext.eq_ignore_ascii_case("md")) {
             let name = path
                 .file_stem()
                 .unwrap_or_default()
@@ -143,6 +184,8 @@ fn scan_prompts_dir(
 // ============================================================================
 
 fn parse_prompt(content: &str, path: &str) -> Result<PromptContent, String> {
+    // Strip UTF-8 BOM if present
+    let content = content.trim_start_matches('\u{FEFF}');
     let trimmed = content.trim_start();
 
     if !trimmed.starts_with("---") {
@@ -267,19 +310,25 @@ pub fn install_default_prompts(app: &AppHandle) -> Result<(), String> {
     for prompt in DEFAULT_PROMPTS {
         let target = base.join(prompt.path);
 
-        // Don't overwrite existing files
-        if target.exists() {
-            continue;
-        }
-
         // Create parent directories
         if let Some(parent) = target.parent() {
             fs::create_dir_all(parent)
                 .map_err(|e| format!("Failed to create dir {:?}: {}", parent, e))?;
         }
 
-        fs::write(&target, prompt.content)
-            .map_err(|e| format!("Failed to write {:?}: {}", target, e))?;
+        // Atomic create — skip if file already exists (no TOCTOU race)
+        match OpenOptions::new().write(true).create_new(true).open(&target) {
+            Ok(mut file) => {
+                file.write_all(prompt.content.as_bytes())
+                    .map_err(|e| format!("Failed to write {:?}: {}", target, e))?;
+            }
+            Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => {
+                continue;
+            }
+            Err(e) => {
+                return Err(format!("Failed to create {:?}: {}", target, e));
+            }
+        }
     }
 
     Ok(())
@@ -323,6 +372,14 @@ You are an expert editor. Improve the following text:
         assert_eq!(result.metadata.name, "test-prompt");
         assert_eq!(result.metadata.scope, "selection");
         assert!(result.template.contains("{{content}}"));
+    }
+
+    #[test]
+    fn test_parse_prompt_with_bom() {
+        let content = "\u{FEFF}---\nname: bom-test\ndescription: Has BOM\nscope: document\n---\n\nTemplate here";
+        let result = parse_prompt(content, "bom-test.md").unwrap();
+        assert_eq!(result.metadata.name, "bom-test");
+        assert_eq!(result.metadata.scope, "document");
     }
 
     #[test]

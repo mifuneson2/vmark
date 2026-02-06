@@ -24,6 +24,8 @@ pub struct CliProviderEntry {
 
 #[derive(Debug, Serialize, Clone)]
 pub struct AiResponseChunk {
+    #[serde(rename = "requestId")]
+    pub request_id: String,
     pub chunk: String,
     pub done: bool,
     pub error: Option<String>,
@@ -85,6 +87,7 @@ fn check_command(cmd: &str) -> (bool, Option<String>) {
 #[command]
 pub async fn run_ai_prompt(
     window: WebviewWindow,
+    request_id: String,
     provider: String,
     prompt: String,
     model: Option<String>,
@@ -93,39 +96,57 @@ pub async fn run_ai_prompt(
 ) -> Result<(), String> {
     match provider.as_str() {
         // CLI providers
-        "claude" => run_cli_provider(&window, "claude", &["--print", "--output-format", "text"], &prompt),
-        "codex" => run_cli_provider(&window, "codex", &[], &prompt),
-        "gemini" => run_cli_provider(&window, "gemini", &[], &prompt),
+        "claude" => run_cli_provider(&window, &request_id, "claude", &["--print", "--output-format", "text"], &prompt),
+        "codex" => run_cli_provider(&window, &request_id, "codex", &[], &prompt),
+        "gemini" => run_cli_provider(&window, &request_id, "gemini", &[], &prompt),
         "ollama" => {
             let m = model.as_deref().unwrap_or("llama3.2");
-            run_cli_provider(&window, "ollama", &["run", m], &prompt)
+            run_cli_provider(&window, &request_id, "ollama", &["run", m], &prompt)
         }
 
         // REST providers
         "anthropic" => {
+            let key = api_key.unwrap_or_default();
+            if key.is_empty() {
+                emit_error(&window, &request_id, "Anthropic API key is required");
+                return Ok(());
+            }
             run_rest_anthropic(
                 &window,
+                &request_id,
                 &endpoint.unwrap_or_else(|| "https://api.anthropic.com".to_string()),
-                &api_key.unwrap_or_default(),
+                &key,
                 &model.unwrap_or_else(|| "claude-sonnet-4-5-20250929".to_string()),
                 &prompt,
             )
             .await
         }
         "openai" => {
+            let key = api_key.unwrap_or_default();
+            if key.is_empty() {
+                emit_error(&window, &request_id, "OpenAI API key is required");
+                return Ok(());
+            }
             run_rest_openai(
                 &window,
+                &request_id,
                 &endpoint.unwrap_or_else(|| "https://api.openai.com".to_string()),
-                &api_key.unwrap_or_default(),
+                &key,
                 &model.unwrap_or_else(|| "gpt-4o".to_string()),
                 &prompt,
             )
             .await
         }
         "google-ai" => {
+            let key = api_key.unwrap_or_default();
+            if key.is_empty() {
+                emit_error(&window, &request_id, "Google AI API key is required");
+                return Ok(());
+            }
             run_rest_google(
                 &window,
-                &api_key.unwrap_or_default(),
+                &request_id,
+                &key,
                 &model.unwrap_or_else(|| "gemini-2.0-flash".to_string()),
                 &prompt,
             )
@@ -134,6 +155,7 @@ pub async fn run_ai_prompt(
         "ollama-api" => {
             run_rest_ollama(
                 &window,
+                &request_id,
                 &endpoint.unwrap_or_else(|| "http://localhost:11434".to_string()),
                 &model.unwrap_or_else(|| "llama3.2".to_string()),
                 &prompt,
@@ -151,6 +173,7 @@ pub async fn run_ai_prompt(
 
 fn run_cli_provider(
     window: &WebviewWindow,
+    request_id: &str,
     cmd: &str,
     args: &[&str],
     prompt: &str,
@@ -159,7 +182,7 @@ fn run_cli_provider(
         .args(args)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
+        .stderr(Stdio::null())
         .spawn()
         .map_err(|e| format!("Failed to spawn {}: {}", cmd, e))?;
 
@@ -177,24 +200,11 @@ fn run_cli_provider(
         for line in reader.lines() {
             match line {
                 Ok(text) => {
-                    let _ = window.emit(
-                        "ai:response",
-                        AiResponseChunk {
-                            chunk: text + "\n",
-                            done: false,
-                            error: None,
-                        },
-                    );
+                    emit_chunk(window, request_id, &(text + "\n"));
                 }
                 Err(e) => {
-                    let _ = window.emit(
-                        "ai:response",
-                        AiResponseChunk {
-                            chunk: String::new(),
-                            done: true,
-                            error: Some(format!("Read error: {}", e)),
-                        },
-                    );
+                    emit_error(window, request_id, &format!("Read error: {}", e));
+                    let _ = child.kill();
                     return Ok(());
                 }
             }
@@ -204,24 +214,9 @@ fn run_cli_provider(
     // Check exit status
     let status = child.wait().map_err(|e| format!("Wait failed: {}", e))?;
     if !status.success() {
-        // Read stderr for error message
-        let _ = window.emit(
-            "ai:response",
-            AiResponseChunk {
-                chunk: String::new(),
-                done: true,
-                error: Some(format!("{} exited with status {}", cmd, status)),
-            },
-        );
+        emit_error(window, request_id, &format!("{} exited with status {}", cmd, status));
     } else {
-        let _ = window.emit(
-            "ai:response",
-            AiResponseChunk {
-                chunk: String::new(),
-                done: true,
-                error: None,
-            },
-        );
+        emit_done(window, request_id);
     }
 
     Ok(())
@@ -233,6 +228,7 @@ fn run_cli_provider(
 
 async fn run_rest_anthropic(
     window: &WebviewWindow,
+    request_id: &str,
     endpoint: &str,
     api_key: &str,
     model: &str,
@@ -258,7 +254,7 @@ async fn run_rest_anthropic(
     if !resp.status().is_success() {
         let status = resp.status();
         let text = resp.text().await.unwrap_or_default();
-        emit_error(window, &format!("Anthropic API error {}: {}", status, text));
+        emit_error(window, request_id, &format!("Anthropic API error {}: {}", status, text));
         return Ok(());
     }
 
@@ -271,24 +267,21 @@ async fn run_rest_anthropic(
     if let Some(content) = json.get("content").and_then(|c| c.as_array()) {
         for block in content {
             if let Some(text) = block.get("text").and_then(|t| t.as_str()) {
-                let _ = window.emit(
-                    "ai:response",
-                    AiResponseChunk {
-                        chunk: text.to_string(),
-                        done: false,
-                        error: None,
-                    },
-                );
+                emit_chunk(window, request_id, text);
             }
         }
+    } else {
+        emit_error(window, request_id, "No content blocks in Anthropic response");
+        return Ok(());
     }
 
-    emit_done(window);
+    emit_done(window, request_id);
     Ok(())
 }
 
 async fn run_rest_openai(
     window: &WebviewWindow,
+    request_id: &str,
     endpoint: &str,
     api_key: &str,
     model: &str,
@@ -312,7 +305,7 @@ async fn run_rest_openai(
     if !resp.status().is_success() {
         let status = resp.status();
         let text = resp.text().await.unwrap_or_default();
-        emit_error(window, &format!("OpenAI API error {}: {}", status, text));
+        emit_error(window, request_id, &format!("OpenAI API error {}: {}", status, text));
         return Ok(());
     }
 
@@ -321,30 +314,27 @@ async fn run_rest_openai(
         .await
         .map_err(|e| format!("Failed to parse response: {}", e))?;
 
-    if let Some(choices) = json.get("choices").and_then(|c| c.as_array()) {
-        if let Some(text) = choices
-            .first()
-            .and_then(|c| c.get("message"))
-            .and_then(|m| m.get("content"))
-            .and_then(|t| t.as_str())
-        {
-            let _ = window.emit(
-                "ai:response",
-                AiResponseChunk {
-                    chunk: text.to_string(),
-                    done: false,
-                    error: None,
-                },
-            );
-        }
+    if let Some(text) = json
+        .get("choices")
+        .and_then(|c| c.as_array())
+        .and_then(|choices| choices.first())
+        .and_then(|c| c.get("message"))
+        .and_then(|m| m.get("content"))
+        .and_then(|t| t.as_str())
+    {
+        emit_chunk(window, request_id, text);
+    } else {
+        emit_error(window, request_id, "No choices in OpenAI response");
+        return Ok(());
     }
 
-    emit_done(window);
+    emit_done(window, request_id);
     Ok(())
 }
 
 async fn run_rest_google(
     window: &WebviewWindow,
+    request_id: &str,
     api_key: &str,
     model: &str,
     prompt: &str,
@@ -370,7 +360,7 @@ async fn run_rest_google(
     if !resp.status().is_success() {
         let status = resp.status();
         let text = resp.text().await.unwrap_or_default();
-        emit_error(window, &format!("Google AI error {}: {}", status, text));
+        emit_error(window, request_id, &format!("Google AI error {}: {}", status, text));
         return Ok(());
     }
 
@@ -379,33 +369,30 @@ async fn run_rest_google(
         .await
         .map_err(|e| format!("Failed to parse response: {}", e))?;
 
-    if let Some(candidates) = json.get("candidates").and_then(|c| c.as_array()) {
-        if let Some(text) = candidates
-            .first()
-            .and_then(|c| c.get("content"))
-            .and_then(|c| c.get("parts"))
-            .and_then(|p| p.as_array())
-            .and_then(|parts| parts.first())
-            .and_then(|p| p.get("text"))
-            .and_then(|t| t.as_str())
-        {
-            let _ = window.emit(
-                "ai:response",
-                AiResponseChunk {
-                    chunk: text.to_string(),
-                    done: false,
-                    error: None,
-                },
-            );
-        }
+    if let Some(text) = json
+        .get("candidates")
+        .and_then(|c| c.as_array())
+        .and_then(|candidates| candidates.first())
+        .and_then(|c| c.get("content"))
+        .and_then(|c| c.get("parts"))
+        .and_then(|p| p.as_array())
+        .and_then(|parts| parts.first())
+        .and_then(|p| p.get("text"))
+        .and_then(|t| t.as_str())
+    {
+        emit_chunk(window, request_id, text);
+    } else {
+        emit_error(window, request_id, "No candidates in Google AI response");
+        return Ok(());
     }
 
-    emit_done(window);
+    emit_done(window, request_id);
     Ok(())
 }
 
 async fn run_rest_ollama(
     window: &WebviewWindow,
+    request_id: &str,
     endpoint: &str,
     model: &str,
     prompt: &str,
@@ -428,7 +415,7 @@ async fn run_rest_ollama(
     if !resp.status().is_success() {
         let status = resp.status();
         let text = resp.text().await.unwrap_or_default();
-        emit_error(window, &format!("Ollama API error {}: {}", status, text));
+        emit_error(window, request_id, &format!("Ollama API error {}: {}", status, text));
         return Ok(());
     }
 
@@ -438,17 +425,13 @@ async fn run_rest_ollama(
         .map_err(|e| format!("Failed to parse response: {}", e))?;
 
     if let Some(text) = json.get("response").and_then(|r| r.as_str()) {
-        let _ = window.emit(
-            "ai:response",
-            AiResponseChunk {
-                chunk: text.to_string(),
-                done: false,
-                error: None,
-            },
-        );
+        emit_chunk(window, request_id, text);
+    } else {
+        emit_error(window, request_id, "No response field in Ollama response");
+        return Ok(());
     }
 
-    emit_done(window);
+    emit_done(window, request_id);
     Ok(())
 }
 
@@ -456,10 +439,23 @@ async fn run_rest_ollama(
 // Helpers
 // ============================================================================
 
-fn emit_done(window: &WebviewWindow) {
+fn emit_chunk(window: &WebviewWindow, request_id: &str, text: &str) {
     let _ = window.emit(
         "ai:response",
         AiResponseChunk {
+            request_id: request_id.to_string(),
+            chunk: text.to_string(),
+            done: false,
+            error: None,
+        },
+    );
+}
+
+fn emit_done(window: &WebviewWindow, request_id: &str) {
+    let _ = window.emit(
+        "ai:response",
+        AiResponseChunk {
+            request_id: request_id.to_string(),
             chunk: String::new(),
             done: true,
             error: None,
@@ -467,10 +463,11 @@ fn emit_done(window: &WebviewWindow) {
     );
 }
 
-fn emit_error(window: &WebviewWindow, msg: &str) {
+fn emit_error(window: &WebviewWindow, request_id: &str, msg: &str) {
     let _ = window.emit(
         "ai:response",
         AiResponseChunk {
+            request_id: request_id.to_string(),
             chunk: String::new(),
             done: true,
             error: Some(msg.to_string()),

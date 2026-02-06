@@ -3,6 +3,7 @@
  *
  * Manages available AI providers (CLI + REST) and active selection.
  * Persists provider selection and REST API configurations.
+ * API keys are ephemeral — not persisted to localStorage.
  */
 
 import { create } from "zustand";
@@ -75,6 +76,9 @@ const DEFAULT_REST_PROVIDERS: RestProviderConfig[] = [
   },
 ];
 
+// Race guard counter for detectProviders
+let _detectId = 0;
+
 // ============================================================================
 // Store
 // ============================================================================
@@ -88,6 +92,7 @@ export const useAiProviderStore = create<AiProviderState & AiProviderActions>()(
       detecting: false,
 
       detectProviders: async () => {
+        const thisDetectId = ++_detectId;
         set({ detecting: true });
         try {
           type RawEntry = {
@@ -98,6 +103,10 @@ export const useAiProviderStore = create<AiProviderState & AiProviderActions>()(
             path?: string;
           };
           const raw: RawEntry[] = await invoke("detect_ai_providers");
+
+          // Stale check
+          if (thisDetectId !== _detectId) return;
+
           const providers: CliProviderInfo[] = raw.map((r) => ({
             type: r.type as CliProviderInfo["type"],
             name: r.name,
@@ -107,9 +116,25 @@ export const useAiProviderStore = create<AiProviderState & AiProviderActions>()(
           }));
           set({ cliProviders: providers, detecting: false });
 
-          // Auto-select first available if none active
-          const { activeProvider } = get();
-          if (!activeProvider) {
+          // Validate active provider is still available
+          const { activeProvider, restProviders } = get();
+          if (activeProvider) {
+            const cliAvailable = providers.some(
+              (p) => p.type === activeProvider && p.available
+            );
+            const restAvailable = restProviders.some(
+              (p) => p.type === activeProvider && p.enabled
+            );
+            if (!cliAvailable && !restAvailable) {
+              // Active provider is gone — pick first available or null
+              const firstCli = providers.find((p) => p.available);
+              const firstRest = restProviders.find((p) => p.enabled);
+              set({
+                activeProvider: firstCli?.type ?? firstRest?.type ?? null,
+              });
+            }
+          } else {
+            // No active provider — auto-select first available
             const first = providers.find((p) => p.available);
             if (first) {
               set({ activeProvider: first.type });
@@ -117,7 +142,9 @@ export const useAiProviderStore = create<AiProviderState & AiProviderActions>()(
           }
         } catch (e) {
           console.error("Failed to detect providers:", e);
-          set({ detecting: false });
+          if (thisDetectId === _detectId) {
+            set({ detecting: false });
+          }
         }
       },
 
@@ -145,11 +172,36 @@ export const useAiProviderStore = create<AiProviderState & AiProviderActions>()(
     }),
     {
       name: "vmark-ai-providers",
+      version: 1,
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         activeProvider: state.activeProvider,
-        restProviders: state.restProviders,
+        // Strip apiKey from persisted REST providers (ephemeral — Fix 7)
+        restProviders: state.restProviders.map((p) => ({
+          ...p,
+          apiKey: "",
+        })),
       }),
+      migrate: (persisted, version) => {
+        if (version === 0) {
+          // v0 → v1: merge DEFAULT_REST_PROVIDERS by type, preserving user overrides
+          const old = persisted as {
+            activeProvider?: ProviderType | null;
+            restProviders?: RestProviderConfig[];
+          };
+          const merged = DEFAULT_REST_PROVIDERS.map((def) => {
+            const existing = old.restProviders?.find((p) => p.type === def.type);
+            return existing
+              ? { ...def, ...existing, apiKey: "" }
+              : def;
+          });
+          return {
+            activeProvider: old.activeProvider ?? null,
+            restProviders: merged,
+          };
+        }
+        return persisted as AiProviderState;
+      },
     }
   )
 );

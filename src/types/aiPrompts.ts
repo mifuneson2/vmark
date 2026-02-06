@@ -57,6 +57,7 @@ export interface RestProviderConfig {
 // ============================================================================
 
 export interface AiResponseChunk {
+  requestId: string;
   chunk: string;
   done: boolean;
   error?: string;

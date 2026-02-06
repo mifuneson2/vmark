@@ -15,7 +15,7 @@ import { useMcpHealthStore } from "@/stores/mcpHealthStore";
 import { useAiProviderStore } from "@/stores/aiProviderStore";
 import { McpConfigInstaller } from "./McpConfigInstaller";
 import { RefreshCw, Users, ExternalLink } from "lucide-react";
-import type { ProviderType, RestProviderType } from "@/types/aiPrompts";
+import type { ProviderType, RestProviderType, RestProviderConfig } from "@/types/aiPrompts";
 
 function StatusBadge({ running, loading }: { running: boolean; loading: boolean }) {
   if (loading) {
@@ -304,10 +304,22 @@ function AiProviderSettings() {
 
   const handleRestUpdate = (
     type: RestProviderType,
-    field: string,
+    field: keyof RestProviderConfig,
     value: string | boolean
   ) => {
-    useAiProviderStore.getState().updateRestProvider(type, { [field]: value });
+    const store = useAiProviderStore.getState();
+    store.updateRestProvider(type, { [field]: value });
+
+    // If disabling a provider that is currently active, auto-select next available
+    if (field === "enabled" && value === false && store.activeProvider === type) {
+      const nextCli = store.cliProviders.find((p) => p.available);
+      const nextRest = store.restProviders.find(
+        (p) => p.type !== type && p.enabled
+      );
+      store.setActiveProvider(
+        (nextCli?.type ?? nextRest?.type ?? null) as ProviderType
+      );
+    }
   };
 
   // Build provider options for dropdown

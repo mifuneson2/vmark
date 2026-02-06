@@ -19,6 +19,7 @@ import { useWorkspaceStore } from "@/stores/workspaceStore";
 import { usePromptInvocation } from "@/hooks/usePromptInvocation";
 import type { PromptDefinition, PromptScope } from "@/types/aiPrompts";
 import { PromptChips } from "./PromptChips";
+import { PromptItem } from "./PromptItem";
 import "./prompt-picker.css";
 
 const SCOPES: PromptScope[] = ["selection", "block", "document"];
@@ -330,49 +331,3 @@ export function PromptPicker() {
   );
 }
 
-// ============================================================================
-// Prompt Item
-// ============================================================================
-
-interface PromptItemProps {
-  prompt: PromptDefinition;
-  index: number;
-  selected: boolean;
-  onSelect: (prompt: PromptDefinition) => void;
-  onHover: (index: number) => void;
-}
-
-function PromptItem({
-  prompt,
-  index,
-  selected,
-  onSelect,
-  onHover,
-}: PromptItemProps) {
-  return (
-    <div
-      className={`prompt-picker-item ${selected ? "prompt-picker-item--selected" : ""}`}
-      data-index={index}
-      onClick={() => onSelect(prompt)}
-      onMouseEnter={() => onHover(index)}
-    >
-      <div className="prompt-picker-item-name">
-        {formatName(prompt.metadata.name)}
-      </div>
-      <div className="prompt-picker-item-meta">
-        {prompt.metadata.description && (
-          <span className="prompt-picker-item-desc">
-            {prompt.metadata.description}
-          </span>
-        )}
-        <span className="prompt-picker-item-scope">
-          {prompt.metadata.scope}
-        </span>
-      </div>
-    </div>
-  );
-}
-
-function formatName(name: string): string {
-  return name.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-}

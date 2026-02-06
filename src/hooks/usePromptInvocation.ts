@@ -5,7 +5,7 @@
  * extract content → fill template → invoke provider → stream → create suggestion
  */
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import type { UnlistenFn } from "@tauri-apps/api/event";
@@ -86,53 +86,33 @@ function fillTemplate(template: string, content: string): string {
 
 export function usePromptInvocation() {
   const [isRunning, setIsRunning] = useState(false);
+  const isRunningRef = useRef(false);
   const unlistenRef = useRef<UnlistenFn | null>(null);
+
+  // Cleanup listener on unmount
+  useEffect(() => {
+    return () => {
+      if (unlistenRef.current) {
+        unlistenRef.current();
+        unlistenRef.current = null;
+      }
+    };
+  }, []);
 
   const cancel = useCallback(() => {
     if (unlistenRef.current) {
       unlistenRef.current();
       unlistenRef.current = null;
     }
+    isRunningRef.current = false;
     setIsRunning(false);
   }, []);
 
-  const invokePrompt = useCallback(
-    async (prompt: PromptDefinition, scopeOverride?: PromptScope) => {
-      const scope = scopeOverride ?? prompt.metadata.scope;
-      const extracted = extractContent(scope);
-      if (!extracted) {
-        console.warn("No content to extract for scope:", scope);
-        return;
-      }
-
-      const filled = fillTemplate(prompt.template, extracted.text);
-
-      // Track prompt as recent
-      usePromptsStore.getState().addRecent(prompt.metadata.name);
-
-      await runPrompt(filled, extracted, prompt.metadata.model);
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    []
-  );
-
-  const invokeFreeform = useCallback(
-    async (userPrompt: string, scope: PromptScope) => {
-      const extracted = extractContent(scope);
-      if (!extracted) {
-        console.warn("No content to extract for scope:", scope);
-        return;
-      }
-
-      const filled = `${userPrompt}\n\n${extracted.text}`;
-      await runPrompt(filled, extracted);
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    []
-  );
-
   const runPrompt = useCallback(
     async (filledPrompt: string, extraction: ExtractionResult, model?: string) => {
+      // Guard against concurrent invocations
+      if (isRunningRef.current) return;
+
       const providerState = useAiProviderStore.getState();
       const provider = providerState.activeProvider;
       if (!provider) {
@@ -145,12 +125,18 @@ export function usePromptInvocation() {
         (p) => p.type === provider
       );
 
+      isRunningRef.current = true;
       setIsRunning(true);
       let accumulated = "";
 
-      // Listen for streamed response
+      // Generate unique request ID
+      const requestId = crypto.randomUUID();
+
+      // Listen for streamed response, filtering by request ID
       const unlisten = await listen<AiResponseChunk>("ai:response", (event) => {
         const chunk = event.payload;
+        if (chunk.requestId !== requestId) return;
+
         if (chunk.error) {
           console.error("AI error:", chunk.error);
           cancel();
@@ -178,6 +164,7 @@ export function usePromptInvocation() {
 
       try {
         await invoke("run_ai_prompt", {
+          requestId,
           provider,
           prompt: filledPrompt,
           model: model ?? restConfig?.model ?? null,
@@ -190,6 +177,39 @@ export function usePromptInvocation() {
       }
     },
     [cancel]
+  );
+
+  const invokePrompt = useCallback(
+    async (prompt: PromptDefinition, scopeOverride?: PromptScope) => {
+      const scope = scopeOverride ?? prompt.metadata.scope;
+      const extracted = extractContent(scope);
+      if (!extracted) {
+        console.warn("No content to extract for scope:", scope);
+        return;
+      }
+
+      const filled = fillTemplate(prompt.template, extracted.text);
+
+      // Track prompt as recent
+      usePromptsStore.getState().addRecent(prompt.metadata.name);
+
+      await runPrompt(filled, extracted, prompt.metadata.model);
+    },
+    [runPrompt]
+  );
+
+  const invokeFreeform = useCallback(
+    async (userPrompt: string, scope: PromptScope) => {
+      const extracted = extractContent(scope);
+      if (!extracted) {
+        console.warn("No content to extract for scope:", scope);
+        return;
+      }
+
+      const filled = `${userPrompt}\n\n${extracted.text}`;
+      await runPrompt(filled, extracted);
+    },
+    [runPrompt]
   );
 
   return { invokePrompt, invokeFreeform, isRunning, cancel };
