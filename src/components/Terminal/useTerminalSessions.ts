@@ -158,7 +158,7 @@ export function useTerminalSessions(
 
       const termSettings = useSettingsStore.getState().terminal;
       const fontSize = termSettings?.fontSize ?? 13;
-      const lineHeight = termSettings?.lineHeight ?? 1.4;
+      const lineHeight = termSettings?.lineHeight ?? 1.2;
 
       // Create a shared ptyRef that we'll update as the pty changes
       const ptyRefForKeys: React.RefObject<IPty | null> = { current: null };
