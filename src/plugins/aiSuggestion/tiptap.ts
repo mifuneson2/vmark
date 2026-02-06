@@ -10,11 +10,13 @@
  */
 
 import { Extension } from "@tiptap/core";
-import { Plugin, PluginKey } from "@tiptap/pm/state";
-import { Decoration, DecorationSet } from "@tiptap/pm/view";
+import { Plugin, PluginKey, type EditorState, type Transaction } from "@tiptap/pm/state";
+import { Decoration, DecorationSet, type EditorView } from "@tiptap/pm/view";
 import { useAiSuggestionStore } from "@/stores/aiSuggestionStore";
+import { useTiptapEditorStore } from "@/stores/tiptapEditorStore";
 import { runOrQueueProseMirrorAction } from "@/utils/imeGuard";
 import { createMarkdownPasteSlice } from "@/plugins/markdownPaste/tiptap";
+import { cleanMarkdownForClipboard } from "@/plugins/markdownCopy/tiptap";
 import type { AiSuggestion } from "./types";
 import { AI_SUGGESTION_EVENTS } from "./types";
 
@@ -49,26 +51,77 @@ const ICON_X = ["M18 6 6 18", "m6 6 12 12"];
 function createGhostText(text: string, isFocused: boolean): HTMLSpanElement {
   const span = document.createElement("span");
   span.className = `ai-suggestion-ghost${isFocused ? " ai-suggestion-ghost-focused" : ""}`;
-  span.textContent = text;
+  // Strip markdown backslash escapes (\$, \~, \@ …) and collapse autolinks
+  // so ghost text matches what the user will see after accepting.
+  span.textContent = cleanMarkdownForClipboard(text);
   return span;
 }
 
 /**
+ * Apply a suggestion's document change on a transaction.
+ * Shared by button handler, handleAccept, and handleAcceptAll.
+ */
+function applySuggestionToTr(
+  state: EditorState,
+  tr: Transaction,
+  suggestion: AiSuggestion,
+): Transaction {
+  switch (suggestion.type) {
+    case "insert": {
+      if (suggestion.newContent != null) {
+        const slice = createMarkdownPasteSlice(state, suggestion.newContent);
+        return tr.replaceRange(suggestion.from, suggestion.from, slice);
+      }
+      break;
+    }
+    case "replace": {
+      if (suggestion.newContent != null) {
+        const slice = createMarkdownPasteSlice(state, suggestion.newContent);
+        return tr.replaceRange(suggestion.from, suggestion.to, slice);
+      }
+      break;
+    }
+    case "delete": {
+      return tr.delete(suggestion.from, suggestion.to);
+    }
+  }
+  return tr;
+}
+
+/**
+ * Apply a suggestion directly on the editor view.
+ * Uses runOrQueueProseMirrorAction for IME safety.
+ */
+function applySuggestion(view: EditorView, suggestion: AiSuggestion): void {
+  runOrQueueProseMirrorAction(view, () => {
+    const { state } = view;
+    view.dispatch(applySuggestionToTr(state, state.tr, suggestion));
+  });
+}
+
+/**
  * Create accept/reject buttons container.
+ * Buttons apply changes directly via the editor store — no CustomEvent
+ * indirection — for immediate visual response.
  */
 function createButtons(suggestion: AiSuggestion): HTMLSpanElement {
   const container = document.createElement("span");
   container.className = "ai-suggestion-buttons";
 
-  // Accept button with Check icon
+  // Use mousedown instead of click — ProseMirror's mousedown handler
+  // triggers state updates that rebuild widget decorations, so the button
+  // DOM is replaced before the click event fires.
   const acceptBtn = document.createElement("button");
   acceptBtn.className = "ai-suggestion-btn ai-suggestion-btn-accept";
   acceptBtn.title = "Accept (Enter)";
   acceptBtn.appendChild(createIcon(ICON_CHECK));
-  acceptBtn.onclick = (e) => {
+  acceptBtn.onmousedown = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    useAiSuggestionStore.getState().acceptSuggestion(suggestion.id);
+    const view = useTiptapEditorStore.getState().editorView;
+    if (!view) return;
+    applySuggestion(view, suggestion);
+    useAiSuggestionStore.getState().removeSuggestion(suggestion.id);
   };
 
   // Reject button with X icon
@@ -76,15 +129,25 @@ function createButtons(suggestion: AiSuggestion): HTMLSpanElement {
   rejectBtn.className = "ai-suggestion-btn ai-suggestion-btn-reject";
   rejectBtn.title = "Reject (Escape)";
   rejectBtn.appendChild(createIcon(ICON_X));
-  rejectBtn.onclick = (e) => {
+  rejectBtn.onmousedown = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    useAiSuggestionStore.getState().rejectSuggestion(suggestion.id);
+    useAiSuggestionStore.getState().removeSuggestion(suggestion.id);
   };
 
   container.appendChild(acceptBtn);
   container.appendChild(rejectBtn);
   return container;
+}
+
+/**
+ * Check if a DOM event targets a suggestion button.
+ * Used by widget decorations to tell ProseMirror not to handle button clicks.
+ */
+function isButtonEvent(event: Event): boolean {
+  const target = event.target;
+  if (!(target instanceof Element)) return false;
+  return target.closest(".ai-suggestion-btn") !== null;
 }
 
 /**
@@ -212,13 +275,15 @@ export const aiSuggestionExtension = Extension.create({
                       }
 
                       return container;
-                    }, { side: 0 })
+                    }, { side: 0, stopEvent: isButtonEvent })
                   );
                   break;
                 }
 
                 case "replace": {
                   // Replace: Strikethrough original + ghost text for new
+                  // Skip zero-length range (nothing to strike through)
+                  if (suggestion.from === suggestion.to) continue;
                   // Strikethrough decoration on original text
                   decorations.push(
                     Decoration.inline(suggestion.from, suggestion.to, {
@@ -233,6 +298,7 @@ export const aiSuggestionExtension = Extension.create({
                     Decoration.widget(suggestion.to, () => {
                       const container = document.createElement("span");
                       container.className = "ai-suggestion-replace-container";
+                      container.setAttribute("data-suggestion-id", suggestion.id);
 
                       // Ghost text for new content
                       if (suggestion.newContent) {
@@ -245,13 +311,15 @@ export const aiSuggestionExtension = Extension.create({
                       }
 
                       return container;
-                    }, { side: 0 })
+                    }, { side: 0, stopEvent: isButtonEvent })
                   );
                   break;
                 }
 
                 case "delete": {
                   // Delete: Strikethrough decoration only
+                  // Skip zero-length range (nothing to delete)
+                  if (suggestion.from === suggestion.to) continue;
                   decorations.push(
                     Decoration.inline(suggestion.from, suggestion.to, {
                       class: getDecorationClass(suggestion, isFocused),
@@ -263,7 +331,7 @@ export const aiSuggestionExtension = Extension.create({
                   // Buttons for focused suggestion
                   if (isFocused) {
                     decorations.push(
-                      Decoration.widget(suggestion.to, () => createButtons(suggestion), { side: 0 })
+                      Decoration.widget(suggestion.to, () => createButtons(suggestion), { side: 0, stopEvent: isButtonEvent })
                     );
                   }
                   break;
@@ -290,57 +358,29 @@ export const aiSuggestionExtension = Extension.create({
         },
 
         view(editorView) {
-          // Handle accept event - NOW we modify the document
+          // Handle accept event — apply the suggestion's document change
           const handleAccept = (event: Event) => {
             const { suggestion } = (event as CustomEvent).detail as {
-              id: string;
               suggestion: AiSuggestion;
             };
 
             runOrQueueProseMirrorAction(editorView, () => {
               const { state } = editorView;
-
-              switch (suggestion.type) {
-                case "insert": {
-                  // Insert the new content at the stored position, parsing markdown
-                  // Use replaceRange to preserve slice open depth and block structure
-                  if (suggestion.newContent) {
-                    const slice = createMarkdownPasteSlice(state, suggestion.newContent);
-                    const tr = state.tr.replaceRange(suggestion.from, suggestion.from, slice);
-                    editorView.dispatch(tr);
-                  }
-                  break;
-                }
-
-                case "replace": {
-                  // Delete original and insert new content, parsing markdown
-                  if (suggestion.newContent) {
-                    const slice = createMarkdownPasteSlice(state, suggestion.newContent);
-                    const tr = state.tr.replaceRange(suggestion.from, suggestion.to, slice);
-                    editorView.dispatch(tr);
-                  }
-                  break;
-                }
-
-                case "delete": {
-                  // Delete the content
-                  const tr = state.tr.delete(suggestion.from, suggestion.to);
-                  editorView.dispatch(tr);
-                  break;
-                }
-              }
+              editorView.dispatch(applySuggestionToTr(state, state.tr, suggestion));
             });
           };
 
-          // Handle reject event - just refresh decorations (no doc changes)
-          const handleReject = () => {
+          // Trigger decoration refresh via empty transaction
+          const refreshDecorations = () => {
             runOrQueueProseMirrorAction(editorView, () => {
-              // Trigger decoration refresh
               editorView.dispatch(editorView.state.tr);
             });
           };
 
-          // Handle accept all event - apply all changes in a SINGLE transaction
+          // Handle reject event — just refresh decorations (no doc changes)
+          const handleReject = refreshDecorations;
+
+          // Handle accept all event — apply all changes in a SINGLE transaction
           const handleAcceptAll = (event: Event) => {
             const { suggestions } = (event as CustomEvent).detail as {
               suggestions: AiSuggestion[];
@@ -353,56 +393,29 @@ export const aiSuggestionExtension = Extension.create({
               let { tr } = state;
 
               // Apply all suggestions in reverse order (they're already sorted reverse)
-              // This maintains correct positions as we modify the document
+              // so earlier positions remain valid as we modify later ones
               for (const suggestion of suggestions) {
-                switch (suggestion.type) {
-                  case "insert": {
-                    // Use replaceRange to preserve slice open depth and block structure
-                    if (suggestion.newContent) {
-                      const slice = createMarkdownPasteSlice(state, suggestion.newContent);
-                      tr = tr.replaceRange(suggestion.from, suggestion.from, slice);
-                    }
-                    break;
-                  }
-                  case "replace": {
-                    if (suggestion.newContent) {
-                      const slice = createMarkdownPasteSlice(state, suggestion.newContent);
-                      tr = tr.replaceRange(suggestion.from, suggestion.to, slice);
-                    }
-                    break;
-                  }
-                  case "delete": {
-                    tr = tr.delete(suggestion.from, suggestion.to);
-                    break;
-                  }
-                }
+                tr = applySuggestionToTr(state, tr, suggestion);
               }
 
-              // Dispatch single transaction for all changes - one undo reverts all
               editorView.dispatch(tr);
             });
           };
 
-          // Handle reject all event - just refresh decorations
-          const handleRejectAll = () => {
-            runOrQueueProseMirrorAction(editorView, () => {
-              // Trigger decoration refresh
-              editorView.dispatch(editorView.state.tr);
-            });
-          };
+          // Handle reject all event — just refresh decorations
+          const handleRejectAll = refreshDecorations;
 
           // Handle store changes to trigger decoration updates
-          const unsubscribe = useAiSuggestionStore.subscribe(() => {
-            runOrQueueProseMirrorAction(editorView, () => {
-              editorView.dispatch(editorView.state.tr);
-            });
-          });
+          const unsubscribe = useAiSuggestionStore.subscribe(refreshDecorations);
 
           // Subscribe to scroll-to-focus events
           const handleFocusChanged = (event: Event) => {
             const { id } = (event as CustomEvent).detail;
             const suggestion = useAiSuggestionStore.getState().getSuggestion(id);
             if (!suggestion) return;
+
+            // Guard against stale positions after doc changes
+            if (!isValidPosition(suggestion, editorView.state.doc.content.size)) return;
 
             // Scroll to the focused suggestion
             const coords = editorView.coordsAtPos(suggestion.from);
