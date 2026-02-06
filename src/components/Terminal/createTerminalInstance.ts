@@ -137,7 +137,7 @@ export function createTerminalInstance(options: CreateOptions): TerminalInstance
   // Copy on select
   term.onSelectionChange(() => {
     if (term.hasSelection() && useSettingsStore.getState().terminal.copyOnSelect) {
-      writeText(term.getSelection());
+      writeText(term.getSelection().trimEnd());
     }
   });
 

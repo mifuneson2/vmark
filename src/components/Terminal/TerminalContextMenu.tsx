@@ -74,7 +74,7 @@ export function TerminalContextMenu({
       switch (id) {
         case "copy":
           if (term.hasSelection()) {
-            await writeText(term.getSelection());
+            await writeText(term.getSelection().trimEnd());
             term.clearSelection();
           }
           break;

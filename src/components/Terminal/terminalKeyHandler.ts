@@ -26,7 +26,7 @@ export function createTerminalKeyHandler(
     switch (event.key.toLowerCase()) {
       case "c": {
         if (term.hasSelection()) {
-          writeText(term.getSelection());
+          writeText(term.getSelection().trimEnd());
           term.clearSelection();
           return false;
         }
