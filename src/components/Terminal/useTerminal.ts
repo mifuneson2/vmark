@@ -2,12 +2,14 @@ import { useRef, useEffect, useCallback } from "react";
 import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { WebglAddon } from "@xterm/addon-webgl";
+import { WebLinksAddon } from "@xterm/addon-web-links";
 import { spawn, type IPty } from "tauri-pty";
 import { useSettingsStore, themes } from "@/stores/settingsStore";
 import { useWorkspaceStore } from "@/stores/workspaceStore";
 import { useTabStore } from "@/stores/tabStore";
 import { useDocumentStore } from "@/stores/documentStore";
 import { getCurrentWindowLabel } from "@/utils/workspaceStorage";
+import { createFileLinkProvider } from "./fileLinkProvider";
 
 import "@xterm/xterm/css/xterm.css";
 
@@ -120,6 +122,26 @@ export function useTerminal(containerRef: React.RefObject<HTMLDivElement | null>
     } catch {
       // Fallback to canvas renderer
     }
+
+    // Web links — clickable URLs open in default browser
+    term.loadAddon(new WebLinksAddon((_event, uri) => {
+      import("@tauri-apps/plugin-opener").then(({ openUrl }) => {
+        openUrl(uri);
+      });
+    }));
+
+    // File links — clickable file paths open in editor
+    term.registerLinkProvider(createFileLinkProvider(term, (filePath) => {
+      import("@tauri-apps/plugin-fs").then(({ readTextFile }) => {
+        readTextFile(filePath).then((content) => {
+          const windowLabel = getCurrentWindowLabel();
+          const tabId = useTabStore.getState().createTab(windowLabel, filePath);
+          useDocumentStore.getState().initDocument(tabId, content, filePath);
+        }).catch(() => {
+          // File not readable — ignore
+        });
+      });
+    }));
 
     // Initial fit (after layout settles)
     requestAnimationFrame(() => fit());
