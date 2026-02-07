@@ -48,11 +48,12 @@ export const compositionGuardExtension = Extension.create({
       let cleanupEnd = $start.end();
       let allowNewlines = false;
 
-      if ($start.parent.type.name === "heading") {
-        cleanupEnd = $start.end();
-      } else {
-        const tableDepth = findTableCellDepth(view, compositionStartPos);
-        if (tableDepth === null) return;
+      // Table cells can contain multiple paragraphs, so use the
+      // cell boundary and allow newlines in the cleanup range.
+      // For every other block (paragraph, heading, code block,
+      // list item, blockquote, etc.) $start.end() is correct.
+      const tableDepth = findTableCellDepth(view, compositionStartPos);
+      if (tableDepth !== null) {
         cleanupEnd = $start.end(tableDepth);
         allowNewlines = true;
       }
