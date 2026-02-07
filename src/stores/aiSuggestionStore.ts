@@ -123,6 +123,10 @@ export const useAiSuggestionStore = create<AiSuggestionState & AiSuggestionActio
         };
       });
 
+      window.dispatchEvent(
+        new CustomEvent(AI_SUGGESTION_EVENTS.ADDED, { detail: { id, suggestion } })
+      );
+
       return id;
     },
 

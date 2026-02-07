@@ -181,7 +181,7 @@ describe("aiSuggestionStore", () => {
     it("removes suggestion from store", () => {
       const { addSuggestion, removeSuggestion } = useAiSuggestionStore.getState();
 
-      const id = addSuggestion({ type: "insert", from: 0, to: 5 });
+      const id = addSuggestion({ tabId: TAB_ID, type: "insert", from: 0, to: 5 });
       expect(useAiSuggestionStore.getState().suggestions.size).toBe(1);
 
       removeSuggestion(id);
@@ -191,8 +191,8 @@ describe("aiSuggestionStore", () => {
     it("updates focus when removing focused suggestion", () => {
       const { addSuggestion, removeSuggestion } = useAiSuggestionStore.getState();
 
-      const id1 = addSuggestion({ type: "insert", from: 0, to: 5 });
-      const id2 = addSuggestion({ type: "insert", from: 10, to: 15 });
+      const id1 = addSuggestion({ tabId: TAB_ID, type: "insert", from: 0, to: 5 });
+      const id2 = addSuggestion({ tabId: TAB_ID, type: "insert", from: 10, to: 15 });
 
       expect(useAiSuggestionStore.getState().focusedSuggestionId).toBe(id1);
 
@@ -203,7 +203,7 @@ describe("aiSuggestionStore", () => {
     it("is a no-op for missing id", () => {
       const { addSuggestion, removeSuggestion } = useAiSuggestionStore.getState();
 
-      addSuggestion({ type: "insert", from: 0, to: 5 });
+      addSuggestion({ tabId: TAB_ID, type: "insert", from: 0, to: 5 });
       removeSuggestion("nonexistent-id");
 
       expect(useAiSuggestionStore.getState().suggestions.size).toBe(1);
@@ -216,7 +216,7 @@ describe("aiSuggestionStore", () => {
       window.addEventListener(AI_SUGGESTION_EVENTS.REJECT, rejectHandler);
 
       const { addSuggestion, removeSuggestion } = useAiSuggestionStore.getState();
-      const id = addSuggestion({ type: "insert", from: 0, to: 5 });
+      const id = addSuggestion({ tabId: TAB_ID, type: "insert", from: 0, to: 5 });
       removeSuggestion(id);
 
       expect(acceptHandler).not.toHaveBeenCalled();
@@ -231,8 +231,8 @@ describe("aiSuggestionStore", () => {
       window.addEventListener(AI_SUGGESTION_EVENTS.FOCUS_CHANGED, handler);
 
       const { addSuggestion, removeSuggestion } = useAiSuggestionStore.getState();
-      const id1 = addSuggestion({ type: "insert", from: 0, to: 5 });
-      addSuggestion({ type: "insert", from: 10, to: 15 });
+      const id1 = addSuggestion({ tabId: TAB_ID, type: "insert", from: 0, to: 5 });
+      addSuggestion({ tabId: TAB_ID, type: "insert", from: 10, to: 15 });
 
       handler.mockClear();
       removeSuggestion(id1);
@@ -247,7 +247,7 @@ describe("aiSuggestionStore", () => {
       window.addEventListener(AI_SUGGESTION_EVENTS.FOCUS_CHANGED, handler);
 
       const { addSuggestion, removeSuggestion } = useAiSuggestionStore.getState();
-      const id = addSuggestion({ type: "insert", from: 0, to: 5 });
+      const id = addSuggestion({ tabId: TAB_ID, type: "insert", from: 0, to: 5 });
 
       handler.mockClear();
       removeSuggestion(id);
