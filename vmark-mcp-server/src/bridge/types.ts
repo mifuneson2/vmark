@@ -688,7 +688,11 @@ export type BridgeRequest =
   | { type: 'paragraph.read'; target: ParagraphTarget; includeContext?: boolean; windowId?: WindowId }
   | { type: 'paragraph.write'; baseRevision: string; target: ParagraphTarget; operation: ParagraphOperation; content?: string; mode?: OperationMode; windowId?: WindowId }
   // Smart insert command
-  | { type: 'smartInsert'; baseRevision: string; destination: SmartInsertDestination; content: string; mode?: OperationMode; windowId?: WindowId };
+  | { type: 'smartInsert'; baseRevision: string; destination: SmartInsertDestination; content: string; mode?: OperationMode; windowId?: WindowId }
+  // Prompt commands
+  | { type: 'prompts.list'; windowId?: WindowId }
+  | { type: 'prompts.read'; windowId?: WindowId; path: string }
+  | { type: 'prompts.invoke'; windowId?: WindowId; promptPath: string; scope: string };
 
 /**
  * Bridge response types - responses from VMark.
