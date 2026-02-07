@@ -50,13 +50,20 @@ function extractContent(scope: GenieScope): ExtractionResult | null {
 
   switch (scope) {
     case "selection": {
-      if (selection.empty) return null;
-      const text = doc.textBetween(selection.from, selection.to, "\n\n");
-      return { text, from: selection.from, to: selection.to };
+      if (!selection.empty) {
+        const text = doc.textBetween(selection.from, selection.to, "\n\n");
+        return { text, from: selection.from, to: selection.to };
+      }
+      // No selection — use current block (paragraph) instead
+      const $sel = selection.$from;
+      const selDepth = $sel.depth;
+      const selStart = $sel.start(selDepth);
+      const selEnd = $sel.end(selDepth);
+      const selText = doc.textBetween(selStart, selEnd, "\n\n");
+      return { text: selText, from: selStart, to: selEnd };
     }
 
     case "block": {
-      // Resolve to the block node containing cursor
       const $pos = selection.$from;
       const depth = $pos.depth;
       const start = $pos.start(depth);
