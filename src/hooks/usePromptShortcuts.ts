@@ -2,7 +2,7 @@
  * Prompt Shortcuts Hook
  *
  * - Cmd+Y keyboard shortcut opens the prompt picker
- * - Loads prompts on mount + workspace change and syncs to native menu
+ * - Loads prompts on mount and syncs to native menu
  * - Handles direct prompt invocation from the Genies menu
  */
 
@@ -12,7 +12,6 @@ import { invoke } from "@tauri-apps/api/core";
 import { useShortcutsStore } from "@/stores/shortcutsStore";
 import { usePromptPickerStore } from "@/stores/promptPickerStore";
 import { usePromptsStore } from "@/stores/promptsStore";
-import { useWorkspaceStore } from "@/stores/workspaceStore";
 import { usePromptInvocation } from "@/hooks/usePromptInvocation";
 import { matchesShortcutEvent } from "@/utils/shortcutMatch";
 import { isImeKeyEvent } from "@/utils/imeGuard";
@@ -20,11 +19,8 @@ import type { PromptDefinition, PromptMetadata } from "@/types/aiPrompts";
 
 /** Load prompts from disk and refresh the native Genies menu. */
 async function loadAndSyncMenu(): Promise<void> {
-  const rootPath = useWorkspaceStore.getState().rootPath;
-  await usePromptsStore.getState().loadPrompts(rootPath);
-  await invoke("refresh_genies_menu", {
-    workspaceRoot: rootPath ?? undefined,
-  });
+  await usePromptsStore.getState().loadPrompts();
+  await invoke("refresh_genies_menu");
 }
 
 export function usePromptShortcuts() {
@@ -47,21 +43,11 @@ export function usePromptShortcuts() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  // Load prompts + sync menu on mount and workspace changes
+  // Load prompts + sync menu on mount
   useEffect(() => {
     loadAndSyncMenu().catch((e) =>
       console.error("[usePromptShortcuts] Failed to load prompts:", e)
     );
-
-    const unsub = useWorkspaceStore.subscribe((state, prev) => {
-      if (state.rootPath !== prev.rootPath) {
-        loadAndSyncMenu().catch((e) =>
-          console.error("[usePromptShortcuts] Failed to reload prompts:", e)
-        );
-      }
-    });
-
-    return unsub;
   }, []);
 
   // Direct prompt invocation from Genies menu — reads from disk directly
@@ -72,10 +58,9 @@ export function usePromptShortcuts() {
       async (event) => {
         const [promptPath] = event.payload;
         try {
-          const rootPath = useWorkspaceStore.getState().rootPath;
           const result = await invoke<{ metadata: PromptMetadata; template: string }>(
             "read_prompt",
-            { path: promptPath, workspaceRoot: rootPath ?? undefined },
+            { path: promptPath },
           );
           const prompt: PromptDefinition = {
             metadata: result.metadata,
@@ -99,6 +84,18 @@ export function usePromptShortcuts() {
   useEffect(() => {
     const unlisten = listen("menu:search-genies", () => {
       usePromptPickerStore.getState().openPicker();
+    });
+    return () => {
+      unlisten.then((fn) => fn()).catch(() => {});
+    };
+  }, []);
+
+  // "Reload Genies" menu item re-scans the genies folder
+  useEffect(() => {
+    const unlisten = listen("menu:reload-genies", () => {
+      loadAndSyncMenu().catch((e) =>
+        console.error("[usePromptShortcuts] Failed to reload genies:", e)
+      );
     });
     return () => {
       unlisten.then((fn) => fn()).catch(() => {});

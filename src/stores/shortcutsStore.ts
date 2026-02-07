@@ -362,11 +362,7 @@ async function syncMenuShortcuts(shortcuts: Record<string, string>) {
     await invoke("rebuild_menu", { shortcuts: menuShortcuts });
 
     // rebuild_menu resets the Genies submenu to a placeholder — re-populate it
-    const { useWorkspaceStore } = await import("@/stores/workspaceStore");
-    const rootPath = useWorkspaceStore.getState().rootPath;
-    await invoke("refresh_genies_menu", {
-      workspaceRoot: rootPath ?? undefined,
-    });
+    await invoke("refresh_genies_menu");
   } catch (e) {
     // Menu rebuild may fail if command not yet implemented
     console.warn("Failed to sync menu shortcuts:", e);

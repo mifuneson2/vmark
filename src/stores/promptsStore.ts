@@ -1,7 +1,7 @@
 /**
  * Prompts Store
  *
- * Manages loaded AI prompt definitions from global and workspace directories.
+ * Manages loaded AI prompt definitions from the global genies directory.
  * Persists recent/favorite prompt names only (prompts are read from disk).
  */
 
@@ -34,7 +34,7 @@ interface PromptsState {
 }
 
 interface PromptsActions {
-  loadPrompts(workspaceRoot?: string | null): Promise<void>;
+  loadPrompts(): Promise<void>;
   searchPrompts(query: string, scope?: PromptScope | null): PromptDefinition[];
   getGroupedByCategory(): Map<string, PromptDefinition[]>;
   addRecent(name: string): void;
@@ -60,13 +60,11 @@ export const usePromptsStore = create<PromptsState & PromptsActions>()(
       recentPromptNames: [],
       favoritePromptNames: [],
 
-      loadPrompts: async (workspaceRoot) => {
+      loadPrompts: async () => {
         const thisLoadId = ++_loadId;
         set({ loading: true });
         try {
-          const entries: PromptEntry[] = await invoke("list_prompts", {
-            workspaceRoot: workspaceRoot ?? null,
-          });
+          const entries: PromptEntry[] = await invoke("list_prompts");
 
           // Stale check
           if (thisLoadId !== _loadId) return;
@@ -76,13 +74,12 @@ export const usePromptsStore = create<PromptsState & PromptsActions>()(
             try {
               const content: PromptContent = await invoke("read_prompt", {
                 path: entry.path,
-                workspaceRoot: workspaceRoot ?? null,
               });
               prompts.push({
                 metadata: content.metadata,
                 template: content.template,
                 filePath: entry.path,
-                source: entry.source as "global" | "workspace",
+                source: "global",
               });
             } catch (e) {
               console.warn(`Failed to read prompt ${entry.path}:`, e);

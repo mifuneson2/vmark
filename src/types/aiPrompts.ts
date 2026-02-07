@@ -24,7 +24,7 @@ export interface PromptDefinition {
   metadata: PromptMetadata;
   template: string;
   filePath: string;
-  source: "global" | "workspace";
+  source: "global";
 }
 
 // ============================================================================

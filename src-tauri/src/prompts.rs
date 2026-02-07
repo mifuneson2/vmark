@@ -1,8 +1,7 @@
 //! AI Genies — file reader and default genie installer
 //!
-//! Scans global (`<appDataDir>/genies/`) and workspace (`.vmark/genies/`)
-//! directories for markdown prompt files. Workspace genies override global
-//! ones on name collision in the store (menu shows both independently).
+//! Scans the global genies directory (`<appDataDir>/genies/`) for markdown
+//! prompt files.
 
 use serde::Serialize;
 use std::collections::HashMap;
@@ -19,7 +18,7 @@ use tauri::{command, AppHandle, Manager};
 pub struct PromptEntry {
     pub name: String,
     pub path: String,
-    pub source: String, // "global" | "workspace"
+    pub source: String, // "global"
     pub category: Option<String>,
 }
 
@@ -50,27 +49,14 @@ pub fn get_genies_dir(app: AppHandle) -> Result<String, String> {
     Ok(dir.to_string_lossy().to_string())
 }
 
-/// List all available prompts from global + workspace directories.
-/// Workspace prompts override global on name collision.
+/// List all available prompts from the global genies directory.
 #[command]
-pub fn list_prompts(
-    app: AppHandle,
-    workspace_root: Option<String>,
-) -> Result<Vec<PromptEntry>, String> {
+pub fn list_prompts(app: AppHandle) -> Result<Vec<PromptEntry>, String> {
     let mut by_name: HashMap<String, PromptEntry> = HashMap::new();
 
-    // 1. Scan global prompts
     let global_dir = global_prompts_dir(&app)?;
     if global_dir.is_dir() {
         scan_prompts_dir(&global_dir, &global_dir, "global", &mut by_name);
-    }
-
-    // 2. Scan workspace prompts (overrides global)
-    if let Some(root) = workspace_root {
-        let ws_dir = Path::new(&root).join(".vmark").join("genies");
-        if ws_dir.is_dir() {
-            scan_prompts_dir(&ws_dir, &ws_dir, "workspace", &mut by_name);
-        }
     }
 
     let mut entries: Vec<PromptEntry> = by_name.into_values().collect();
@@ -79,36 +65,18 @@ pub fn list_prompts(
 }
 
 /// Read a single prompt file — parse frontmatter and return metadata + template.
-/// Validates the path is within allowed prompt directories to prevent traversal.
+/// Validates the path is within the global genies directory to prevent traversal.
 #[command]
-pub fn read_prompt(
-    app: AppHandle,
-    path: String,
-    workspace_root: Option<String>,
-) -> Result<PromptContent, String> {
+pub fn read_prompt(app: AppHandle, path: String) -> Result<PromptContent, String> {
     // Canonicalize requested path
     let requested = fs::canonicalize(&path)
         .map_err(|e| format!("Invalid prompt path {}: {}", path, e))?;
 
-    // Build allowed roots
+    // Validate path is within the global genies directory
     let global_dir = fs::canonicalize(global_prompts_dir(&app)?)
         .unwrap_or_else(|_| global_prompts_dir(&app).unwrap_or_default());
 
-    let mut allowed = false;
-    if requested.starts_with(&global_dir) {
-        allowed = true;
-    }
-
-    if let Some(root) = &workspace_root {
-        let ws_dir = Path::new(root).join(".vmark").join("genies");
-        if let Ok(ws_canonical) = fs::canonicalize(&ws_dir) {
-            if requested.starts_with(&ws_canonical) {
-                allowed = true;
-            }
-        }
-    }
-
-    if !allowed {
+    if !requested.starts_with(&global_dir) {
         return Err("Prompt path is outside allowed directories".to_string());
     }
 

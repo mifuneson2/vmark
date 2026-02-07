@@ -15,7 +15,6 @@ import {
 import { createPortal } from "react-dom";
 import { usePromptPickerStore } from "@/stores/promptPickerStore";
 import { usePromptsStore } from "@/stores/promptsStore";
-import { useWorkspaceStore } from "@/stores/workspaceStore";
 import { usePromptInvocation } from "@/hooks/usePromptInvocation";
 import type { PromptDefinition, PromptScope } from "@/types/aiPrompts";
 import { PromptChips } from "./PromptChips";
@@ -46,8 +45,7 @@ export function PromptPicker() {
   // Load prompts on open
   useEffect(() => {
     if (isOpen) {
-      const rootPath = useWorkspaceStore.getState().rootPath;
-      usePromptsStore.getState().loadPrompts(rootPath);
+      usePromptsStore.getState().loadPrompts();
       setFilter("");
       setSelectedIndex(0);
       setFreeform("");
@@ -228,7 +226,7 @@ export function PromptPicker() {
             ref={inputRef}
             className="prompt-picker-search"
             type="text"
-            placeholder="Search prompts..."
+            placeholder="Search genies..."
             value={filter}
             onChange={(e) => {
               setFilter(e.target.value);
@@ -245,18 +243,18 @@ export function PromptPicker() {
         {/* Prompt list */}
         <div className="prompt-picker-list" ref={listRef}>
           {loading && (
-            <div className="prompt-picker-empty">Loading prompts...</div>
+            <div className="prompt-picker-empty">Loading genies...</div>
           )}
 
           {!loading && flatList.length === 0 && !filter && (
             <div className="prompt-picker-empty">
-              No prompts found. Add .md files to your prompts directory.
+              No genies found. Add .md files to your genies directory.
             </div>
           )}
 
           {!loading && flatList.length === 0 && filter && (
             <div className="prompt-picker-empty">
-              No matching prompts for &ldquo;{filter}&rdquo;
+              No matching genies for &ldquo;{filter}&rdquo;
             </div>
           )}
 

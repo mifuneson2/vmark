@@ -709,7 +709,7 @@ pub fn update_recent_workspaces(app: AppHandle, workspaces: Vec<String>) -> Resu
 /// Refresh the Genies submenu by scanning global and workspace prompt directories.
 /// Called by frontend on mount and when workspace changes.
 #[tauri::command]
-pub fn refresh_genies_menu(app: AppHandle, workspace_root: Option<String>) -> Result<(), String> {
+pub fn refresh_genies_menu(app: AppHandle) -> Result<(), String> {
     use crate::prompts;
 
     let global_dir = prompts::global_prompts_dir(&app)?;
@@ -718,15 +718,6 @@ pub fn refresh_genies_menu(app: AppHandle, workspace_root: Option<String>) -> Re
     } else {
         Vec::new()
     };
-
-    let ws_dir = workspace_root
-        .as_ref()
-        .map(|r| std::path::Path::new(r).join(".vmark").join("genies"));
-    let ws_entries = ws_dir
-        .as_ref()
-        .filter(|d| d.is_dir())
-        .map(|d| prompts::scan_genies_with_titles(d))
-        .unwrap_or_default();
 
     let mut snapshot: Vec<String> = Vec::new();
 
@@ -750,31 +741,12 @@ pub fn refresh_genies_menu(app: AppHandle, workspace_root: Option<String>) -> Re
         submenu.remove(item).map_err(|e| e.to_string())?;
     }
 
-    let has_workspace = workspace_root.is_some();
-    let has_ws_entries = !ws_entries.is_empty();
-    let ws_dir_exists = ws_dir.as_ref().is_some_and(|d| d.is_dir());
-
     // "Search Genies…" at top — opens the picker (Cmd+Y)
     let search_item = MenuItem::with_id(&app, "search-genies", "Search Genies…", true, None::<&str>)
         .map_err(|e| e.to_string())?;
     submenu.append(&search_item).map_err(|e| e.to_string())?;
     let sep = PredefinedMenuItem::separator(&app).map_err(|e| e.to_string())?;
     submenu.append(&sep).map_err(|e| e.to_string())?;
-
-    // Private section (only if workspace genies exist)
-    if has_ws_entries {
-        let header = MenuItem::with_id(&app, "genies-header-private", "Private", false, None::<&str>)
-            .map_err(|e| e.to_string())?;
-        submenu.append(&header).map_err(|e| e.to_string())?;
-        append_genie_entries(&app, &submenu, &ws_entries, &mut snapshot)?;
-        let sep = PredefinedMenuItem::separator(&app).map_err(|e| e.to_string())?;
-        submenu.append(&sep).map_err(|e| e.to_string())?;
-    }
-
-    // Global section
-    let header = MenuItem::with_id(&app, "genies-header-global", "Global", false, None::<&str>)
-        .map_err(|e| e.to_string())?;
-    submenu.append(&header).map_err(|e| e.to_string())?;
 
     if global_entries.is_empty() {
         let no_genies = MenuItem::with_id(&app, "no-genies", "No Genies", false, None::<&str>)
@@ -784,27 +756,19 @@ pub fn refresh_genies_menu(app: AppHandle, workspace_root: Option<String>) -> Re
         append_genie_entries(&app, &submenu, &global_entries, &mut snapshot)?;
     }
 
-    // Separator before folder actions
+    // Separator before folder action
     let sep = PredefinedMenuItem::separator(&app).map_err(|e| e.to_string())?;
     submenu.append(&sep).map_err(|e| e.to_string())?;
 
-    // Open Global Genies Folder
-    let open_global = MenuItem::with_id(&app, "open-global-genies", "Open Global Genies Folder", true, None::<&str>)
+    // Reload Genies
+    let reload = MenuItem::with_id(&app, "reload-genies", "Reload Genies", true, None::<&str>)
         .map_err(|e| e.to_string())?;
-    submenu.append(&open_global).map_err(|e| e.to_string())?;
+    submenu.append(&reload).map_err(|e| e.to_string())?;
 
-    // Workspace folder action: Open if dir exists, Create if not
-    if has_workspace {
-        if has_ws_entries || ws_dir_exists {
-            let open_ws = MenuItem::with_id(&app, "open-workspace-genies", "Open Workspace Genies Folder", true, None::<&str>)
-                .map_err(|e| e.to_string())?;
-            submenu.append(&open_ws).map_err(|e| e.to_string())?;
-        } else {
-            let create_ws = MenuItem::with_id(&app, "create-workspace-genies", "Create Local Genies Folder", true, None::<&str>)
-                .map_err(|e| e.to_string())?;
-            submenu.append(&create_ws).map_err(|e| e.to_string())?;
-        }
-    }
+    // Open Genies Folder
+    let open_folder = MenuItem::with_id(&app, "open-genies-folder", "Open Genies Folder", true, None::<&str>)
+        .map_err(|e| e.to_string())?;
+    submenu.append(&open_folder).map_err(|e| e.to_string())?;
 
     // Update snapshot
     if let Ok(mut s) = GENIES_SNAPSHOT.lock() {

@@ -6,7 +6,6 @@ import { openUrl, revealItemInDir } from "@tauri-apps/plugin-opener";
 import { mkdir } from "@tauri-apps/plugin-fs";
 import { invoke } from "@tauri-apps/api/core";
 import { useDocumentStore } from "@/stores/documentStore";
-import { useWorkspaceStore } from "@/stores/workspaceStore";
 import { useUIStore } from "@/stores/uiStore";
 import { useTabStore } from "@/stores/tabStore";
 import { useSettingsStore } from "@/stores/settingsStore";
@@ -121,53 +120,19 @@ export function useMenuEvents(): void {
       if (cancelled) { unlistenReportIssue(); return; }
       unlistenRefs.current.push(unlistenReportIssue);
 
-      // Open Global Genies Folder
-      const unlistenOpenGlobalGenies = await currentWindow.listen<string>("menu:open-global-genies", async (event) => {
+      // Open Genies Folder
+      const unlistenOpenGeniesFolder = await currentWindow.listen<string>("menu:open-genies-folder", async (event) => {
         if (event.payload !== windowLabel) return;
         try {
           const dir = await invoke<string>("get_genies_dir");
           await mkdir(dir, { recursive: true });
           await revealItemInDir(dir);
         } catch (error) {
-          console.error("[Menu] Failed to open global genies folder:", error);
+          console.error("[Menu] Failed to open genies folder:", error);
         }
       });
-      if (cancelled) { unlistenOpenGlobalGenies(); return; }
-      unlistenRefs.current.push(unlistenOpenGlobalGenies);
-
-      // Open Workspace Genies Folder
-      const unlistenOpenWorkspaceGenies = await currentWindow.listen<string>("menu:open-workspace-genies", async (event) => {
-        if (event.payload !== windowLabel) return;
-        const rootPath = useWorkspaceStore.getState().rootPath;
-        if (!rootPath) return;
-        try {
-          const dir = `${rootPath}/.vmark/genies`;
-          await mkdir(dir, { recursive: true });
-          await revealItemInDir(dir);
-        } catch (error) {
-          console.error("[Menu] Failed to open workspace genies folder:", error);
-        }
-      });
-      if (cancelled) { unlistenOpenWorkspaceGenies(); return; }
-      unlistenRefs.current.push(unlistenOpenWorkspaceGenies);
-
-      // Create Local Genies Folder (creates .vmark/genies/ and refreshes menu)
-      const unlistenCreateWorkspaceGenies = await currentWindow.listen<string>("menu:create-workspace-genies", async (event) => {
-        if (event.payload !== windowLabel) return;
-        const rootPath = useWorkspaceStore.getState().rootPath;
-        if (!rootPath) return;
-        try {
-          const dir = `${rootPath}/.vmark/genies`;
-          await mkdir(dir, { recursive: true });
-          await revealItemInDir(dir);
-          // Refresh menu so "Create" becomes "Open"
-          await invoke("refresh_genies_menu", { workspaceRoot: rootPath });
-        } catch (error) {
-          console.error("[Menu] Failed to create workspace genies folder:", error);
-        }
-      });
-      if (cancelled) { unlistenCreateWorkspaceGenies(); return; }
-      unlistenRefs.current.push(unlistenCreateWorkspaceGenies);
+      if (cancelled) { unlistenOpenGeniesFolder(); return; }
+      unlistenRefs.current.push(unlistenOpenGeniesFolder);
     };
 
     setupListeners().catch((error) => {
