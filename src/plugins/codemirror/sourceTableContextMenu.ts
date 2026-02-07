@@ -5,7 +5,7 @@
  * inside a markdown table in Source mode.
  */
 
-import { EditorView, ViewPlugin } from "@codemirror/view";
+import { EditorView } from "@codemirror/view";
 import { toast } from "sonner";
 import { icons } from "@/utils/icons";
 import { getPopupHost, toHostCoords } from "@/plugins/sourcePopup";
@@ -31,6 +31,7 @@ interface MenuAction {
   action: (view: EditorView, info: SourceTableInfo) => void;
   dividerAfter?: boolean;
   danger?: boolean;
+  disabled?: boolean;
 }
 
 /**
@@ -59,6 +60,8 @@ class SourceTableContextMenuView {
 
   private buildMenu(info: SourceTableInfo): void {
     this.container.innerHTML = "";
+
+    const onSeparator = info.rowIndex === 1;
 
     const alignCol =
       (alignment: TableAlignment) => (view: EditorView, info: SourceTableInfo) =>
@@ -95,6 +98,7 @@ class SourceTableContextMenuView {
         icon: icons.deleteRow,
         action: (v, i) => deleteRow(v, i),
         danger: true,
+        disabled: onSeparator,
       },
       {
         label: "Delete Column",
@@ -113,33 +117,39 @@ class SourceTableContextMenuView {
         label: "Align Column Left",
         icon: icons.alignLeft,
         action: alignCol("left"),
+        disabled: onSeparator,
       },
       {
         label: "Align Column Center",
         icon: icons.alignCenter,
         action: alignCol("center"),
+        disabled: onSeparator,
       },
       {
         label: "Align Column Right",
         icon: icons.alignRight,
         action: alignCol("right"),
         dividerAfter: true,
+        disabled: onSeparator,
       },
       {
         label: "Align All Left",
         icon: icons.alignAllLeft,
         action: alignAll("left"),
+        disabled: onSeparator,
       },
       {
         label: "Align All Center",
         icon: icons.alignAllCenter,
         action: alignAll("center"),
+        disabled: onSeparator,
       },
       {
         label: "Align All Right",
         icon: icons.alignAllRight,
         action: alignAll("right"),
         dividerAfter: true,
+        disabled: onSeparator,
       },
       {
         label: "Format Table",
@@ -154,10 +164,12 @@ class SourceTableContextMenuView {
 
     for (const item of actions) {
       const menuItem = document.createElement("button");
-      menuItem.className = `table-context-menu-item${
-        item.danger ? " table-context-menu-item-danger" : ""
-      }`;
+      let className = "table-context-menu-item";
+      if (item.danger) className += " table-context-menu-item-danger";
+      if (item.disabled) className += " table-context-menu-item-disabled";
+      menuItem.className = className;
       menuItem.type = "button";
+      if (item.disabled) menuItem.disabled = true;
 
       const iconSpan = document.createElement("span");
       iconSpan.className = "table-context-menu-icon";
@@ -170,12 +182,14 @@ class SourceTableContextMenuView {
       menuItem.appendChild(labelSpan);
 
       menuItem.addEventListener("mousedown", (e) => e.preventDefault());
-      menuItem.addEventListener("click", (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        item.action(this.view, info);
-        this.hide();
-      });
+      if (!item.disabled) {
+        menuItem.addEventListener("click", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          item.action(this.view, info);
+          this.hide();
+        });
+      }
 
       this.container.appendChild(menuItem);
 
@@ -243,25 +257,6 @@ class SourceTableContextMenuView {
 }
 
 /**
- * Creates the source table context menu plugin.
- */
-export function createSourceTableContextMenuPlugin() {
-  return ViewPlugin.fromClass(
-    class {
-      private contextMenu: SourceTableContextMenuView;
-
-      constructor(view: EditorView) {
-        this.contextMenu = new SourceTableContextMenuView(view);
-      }
-
-      destroy() {
-        this.contextMenu.destroy();
-      }
-    }
-  );
-}
-
-/**
  * Context menu event handler for tables.
  */
 export function createTableContextMenuHandler() {
@@ -283,7 +278,7 @@ export function createTableContextMenuHandler() {
 
       event.preventDefault();
 
-      // Create context menu if not exists
+      // Create context menu if not exists, or recreate if previous was destroyed
       if (!contextMenu) {
         contextMenu = new SourceTableContextMenuView(view);
       }

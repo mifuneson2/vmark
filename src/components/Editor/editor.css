@@ -469,6 +469,11 @@
   margin-bottom: 0;
 }
 
+/* Table cell selection — use theme-aware accent instead of ProseMirror's hardcoded light blue */
+.tiptap-editor .ProseMirror .selectedCell::after {
+  background: var(--accent-bg);
+}
+
 /* Table scroll container - enables horizontal scrolling for wide tables.
    Negative margins break out of ProseMirror padding so tables span full width.
    Horizontal scrollbar appears when table is wider than container. */

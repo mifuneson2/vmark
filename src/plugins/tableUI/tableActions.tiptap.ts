@@ -114,6 +114,11 @@ export function addColRight(view: EditorView): boolean {
 
 export function deleteCurrentRow(view: EditorView): boolean {
   if (!isInTable(view)) return false;
+  // If table only has header + 1 data row (2 rows total), delete entire table
+  const info = getTableInfo(view);
+  if (info && info.numRows <= 2) {
+    return deleteCurrentTable(view);
+  }
   view.focus();
   return deleteRow(view.state, view.dispatch);
 }
@@ -175,6 +180,61 @@ export function alignColumn(view: EditorView, alignment: TableAlignment, allColu
   }
 }
 
+/**
+ * Collect inline content from a cell, flattening multiple paragraphs into one.
+ * Preserves marks (bold, italic, links, code, etc.) instead of stripping them.
+ */
+function collectCellInlineContent(cell: Node, schema: { text: (s: string) => Node }): Node[] {
+  const fragments: Node[] = [];
+
+  for (let p = 0; p < cell.childCount; p++) {
+    const block = cell.child(p);
+
+    // Add space separator between multiple paragraphs
+    if (p > 0 && fragments.length > 0) {
+      fragments.push(schema.text(" "));
+    }
+
+    // Collect all inline children from this block
+    for (let i = 0; i < block.childCount; i++) {
+      fragments.push(block.child(i));
+    }
+  }
+
+  // Trim leading/trailing whitespace-only text nodes
+  while (fragments.length > 0) {
+    const first = fragments[0];
+    if (first.isText && first.text?.trim() === "") {
+      fragments.shift();
+    } else if (first.isText) {
+      const trimmed = first.text!.replace(/^\s+/, "");
+      if (trimmed !== first.text) {
+        fragments[0] = first.type.schema.text(trimmed, first.marks);
+      }
+      break;
+    } else {
+      break;
+    }
+  }
+
+  while (fragments.length > 0) {
+    const last = fragments[fragments.length - 1];
+    if (last.isText && last.text?.trim() === "") {
+      fragments.pop();
+    } else if (last.isText) {
+      const trimmed = last.text!.replace(/\s+$/, "");
+      if (trimmed !== last.text) {
+        fragments[fragments.length - 1] = last.type.schema.text(trimmed, last.marks);
+      }
+      break;
+    } else {
+      break;
+    }
+  }
+
+  return fragments;
+}
+
 export function formatTable(view: EditorView): boolean {
   const info = getTableInfo(view);
   if (!info) return false;
@@ -193,9 +253,8 @@ export function formatTable(view: EditorView): boolean {
 
       for (let c = 0; c < row.childCount; c++) {
         const cell = row.child(c);
-        const trimmed = cell.textContent.trim();
-        const textNode = trimmed ? state.schema.text(trimmed) : null;
-        const newParagraph = paragraphType.create(null, textNode ? [textNode] : []);
+        const inlineContent = collectCellInlineContent(cell, state.schema);
+        const newParagraph = paragraphType.create(null, inlineContent.length > 0 ? inlineContent : []);
         newCells.push(cell.type.create(cell.attrs, [newParagraph]));
       }
 

@@ -11,7 +11,7 @@ export { createMarkdownAutoPairPlugin, markdownPairBackspace } from "./markdownA
 export { tabEscapeKeymap } from "./tabEscape";
 export { tabIndentFallbackKeymap, shiftTabIndentFallbackKeymap } from "./tabIndent";
 export { listContinuationKeymap } from "./listContinuation";
-export { tableTabKeymap, tableShiftTabKeymap, tableArrowUpKeymap, tableArrowDownKeymap } from "./tableTabNav";
+export { tableTabKeymap, tableShiftTabKeymap, tableArrowUpKeymap, tableArrowDownKeymap, tableModEnterKeymap, tableModShiftEnterKeymap } from "./tableTabNav";
 export { createSmartPastePlugin } from "./smartPaste";
 export { createSourceFocusModePlugin } from "./focusModePlugin";
 export { createSourceTypewriterPlugin } from "./typewriterModePlugin";

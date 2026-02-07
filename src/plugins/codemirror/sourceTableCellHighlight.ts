@@ -14,44 +14,43 @@ import {
   type ViewUpdate,
 } from "@codemirror/view";
 import { getSourceTableInfo } from "@/plugins/sourceContextDetection/tableDetection";
+import { splitTableCells } from "@/utils/tableParser";
 
 /**
  * Get the character range of the current cell within the table row.
+ * Uses splitTableCells to correctly handle escaped pipes and code spans.
  */
 function getCellRange(
   lineText: string,
   lineFrom: number,
   colIndex: number
 ): { from: number; to: number } | null {
-  let inCell = false;
-  let currentCol = -1;
-  let cellStart = lineFrom;
-  let cellEnd = lineFrom + lineText.length;
+  // Split on unescaped pipes to find cell boundaries
+  const trimmed = lineText.trimStart();
+  const leadingWs = lineText.length - trimmed.length;
 
-  for (let i = 0; i < lineText.length; i++) {
-    const char = lineText[i];
-
-    if (char === "|") {
-      if (inCell) {
-        // End of current cell
-        if (currentCol === colIndex) {
-          cellEnd = lineFrom + i;
-          return { from: cellStart, to: cellEnd };
-        }
-      }
-      // Start of next cell
-      inCell = true;
-      currentCol++;
-      cellStart = lineFrom + i + 1;
-    }
+  // Remove leading pipe
+  let content = trimmed;
+  let offset = leadingWs;
+  if (content.startsWith("|")) {
+    content = content.slice(1);
+    offset += 1;
   }
 
-  // Handle last cell (if no trailing |)
-  if (inCell && currentCol === colIndex) {
-    return { from: cellStart, to: lineFrom + lineText.length };
+  // Split into cells (including trailing empty cell if trailing pipe)
+  const cells = splitTableCells(content);
+
+  // Target the colIndex-th cell
+  if (colIndex < 0 || colIndex >= cells.length) return null;
+
+  // Calculate position by summing up preceding cell lengths + pipe chars
+  let pos = offset;
+  for (let i = 0; i < colIndex; i++) {
+    pos += cells[i].length + 1; // +1 for the pipe separator
   }
 
-  return null;
+  const cellText = cells[colIndex];
+  return { from: lineFrom + pos, to: lineFrom + pos + cellText.length };
 }
 
 /**

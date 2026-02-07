@@ -5,7 +5,7 @@ import type { EditorView } from "@tiptap/pm/view";
 import { goToNextCell } from "@tiptap/pm/tables";
 import { ColumnResizeManager } from "./columnResize";
 import { TiptapTableContextMenu } from "./TiptapTableContextMenu";
-import { addRowAbove, addRowBelow, deleteCurrentRow, isInTable } from "./tableActions.tiptap";
+import { addRowAbove, addRowBelow, isInTable } from "./tableActions.tiptap";
 import { escapeTableUp, escapeTableDown } from "./tableEscape";
 import { getActiveTableElement } from "./tableDom";
 import { guardProseMirrorCommand } from "@/utils/imeGuard";
@@ -75,7 +75,7 @@ export const tableUIExtension = Extension.create({
         "Shift-Tab": goPrev,
         "Mod-Enter": guardProseMirrorCommand(cmdWhenInTable((view) => addRowBelow(view))),
         "Mod-Shift-Enter": guardProseMirrorCommand(cmdWhenInTable((view) => addRowAbove(view))),
-        "Mod-Backspace": guardProseMirrorCommand(cmdWhenInTable((view) => deleteCurrentRow(view))),
+
         ArrowUp: guardProseMirrorCommand(cmdWhenInTable((view) => escapeTableUp(view))),
         ArrowDown: guardProseMirrorCommand(cmdWhenInTable((view) => escapeTableDown(view))),
       }),

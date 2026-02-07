@@ -25,6 +25,8 @@ import {
   listContinuationKeymap,
   tableTabKeymap,
   tableShiftTabKeymap,
+  tableModEnterKeymap,
+  tableModShiftEnterKeymap,
   tableArrowUpKeymap,
   tableArrowDownKeymap,
   createSmartPastePlugin,
@@ -141,6 +143,9 @@ export function createSourceEditorExtensions(config: ExtensionConfig): Extension
       // Table arrow escape (first/last block handling)
       tableArrowUpKeymap,
       tableArrowDownKeymap,
+      // Table Mod-Enter shortcuts (must be before task list toggle)
+      tableModEnterKeymap,
+      tableModShiftEnterKeymap,
       // Tab to jump over closing brackets (must be before default keymap)
       tabEscapeKeymap,
       // Backspace to delete both halves of markdown pairs

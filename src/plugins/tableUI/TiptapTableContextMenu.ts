@@ -22,6 +22,7 @@ export class TiptapTableContextMenu {
     this.container = this.buildContainer();
     // Container will be appended to host in show()
     document.addEventListener("mousedown", this.handleClickOutside);
+    document.addEventListener("keydown", this.handleKeydown);
   }
 
   updateView(view: EditorView) {
@@ -166,8 +167,16 @@ export class TiptapTableContextMenu {
     }
   };
 
+  private handleKeydown = (e: KeyboardEvent) => {
+    if (e.key === "Escape" && this.isVisible) {
+      this.hide();
+      this.editorView.focus();
+    }
+  };
+
   destroy() {
     document.removeEventListener("mousedown", this.handleClickOutside);
+    document.removeEventListener("keydown", this.handleKeydown);
     this.container.remove();
   }
 }

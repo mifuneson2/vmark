@@ -7,8 +7,9 @@
 
 import type { EditorView, KeyBinding } from "@codemirror/view";
 import { getSourceTableInfo, isInEditableTableRow } from "@/plugins/sourceContextDetection/tableDetection";
-import { insertRowBelow } from "@/plugins/sourceContextDetection/tableActions";
+import { insertRowBelow, insertRowAbove } from "@/plugins/sourceContextDetection/tableActions";
 import { guardCodeMirrorKeyBinding } from "@/utils/imeGuard";
+import { splitTableCells } from "@/utils/tableParser";
 
 export interface CellBoundary {
   from: number; // Start of cell content (after leading space)
@@ -18,58 +19,53 @@ export interface CellBoundary {
 /**
  * Parse cell boundaries from a table row.
  * Returns positions relative to line start.
+ * Uses splitTableCells to correctly handle escaped pipes and code spans.
  *
  * Example: "| A | B | C |" → [{from: 2, to: 3}, {from: 6, to: 7}, {from: 10, to: 11}]
  */
 export function getCellBoundaries(lineText: string): CellBoundary[] {
   const cells: CellBoundary[] = [];
-  let pos = 0;
 
-  // Skip leading pipe if present
-  if (lineText.startsWith("|")) {
-    pos = 1;
+  // Strip leading pipe
+  let offset = 0;
+  let content = lineText;
+  if (content.startsWith("|")) {
+    content = content.slice(1);
+    offset = 1;
   }
 
-  while (pos < lineText.length) {
+  // Strip trailing pipe (only if not escaped)
+  if (content.endsWith("|") && !content.endsWith("\\|")) {
+    content = content.slice(0, -1);
+  }
+
+  const rawCells = splitTableCells(content);
+
+  let pos = offset;
+  for (const rawCell of rawCells) {
     const cellStart = pos;
+    const cellEnd = pos + rawCell.length;
 
-    // Find next pipe or end
-    while (pos < lineText.length && lineText[pos] !== "|") {
-      pos++;
-    }
-
-    // We found a cell (from cellStart to pos)
     // Trim whitespace to find content boundaries
     let contentStart = cellStart;
-    let contentEnd = pos;
+    let contentEnd = cellEnd;
 
-    // Skip leading whitespace
     while (contentStart < contentEnd && lineText[contentStart] === " ") {
       contentStart++;
     }
-
-    // Skip trailing whitespace
     while (contentEnd > contentStart && lineText[contentEnd - 1] === " ") {
       contentEnd--;
     }
 
     // For empty cells, place cursor in the middle of the cell
     if (contentStart >= contentEnd) {
-      const midPoint = Math.floor((cellStart + pos) / 2);
+      const midPoint = Math.floor((cellStart + cellEnd) / 2);
       cells.push({ from: midPoint, to: midPoint });
     } else {
       cells.push({ from: contentStart, to: contentEnd });
     }
 
-    // Skip the pipe
-    if (pos < lineText.length && lineText[pos] === "|") {
-      pos++;
-    }
-
-    // Stop if we've reached the end or trailing pipe
-    if (pos >= lineText.length) {
-      break;
-    }
+    pos = cellEnd + 1; // +1 for the pipe separator
   }
 
   return cells;
@@ -312,4 +308,44 @@ export const tableArrowUpKeymap: KeyBinding = guardCodeMirrorKeyBinding({
 export const tableArrowDownKeymap: KeyBinding = guardCodeMirrorKeyBinding({
   key: "ArrowDown",
   run: escapeTableDown,
+});
+
+/**
+ * Mod-Enter: insert a new row below current position in a table.
+ */
+export function tableModEnter(view: EditorView): boolean {
+  const info = getSourceTableInfo(view);
+  if (!info) return false;
+  if (!isInEditableTableRow(info)) return false;
+
+  insertRowBelow(view, info);
+  return true;
+}
+
+/**
+ * Mod-Shift-Enter: insert a new row above current position in a table.
+ */
+export function tableModShiftEnter(view: EditorView): boolean {
+  const info = getSourceTableInfo(view);
+  if (!info) return false;
+  if (!isInEditableTableRow(info)) return false;
+
+  insertRowAbove(view, info);
+  return true;
+}
+
+/**
+ * Mod+Enter key handler for inserting row below in table.
+ */
+export const tableModEnterKeymap: KeyBinding = guardCodeMirrorKeyBinding({
+  key: "Mod-Enter",
+  run: tableModEnter,
+});
+
+/**
+ * Mod+Shift+Enter key handler for inserting row above in table.
+ */
+export const tableModShiftEnterKeymap: KeyBinding = guardCodeMirrorKeyBinding({
+  key: "Mod-Shift-Enter",
+  run: tableModShiftEnter,
 });

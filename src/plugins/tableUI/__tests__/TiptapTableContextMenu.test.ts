@@ -348,6 +348,43 @@ describe("TiptapTableContextMenu", () => {
     });
   });
 
+  describe("Escape key handling", () => {
+    it("hides menu when Escape is pressed", async () => {
+      menu.show(100, 200);
+      await new Promise((r) => requestAnimationFrame(r));
+
+      const container = document.querySelector(".table-context-menu") as HTMLElement;
+      expect(container.style.display).toBe("flex");
+
+      const escapeEvent = new KeyboardEvent("keydown", { key: "Escape", bubbles: true });
+      document.dispatchEvent(escapeEvent);
+
+      expect(container.style.display).toBe("none");
+    });
+
+    it("focuses editor after Escape", async () => {
+      menu.show(100, 200);
+      await new Promise((r) => requestAnimationFrame(r));
+
+      const escapeEvent = new KeyboardEvent("keydown", { key: "Escape", bubbles: true });
+      document.dispatchEvent(escapeEvent);
+
+      expect(view.focus).toHaveBeenCalled();
+    });
+
+    it("does not hide menu on other keys", async () => {
+      menu.show(100, 200);
+      await new Promise((r) => requestAnimationFrame(r));
+
+      const container = document.querySelector(".table-context-menu") as HTMLElement;
+
+      const enterEvent = new KeyboardEvent("keydown", { key: "Enter", bubbles: true });
+      document.dispatchEvent(enterEvent);
+
+      expect(container.style.display).toBe("flex");
+    });
+  });
+
   describe("View update", () => {
     it("updateView updates the editor view reference", async () => {
       const newEditorDom = document.createElement("div");

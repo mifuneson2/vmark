@@ -232,10 +232,14 @@ describe("SourceTableContextMenu", () => {
   });
 
   describe("Plugin creation", () => {
-    it("createSourceTableContextMenuPlugin returns a ViewPlugin", async () => {
-      const { createSourceTableContextMenuPlugin } = await importContextMenu();
-      const plugin = createSourceTableContextMenuPlugin();
-      expect(plugin).toBeDefined();
+    it("exports createTableContextMenuHandler", async () => {
+      const mod = await importContextMenu();
+      expect(typeof mod.createTableContextMenuHandler).toBe("function");
+    });
+
+    it("does not export createSourceTableContextMenuPlugin (removed)", async () => {
+      const mod = await importContextMenu();
+      expect((mod as Record<string, unknown>).createSourceTableContextMenuPlugin).toBeUndefined();
     });
   });
 });
