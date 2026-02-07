@@ -800,18 +800,29 @@ pub fn hide_genies_menu(app: AppHandle) -> Result<(), String> {
     let edit_menu = find_edit_submenu(&menu).ok_or("Edit menu not found")?;
 
     // Find and remove the Genies submenu
-    if let Some(genies_sub) = find_genies_submenu(&edit_menu) {
+    let was_present = if let Some(genies_sub) = find_genies_submenu(&edit_menu) {
         edit_menu
             .remove(&genies_sub)
             .map_err(|e| e.to_string())?;
+        true
+    } else {
+        false
+    };
+
+    // Remove the separator that refresh_genies_menu prepended before the submenu.
+    // Only attempt this when we actually removed the submenu above, so we never
+    // accidentally strip a real menu item (Cut/Copy/Paste are also Predefined).
+    if was_present {
+        if let Some(last) = edit_menu.items().map_err(|e| e.to_string())?.last() {
+            if matches!(last, MenuItemKind::Predefined(_)) {
+                edit_menu.remove(last).map_err(|e| e.to_string())?;
+            }
+        }
     }
 
-    // Also remove the trailing separator before genies (last item in Edit should now be a separator)
-    if let Some(last) = edit_menu.items().map_err(|e| e.to_string())?.last() {
-        if matches!(last, MenuItemKind::Predefined(_)) {
-            // PredefinedMenuItem includes separators — remove it
-            edit_menu.remove(last).map_err(|e| e.to_string())?;
-        }
+    // Clear stale snapshot so removed menu items can't resolve genie paths
+    if let Ok(mut s) = GENIES_SNAPSHOT.lock() {
+        s.clear();
     }
 
     Ok(())
