@@ -98,12 +98,19 @@ Open settings with `Cmd/Ctrl + ,` to customize:
 - **Terminal**: Terminal font size and line height
 - **Shortcuts**: Customize keyboard shortcuts
 
+## AI Writing Assistance
+
+VMark includes built-in AI Genies — select text and press `Mod + Y` to polish, expand, translate, or transform your writing with AI. Configure your preferred provider in **Settings > Integrations**.
+
+[Learn more about AI Genies →](/guide/ai-genies) | [Configure providers →](/guide/ai-providers)
+
 ## Tips for Getting Started
 
 1. **Use the slash menu**: Type `/` to quickly insert blocks, headings, lists, and more
 2. **Navigate with outline**: Click outline items to jump to sections
-3. **Try focus mode**: `F8` helps you concentrate on current paragraph
-4. **Learn shortcuts**: Check the [shortcuts guide](/guide/shortcuts) for efficiency
+3. **Try AI Genies**: Select text and press `Mod + Y` to polish, rephrase, or expand
+4. **Try focus mode**: `F8` helps you concentrate on current paragraph
+5. **Learn shortcuts**: Check the [shortcuts guide](/guide/shortcuts) for efficiency
 
 ## Next Steps
 

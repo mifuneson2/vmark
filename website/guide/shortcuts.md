@@ -175,11 +175,17 @@ If you prefer keeping system functions on F-keys, you can customize VMark shortc
 | Copy as HTML | `Mod + Shift + C` |
 | Paste Plain Text | `Mod + Shift + V` |
 
-## AI Prompts
+## AI Genies
 
 | Action | Shortcut |
 |--------|----------|
-| Open AI Prompt Picker | `Mod + Y` |
+| Open AI Genies | `Mod + Y` |
+| Accept suggestion | `Enter` |
+| Reject suggestion | `Escape` |
+| Next suggestion | `Tab` |
+| Previous suggestion | `Shift + Tab` |
+| Accept all suggestions | `Mod + Shift + Enter` |
+| Reject all suggestions | `Mod + Shift + Escape` |
 
 ## CJK Formatting
 

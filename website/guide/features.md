@@ -160,6 +160,17 @@ Mermaid diagram support with live preview:
 - Live preview panel in Source mode (drag, resize, zoom)
 - [Learn more →](/guide/mermaid)
 
+## AI Genies
+
+Built-in AI writing assistance powered by your choice of provider:
+
+- 13 genies across four categories — editing, creative, structure, and tools
+- Spotlight-style picker with search and freeform prompts (`Mod + Y`)
+- Inline suggestion rendering — accept or reject with keyboard shortcuts
+- Supports CLI providers (Claude, Codex, Gemini, Ollama) and REST APIs
+
+[Learn more →](/guide/ai-genies) | [Configure providers →](/guide/ai-providers)
+
 ## Search & Replace
 
 - Find bar (`Cmd/Ctrl + F`)

@@ -42,6 +42,8 @@ export default defineConfig({
         {
           text: 'AI Integration',
           items: [
+            { text: 'AI Genies', link: '/guide/ai-genies' },
+            { text: 'AI Providers', link: '/guide/ai-providers' },
             { text: 'MCP Setup', link: '/guide/mcp-setup' },
             { text: 'MCP Tools Reference', link: '/guide/mcp-tools' },
             { text: 'Claude Code Skill', link: '/guide/claude-code-skill' },
