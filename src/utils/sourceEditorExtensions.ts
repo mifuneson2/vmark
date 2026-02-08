@@ -30,6 +30,7 @@ import {
   tableArrowUpKeymap,
   tableArrowDownKeymap,
   createSmartPastePlugin,
+  createSourceCopyOnSelectPlugin,
   createSourceFocusModePlugin,
   createSourceTypewriterPlugin,
   createImeGuardPlugin,
@@ -107,6 +108,8 @@ export function createSourceEditorExtensions(config: ExtensionConfig): Extension
     createListBlankLinePlugin(),
     // Smart paste: URL on selection creates markdown link
     createSmartPastePlugin(),
+    // Copy on select: auto-copy selected text to clipboard on mouseup
+    createSourceCopyOnSelectPlugin(),
     // IME guard: flush queued work after composition ends
     createImeGuardPlugin(),
     // Focus mode: dim non-current paragraph
