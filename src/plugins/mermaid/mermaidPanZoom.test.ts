@@ -59,7 +59,7 @@ describe("setupMermaidPanZoom", () => {
     expect(container.classList.contains("panzoom-enabled")).toBe(true);
   });
 
-  it("creates reset button when showResetButton is true (default)", () => {
+  it("creates reset button by default", () => {
     const container = createContainer();
     setupMermaidPanZoom(container);
     const btn = container.querySelector(".mermaid-panzoom-reset");
@@ -104,9 +104,7 @@ describe("setupMermaidPanZoom", () => {
     const container = createContainer();
     setupMermaidPanZoom(container);
     const svg = container.querySelector("svg")!;
-    // SVG children should not be wrapped in a <g>
     expect(svg.querySelector("g.panzoom-target")).toBeNull();
-    // Original rect should still be directly in the SVG
     expect(svg.querySelector("rect")).not.toBeNull();
   });
 });

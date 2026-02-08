@@ -63,7 +63,7 @@ function installDoubleClickHandler(element: HTMLElement, onDoubleClick?: () => v
 function createPreviewElement(
   language: string,
   rendered: string,
-  onDoubleClick?: () => void
+  onDoubleClick?: () => void,
 ): HTMLElement {
   const wrapper = document.createElement("div");
   // Use "latex" class for both "latex" and "$$math$$" languages
@@ -96,7 +96,8 @@ function createPreviewPlaceholder(
 function createEditHeader(
   language: string,
   onCancel: () => void,
-  onSave: () => void
+  onSave: () => void,
+  onCopy?: () => void,
 ): HTMLElement {
   const header = document.createElement("div");
   header.className = "code-block-edit-header";
@@ -107,6 +108,31 @@ function createEditHeader(
 
   const actions = document.createElement("div");
   actions.className = "code-block-edit-actions";
+
+  // Copy button (mermaid only — passed via onCopy)
+  if (onCopy) {
+    const copyBtn = document.createElement("button");
+    copyBtn.className = "code-block-edit-btn code-block-edit-copy";
+    copyBtn.title = "Copy mermaid code";
+    copyBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`;
+    copyBtn.addEventListener("mousedown", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+    });
+    copyBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      onCopy();
+      // Brief checkmark feedback
+      copyBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
+      copyBtn.classList.add("code-block-edit-btn--success");
+      setTimeout(() => {
+        copyBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`;
+        copyBtn.classList.remove("code-block-edit-btn--success");
+      }, 1500);
+    });
+    actions.appendChild(copyBtn);
+  }
 
   const cancelBtn = document.createElement("button");
   cancelBtn.className = "code-block-edit-btn code-block-edit-cancel";
@@ -335,10 +361,17 @@ export const codePreviewExtension = Extension.create({
                 const headerWidget = Decoration.widget(
                   nodeStart,
                   (widgetView) => {
+                    const onCopy = language === "mermaid"
+                      ? () => {
+                          const node = widgetView?.state.doc.nodeAt(nodeStart);
+                          if (node) navigator.clipboard.writeText(node.textContent);
+                        }
+                      : undefined;
                     return createEditHeader(
                       language,
                       () => exitEditMode(widgetView, true), // Cancel
-                      () => exitEditMode(widgetView, false) // Save
+                      () => exitEditMode(widgetView, false), // Save
+                      onCopy,
                     );
                   },
                   { side: -1, key: `${nodeStart}:header` }
