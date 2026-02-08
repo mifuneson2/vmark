@@ -193,7 +193,7 @@ export interface McpServerSettings {
 export interface TerminalSettings {
   fontSize: number;    // Default: 13 (range: 10–24)
   lineHeight: number;  // Default: 1.4 (range: 1.0–2.0)
-  copyOnSelect: boolean; // Default: true — auto-copy selected text to clipboard
+  copyOnSelect: boolean; // Default: false — auto-copy selected text to clipboard
 }
 
 export interface AdvancedSettingsState {
@@ -379,8 +379,8 @@ const initialState: SettingsState = {
     autoPairEnabled: true,
     autoPairCJKStyle: "auto",
     autoPairCurlyQuotes: true,
-    copyFormat: "markdown",
-    copyOnSelect: true,
+    copyFormat: "default",
+    copyOnSelect: false,
   },
   image: {
     autoResizeMax: 0, // Off by default
@@ -392,7 +392,7 @@ const initialState: SettingsState = {
   terminal: {
     fontSize: 13,
     lineHeight: 1.2,
-    copyOnSelect: true,
+    copyOnSelect: false,
   },
   advanced: {
     mcpServer: {

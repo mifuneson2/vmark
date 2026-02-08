@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { cleanMarkdownForClipboard } from "./tiptap";
+import { cleanMarkdownForClipboard, cleanTextForClipboard } from "./tiptap";
 
 describe("cleanMarkdownForClipboard", () => {
   describe("backslash escape stripping", () => {
@@ -126,5 +126,50 @@ describe("cleanMarkdownForClipboard", () => {
       const input = "```js\nconst x = 1;\n```";
       expect(cleanMarkdownForClipboard(input)).toBe(input);
     });
+  });
+});
+
+describe("cleanTextForClipboard", () => {
+  it("trims trailing whitespace from each line", () => {
+    expect(cleanTextForClipboard("hello   \nworld  ")).toBe("hello\nworld");
+  });
+
+  it("trims trailing tabs from each line", () => {
+    expect(cleanTextForClipboard("hello\t\t\nworld\t")).toBe("hello\nworld");
+  });
+
+  it("collapses multiple blank lines into one", () => {
+    expect(cleanTextForClipboard("a\n\n\nb")).toBe("a\n\nb");
+  });
+
+  it("collapses many blank lines into one", () => {
+    expect(cleanTextForClipboard("a\n\n\n\n\nb")).toBe("a\n\nb");
+  });
+
+  it("trims leading blank lines", () => {
+    expect(cleanTextForClipboard("\n\nhello")).toBe("hello");
+  });
+
+  it("trims trailing blank lines", () => {
+    expect(cleanTextForClipboard("hello\n\n")).toBe("hello");
+  });
+
+  it("trims both leading and trailing blank lines", () => {
+    expect(cleanTextForClipboard("\n\nhello\n\n")).toBe("hello");
+  });
+
+  it("handles all three rules together", () => {
+    const input = "\n\nline one   \n\n\n\nline two  \n\n";
+    expect(cleanTextForClipboard(input)).toBe("line one\n\nline two");
+  });
+
+  it("preserves single blank line between paragraphs", () => {
+    expect(cleanTextForClipboard("para one\n\npara two")).toBe(
+      "para one\n\npara two"
+    );
+  });
+
+  it("returns empty string for whitespace-only input", () => {
+    expect(cleanTextForClipboard("   \n\n  \n  ")).toBe("");
   });
 });

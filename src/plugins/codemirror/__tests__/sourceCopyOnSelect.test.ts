@@ -121,4 +121,37 @@ describe("sourceCopyOnSelect", () => {
     expect(clipboardSpy).toHaveBeenCalledWith("Hello");
     view.destroy();
   });
+
+  it("trims trailing whitespace from copied text", async () => {
+    const content = "hello   \nworld  ";
+    const view = createView(content, 0, content.length);
+
+    view.dom.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+
+    expect(clipboardSpy).toHaveBeenCalledWith("hello\nworld");
+    view.destroy();
+  });
+
+  it("collapses multiple blank lines in copied text", async () => {
+    const content = "a\n\n\n\nb";
+    const view = createView(content, 0, content.length);
+
+    view.dom.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+
+    expect(clipboardSpy).toHaveBeenCalledWith("a\n\nb");
+    view.destroy();
+  });
+
+  it("trims leading/trailing blank lines from copied text", async () => {
+    const content = "\n\nhello\n\n";
+    const view = createView(content, 0, content.length);
+
+    view.dom.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+
+    expect(clipboardSpy).toHaveBeenCalledWith("hello");
+    view.destroy();
+  });
 });

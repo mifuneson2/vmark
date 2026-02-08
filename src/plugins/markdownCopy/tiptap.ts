@@ -74,6 +74,25 @@ export function cleanMarkdownForClipboard(md: string): string {
 }
 
 /**
+ * Normalize whitespace for clipboard content.
+ *
+ * Applied to ALL clipboard writes (WYSIWYG and Source mode):
+ * 1. Trim trailing whitespace from each line
+ * 2. Collapse runs of 3+ blank lines into a single blank line
+ * 3. Trim leading/trailing blank lines from the whole string
+ */
+export function cleanTextForClipboard(text: string): string {
+  let result = text;
+  // 1. Trim trailing whitespace per line
+  result = result.replace(/[^\S\n]+$/gm, "");
+  // 2. Collapse multiple blank lines (3+ newlines → 2)
+  result = result.replace(/\n{3,}/g, "\n\n");
+  // 3. Trim leading/trailing blank lines
+  result = result.trim();
+  return result;
+}
+
+/**
  * Serialize a Slice to markdown with blank-line collapsing.
  * Returns null on failure (caller decides fallback).
  */
@@ -81,7 +100,7 @@ function serializeSliceAsMarkdown(schema: Schema, slice: Slice): string | null {
   try {
     const doc = createDocFromSlice(schema, slice);
     const md = serializeMarkdown(schema, doc);
-    return cleanMarkdownForClipboard(md.replace(/\n{3,}/g, "\n\n"));
+    return cleanTextForClipboard(cleanMarkdownForClipboard(md));
   } catch (error) {
     if (import.meta.env.DEV) {
       console.warn("[markdownCopy] Serialization failed:", error);
@@ -106,7 +125,7 @@ function getSelectionText(view: EditorView): string {
     if (md !== null) return md;
   }
 
-  return state.doc.textBetween(from, to, "\n\n");
+  return cleanTextForClipboard(state.doc.textBetween(from, to, "\n\n"));
 }
 
 export const markdownCopyExtension = Extension.create({

@@ -11,6 +11,7 @@
 import type { Extension } from "@codemirror/state";
 import { ViewPlugin, type EditorView } from "@codemirror/view";
 import { useSettingsStore } from "@/stores/settingsStore";
+import { cleanTextForClipboard } from "@/plugins/markdownCopy/tiptap";
 
 export function createSourceCopyOnSelectPlugin(): Extension {
   return ViewPlugin.fromClass(
@@ -33,7 +34,8 @@ export function createSourceCopyOnSelectPlugin(): Extension {
           const { from, to } = view.state.selection.main;
           if (from === to) return;
 
-          const text = view.state.sliceDoc(from, to);
+          const raw = view.state.sliceDoc(from, to);
+          const text = cleanTextForClipboard(raw);
           if (text) {
             navigator.clipboard.writeText(text).catch(() => {
               // Clipboard write can fail if window loses focus
