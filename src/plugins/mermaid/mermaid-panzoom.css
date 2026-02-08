@@ -13,18 +13,17 @@
   width: 24px;
   height: 24px;
   padding: 0;
-  border: 1px solid var(--border-color);
+  border: none;
   border-radius: var(--radius-sm);
-  background: var(--bg-color);
+  background: transparent;
   color: var(--text-secondary);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   opacity: 0;
-  transition: opacity 0.15s, background 0.15s;
+  transition: opacity 0.15s, background 0.15s, color 0.15s;
   z-index: 10;
-  box-shadow: var(--shadow-sm);
 }
 
 .panzoom-enabled:hover .mermaid-panzoom-reset {
@@ -66,18 +65,17 @@
   width: 24px;
   height: 24px;
   padding: 0;
-  border: 1px solid var(--border-color);
+  border: none;
   border-radius: var(--radius-sm);
-  background: var(--bg-color);
+  background: transparent;
   color: var(--text-secondary);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   opacity: 0;
-  transition: opacity 0.15s, background 0.15s;
+  transition: opacity 0.15s, background 0.15s, color 0.15s;
   z-index: 10;
-  box-shadow: var(--shadow-sm);
 }
 
 .panzoom-enabled:hover .mermaid-export-btn {
