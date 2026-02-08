@@ -1,10 +1,9 @@
 /**
  * Link Popup Plugin (Tiptap)
  *
- * Handles Cmd+Click to open links. The edit popup is triggered by Cmd+K
- * (handled in editorPlugins.tiptap.ts), not by hover.
- *
- * For hover tooltips, see linkTooltip plugin.
+ * Handles Cmd+Click to open links in browser / navigate to heading.
+ * Regular click on a link opens the edit popup.
+ * Cmd+K also opens the edit popup (handled in editorPlugins.tiptap.ts).
  */
 
 import { Extension } from "@tiptap/core";
@@ -13,7 +12,6 @@ import { TextSelection } from "@tiptap/pm/state";
 import type { EditorView } from "@tiptap/pm/view";
 import type { Mark } from "@tiptap/pm/model";
 import { useLinkPopupStore } from "@/stores/linkPopupStore";
-import { useLinkTooltipStore } from "@/stores/linkTooltipStore";
 import { useLinkCreatePopupStore } from "@/stores/linkCreatePopupStore";
 import { findHeadingById } from "@/utils/headingSlug";
 import { LinkPopupView } from "./LinkPopupView";
@@ -127,7 +125,8 @@ function navigateToFragment(view: EditorView, targetId: string): boolean {
 
 /**
  * Click handler: Cmd/Ctrl+click opens link in browser or navigates to fragment.
- * Regular click just places cursor (default behavior) and closes any open popups.
+ * Regular click on a link opens the edit popup.
+ * Regular click elsewhere closes any open popups.
  */
 function handleClick(view: EditorView, pos: number, event: MouseEvent): boolean {
   try {
@@ -137,9 +136,6 @@ function handleClick(view: EditorView, pos: number, event: MouseEvent): boolean 
       if (linkRange) {
         const href = linkRange.mark.attrs.href as string;
         if (href) {
-          // Close tooltip if open
-          useLinkTooltipStore.getState().hideTooltip();
-
           // Handle fragment links (internal navigation)
           if (href.startsWith("#")) {
             const targetId = href.slice(1);
@@ -161,12 +157,39 @@ function handleClick(view: EditorView, pos: number, event: MouseEvent): boolean 
       return false;
     }
 
-    // Regular click: close all link popups, let default cursor placement happen
+    // Regular click on a link: open the edit popup
+    const linkRange = findLinkMarkRange(view, pos);
+    if (linkRange) {
+      const href = linkRange.mark.attrs.href as string;
+      if (href) {
+        // Close create popup if open
+        if (useLinkCreatePopupStore.getState().isOpen) {
+          useLinkCreatePopupStore.getState().closePopup();
+        }
+
+        // Compute anchor rect from link range coordinates
+        const startCoords = view.coordsAtPos(linkRange.from);
+        const endCoords = view.coordsAtPos(linkRange.to);
+        const anchorRect = {
+          top: startCoords.top,
+          left: startCoords.left,
+          bottom: startCoords.bottom,
+          right: endCoords.right,
+        };
+
+        useLinkPopupStore.getState().openPopup({
+          href,
+          linkFrom: linkRange.from,
+          linkTo: linkRange.to,
+          anchorRect,
+        });
+        return false; // let ProseMirror place cursor normally
+      }
+    }
+
+    // Regular click not on a link: close all link popups
     if (useLinkPopupStore.getState().isOpen) {
       useLinkPopupStore.getState().closePopup();
-    }
-    if (useLinkTooltipStore.getState().isOpen) {
-      useLinkTooltipStore.getState().hideTooltip();
     }
     if (useLinkCreatePopupStore.getState().isOpen) {
       useLinkCreatePopupStore.getState().closePopup();
@@ -180,8 +203,8 @@ function handleClick(view: EditorView, pos: number, event: MouseEvent): boolean 
 }
 
 /**
- * Plugin view - only manages the popup view for Cmd+K triggered editing.
- * No hover handling - that's done by linkTooltip plugin.
+ * Plugin view - manages the popup view for link editing.
+ * Triggered by clicking a link or via Cmd+K.
  */
 class LinkPopupPluginView {
   private popupView: LinkPopupView;

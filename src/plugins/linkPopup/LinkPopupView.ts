@@ -9,7 +9,6 @@
 
 import { TextSelection } from "@tiptap/pm/state";
 import { useLinkPopupStore } from "@/stores/linkPopupStore";
-import { useLinkTooltipStore } from "@/stores/linkTooltipStore";
 import { findHeadingById } from "@/utils/headingSlug";
 import { isImeKeyEvent } from "@/utils/imeGuard";
 import { popupIcons } from "@/utils/popupComponents";
@@ -107,9 +106,6 @@ export class LinkPopupView extends WysiwygPopupView<LinkPopupState> {
   }
 
   protected onShow(state: LinkPopupState): void {
-    // Close tooltip if open (edit popup takes precedence)
-    useLinkTooltipStore.getState().hideTooltip();
-
     const isBookmark = state.href.startsWith("#");
 
     this.input.value = state.href;

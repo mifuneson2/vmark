@@ -331,4 +331,28 @@ describe("canTabEscape", () => {
     expect(result).not.toBeNull();
     expect(result?.targetPos).toBe(11); // After "bold"
   });
+
+  it("escapes link at end of paragraph (cursor at link end)", () => {
+    // Link is the last content — cursor at end of paragraph = end of link
+    // Tab should escape by returning current position (handler clears stored marks)
+    const document = doc(p("hello ", linkedText("link", "https://example.com")));
+    // Position 11 = end of "link" = end of paragraph content
+    const state = createState(document, 11);
+
+    const result = canTabEscape(state) as TabEscapeResult | null;
+    // Should still return a result so Tab handler can clear link stored marks
+    expect(result).not.toBeNull();
+    expect(result?.type).toBe("link");
+    expect(result?.targetPos).toBe(11); // Same position — marks will be cleared
+  });
+
+  it("escapes link at end of paragraph (cursor inside link)", () => {
+    const document = doc(p("hello ", linkedText("link", "https://example.com")));
+    const state = createState(document, 9); // Inside "link"
+
+    const result = canTabEscape(state) as TabEscapeResult | null;
+    expect(result).not.toBeNull();
+    expect(result?.type).toBe("link");
+    expect(result?.targetPos).toBe(11); // Jump to end
+  });
 });

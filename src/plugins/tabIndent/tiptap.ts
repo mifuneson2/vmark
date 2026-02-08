@@ -87,6 +87,11 @@ export const tabIndentExtension = Extension.create({
                   // Handle multi-cursor
                   if (escapeResult instanceof MultiSelection) {
                     const tr = state.tr.setSelection(escapeResult);
+                    // Clear link from stored marks for all cursors
+                    const linkMarkType = state.schema.marks.link;
+                    if (linkMarkType) {
+                      tr.removeStoredMark(linkMarkType);
+                    }
                     dispatch(tr);
                     return true;
                   }
@@ -95,6 +100,16 @@ export const tabIndentExtension = Extension.create({
                   const tr = state.tr.setSelection(
                     TextSelection.create(state.doc, escapeResult.targetPos)
                   );
+                  // When escaping a link, clear the link from stored marks
+                  // so subsequent typing produces normal (unlinked) text.
+                  // This is essential when the link is at end of paragraph
+                  // where there's no un-marked position to jump to.
+                  if (escapeResult.type === "link") {
+                    const linkMarkType = state.schema.marks.link;
+                    if (linkMarkType) {
+                      tr.removeStoredMark(linkMarkType);
+                    }
+                  }
                   dispatch(tr);
                   return true;
                 }

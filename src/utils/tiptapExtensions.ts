@@ -18,7 +18,6 @@ import { htmlPasteExtension } from "@/plugins/htmlPaste/tiptap";
 import { codePasteExtension } from "@/plugins/codePaste/tiptap";
 import { markdownCopyExtension } from "@/plugins/markdownCopy/tiptap";
 import { linkPopupExtension } from "@/plugins/linkPopup/tiptap";
-import { linkTooltipExtension } from "@/plugins/linkTooltip";
 import { linkCreatePopupExtension } from "@/plugins/linkCreatePopup";
 import { inlineNodeEditingExtension } from "@/plugins/inlineNodeEditing/tiptap";
 import { searchExtension } from "@/plugins/search/tiptap";
@@ -146,7 +145,6 @@ export function createTiptapExtensions(): Extensions {
     codePasteExtension,
     markdownCopyExtension,
     linkPopupExtension,
-    linkTooltipExtension,
     linkCreatePopupExtension,
     searchExtension,
     autoPairExtension,

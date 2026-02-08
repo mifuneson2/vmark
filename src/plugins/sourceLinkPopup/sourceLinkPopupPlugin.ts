@@ -2,14 +2,16 @@
  * Source Link Popup Plugin
  *
  * CodeMirror 6 plugin for editing links in Source mode.
- * Shows a popup when cursor is inside link markdown syntax.
+ * Click on a link opens the edit popup. Cmd+Click opens in browser / navigates to heading.
  */
 
-import type { EditorView } from "@codemirror/view";
+import { type Extension } from "@codemirror/state";
+import { ViewPlugin, type EditorView } from "@codemirror/view";
 import { createSourcePopupPlugin } from "@/plugins/sourcePopup";
 import { useLinkPopupStore } from "@/stores/linkPopupStore";
 import { SourceLinkPopupView } from "./SourceLinkPopupView";
 import { findMarkdownLinkAtPosition } from "@/utils/markdownLinkPatterns";
+import { extractMarkdownHeadings } from "@/plugins/toolbarActions/sourceAdapterLinks";
 
 /**
  * Link range result from detection.
@@ -83,24 +85,88 @@ function extractLinkData(
 }
 
 /**
+ * Cmd+Click handler: opens links in browser or navigates to headings.
+ * Registered at capture phase so it runs before the popup click handler.
+ */
+function createCmdClickPlugin(): Extension {
+  return ViewPlugin.fromClass(
+    class CmdClickHandler {
+      private view: EditorView;
+
+      constructor(view: EditorView) {
+        this.view = view;
+        view.dom.addEventListener("click", this.handleClick, true);
+      }
+
+      destroy() {
+        this.view.dom.removeEventListener("click", this.handleClick, true);
+      }
+
+      private handleClick = (e: MouseEvent) => {
+        if (!e.metaKey && !e.ctrlKey) return;
+
+        const pos = this.view.posAtCoords({ x: e.clientX, y: e.clientY });
+        if (pos === null) return;
+
+        const link = findLinkAtPos(this.view, pos);
+        if (!link) return;
+
+        // Prevent the popup from opening
+        e.stopPropagation();
+        e.preventDefault();
+
+        const { href } = link;
+
+        // Handle bookmark links — navigate to heading
+        if (href.startsWith("#")) {
+          const targetId = href.slice(1);
+          const docText = this.view.state.doc.toString();
+          const headings = extractMarkdownHeadings(docText);
+          const heading = headings.find((h) => h.id === targetId);
+
+          if (heading && heading.pos !== undefined) {
+            this.view.dispatch({
+              selection: { anchor: heading.pos },
+              scrollIntoView: true,
+            });
+            this.view.focus();
+          }
+          return;
+        }
+
+        // External link — open in browser
+        import("@tauri-apps/plugin-opener").then(({ openUrl }) => {
+          openUrl(href).catch((error: unknown) => {
+            console.error("Failed to open link:", error);
+          });
+        });
+      };
+    }
+  );
+}
+
+/**
  * Create the Source link popup plugin.
  *
- * The edit popup is only opened via Cmd+K (handled in sourceShortcuts.ts).
- * Hover shows a read-only tooltip (handled by sourceLinkTooltip plugin).
+ * Click on a link opens the edit popup. Cmd+Click opens in browser.
  */
-export function createSourceLinkPopupPlugin() {
-  return createSourcePopupPlugin({
-    store: useLinkPopupStore,
-    createView: (view, store) => new SourceLinkPopupView(view, store),
-    detectTrigger: detectLinkTrigger,
-    detectTriggerAtPos: (view, pos) => {
-      const link = findLinkAtPos(view, pos);
-      if (!link) return null;
-      return { from: link.from, to: link.to };
-    },
-    extractData: extractLinkData,
-    // Disable click/hover triggers - popup is opened via Cmd+K only
-    triggerOnClick: false,
-    triggerOnHover: false,
-  });
+export function createSourceLinkPopupPlugin(): Extension {
+  return [
+    // Cmd+Click handler (capture phase, runs first)
+    createCmdClickPlugin(),
+    // Popup plugin: opens edit popup on regular click
+    createSourcePopupPlugin({
+      store: useLinkPopupStore,
+      createView: (view, store) => new SourceLinkPopupView(view, store),
+      detectTrigger: detectLinkTrigger,
+      detectTriggerAtPos: (view, pos) => {
+        const link = findLinkAtPos(view, pos);
+        if (!link) return null;
+        return { from: link.from, to: link.to };
+      },
+      extractData: extractLinkData,
+      triggerOnClick: true,
+      triggerOnHover: false,
+    }),
+  ];
 }

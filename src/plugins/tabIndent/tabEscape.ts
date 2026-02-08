@@ -232,6 +232,10 @@ function calculateEscapeForPosition(
 
       offset += child.nodeSize;
     }
+
+    // Cursor is at the end of a link (pos === childEnd of last link node).
+    // Return current position so the Tab handler clears stored marks.
+    return pos;
   }
 
   // Check for escapable mark
@@ -342,6 +346,11 @@ export function canTabEscape(state: EditorState): TabEscapeResult | MultiSelecti
     if (endPos !== null && endPos > from) {
       return { type: "link", targetPos: endPos };
     }
+    // Cursor is at the end of a link (e.g., last word in paragraph).
+    // getLinkEndPos returns null because pos === childEnd, or endPos === from.
+    // Return current position — the Tab handler will clear stored marks
+    // so subsequent typing is no longer linked.
+    return { type: "link", targetPos: from };
   }
 
   // Check for escapable mark
