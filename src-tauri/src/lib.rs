@@ -183,6 +183,40 @@ pub fn run() {
                 eprintln!("[Tauri] Warning: Failed to install default genies: {}", e);
             }
 
+            // Windows/Linux: handle files passed as CLI arguments
+            // (macOS uses RunEvent::Opened from Finder instead)
+            #[cfg(not(target_os = "macos"))]
+            {
+                let md_extensions = ["md", "markdown", "mdown", "mkd", "mdx"];
+                let args: Vec<String> = std::env::args().skip(1).collect();
+                let file_args: Vec<String> = args
+                    .into_iter()
+                    .filter(|arg| {
+                        let path = std::path::Path::new(arg);
+                        path.exists()
+                            && path.is_file()
+                            && path
+                                .extension()
+                                .and_then(|e| e.to_str())
+                                .map(|e| md_extensions.contains(&e.to_lowercase().as_str()))
+                                .unwrap_or(false)
+                    })
+                    .collect();
+
+                if !file_args.is_empty() {
+                    if let Ok(mut pending) = PENDING_FILE_OPENS.lock() {
+                        for path_str in file_args {
+                            let workspace_root =
+                                window_manager::get_workspace_root_for_file(&path_str);
+                            pending.push(PendingFileOpen {
+                                path: path_str,
+                                workspace_root,
+                            });
+                        }
+                    }
+                }
+            }
+
             // Listen for "ready" events from frontend windows
             // This is used by menu_events to know when it's safe to emit events
             // The payload contains the window label as a string

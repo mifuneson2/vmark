@@ -179,20 +179,25 @@ fn get_mcp_binary_path() -> Result<String, String> {
     let exe = std::env::current_exe().map_err(|e| format!("Cannot get executable path: {}", e))?;
     let exe_dir = exe.parent().ok_or("Cannot get executable directory")?;
 
-    // On macOS, check MacOS folder first (where Tauri puts sidecars)
+    // Cross-platform: try simple name first (Tauri bundles without target suffix)
+    // On Windows the binary has .exe extension
+    let simple_name = if cfg!(target_os = "windows") {
+        format!("{}.exe", binary_name_simple)
+    } else {
+        binary_name_simple.to_string()
+    };
+    let simple_path = exe_dir.join(&simple_name);
+    if simple_path.exists() {
+        return Ok(simple_path
+            .canonicalize()
+            .unwrap_or(simple_path)
+            .to_string_lossy()
+            .to_string());
+    }
+
+    // macOS only: try Resources folder (alternative bundle location)
     #[cfg(target_os = "macos")]
     {
-        // Try simple name first (Tauri bundles without target suffix)
-        let macos_path = exe_dir.join(binary_name_simple);
-        if macos_path.exists() {
-            return Ok(macos_path
-                .canonicalize()
-                .unwrap_or(macos_path)
-                .to_string_lossy()
-                .to_string());
-        }
-
-        // Try Resources folder (alternative location)
         let resources_path = exe_dir.join("../Resources").join(&binary_name_with_target);
         if resources_path.exists() {
             return Ok(resources_path
@@ -203,7 +208,7 @@ fn get_mcp_binary_path() -> Result<String, String> {
         }
     }
 
-    // Try next to executable with target suffix
+    // Fallback: try next to executable with target suffix
     let prod_path = exe_dir.join(&binary_name_with_target);
     if prod_path.exists() {
         return Ok(prod_path.to_string_lossy().to_string());

@@ -46,16 +46,52 @@ fn event_kind_to_string(kind: &notify::EventKind) -> Option<&'static str> {
     }
 }
 
+/// Directory names that should always be ignored by the file watcher.
+const IGNORED_DIRS: &[&str] = &[
+    ".git",
+    ".obsidian",
+    ".svn",
+    ".hg",
+    "node_modules",
+    ".DS_Store",
+    ".Trash",
+    "__pycache__",
+];
+
+/// Check whether a filesystem path should be ignored by the watcher.
+///
+/// Returns true if any path component is in the ignore list or starts with
+/// a dot (hidden directory/file on Unix). This prevents high-frequency
+/// events from tool metadata directories (e.g. Obsidian vaults) from
+/// flooding the frontend.
+fn should_ignore_path(path: &Path) -> bool {
+    for component in path.components() {
+        if let std::path::Component::Normal(name) = component {
+            let name_str = name.to_string_lossy();
+            // Skip known noisy directories
+            if IGNORED_DIRS.contains(&name_str.as_ref()) {
+                return true;
+            }
+            // Skip hidden directories/files (start with '.')
+            if name_str.starts_with('.') {
+                return true;
+            }
+        }
+    }
+    false
+}
+
 /// Handle a notify event and emit it to the frontend.
 fn handle_event(app: &AppHandle, watch_id: &str, root_path: &str, event: Event) {
     let Some(kind_str) = event_kind_to_string(&event.kind) else {
         return;
     };
 
-    // Collect all paths from the event
+    // Filter out paths from ignored directories before emitting
     let paths: Vec<String> = event
         .paths
         .iter()
+        .filter(|p| !should_ignore_path(p))
         .map(|p| p.to_string_lossy().to_string())
         .collect();
 
@@ -177,6 +213,46 @@ mod tests {
     fn test_event_kind_other_ignored() {
         let kind = EventKind::Other;
         assert_eq!(event_kind_to_string(&kind), None);
+    }
+
+    #[test]
+    fn test_ignore_git_dir() {
+        assert!(should_ignore_path(Path::new("/project/.git/objects/abc")));
+        assert!(should_ignore_path(Path::new("/project/.git/HEAD")));
+    }
+
+    #[test]
+    fn test_ignore_obsidian_dir() {
+        assert!(should_ignore_path(Path::new("/vault/.obsidian/workspace.json")));
+        assert!(should_ignore_path(Path::new("/vault/.obsidian/plugins/foo")));
+    }
+
+    #[test]
+    fn test_ignore_node_modules() {
+        assert!(should_ignore_path(Path::new("/project/node_modules/pkg/index.js")));
+    }
+
+    #[test]
+    fn test_ignore_hidden_dirs() {
+        assert!(should_ignore_path(Path::new("/project/.hidden/file.txt")));
+        assert!(should_ignore_path(Path::new("/home/.config/app.toml")));
+    }
+
+    #[test]
+    fn test_allow_normal_paths() {
+        assert!(!should_ignore_path(Path::new("/project/src/foo.md")));
+        assert!(!should_ignore_path(Path::new("/project/notes/chapter1.md")));
+        assert!(!should_ignore_path(Path::new("/project/README.md")));
+    }
+
+    #[test]
+    fn test_ignore_ds_store() {
+        assert!(should_ignore_path(Path::new("/project/.DS_Store")));
+    }
+
+    #[test]
+    fn test_ignore_pycache() {
+        assert!(should_ignore_path(Path::new("/project/__pycache__/mod.pyc")));
     }
 
     #[test]
