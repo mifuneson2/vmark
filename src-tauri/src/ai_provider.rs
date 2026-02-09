@@ -71,7 +71,7 @@ pub fn detect_ai_providers() -> Vec<CliProviderEntry> {
 /// needed.  On fish shell, `$PATH` is a list so we use `string join`.
 ///
 /// The result is cached for the lifetime of the process.
-fn login_shell_path() -> String {
+pub(crate) fn login_shell_path() -> String {
     use std::sync::OnceLock;
     static CACHED: OnceLock<String> = OnceLock::new();
 
@@ -588,7 +588,7 @@ pub async fn run_ai_prompt(
 ///
 /// On Windows, `.cmd`/`.bat` shims (created by npm/yarn global installs)
 /// must run through `cmd.exe /c`.  On macOS/Linux this is a plain spawn.
-fn build_command(exe: &str, args: &[&str]) -> Command {
+pub(crate) fn build_command(exe: &str, args: &[&str]) -> Command {
     if cfg!(target_os = "windows") {
         let lower = exe.to_lowercase();
         if lower.ends_with(".cmd") || lower.ends_with(".bat") {
