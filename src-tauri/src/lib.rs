@@ -154,6 +154,8 @@ pub fn run() {
             ai_provider::run_ai_prompt,
             ai_provider::read_env_api_keys,
             ai_provider::test_api_key,
+            ai_provider::list_models,
+            ai_provider::validate_model,
             #[cfg(debug_assertions)]
             debug_log,
             print_webview,

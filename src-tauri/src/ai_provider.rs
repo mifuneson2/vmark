@@ -258,6 +258,271 @@ pub async fn test_api_key(
 }
 
 // ============================================================================
+// Model Listing
+// ============================================================================
+
+/// List available models for a REST provider.
+///
+/// - Ollama: fetches from local `/api/tags`
+/// - OpenAI: fetches `/v1/models`, filters to chat-capable prefixes
+/// - Google AI: fetches `/v1beta/models`, strips `models/` prefix
+/// - Anthropic: returns curated list (no listing endpoint)
+#[command]
+pub async fn list_models(
+    provider: String,
+    api_key: Option<String>,
+    endpoint: Option<String>,
+) -> Result<Vec<String>, String> {
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(10))
+        .build()
+        .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
+
+    match provider.as_str() {
+        "ollama-api" => {
+            let base = endpoint
+                .filter(|e| !e.is_empty())
+                .unwrap_or_else(|| "http://localhost:11434".to_string());
+            let resp = client
+                .get(format!("{}/api/tags", base))
+                .send()
+                .await
+                .map_err(|e| format!("Request failed: {}", e))?;
+            if !resp.status().is_success() {
+                let status = resp.status();
+                let text = resp.text().await.unwrap_or_default();
+                return Err(format!("HTTP {}: {}", status.as_u16(), text));
+            }
+            let json: serde_json::Value = resp
+                .json()
+                .await
+                .map_err(|e| format!("Failed to parse response: {}", e))?;
+            let models = json
+                .get("models")
+                .and_then(|m| m.as_array())
+                .map(|arr| {
+                    arr.iter()
+                        .filter_map(|m| m.get("name").and_then(|n| n.as_str()).map(String::from))
+                        .collect()
+                })
+                .unwrap_or_default();
+            Ok(models)
+        }
+
+        "openai" => {
+            let key = api_key
+                .filter(|k| !k.is_empty())
+                .ok_or("API key is required")?;
+            let base = endpoint
+                .filter(|e| !e.is_empty())
+                .unwrap_or_else(|| "https://api.openai.com".to_string());
+            let resp = client
+                .get(format!("{}/v1/models", base))
+                .header("Authorization", format!("Bearer {}", key))
+                .send()
+                .await
+                .map_err(|e| format!("Request failed: {}", e))?;
+            if !resp.status().is_success() {
+                let status = resp.status();
+                let text = resp.text().await.unwrap_or_default();
+                return Err(format!("HTTP {}: {}", status.as_u16(), text));
+            }
+            let json: serde_json::Value = resp
+                .json()
+                .await
+                .map_err(|e| format!("Failed to parse response: {}", e))?;
+            let prefixes = ["gpt-", "o1", "o3", "o4", "chatgpt-"];
+            let mut models: Vec<String> = json
+                .get("data")
+                .and_then(|d| d.as_array())
+                .map(|arr| {
+                    arr.iter()
+                        .filter_map(|m| m.get("id").and_then(|id| id.as_str()).map(String::from))
+                        .filter(|id| prefixes.iter().any(|p| id.starts_with(p)))
+                        .collect()
+                })
+                .unwrap_or_default();
+            models.sort();
+            Ok(models)
+        }
+
+        "google-ai" => {
+            let key = api_key
+                .filter(|k| !k.is_empty())
+                .ok_or("API key is required")?;
+            let resp = client
+                .get("https://generativelanguage.googleapis.com/v1beta/models")
+                .header("x-goog-api-key", &key)
+                .send()
+                .await
+                .map_err(|e| format!("Request failed: {}", e))?;
+            if !resp.status().is_success() {
+                let status = resp.status();
+                let text = resp.text().await.unwrap_or_default();
+                return Err(format!("HTTP {}: {}", status.as_u16(), text));
+            }
+            let json: serde_json::Value = resp
+                .json()
+                .await
+                .map_err(|e| format!("Failed to parse response: {}", e))?;
+            let mut models: Vec<String> = json
+                .get("models")
+                .and_then(|m| m.as_array())
+                .map(|arr| {
+                    arr.iter()
+                        .filter_map(|m| {
+                            m.get("name")
+                                .and_then(|n| n.as_str())
+                                .map(|n| n.strip_prefix("models/").unwrap_or(n).to_string())
+                        })
+                        .collect()
+                })
+                .unwrap_or_default();
+            models.sort();
+            Ok(models)
+        }
+
+        "anthropic" => Ok(vec![
+            "claude-sonnet-4-5-20250929".to_string(),
+            "claude-haiku-4-5-20251001".to_string(),
+        ]),
+
+        _ => Err(format!("Unknown provider: {}", provider)),
+    }
+}
+
+// ============================================================================
+// Model Validation
+// ============================================================================
+
+/// Validate that a specific model works by sending a minimal request.
+///
+/// - OpenAI: POST /v1/chat/completions with max_tokens=1
+/// - Anthropic: POST /v1/messages with max_tokens=1
+/// - Google AI: POST generateContent with minimal content
+/// - Ollama: POST /api/show to check model existence
+#[command]
+pub async fn validate_model(
+    provider: String,
+    model: String,
+    api_key: Option<String>,
+    endpoint: Option<String>,
+) -> Result<String, String> {
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(15))
+        .build()
+        .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
+
+    match provider.as_str() {
+        "openai" => {
+            let key = api_key
+                .filter(|k| !k.is_empty())
+                .ok_or("API key is required")?;
+            let base = endpoint
+                .filter(|e| !e.is_empty())
+                .unwrap_or_else(|| "https://api.openai.com".to_string());
+            let body = serde_json::json!({
+                "model": model,
+                "max_tokens": 1,
+                "messages": [{"role": "user", "content": "Hi"}]
+            });
+            let resp = client
+                .post(format!("{}/v1/chat/completions", base))
+                .header("Authorization", format!("Bearer {}", key))
+                .header("content-type", "application/json")
+                .json(&body)
+                .send()
+                .await
+                .map_err(|e| format!("Request failed: {}", e))?;
+            if !resp.status().is_success() {
+                let status = resp.status();
+                let text = resp.text().await.unwrap_or_default();
+                return Err(format!("HTTP {}: {}", status.as_u16(), text));
+            }
+            Ok("Model OK".to_string())
+        }
+
+        "anthropic" => {
+            let key = api_key
+                .filter(|k| !k.is_empty())
+                .ok_or("API key is required")?;
+            let base = endpoint
+                .filter(|e| !e.is_empty())
+                .unwrap_or_else(|| "https://api.anthropic.com".to_string());
+            let body = serde_json::json!({
+                "model": model,
+                "max_tokens": 1,
+                "messages": [{"role": "user", "content": "Hi"}]
+            });
+            let resp = client
+                .post(format!("{}/v1/messages", base))
+                .header("x-api-key", &key)
+                .header("anthropic-version", "2023-06-01")
+                .header("content-type", "application/json")
+                .json(&body)
+                .send()
+                .await
+                .map_err(|e| format!("Request failed: {}", e))?;
+            if !resp.status().is_success() {
+                let status = resp.status();
+                let text = resp.text().await.unwrap_or_default();
+                return Err(format!("HTTP {}: {}", status.as_u16(), text));
+            }
+            Ok("Model OK".to_string())
+        }
+
+        "google-ai" => {
+            let key = api_key
+                .filter(|k| !k.is_empty())
+                .ok_or("API key is required")?;
+            let body = serde_json::json!({
+                "contents": [{"parts": [{"text": "Hi"}]}]
+            });
+            let url = format!(
+                "https://generativelanguage.googleapis.com/v1beta/models/{}:generateContent",
+                model
+            );
+            let resp = client
+                .post(&url)
+                .header("x-goog-api-key", &key)
+                .header("content-type", "application/json")
+                .json(&body)
+                .send()
+                .await
+                .map_err(|e| format!("Request failed: {}", e))?;
+            if !resp.status().is_success() {
+                let status = resp.status();
+                let text = resp.text().await.unwrap_or_default();
+                return Err(format!("HTTP {}: {}", status.as_u16(), text));
+            }
+            Ok("Model OK".to_string())
+        }
+
+        "ollama-api" => {
+            let base = endpoint
+                .filter(|e| !e.is_empty())
+                .unwrap_or_else(|| "http://localhost:11434".to_string());
+            let body = serde_json::json!({ "name": model });
+            let resp = client
+                .post(format!("{}/api/show", base))
+                .header("content-type", "application/json")
+                .json(&body)
+                .send()
+                .await
+                .map_err(|e| format!("Request failed: {}", e))?;
+            if !resp.status().is_success() {
+                let status = resp.status();
+                let text = resp.text().await.unwrap_or_default();
+                return Err(format!("HTTP {}: {}", status.as_u16(), text));
+            }
+            Ok("Model OK".to_string())
+        }
+
+        _ => Err(format!("Unknown provider: {}", provider)),
+    }
+}
+
+// ============================================================================
 // Prompt Execution
 // ============================================================================
 

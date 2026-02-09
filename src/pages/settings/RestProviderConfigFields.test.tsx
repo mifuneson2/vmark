@@ -13,7 +13,7 @@ vi.mock("@/stores/aiProviderStore", () => {
   };
 });
 
-// Mock Tauri invoke
+// Mock Tauri invoke — route calls by command name
 const mockInvoke = vi.fn();
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: (...args: unknown[]) => mockInvoke(...args),
@@ -36,9 +36,15 @@ function getUpdateMock() {
 describe("RestProviderConfigFields", () => {
   beforeEach(() => {
     getUpdateMock().mockClear();
-    mockInvoke.mockClear();
+    mockInvoke.mockReset();
     mockToastSuccess.mockClear();
     mockToastError.mockClear();
+
+    // Default: list_models returns empty, other commands succeed
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === "list_models") return Promise.resolve([]);
+      return Promise.resolve("OK");
+    });
   });
 
   it("renders endpoint, apiKey, and model inputs for non-google providers", () => {
@@ -124,7 +130,7 @@ describe("RestProviderConfigFields", () => {
     expect(getUpdateMock()).toHaveBeenCalledWith("openai", { model: "gpt-4o-mini" });
   });
 
-  // --- Test button ---
+  // --- Test API key button ---
 
   it("renders test button and disables it when no API key", () => {
     render(
@@ -170,7 +176,10 @@ describe("RestProviderConfigFields", () => {
   });
 
   it("calls invoke on test button click and shows success toast", async () => {
-    mockInvoke.mockResolvedValue("Connected");
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === "test_api_key") return Promise.resolve("Connected");
+      return Promise.resolve([]);
+    });
 
     render(
       <RestProviderConfigFields
@@ -195,7 +204,10 @@ describe("RestProviderConfigFields", () => {
   });
 
   it("shows error toast and X icon on test failure", async () => {
-    mockInvoke.mockRejectedValue("HTTP 401: Unauthorized");
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === "test_api_key") return Promise.reject("HTTP 401: Unauthorized");
+      return Promise.resolve([]);
+    });
 
     render(
       <RestProviderConfigFields
@@ -216,5 +228,110 @@ describe("RestProviderConfigFields", () => {
     const testBtn = screen.getByTitle("Test API key");
     const xIcon = testBtn.querySelector("svg");
     expect(xIcon).toBeInTheDocument();
+  });
+
+  // --- Test model button ---
+
+  it("renders test-model button", () => {
+    render(
+      <RestProviderConfigFields
+        type="openai"
+        endpoint=""
+        apiKey="sk-test"
+        model="gpt-4o"
+      />,
+    );
+
+    expect(screen.getByTitle("Test model")).toBeInTheDocument();
+  });
+
+  it("disables test-model button when model is empty", () => {
+    render(
+      <RestProviderConfigFields
+        type="openai"
+        endpoint=""
+        apiKey="sk-test"
+        model=""
+      />,
+    );
+
+    expect(screen.getByTitle("Test model")).toBeDisabled();
+  });
+
+  it("disables test-model button when no API key (non-ollama)", () => {
+    render(
+      <RestProviderConfigFields
+        type="openai"
+        endpoint=""
+        apiKey=""
+        model="gpt-4o"
+      />,
+    );
+
+    expect(screen.getByTitle("Test model")).toBeDisabled();
+  });
+
+  it("enables test-model button for ollama-api without API key", () => {
+    render(
+      <RestProviderConfigFields
+        type="ollama-api"
+        endpoint="http://localhost:11434"
+        apiKey=""
+        model="llama3.2"
+      />,
+    );
+
+    expect(screen.getByTitle("Test model")).not.toBeDisabled();
+  });
+
+  it("calls validate_model on test-model click and shows success toast", async () => {
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === "validate_model") return Promise.resolve("Model OK");
+      return Promise.resolve([]);
+    });
+
+    render(
+      <RestProviderConfigFields
+        type="openai"
+        endpoint="https://api.openai.com"
+        apiKey="sk-test"
+        model="gpt-4o"
+      />,
+    );
+
+    fireEvent.click(screen.getByTitle("Test model"));
+
+    expect(mockInvoke).toHaveBeenCalledWith("validate_model", {
+      provider: "openai",
+      model: "gpt-4o",
+      apiKey: "sk-test",
+      endpoint: "https://api.openai.com",
+    });
+
+    await waitFor(() => {
+      expect(mockToastSuccess).toHaveBeenCalledWith("Model OK");
+    });
+  });
+
+  it("shows error toast on validate_model failure", async () => {
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === "validate_model") return Promise.reject("Model not found");
+      return Promise.resolve([]);
+    });
+
+    render(
+      <RestProviderConfigFields
+        type="anthropic"
+        endpoint=""
+        apiKey="sk-test"
+        model="bad-model"
+      />,
+    );
+
+    fireEvent.click(screen.getByTitle("Test model"));
+
+    await waitFor(() => {
+      expect(mockToastError).toHaveBeenCalledWith("Model not found");
+    });
   });
 });
