@@ -163,9 +163,14 @@
 /* ---- Freeform ---- */
 
 .genie-picker-freeform {
+  position: relative;
   padding: 8px 14px;
   border-top: 1px solid var(--border-color);
   background: var(--subtle-bg);
+}
+
+.genie-freeform-ghost-wrapper {
+  position: relative;
 }
 
 .genie-picker-freeform-input {
@@ -180,8 +185,111 @@
   resize: none;
 }
 
+/* Focus indicator: highlight the divider between freeform and footer */
+.genie-picker-freeform:focus-within + .genie-picker-footer {
+  border-top-color: var(--primary-color);
+  transition: border-color 0.15s;
+}
+
 .genie-picker-freeform-input::placeholder {
   color: var(--text-tertiary);
+}
+
+/* ---- Ghost text (Layer 3) ---- */
+
+.genie-freeform-ghost {
+  position: absolute;
+  top: 0;
+  left: 0;
+  padding: 4px 0;
+  font-size: 15px;
+  font-family: var(--font-sans);
+  line-height: normal;
+  pointer-events: none;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  width: 100%;
+  overflow: hidden;
+}
+
+.genie-freeform-ghost-spacer {
+  visibility: hidden;
+}
+
+.genie-freeform-ghost-text {
+  color: var(--text-tertiary);
+}
+
+/* ---- Prompt History Dropdown (Layer 4) ---- */
+
+.prompt-history-dropdown {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  right: 0;
+  margin-bottom: 4px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  background: var(--bg-color);
+  box-shadow: var(--popup-shadow);
+  animation: popup-fade-in 0.1s ease-out;
+  overflow: hidden;
+}
+
+.prompt-history-dropdown-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.prompt-history-dropdown-hint {
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.prompt-history-dropdown-list {
+  max-height: 240px;
+  overflow-y: auto;
+  padding: 4px;
+}
+
+.prompt-history-dropdown-item {
+  padding: 5px 8px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.prompt-history-dropdown-item:hover {
+  background: var(--hover-bg);
+}
+
+.prompt-history-dropdown-item--selected {
+  background: var(--accent-bg);
+}
+
+.prompt-history-dropdown-text {
+  font-size: 13px;
+  color: var(--text-color);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: block;
+}
+
+.prompt-history-dropdown-empty {
+  padding: 12px 8px;
+  text-align: center;
+  color: var(--text-tertiary);
+  font-size: 13px;
 }
 
 /* ---- Footer ---- */
@@ -233,5 +341,9 @@
 }
 
 .dark-theme .genie-picker {
+  box-shadow: var(--popup-shadow-dark);
+}
+
+.dark-theme .prompt-history-dropdown {
   box-shadow: var(--popup-shadow-dark);
 }

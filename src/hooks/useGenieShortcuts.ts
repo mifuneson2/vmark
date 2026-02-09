@@ -12,18 +12,27 @@ import { invoke } from "@tauri-apps/api/core";
 import { useShortcutsStore } from "@/stores/shortcutsStore";
 import { useGeniePickerStore } from "@/stores/geniePickerStore";
 import { useGeniesStore } from "@/stores/geniesStore";
-import { useAiProviderStore } from "@/stores/aiProviderStore";
 import { useTabStore } from "@/stores/tabStore";
+import { useTiptapEditorStore } from "@/stores/tiptapEditorStore";
+import { useEditorStore } from "@/stores/editorStore";
 import { initSuggestionTabWatcher } from "@/stores/aiSuggestionStore";
 import { useGenieInvocation } from "@/hooks/useGenieInvocation";
 import { matchesShortcutEvent } from "@/utils/shortcutMatch";
 import { isImeKeyEvent } from "@/utils/imeGuard";
-import type { GenieDefinition, GenieMetadata } from "@/types/aiGenies";
+import type { GenieDefinition, GenieMetadata, GenieScope } from "@/types/aiGenies";
 
 /** Load genies from disk and refresh the native Genies menu. */
 async function loadAndSyncMenu(): Promise<void> {
   await useGeniesStore.getState().loadGenies();
   await invoke("refresh_genies_menu");
+}
+
+/** Detect scope from current editor selection state. */
+function detectScope(): GenieScope | undefined {
+  if (useEditorStore.getState().sourceMode) return undefined;
+  const editor = useTiptapEditorStore.getState().editor;
+  if (!editor) return undefined;
+  return editor.state.selection.empty ? undefined : "selection";
 }
 
 export function useGenieShortcuts() {
@@ -37,7 +46,7 @@ export function useGenieShortcuts() {
       const aiGeniesKey = useShortcutsStore.getState().getShortcut("aiPrompts");
       if (matchesShortcutEvent(e, aiGeniesKey)) {
         e.preventDefault();
-        useGeniePickerStore.getState().openPicker();
+        useGeniePickerStore.getState().openPicker({ filterScope: detectScope() });
       }
     };
 
@@ -46,13 +55,13 @@ export function useGenieShortcuts() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  // Load genies + sync menu on mount; pre-fill env API keys; init tab watcher
+  // Load genies + sync menu on mount; init tab watcher.
+  // Env API keys are loaded by aiProviderStore's onRehydrateStorage.
   // On unmount (feature disabled), remove the Genies submenu from the native menu
   useEffect(() => {
     loadAndSyncMenu().catch((e) =>
       console.error("[useGenieShortcuts] Failed to load genies:", e)
     );
-    useAiProviderStore.getState().loadEnvApiKeys();
     initSuggestionTabWatcher(useTabStore.subscribe);
     return () => {
       invoke("hide_genies_menu").catch(() => {});
@@ -92,7 +101,7 @@ export function useGenieShortcuts() {
   // "Search Genies…" menu item opens the picker (same as Cmd+Y)
   useEffect(() => {
     const unlisten = listen("menu:search-genies", () => {
-      useGeniePickerStore.getState().openPicker();
+      useGeniePickerStore.getState().openPicker({ filterScope: detectScope() });
     });
     return () => {
       unlisten.then((fn) => fn()).catch(() => {});

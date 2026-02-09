@@ -2,8 +2,8 @@
  * AI Provider Store
  *
  * Manages available AI providers (CLI + REST) and active selection.
- * Persists provider selection and REST API configurations.
- * API keys are ephemeral — not persisted to localStorage.
+ * Persists provider selection, REST API configurations, and API keys.
+ * On startup, empty API key fields are auto-filled from environment variables.
  */
 
 import { create } from "zustand";
@@ -221,12 +221,16 @@ export const useAiProviderStore = create<AiProviderState & AiProviderActions>()(
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         activeProvider: state.activeProvider,
-        // Strip apiKey from persisted REST providers (ephemeral — Fix 7)
-        restProviders: state.restProviders.map((p) => ({
-          ...p,
-          apiKey: "",
-        })),
+        restProviders: state.restProviders,
       }),
+      onRehydrateStorage: () => {
+        // After hydration, fill empty API key fields from environment variables.
+        // This runs after persisted keys are restored, so manually entered keys
+        // are preserved and env vars only fill gaps.
+        return () => {
+          useAiProviderStore.getState().loadEnvApiKeys();
+        };
+      },
       migrate: (persisted, version) => {
         if (version === 0) {
           // v0 → v1: merge DEFAULT_REST_PROVIDERS by type, preserving user overrides

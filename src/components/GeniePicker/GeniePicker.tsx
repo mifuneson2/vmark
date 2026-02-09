@@ -3,6 +3,7 @@
  *
  * Spotlight-style centered overlay for browsing and invoking AI genies.
  * Opens via Cmd+Y, supports keyboard navigation, search, and freeform input.
+ * Freeform textarea supports prompt history (Up/Down cycling, ghost text, Ctrl+R dropdown).
  */
 
 import {
@@ -16,9 +17,11 @@ import { createPortal } from "react-dom";
 import { useGeniePickerStore } from "@/stores/geniePickerStore";
 import { useGeniesStore } from "@/stores/geniesStore";
 import { useGenieInvocation } from "@/hooks/useGenieInvocation";
+import { usePromptHistory } from "@/hooks/usePromptHistory";
 import type { GenieDefinition, GenieScope } from "@/types/aiGenies";
 import { GenieChips } from "./GenieChips";
 import { GenieItem } from "./GenieItem";
+import { PromptHistoryDropdown } from "./PromptHistoryDropdown";
 import "./genie-picker.css";
 
 const SCOPES: GenieScope[] = ["selection", "block", "document"];
@@ -33,7 +36,6 @@ export function GeniePicker() {
   const [filter, setFilter] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [activeScope, setActiveScope] = useState<GenieScope | null>(null);
-  const [freeform, setFreeform] = useState("");
 
   const inputRef = useRef<HTMLInputElement>(null);
   const freeformRef = useRef<HTMLTextAreaElement>(null);
@@ -42,15 +44,19 @@ export function GeniePicker() {
 
   const { invokeGenie, invokeFreeform, isRunning } = useGenieInvocation();
 
-  // Load genies on open
+  // Prompt history hook
+  const promptHistory = usePromptHistory();
+
+  // Load genies on open + reset history hook
   useEffect(() => {
     if (isOpen) {
       useGeniesStore.getState().loadGenies();
       setFilter("");
       setSelectedIndex(0);
-      setFreeform("");
+      promptHistory.reset();
       setActiveScope(filterScope);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, filterScope]);
 
   // Focus search input on open
@@ -114,7 +120,8 @@ export function GeniePicker() {
     useGeniePickerStore.getState().closePicker();
     setFilter("");
     setSelectedIndex(0);
-    setFreeform("");
+    promptHistory.reset();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleSelect = useCallback(
@@ -126,14 +133,22 @@ export function GeniePicker() {
   );
 
   const handleFreeformSubmit = useCallback(() => {
-    if (!freeform.trim()) return;
+    const text = promptHistory.displayValue.trim();
+    if (!text) return;
     const scope = activeScope ?? "selection";
+    promptHistory.recordAndReset(text);
     handleClose();
-    invokeFreeform(freeform.trim(), scope);
-  }, [freeform, activeScope, handleClose, invokeFreeform]);
+    invokeFreeform(text, scope);
+  }, [promptHistory, activeScope, handleClose, invokeFreeform]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
+      // If freeform is focused, let the hook handle ArrowUp/ArrowDown/Tab/Escape
+      // (the hook calls stopPropagation when it consumes the key)
+      if (document.activeElement === freeformRef.current) {
+        if (e.key === "ArrowUp" || e.key === "ArrowDown") return;
+      }
+
       const maxIndex = flatList.length - 1;
 
       if (e.key === "Escape") {
@@ -162,6 +177,7 @@ export function GeniePicker() {
           handleSelect(selected);
         }
       } else if (e.key === "Tab") {
+        // If freeform consumed Tab for ghost text, it already stopPropagated
         e.preventDefault();
         // Cycle through scopes
         const currentIdx = activeScope ? SCOPES.indexOf(activeScope) : -1;
@@ -200,7 +216,7 @@ export function GeniePicker() {
 
   // Scroll selected item into view
   useEffect(() => {
-    if (!listRef.current) return;
+    if (!listRef.current || selectedIndex < 0) return;
     const item = listRef.current.querySelector(
       `[data-index="${selectedIndex}"]`
     );
@@ -232,6 +248,7 @@ export function GeniePicker() {
               setFilter(e.target.value);
               setSelectedIndex(0);
             }}
+            onFocus={() => setSelectedIndex(0)}
           />
         </div>
 
@@ -269,7 +286,7 @@ export function GeniePicker() {
                     key={`recent-${genie.metadata.name}`}
                     genie={genie}
                     index={idx}
-                    selected={idx === selectedIndex}
+                    selected={selectedIndex >= 0 && idx === selectedIndex}
                     onSelect={handleSelect}
                     onHover={setSelectedIndex}
                   />
@@ -289,7 +306,7 @@ export function GeniePicker() {
                     key={genie.filePath}
                     genie={genie}
                     index={idx}
-                    selected={idx === selectedIndex}
+                    selected={selectedIndex >= 0 && idx === selectedIndex}
                     onSelect={handleSelect}
                     onHover={setSelectedIndex}
                   />
@@ -299,16 +316,40 @@ export function GeniePicker() {
           ))}
         </div>
 
-        {/* Freeform input */}
+        {/* Freeform input with ghost text + history dropdown */}
         <div className="genie-picker-freeform">
-          <textarea
-            ref={freeformRef}
-            className="genie-picker-freeform-input"
-            placeholder="Describe what you want..."
-            value={freeform}
-            onChange={(e) => setFreeform(e.target.value)}
-            rows={1}
-          />
+          {/* History dropdown (Layer 4) */}
+          {promptHistory.isDropdownOpen && (
+            <PromptHistoryDropdown
+              entries={promptHistory.dropdownEntries}
+              selectedIndex={promptHistory.dropdownSelectedIndex}
+              onSelect={promptHistory.selectDropdownEntry}
+              onClose={promptHistory.closeDropdown}
+            />
+          )}
+          <div className="genie-freeform-ghost-wrapper">
+            <textarea
+              ref={freeformRef}
+              className="genie-picker-freeform-input"
+              placeholder="Describe what you want..."
+              value={promptHistory.displayValue}
+              onChange={(e) => promptHistory.handleChange(e.target.value)}
+              onKeyDown={promptHistory.handleKeyDown}
+              onFocus={() => setSelectedIndex(-1)}
+              rows={1}
+            />
+            {/* Ghost text overlay (Layer 3) */}
+            {promptHistory.ghostText && (
+              <span className="genie-freeform-ghost" aria-hidden="true">
+                <span className="genie-freeform-ghost-spacer">
+                  {promptHistory.displayValue}
+                </span>
+                <span className="genie-freeform-ghost-text">
+                  {promptHistory.ghostText}
+                </span>
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Footer */}
@@ -321,6 +362,8 @@ export function GeniePicker() {
           )}
           <span className="genie-picker-hint">
             <kbd className="genie-picker-kbd">Tab</kbd> cycle scope
+            {" "}
+            <kbd className="genie-picker-kbd">&uarr;&darr;</kbd> history
           </span>
         </div>
       </div>
