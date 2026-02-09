@@ -4,7 +4,7 @@
  * Rendered when the provider is the active selection.
  */
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Eye, EyeOff, Copy, Check } from "lucide-react";
 import type { RestProviderType } from "@/types/aiGenies";
 import { useAiProviderStore } from "@/stores/aiProviderStore";
@@ -35,6 +35,14 @@ export function RestProviderConfigFields({
 }: RestProviderConfigFieldsProps) {
   const [revealed, setRevealed] = useState(false);
   const [copied, setCopied] = useState(false);
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  // Clear copy-feedback timer on unmount
+  useEffect(() => {
+    return () => {
+      clearTimeout(copyTimerRef.current);
+    };
+  }, []);
 
   const handleChange = (field: "endpoint" | "apiKey" | "model", value: string) => {
     useAiProviderStore.getState().updateRestProvider(type, { [field]: value });
@@ -44,7 +52,8 @@ export function RestProviderConfigFields({
     if (!apiKey) return;
     navigator.clipboard.writeText(apiKey);
     setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
+    clearTimeout(copyTimerRef.current);
+    copyTimerRef.current = setTimeout(() => setCopied(false), 1500);
   };
 
   return (

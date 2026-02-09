@@ -118,7 +118,7 @@ function fillTemplate(template: string, content: string, context?: string): stri
   if (context !== undefined) {
     result = result.replace(/\{\{\s*context\s*\}\}/g, context);
   }
-  // Strip unreplaced placeholders (e.g., context with no neighbors)
+  // Safety net: strip any {{context}} missed above (e.g., context undefined)
   result = result.replace(/\{\{\s*context\s*\}\}/g, "");
   return result;
 }

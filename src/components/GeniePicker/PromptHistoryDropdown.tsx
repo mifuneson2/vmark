@@ -73,9 +73,6 @@ export function PromptHistoryDropdown({
                   : ""
               }`}
               onClick={() => onSelect(index)}
-              onMouseEnter={() => {
-                /* handled by parent via onSelect */
-              }}
             >
               <span className="prompt-history-dropdown-text">{firstLine}</span>
             </div>

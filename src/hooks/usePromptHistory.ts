@@ -87,16 +87,14 @@ export function usePromptHistory(): PromptHistoryResult {
           prev !== null ? Math.min(prev + 1, filteredCache.length - 1) : 0
         );
       } else {
-        setCycleIndex((prev) => {
-          if (prev === null || prev <= 0) {
-            // Restore draft
-            setCycleIndex(null);
-            setFilteredCache([]);
-            setDraft(savedDraftRef.current);
-            return null;
-          }
-          return prev - 1;
-        });
+        if (cycleIndex === 0) {
+          // At oldest → exit cycling, restore original draft
+          setCycleIndex(null);
+          setFilteredCache([]);
+          setDraft(savedDraftRef.current);
+        } else {
+          setCycleIndex((prev) => (prev !== null ? prev - 1 : null));
+        }
       }
       return true;
     },
