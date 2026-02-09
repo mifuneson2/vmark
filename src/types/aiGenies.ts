@@ -54,7 +54,6 @@ export interface RestProviderConfig {
   endpoint: string;
   apiKey: string;
   model: string;
-  enabled: boolean;
 }
 
 // ============================================================================

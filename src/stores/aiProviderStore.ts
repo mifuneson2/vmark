@@ -54,7 +54,6 @@ const DEFAULT_REST_PROVIDERS: RestProviderConfig[] = [
     endpoint: "https://api.anthropic.com",
     apiKey: "",
     model: "claude-sonnet-4-5-20250929",
-    enabled: false,
   },
   {
     type: "openai",
@@ -62,7 +61,6 @@ const DEFAULT_REST_PROVIDERS: RestProviderConfig[] = [
     endpoint: "https://api.openai.com",
     apiKey: "",
     model: "gpt-4o",
-    enabled: false,
   },
   {
     type: "google-ai",
@@ -70,7 +68,6 @@ const DEFAULT_REST_PROVIDERS: RestProviderConfig[] = [
     endpoint: "",
     apiKey: "",
     model: "gemini-2.0-flash",
-    enabled: false,
   },
   {
     type: "ollama-api",
@@ -78,15 +75,14 @@ const DEFAULT_REST_PROVIDERS: RestProviderConfig[] = [
     endpoint: "http://localhost:11434",
     apiKey: "",
     model: "llama3.2",
-    enabled: false,
   },
 ];
 
 /** REST provider types (need API key). CLI types are everything else. */
-const REST_TYPES = new Set<string>(["anthropic", "openai", "google-ai", "ollama-api"]);
+export const REST_TYPES = new Set<string>(["anthropic", "openai", "google-ai", "ollama-api"]);
 
 /** Ollama API doesn't require an API key. */
-const KEY_OPTIONAL_REST = new Set<string>(["ollama-api"]);
+export const KEY_OPTIONAL_REST = new Set<string>(["ollama-api"]);
 
 // Race guard counter for detectProviders
 let _detectId = 0;
@@ -190,14 +186,7 @@ export const useAiProviderStore = create<AiProviderState & AiProviderActions>()(
       },
 
       activateProvider: (type) => {
-        set((state) => ({
-          activeProvider: type,
-          // Sync REST enabled flags: only the selected REST provider is enabled
-          restProviders: state.restProviders.map((p) => ({
-            ...p,
-            enabled: p.type === type,
-          })),
-        }));
+        set({ activeProvider: type });
       },
 
       updateRestProvider: (type, updates) => {
@@ -240,7 +229,7 @@ export const useAiProviderStore = create<AiProviderState & AiProviderActions>()(
     }),
     {
       name: "vmark-ai-providers",
-      version: 1,
+      version: 2,
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         activeProvider: state.activeProvider,
@@ -256,24 +245,33 @@ export const useAiProviderStore = create<AiProviderState & AiProviderActions>()(
         };
       },
       migrate: (persisted, version) => {
-        if (version === 0) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let data = persisted as any;
+        if (version < 1) {
           // v0 → v1: merge DEFAULT_REST_PROVIDERS by type, preserving user overrides
-          const old = persisted as {
-            activeProvider?: ProviderType | null;
-            restProviders?: RestProviderConfig[];
-          };
           const merged = DEFAULT_REST_PROVIDERS.map((def) => {
-            const existing = old.restProviders?.find((p) => p.type === def.type);
+            const existing = data.restProviders?.find(
+              (p: RestProviderConfig) => p.type === def.type
+            );
             return existing
               ? { ...def, ...existing, apiKey: "" }
               : def;
           });
-          return {
-            activeProvider: old.activeProvider ?? null,
+          data = {
+            activeProvider: data.activeProvider ?? null,
             restProviders: merged,
           };
         }
-        return persisted as AiProviderState;
+        if (version < 2) {
+          // v1 → v2: strip dead `enabled` field from REST providers
+          if (Array.isArray(data.restProviders)) {
+            data.restProviders = data.restProviders.map(
+              // eslint-disable-next-line @typescript-eslint/no-unused-vars
+              ({ enabled, ...rest }: RestProviderConfig & { enabled?: boolean }) => rest
+            );
+          }
+        }
+        return data as AiProviderState;
       },
     }
   )
