@@ -26,7 +26,15 @@ export function ProviderSwitcher({ onClose, onCloseAll }: ProviderSwitcherProps)
   const cliProviders = useAiProviderStore((s) => s.cliProviders);
   const restProviders = useAiProviderStore((s) => s.restProviders);
   const activeProvider = useAiProviderStore((s) => s.activeProvider);
+  const detecting = useAiProviderStore((s) => s.detecting);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Trigger CLI provider detection if not yet populated
+  useEffect(() => {
+    if (cliProviders.length === 0 && !detecting) {
+      useAiProviderStore.getState().detectProviders();
+    }
+  }, []);
 
   // Close on outside click
   useEffect(() => {
