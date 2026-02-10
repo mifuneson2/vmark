@@ -10,7 +10,7 @@ import {
   getClosingChar,
   isClosingChar,
   getOpeningChar,
-  ASCII_PAIRS,
+  normalizeForPairing,
   CJK_BRACKET_PAIRS,
   CJK_CURLY_QUOTE_PAIRS,
   type PairConfig,
@@ -21,6 +21,7 @@ export interface AutoPairConfig {
   enabled: boolean;
   includeCJK: boolean;
   includeCurlyQuotes: boolean;
+  normalizeRightDoubleQuote: boolean;
 }
 
 /** Convert AutoPairConfig to PairConfig for pair lookup functions */
@@ -47,17 +48,23 @@ export function handleTextInput(
   // Only handle single character input
   if (text.length !== 1) return false;
 
-  const closing = getClosingChar(text, toPairConfig(config));
+  // Normalize right double curly quote → left double curly (IME compat)
+  const inputChar = config.normalizeRightDoubleQuote
+    ? normalizeForPairing(text)
+    : text;
+
+  const closing = getClosingChar(inputChar, toPairConfig(config));
   if (!closing) return false;
 
   const { state } = view;
 
   // Check if we should auto-pair
-  if (!shouldAutoPair(state, from, text)) return false;
+  if (!shouldAutoPair(state, from, inputChar)) return false;
 
   // Check if next char is already the closing char (avoid double-pairing)
+  // Only skip when there's no selection — with a selection we should wrap it
   const nextChar = getCharAt(state, to);
-  if (nextChar === closing) return false;
+  if (from === to && nextChar === closing) return false;
 
   const { dispatch } = view;
 
@@ -67,7 +74,7 @@ export function handleTextInput(
     const tr = state.tr.replaceWith(
       from,
       to,
-      state.schema.text(text + selectedText + closing)
+      state.schema.text(inputChar + selectedText + closing)
     );
     // Place cursor after the selected text (before closing)
     tr.setSelection(
@@ -76,7 +83,7 @@ export function handleTextInput(
     dispatch(tr);
   } else {
     // Insert pair with cursor between
-    const tr = state.tr.insertText(text + closing, from);
+    const tr = state.tr.insertText(inputChar + closing, from);
     tr.setSelection(TextSelection.create(tr.doc, from + 1));
     dispatch(tr);
   }
@@ -145,21 +152,9 @@ export function handleBackspacePair(
   const prevChar = getCharBefore(state, from);
   const nextChar = getCharAt(state, from);
 
-  // Check if prev char is an opening bracket
-  const expectedClosing = ASCII_PAIRS[prevChar];
-  const expectedClosingCJKBracket = config.includeCJK
-    ? CJK_BRACKET_PAIRS[prevChar]
-    : null;
-  const expectedClosingCurlyQuote =
-    config.includeCJK && config.includeCurlyQuotes
-      ? CJK_CURLY_QUOTE_PAIRS[prevChar]
-      : null;
-
-  if (
-    expectedClosing === nextChar ||
-    expectedClosingCJKBracket === nextChar ||
-    expectedClosingCurlyQuote === nextChar
-  ) {
+  // Check if prev char is an opening bracket/quote whose closing matches next char
+  const expectedClosing = getClosingChar(prevChar, toPairConfig(config));
+  if (expectedClosing && expectedClosing === nextChar) {
     // Delete both characters
     view.dispatch(state.tr.delete(from - 1, from + 1));
     return true;

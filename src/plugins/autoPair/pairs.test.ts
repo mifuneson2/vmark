@@ -12,6 +12,7 @@ import {
   isOpeningChar,
   isClosingChar,
   getOpeningChar,
+  normalizeForPairing,
 } from "./pairs";
 
 describe("ASCII_PAIRS", () => {
@@ -225,5 +226,29 @@ describe("getOpeningChar", () => {
   it("returns null for non-closing characters", () => {
     expect(getOpeningChar("a")).toBe(null);
     expect(getOpeningChar("(")).toBe(null);
+  });
+});
+
+describe("normalizeForPairing", () => {
+  it("normalizes right double curly to left double curly", () => {
+    expect(normalizeForPairing("\u201D")).toBe("\u201C"); // " → "
+  });
+
+  it("does NOT normalize right single curly (apostrophe)", () => {
+    expect(normalizeForPairing("\u2019")).toBe("\u2019"); // ' stays '
+  });
+
+  it("passes through left double curly unchanged", () => {
+    expect(normalizeForPairing("\u201C")).toBe("\u201C");
+  });
+
+  it("passes through left single curly unchanged", () => {
+    expect(normalizeForPairing("\u2018")).toBe("\u2018");
+  });
+
+  it("passes through regular characters unchanged", () => {
+    expect(normalizeForPairing("a")).toBe("a");
+    expect(normalizeForPairing("(")).toBe("(");
+    expect(normalizeForPairing('"')).toBe('"');
   });
 });

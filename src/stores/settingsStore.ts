@@ -218,6 +218,7 @@ export interface MarkdownSettings {
   autoPairEnabled: boolean; // Auto-insert closing brackets/quotes
   autoPairCJKStyle: AutoPairCJKStyle; // CJK bracket pairing style
   autoPairCurlyQuotes: boolean; // Include curly quotes in CJK pairing (may conflict with IME)
+  autoPairRightDoubleQuote: boolean; // Typing " also inserts "" pair (IME compat)
   copyFormat: CopyFormat; // What to put in text/plain on copy (default = plain text, markdown = markdown syntax)
   copyOnSelect: boolean; // Auto-copy selected text to clipboard
 }
@@ -379,6 +380,7 @@ const initialState: SettingsState = {
     autoPairEnabled: true,
     autoPairCJKStyle: "auto",
     autoPairCurlyQuotes: true,
+    autoPairRightDoubleQuote: false,
     copyFormat: "default",
     copyOnSelect: false,
   },

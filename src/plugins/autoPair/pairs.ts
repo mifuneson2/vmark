@@ -39,6 +39,20 @@ export const CJK_PAIRS: Record<string, string> = {
   ...CJK_CURLY_QUOTE_PAIRS,
 };
 
+/**
+ * Map from closing curly quotes to their opening counterparts for auto-pairing.
+ * Only right double curly (U+201D → U+201C) is normalized.
+ * Right single curly (U+2019) is intentionally excluded — it doubles as an apostrophe.
+ */
+const NORMALIZE_FOR_PAIRING: Record<string, string> = {
+  "\u201D": "\u201C", // " → "
+};
+
+/** Normalize a closing curly quote to its opening counterpart for auto-pairing. */
+export function normalizeForPairing(char: string): string {
+  return NORMALIZE_FOR_PAIRING[char] ?? char;
+}
+
 /** All closing characters (for skip-over detection) */
 export const CLOSING_CHARS = new Set([
   ...Object.values(ASCII_PAIRS),

@@ -199,6 +199,19 @@ export function EditorSettings() {
             />
           </SettingRow>
         )}
+        {autoPairCJKStyle !== "off" && markdown.autoPairCurlyQuotes && (
+          <SettingRow
+            label="Also pair \u201D"
+            description="Typing \u201D inserts \u201C\u201D pair (helps when IME alternates open/close)"
+            disabled={!autoPairEnabled}
+          >
+            <Toggle
+              checked={markdown.autoPairRightDoubleQuote ?? false}
+              onChange={(v) => updateMarkdownSetting("autoPairRightDoubleQuote", v)}
+              disabled={!autoPairEnabled}
+            />
+          </SettingRow>
+        )}
         <SettingRow
           label="Copy format"
           description="What to put in plain text when copying from WYSIWYG"

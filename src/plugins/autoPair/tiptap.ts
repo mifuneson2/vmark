@@ -17,6 +17,10 @@ function getConfig(): AutoPairConfig {
     enabled: settings.autoPairEnabled ?? true,
     includeCJK: settings.autoPairCJKStyle !== "off",
     includeCurlyQuotes: settings.autoPairCurlyQuotes ?? false,
+    normalizeRightDoubleQuote:
+      settings.autoPairCJKStyle !== "off" &&
+      (settings.autoPairCurlyQuotes ?? false) &&
+      (settings.autoPairRightDoubleQuote ?? false),
   };
 }
 
