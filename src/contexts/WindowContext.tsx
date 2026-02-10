@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState, useRef, type ReactNode } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { readTextFile } from "@tauri-apps/plugin-fs";
 import { toast } from "sonner";
@@ -15,6 +16,57 @@ import {
 } from "../utils/workspaceStorage";
 import { resolveWorkspaceRootForExternalFile } from "../utils/openPolicy";
 import { isWithinRoot } from "../utils/paths";
+
+/** Transfer data shape returned by claim_tab_transfer. */
+interface TabTransferData {
+  tabId: string;
+  title: string;
+  filePath: string | null;
+  content: string;
+  savedContent: string;
+  isDirty: boolean;
+}
+
+/**
+ * Claim transfer data from Rust and create the tab + document.
+ * Returns true if a transfer was handled (caller should skip normal init).
+ */
+async function handleTabTransfer(label: string): Promise<boolean> {
+  const urlParams = new URLSearchParams(globalThis.location?.search || "");
+  if (!urlParams.has("transfer")) return false;
+
+  const data = await invoke<TabTransferData | null>(
+    "claim_tab_transfer",
+    { windowLabel: label }
+  );
+  if (!data) return false;
+
+  // Set up workspace from the file's parent directory (cross-platform)
+  if (data.filePath) {
+    const workspaceRoot = resolveWorkspaceRootForExternalFile(data.filePath);
+    if (workspaceRoot) {
+      try {
+        await openWorkspaceWithConfig(workspaceRoot);
+      } catch {
+        // Non-fatal — proceed without workspace
+      }
+    }
+  }
+
+  const tabId = useTabStore.getState().createTab(label, data.filePath);
+  useTabStore.getState().updateTabTitle(tabId, data.title);
+  useDocumentStore.getState().initDocument(
+    tabId,
+    data.content,
+    data.filePath,
+    data.savedContent
+  );
+  if (data.filePath) {
+    useRecentFilesStore.getState().addFile(data.filePath);
+  }
+
+  return true;
+}
 
 /**
  * Delay before emitting "ready" event to Rust.
@@ -76,6 +128,19 @@ export function WindowProvider({ children }: WindowProviderProps) {
           const existingTabs = useTabStore.getState().getTabsByWindow(label);
           if (existingTabs.length === 0 && !initStartedRef.current) {
             initStartedRef.current = true;
+
+            // Handle tab transfer (drag-out from another window)
+            try {
+              const transferred = await handleTabTransfer(label);
+              if (transferred) {
+                setIsReady(true);
+                setTimeout(() => window.emit("ready", label), READY_EVENT_DELAY_MS);
+                return;
+              }
+            } catch (err) {
+              console.error("[WindowContext] Failed to claim tab transfer:", err);
+            }
+
             // Check if we have a file path and/or workspace root in the URL query params
             const urlParams = new URLSearchParams(globalThis.location?.search || "");
             const filePath = urlParams.get("file");

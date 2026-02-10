@@ -1,4 +1,4 @@
-import { memo, useCallback, type MouseEvent } from "react";
+import { memo, useCallback, type MouseEvent, type PointerEvent } from "react";
 import { X, Pin, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Tab as TabType } from "@/stores/tabStore";
@@ -7,17 +7,21 @@ import { useDocumentStore } from "@/stores/documentStore";
 interface TabProps {
   tab: TabType;
   isActive: boolean;
+  isDragTarget?: boolean;
   onActivate: () => void;
   onClose: () => void;
   onContextMenu: (e: MouseEvent) => void;
+  onPointerDown?: (e: PointerEvent) => void;
 }
 
 export const Tab = memo(function Tab({
   tab,
   isActive,
+  isDragTarget,
   onActivate,
   onClose,
   onContextMenu,
+  onPointerDown,
 }: TabProps) {
   // Get dirty and missing state from document store
   const isDirty = useDocumentStore(
@@ -52,10 +56,12 @@ export const Tab = memo(function Tab({
       className={cn(
         "tab-pill group",
         isActive && "active",
-        isMissing && "tab-missing"
+        isMissing && "tab-missing",
+        isDragTarget && "tab--dragging"
       )}
       onClick={onActivate}
       onMouseDown={handleMiddleClick}
+      onPointerDown={onPointerDown}
       onContextMenu={onContextMenu}
       title={isMissing ? "File deleted from disk" : undefined}
     >

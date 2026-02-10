@@ -227,6 +227,12 @@
   background-color: var(--warning-bg-active, rgba(245, 158, 11, 0.2));
 }
 
+/* Tab being dragged out of the bar */
+.tab-pill.tab--dragging {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
 /* New tab button */
 .status-new-tab {
   display: flex;

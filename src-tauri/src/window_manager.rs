@@ -161,6 +161,14 @@ fn create_document_window_with_url(
     Ok(label)
 }
 
+/// Create a new document window for a tab transfer (drag-out).
+/// The URL includes `?transfer=true` so the frontend can claim the data.
+pub fn create_document_window_for_transfer(
+    app: &AppHandle,
+) -> Result<String, tauri::Error> {
+    create_document_window_with_url(app, "/?transfer=true".to_string())
+}
+
 /// Create a new document window with optional file path and workspace root.
 /// Returns the window label on success.
 ///
