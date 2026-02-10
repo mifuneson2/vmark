@@ -13,6 +13,7 @@ Use this skill when the user wants AI help with:
 - Reorganizing document structure (moving sections, reordering)
 - Formatting (headings, lists, tables, emphasis)
 - Multi-document workflows (working across tabs/windows)
+- Running AI genies against document content
 
 ## Core Principles
 
@@ -21,8 +22,8 @@ Use this skill when the user wants AI help with:
 **Always** understand the document before making changes:
 
 ```
-get_document_digest  →  understand structure
-get_section          →  read specific content
+get_document_digest  ->  understand structure
+get_section          ->  read specific content
 THEN propose changes
 ```
 
@@ -34,7 +35,7 @@ Use `mode: "suggest"` for content changes. Let the writer decide:
 
 ```
 batch_edit(
-  mode: "suggest",      ← Writer reviews before applying
+  mode: "suggest",      <- Writer reviews before applying
   operations: [...]
 )
 ```
@@ -46,10 +47,10 @@ The writer sees highlighted suggestions and accepts/rejects them.
 Every mutation needs `baseRevision` for conflict detection:
 
 ```
-1. get_document_revision → "rev_abc123"
+1. get_document_revision -> "rev_abc123"
 2. batch_edit(baseRevision: "rev_abc123", ...)
-   → If doc changed: CONFLICT (re-read and retry)
-   → If unchanged: SUCCESS
+   -> If doc changed: CONFLICT (re-read and retry)
+   -> If unchanged: SUCCESS
 ```
 
 ### 4. Work with Structure, Not Positions
@@ -57,54 +58,63 @@ Every mutation needs `baseRevision` for conflict detection:
 Target nodes by ID, not character offsets:
 
 ```
-✓ batch_edit(operations: [{nodeId: "node_123", ...}])
-✗ "Replace characters 450-500"
+batch_edit(operations: [{nodeId: "node_123", ...}])
+NOT: "Replace characters 450-500"
 ```
 
 Use `list_blocks` or `get_document_ast` to find node IDs.
 
-## Quick Reference: Intent → Tool
+## Quick Reference: Intent -> Tool
 
-| You Want To... | Use This Tool | Mode |
-|----------------|---------------|------|
+| You Want To... | Use This Tool | Key Params |
+|----------------|---------------|------------|
 | Understand the document | `get_document_digest` | - |
-| Find specific content | `list_blocks` with query | - |
-| Read a section | `get_section` | - |
-| Insert/update/delete content | `batch_edit` | suggest |
-| Find and replace | `apply_diff` | suggest |
-| Replace with context anchors | `replace_text_anchored` | suggest |
-| Move a section | `move_section` | apply |
-| Toggle formatting | `format_toggle` | apply |
-| Change block type | `block_set_type` | apply |
-| Work with lists | `list_toggle`, `list_modify` | apply |
-| Work with tables | `table_modify` | apply |
+| Find specific content | `list_blocks` with query | `query`, `limit` |
+| Read a section | `get_section` | `heading` |
+| Read a paragraph | `read_paragraph` | `target: {index}` or `{containing}` |
+| Insert/update/delete content | `batch_edit` | `baseRevision`, `mode`, `operations` |
+| Find and replace | `apply_diff` | `baseRevision`, `original`, `replacement`, `matchPolicy` |
+| Replace with context anchors | `replace_text_anchored` | `baseRevision`, `anchor`, `replacement` |
+| Update section content | `update_section` | `baseRevision`, `target: {heading}`, `newContent` |
+| Insert new section | `insert_section` | `baseRevision`, `heading: {level, text}` |
+| Move a section | `move_section` | `baseRevision`, `section: {heading}`, `after` |
+| Write/modify paragraph | `write_paragraph` | `baseRevision`, `target`, `operation` |
+| Insert at common location | `smart_insert` | `baseRevision`, `destination`, `content` |
+| Toggle formatting | `format_toggle` | `mark` |
+| Change block type | `block_set_type` | `type`, `level`, `language` |
+| Work with lists | `list_toggle`, `list_modify` | `type` (bullet/ordered/task) |
+| Work with tables | `table_modify` | `target`, `operations` |
+| Insert math | `insert_math_inline` / `insert_math_block` | `latex` |
+| Insert diagram | `insert_mermaid` | `code` |
+| Insert SVG | `insert_svg` | `code` |
+| Insert wiki link | `insert_wiki_link` | `target`, `displayText` |
 | Check pending suggestions | `suggestion_list` | - |
-| Preview changes | Any mutation tool | dryRun |
+| Preview changes | Any mutation tool | `mode: "dryRun"` |
+| Discover AI genies | `list_genies` | - |
+| Run a genie | `invoke_genie` | `geniePath`, `scope` |
 
 ## The Fundamental Workflow
 
 Every AI writing task follows this cycle:
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│  1. READ         get_document_digest / get_section      │
-│                  Understand what exists                 │
-├─────────────────────────────────────────────────────────┤
-│  2. LOCATE       list_blocks / resolve_targets          │
-│                  Find the nodes you'll modify           │
-├─────────────────────────────────────────────────────────┤
-│  3. PLAN         (AI reasoning)                         │
-│                  Decide what changes to make            │
-├─────────────────────────────────────────────────────────┤
-│  4. PREVIEW      batch_edit with mode: "dryRun"         │
-│                  (Optional) Verify targets are correct  │
-├─────────────────────────────────────────────────────────┤
-│  5. SUGGEST      batch_edit with mode: "suggest"        │
-│                  Propose changes for writer approval    │
-├─────────────────────────────────────────────────────────┤
-│  6. WAIT         Writer accepts/rejects suggestions     │
-│                  Don't assume acceptance                │
-└─────────────────────────────────────────────────────────┘
+1. READ         get_document_digest / get_section
+                Understand what exists
+
+2. LOCATE       list_blocks / resolve_targets
+                Find the nodes you'll modify
+
+3. PLAN         (AI reasoning)
+                Decide what changes to make
+
+4. PREVIEW      batch_edit with mode: "dryRun"
+                (Optional) Verify targets are correct
+
+5. SUGGEST      batch_edit with mode: "suggest"
+                Propose changes for writer approval
+
+6. WAIT         Writer accepts/rejects suggestions
+                Don't assume acceptance
 ```
 
 ## Common Workflows
@@ -112,34 +122,46 @@ Every AI writing task follows this cycle:
 ### Expand/Continue Writing
 
 ```
-1. cursor_get_context     → Get text around cursor
+1. cursor_get_context     -> Get text around cursor
 2. (AI generates continuation)
-3. document_insert_at_cursor(text, mode: "suggest")
+3. document_insert_at_cursor(text: "...")
 4. Tell writer: "I've suggested a continuation. Press Tab to accept or Escape to reject."
 ```
 
 ### Improve a Section
 
 ```
-1. get_document_digest    → Find section heading
-2. get_section("Introduction")  → Read full content
-3. (AI analyzes and improves)
-4. update_section(heading: "Introduction", content: "...", mode: "suggest")
-5. Tell writer what you changed and why
+1. get_document_digest         -> Find section heading
+2. get_section(heading: "Introduction")  -> Read full content
+3. get_document_revision       -> Get baseRevision
+4. (AI analyzes and improves)
+5. update_section(
+     baseRevision: "rev_...",
+     target: { heading: "Introduction" },
+     newContent: "...",
+     mode: "suggest"
+   )
+6. Tell writer what you changed and why
 ```
 
 ### Reorganize Document
 
 ```
-1. get_document_digest    → See outline
-2. move_section(heading: "Conclusion", before: "Methods")
-3. Confirm new structure to writer
+1. get_document_digest   -> See outline
+2. get_document_revision -> Get baseRevision
+3. move_section(
+     baseRevision: "rev_...",
+     section: { heading: "Conclusion" },
+     after: { heading: "Introduction" }
+   )
+4. Confirm new structure to writer
 ```
 
 ### Find and Replace
 
 ```
 1. apply_diff(
+     baseRevision: "rev_...",
      original: "old phrase",
      replacement: "new phrase",
      matchPolicy: "all",
@@ -155,6 +177,29 @@ Every AI writing task follows this cycle:
 2. batch_edit(operations: [
      {type: "format", nodeId: "...", marks: [{type: "bold"}]}
    ])
+```
+
+### Quick Insert at Location
+
+```
+1. get_document_revision -> Get baseRevision
+2. smart_insert(
+     baseRevision: "rev_...",
+     destination: { after_section: "Introduction" },
+     content: "New paragraph text...",
+     mode: "suggest"
+   )
+```
+
+### Use AI Genies
+
+```
+1. list_genies                -> Discover available genies
+2. read_genie(path: "...")    -> Read genie template
+3. invoke_genie(
+     geniePath: "...",
+     scope: "selection"       -> selection, block, or document
+   )
 ```
 
 ## What This Skill Cannot Do
@@ -184,9 +229,9 @@ If `batch_edit` returns a conflict error:
 When working across files:
 
 ```
-1. workspace_list_windows  → See all open windows
-2. tabs_list(windowId)     → See tabs in a window
-3. tabs_switch(tabId)      → Switch to target document
+1. workspace_list_windows  -> See all open windows
+2. tabs_list(windowId)     -> See tabs in a window
+3. tabs_switch(tabId)      -> Switch to target document
 4. (Perform operations)
 5. tabs_switch back if needed
 ```
@@ -195,6 +240,6 @@ Always specify `windowId` when not working in the focused window.
 
 ## References
 
-- `references/tools-by-intent.md` — Complete tool mapping by writer intent
-- `references/workflows.md` — Detailed step-by-step patterns
-- `references/examples.md` — Real tool call examples with parameters
+- `references/tools-by-intent.md` -- Complete tool mapping by writer intent
+- `references/workflows.md` -- Detailed step-by-step patterns
+- `references/examples.md` -- Real tool call examples with parameters

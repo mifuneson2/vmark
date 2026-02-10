@@ -116,23 +116,42 @@ Real tool call examples with parameters and expected responses.
 ```json
 {
   "tool": "cursor_get_context",
-  "charsBefore": 200,
-  "charsAfter": 50
+  "linesBefore": 5,
+  "linesAfter": 3
 }
 ```
 
 **Response:**
 ```json
 {
-  "before": "...the data shows a clear trend toward increased adoption. The implications of this finding are significant for practitioners who need to",
+  "before": "...the data shows a clear trend toward increased adoption.\nThe implications of this finding are significant for practitioners who need to",
   "after": " make informed decisions about...",
   "position": 1234,
   "currentBlock": {
     "nodeId": "node_28",
     "type": "paragraph",
-    "text": "The implications of this finding are significant for practitioners who need to make informed decisions about implementation strategies."
+    "text": "The implications of this finding..."
   },
   "revision": "rev_a7b3c9"
+}
+```
+
+### read_paragraph
+
+**Call:**
+```json
+{
+  "tool": "read_paragraph",
+  "target": { "index": 0 }
+}
+```
+
+**Call (by content match):**
+```json
+{
+  "tool": "read_paragraph",
+  "target": { "containing": "key finding" },
+  "includeContext": true
 }
 ```
 
@@ -189,22 +208,6 @@ Real tool call examples with parameters and expected responses.
       "text": "This is a critically important finding that demonstrates a clear correlation between the variables studied."
     }
   ]
-}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "mode": "suggest",
-  "operationResults": [
-    {
-      "type": "update",
-      "nodeId": "node_12",
-      "suggestionId": "sug_a1b2c3"
-    }
-  ],
-  "newRevision": "rev_b8c4d0"
 }
 ```
 
@@ -350,8 +353,9 @@ Real tool call examples with parameters and expected responses.
 ```json
 {
   "tool": "update_section",
-  "heading": "Introduction",
-  "content": "## Introduction\n\nThis completely rewritten introduction provides a clearer overview of the research objectives.\n\nThe study aims to investigate three key areas...",
+  "baseRevision": "rev_a7b3c9",
+  "target": { "heading": "Introduction" },
+  "newContent": "This completely rewritten introduction provides a clearer overview of the research objectives.\n\nThe study aims to investigate three key areas...",
   "mode": "suggest"
 }
 ```
@@ -362,8 +366,9 @@ Real tool call examples with parameters and expected responses.
 ```json
 {
   "tool": "move_section",
-  "heading": "Conclusion",
-  "before": "Methods"
+  "baseRevision": "rev_a7b3c9",
+  "section": { "heading": "Conclusion" },
+  "after": { "heading": "Introduction" }
 }
 ```
 
@@ -372,7 +377,7 @@ Real tool call examples with parameters and expected responses.
 {
   "success": true,
   "movedSection": "Conclusion",
-  "newPosition": "before Methods",
+  "newPosition": "after Introduction",
   "newRevision": "rev_e0f6g2"
 }
 ```
@@ -383,10 +388,72 @@ Real tool call examples with parameters and expected responses.
 ```json
 {
   "tool": "insert_section",
-  "heading": "Literature Review",
-  "level": 2,
+  "baseRevision": "rev_a7b3c9",
+  "heading": { "level": 2, "text": "Literature Review" },
   "content": "Previous studies have examined...",
-  "after": "Introduction"
+  "after": { "heading": "Introduction" }
+}
+```
+
+---
+
+## Paragraph Operations
+
+### write_paragraph
+
+**Call (replace):**
+```json
+{
+  "tool": "write_paragraph",
+  "baseRevision": "rev_a7b3c9",
+  "target": { "index": 2 },
+  "operation": "replace",
+  "content": "Completely rewritten third paragraph...",
+  "mode": "suggest"
+}
+```
+
+**Call (append):**
+```json
+{
+  "tool": "write_paragraph",
+  "baseRevision": "rev_a7b3c9",
+  "target": { "containing": "key finding" },
+  "operation": "append",
+  "content": " This aligns with prior research."
+}
+```
+
+### smart_insert
+
+**Call (end of document):**
+```json
+{
+  "tool": "smart_insert",
+  "baseRevision": "rev_a7b3c9",
+  "destination": "end_of_document",
+  "content": "## Appendix\n\nAdditional data...",
+  "mode": "suggest"
+}
+```
+
+**Call (after section):**
+```json
+{
+  "tool": "smart_insert",
+  "baseRevision": "rev_a7b3c9",
+  "destination": { "after_section": "Introduction" },
+  "content": "A bridging paragraph between sections..."
+}
+```
+
+**Call (after paragraph):**
+```json
+{
+  "tool": "smart_insert",
+  "baseRevision": "rev_a7b3c9",
+  "destination": { "after_paragraph_containing": "key conclusion" },
+  "content": "Supporting evidence for this conclusion..."
 }
 ```
 
@@ -419,7 +486,7 @@ Real tool call examples with parameters and expected responses.
 ```json
 {
   "tool": "format_set_link",
-  "url": "https://example.com/paper",
+  "href": "https://example.com/paper",
   "title": "Reference Paper"
 }
 ```
@@ -431,9 +498,7 @@ Real tool call examples with parameters and expected responses.
 {
   "tool": "block_set_type",
   "type": "heading",
-  "attrs": {
-    "level": 2
-  }
+  "level": 2
 }
 ```
 
@@ -444,9 +509,7 @@ Real tool call examples with parameters and expected responses.
 {
   "tool": "block_set_type",
   "type": "codeBlock",
-  "attrs": {
-    "language": "python"
-  }
+  "language": "python"
 }
 ```
 
@@ -460,7 +523,7 @@ Real tool call examples with parameters and expected responses.
 ```json
 {
   "tool": "list_toggle",
-  "type": "bulletList"
+  "type": "bullet"
 }
 ```
 
@@ -490,6 +553,16 @@ Real tool call examples with parameters and expected responses.
   "tool": "table_insert",
   "rows": 4,
   "cols": 3
+}
+```
+
+### table_add_row
+
+**Call:**
+```json
+{
+  "tool": "table_add_row",
+  "position": "after"
 }
 ```
 
@@ -622,7 +695,7 @@ Real tool call examples with parameters and expected responses.
 ```json
 {
   "tool": "workspace_open_document",
-  "path": "/Users/writer/Documents/reference.md"
+  "filePath": "/Users/writer/Documents/reference.md"
 }
 ```
 
@@ -669,6 +742,16 @@ Real tool call examples with parameters and expected responses.
 }
 ```
 
+### insert_svg
+
+**Call:**
+```json
+{
+  "tool": "insert_svg",
+  "code": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><circle cx=\"50\" cy=\"50\" r=\"40\" fill=\"#0066cc\"/></svg>"
+}
+```
+
 ### insert_wiki_link
 
 **Call:**
@@ -676,7 +759,76 @@ Real tool call examples with parameters and expected responses.
 {
   "tool": "insert_wiki_link",
   "target": "Related Concepts",
-  "alias": "see also"
+  "displayText": "see also"
+}
+```
+
+---
+
+## AI Genies
+
+### list_genies
+
+**Call:**
+```json
+{
+  "tool": "list_genies"
+}
+```
+
+**Response:**
+```json
+{
+  "genies": [
+    { "name": "Summarize", "path": "/path/to/summarize.md", "source": "global", "category": "writing" },
+    { "name": "Translate", "path": "/path/to/translate.md", "source": "workspace", "category": "language" }
+  ]
+}
+```
+
+### read_genie
+
+**Call:**
+```json
+{
+  "tool": "read_genie",
+  "path": "/path/to/summarize.md"
+}
+```
+
+### invoke_genie
+
+**Call:**
+```json
+{
+  "tool": "invoke_genie",
+  "geniePath": "/path/to/summarize.md",
+  "scope": "selection"
+}
+```
+
+---
+
+## Document Replace
+
+### document_replace
+
+**Call (first occurrence):**
+```json
+{
+  "tool": "document_replace",
+  "search": "machine learning",
+  "replace": "ML"
+}
+```
+
+**Call (all occurrences):**
+```json
+{
+  "tool": "document_replace",
+  "search": "machine learning",
+  "replace": "ML",
+  "all": true
 }
 ```
 

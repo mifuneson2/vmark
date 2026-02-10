@@ -35,6 +35,20 @@ get_section(heading: "Introduction")
 get_section(heading: {level: 2, index: 0})  // First H2
 ```
 
+### "Read a specific paragraph"
+
+| Tool | Capability |
+|------|------------|
+| `read_paragraph` | Get paragraph by index or content match |
+
+```
+read_paragraph(target: {index: 0})                  // First paragraph
+read_paragraph(target: {containing: "key phrase"})   // By content
+read_paragraph(target: {index: 2}, includeContext: true)  // With surrounding
+```
+
+**Best practice:** Use for flat documents without headings.
+
 ---
 
 ## Making Content Changes
@@ -44,7 +58,8 @@ get_section(heading: {level: 2, index: 0})  // First H2
 | Tool | Where | Best For |
 |------|-------|----------|
 | `document_insert_at_cursor` | At cursor position | Continuing where writer left off |
-| `batch_edit` with insert op | After specific node | Precise placement |
+| `smart_insert` | At common locations | End/start of doc, after section/paragraph |
+| `batch_edit` with insert op | After specific node | Precise placement by nodeId |
 | `insert_section` | New section with heading | Adding new document section |
 
 **Always use `mode: "suggest"` for content insertion.**
@@ -55,6 +70,7 @@ get_section(heading: {level: 2, index: 0})  // First H2
 |------|------------|----------|
 | `batch_edit` with update op | Change node text/attrs | Targeted node updates |
 | `update_section` | Replace entire section content | Section rewrites |
+| `write_paragraph` | Modify a paragraph | Flat docs without headings |
 | `apply_diff` | Find and replace | Pattern-based changes |
 | `replace_text_anchored` | Context-aware replacement | Drift-tolerant edits |
 
@@ -63,6 +79,7 @@ get_section(heading: {level: 2, index: 0})  // First H2
 | Tool | Capability |
 |------|------------|
 | `batch_edit` with delete op | Remove specific nodes |
+| `write_paragraph` with `operation: "delete"` | Remove a paragraph |
 | `selection_delete` | Delete current selection |
 
 ### "Move content"
@@ -87,7 +104,7 @@ get_section(heading: {level: 2, index: 0})  // First H2
 
 ```
 format_toggle(mark: "bold")      // Toggle on selection
-format_set_link(url: "https://...")
+format_set_link(href: "https://...")
 ```
 
 ### "Change block type"
@@ -98,8 +115,8 @@ format_set_link(url: "https://...")
 | `block_toggle` | Toggle between types |
 
 ```
-block_set_type(type: "heading", attrs: {level: 2})
-block_set_type(type: "codeBlock", attrs: {language: "python"})
+block_set_type(type: "heading", level: 2)
+block_set_type(type: "codeBlock", language: "python")
 ```
 
 ---
@@ -108,9 +125,9 @@ block_set_type(type: "codeBlock", attrs: {language: "python"})
 
 | Intent | Tool |
 |--------|------|
-| Convert to list | `list_toggle(type: "bulletList")` |
-| Change list type | `list_toggle(type: "orderedList")` |
-| Create task list | `list_toggle(type: "taskList")` |
+| Convert to list | `list_toggle(type: "bullet")` |
+| Change list type | `list_toggle(type: "ordered")` |
+| Create task list | `list_toggle(type: "task")` |
 | Indent item | `list_indent` |
 | Outdent item | `list_outdent` |
 | Batch list operations | `list_modify` |
@@ -141,7 +158,9 @@ block_set_type(type: "codeBlock", attrs: {language: "python"})
 | Inline math | `insert_math_inline(latex: "E = mc^2")` |
 | Block math | `insert_math_block(latex: "\\int_0^\\infty...")` |
 | Mermaid diagram | `insert_mermaid(code: "graph TD...")` |
+| SVG graphic | `insert_svg(code: "<svg>...</svg>")` |
 | Wiki link | `insert_wiki_link(target: "Other Page")` |
+| Wiki link with label | `insert_wiki_link(target: "Page", displayText: "see also")` |
 | Horizontal rule | `block_insert_horizontal_rule` |
 
 ---
@@ -150,8 +169,9 @@ block_set_type(type: "codeBlock", attrs: {language: "python"})
 
 | Intent | Tool |
 |--------|------|
-| Convert punctuation | `cjk_punctuation_convert(direction: "toFullWidth")` |
-| Fix CJK-Latin spacing | `cjk_spacing_fix` |
+| Convert punctuation | `cjk_punctuation_convert(direction: "to-fullwidth")` |
+| Fix CJK-Latin spacing | `cjk_spacing_fix(action: "add")` |
+| Remove CJK-Latin spacing | `cjk_spacing_fix(action: "remove")` |
 
 ---
 
@@ -161,14 +181,14 @@ block_set_type(type: "codeBlock", attrs: {language: "python"})
 
 | Tool | Returns |
 |------|---------|
-| `cursor_get_context` | Surrounding text, position, current block info |
+| `cursor_get_context` | Surrounding lines, current line, current paragraph |
 | `selection_get` | Selection range, selected text, isEmpty |
 
 ### "Move cursor/selection"
 
 | Tool | Capability |
 |------|------------|
-| `cursor_set_position(offset)` | Move cursor to character offset |
+| `cursor_set_position(position)` | Move cursor to character offset |
 | `selection_set(from, to)` | Set selection range |
 
 ### "Work with selection"
@@ -204,6 +224,18 @@ block_set_type(type: "codeBlock", attrs: {language: "python"})
 
 ---
 
+## AI Genies
+
+| Intent | Tool |
+|--------|------|
+| Discover genies | `list_genies` |
+| Read genie template | `read_genie(path: "...")` |
+| Run genie | `invoke_genie(geniePath: "...", scope: "selection")` |
+
+Scopes: `selection`, `block`, `document`.
+
+---
+
 ## Multi-Window / Multi-Tab
 
 ### Window Operations
@@ -214,15 +246,16 @@ block_set_type(type: "codeBlock", attrs: {language: "python"})
 | Get focused window | `workspace_get_focused` |
 | Focus a window | `workspace_focus_window(label)` |
 | Close a window | `workspace_close_window(label)` |
+| Get workspace info | `workspace_get_info` |
 
 ### Document Operations
 
 | Intent | Tool |
 |--------|------|
 | New document | `workspace_new_document` |
-| Open document | `workspace_open_document(path)` |
+| Open document | `workspace_open_document(filePath)` |
 | Save document | `workspace_save_document` |
-| Save as | `workspace_save_document_as(path)` |
+| Save as | `workspace_save_document_as(filePath)` |
 | Get document info | `workspace_get_document_info` |
 | Recent files | `workspace_list_recent_files` |
 
@@ -235,6 +268,7 @@ block_set_type(type: "codeBlock", attrs: {language: "python"})
 | Switch tab | `tabs_switch(tabId)` |
 | Close tab | `tabs_close(tabId)` |
 | Create tab | `tabs_create` |
+| Get tab info | `tabs_get_info(tabId)` |
 | Reopen closed | `tabs_reopen_closed` |
 
 ---
@@ -259,6 +293,6 @@ Most mutation tools support three modes:
 | `dryRun` | Preview without making changes |
 
 **Rule of thumb:**
-- Content changes → `suggest`
-- Formatting/structure → `apply` (instant feedback expected)
-- Uncertain about targets → `dryRun` first
+- Content changes -> `suggest`
+- Formatting/structure -> `apply` (instant feedback expected)
+- Uncertain about targets -> `dryRun` first

@@ -12,43 +12,32 @@ Detailed step-by-step patterns for common writing tasks.
 
 ```
 1. READ CONTEXT
-   ┌─────────────────────────────────────────────────────┐
-   │ cursor_get_context(charsBefore: 500, charsAfter: 100)
-   │                                                     │
-   │ Returns: { before: "...", after: "...",            │
-   │            currentBlock: {...}, position: 1234 }    │
-   └─────────────────────────────────────────────────────┘
+   cursor_get_context(linesBefore: 5, linesAfter: 2)
+
+   Returns: { before: "...", after: "...",
+              currentBlock: {...}, position: 1234 }
 
 2. UNDERSTAND DOCUMENT STRUCTURE (if needed)
-   ┌─────────────────────────────────────────────────────┐
-   │ get_document_digest                                 │
-   │                                                     │
-   │ Returns: { title, wordCount, outline: [...],       │
-   │            blockCounts: {paragraph: 12, ...} }      │
-   └─────────────────────────────────────────────────────┘
+   get_document_digest
+
+   Returns: { title, wordCount, outline: [...],
+              blockCounts: {paragraph: 12, ...} }
 
 3. GENERATE CONTINUATION
-   ┌─────────────────────────────────────────────────────┐
-   │ (AI reasoning based on context)                     │
-   │ - Match tone and style of existing text             │
-   │ - Consider document structure from digest           │
-   │ - Generate appropriate continuation                 │
-   └─────────────────────────────────────────────────────┘
+   (AI reasoning based on context)
+   - Match tone and style of existing text
+   - Consider document structure from digest
+   - Generate appropriate continuation
 
 4. INSERT AS SUGGESTION
-   ┌─────────────────────────────────────────────────────┐
-   │ document_insert_at_cursor(                          │
-   │   text: "...generated content...",                  │
-   │   mode: "suggest"                                   │
-   │ )                                                   │
-   └─────────────────────────────────────────────────────┘
+   document_insert_at_cursor(
+     text: "...generated content..."
+   )
 
 5. COMMUNICATE TO WRITER
-   ┌─────────────────────────────────────────────────────┐
-   │ "I've suggested a continuation that [brief desc].   │
-   │  Press Tab to accept or Escape to reject.           │
-   │  Want me to try a different approach?"              │
-   └─────────────────────────────────────────────────────┘
+   "I've suggested a continuation that [brief desc].
+    Press Tab to accept or Escape to reject.
+    Want me to try a different approach?"
 ```
 
 ### Variations
@@ -71,46 +60,42 @@ Detailed step-by-step patterns for common writing tasks.
 
 ```
 1. GET DOCUMENT STRUCTURE
-   ┌─────────────────────────────────────────────────────┐
-   │ get_document_digest                                 │
-   │                                                     │
-   │ Look at outline to confirm section exists           │
-   └─────────────────────────────────────────────────────┘
+   get_document_digest
+
+   Look at outline to confirm section exists
 
 2. READ THE SECTION
-   ┌─────────────────────────────────────────────────────┐
-   │ get_section(heading: "Introduction")                │
-   │                                                     │
-   │ Returns: { heading: {...}, content: [...],         │
-   │            markdown: "...", wordCount: 234 }        │
-   └─────────────────────────────────────────────────────┘
+   get_section(heading: "Introduction")
 
-3. ANALYZE AND IMPROVE
-   ┌─────────────────────────────────────────────────────┐
-   │ (AI reasoning)                                      │
-   │ - Identify issues: wordiness, unclear points, etc.  │
-   │ - Draft improved version                            │
-   │ - Preserve writer's voice                           │
-   └─────────────────────────────────────────────────────┘
+   Returns: { heading: {...}, content: [...],
+              markdown: "...", wordCount: 234 }
 
-4. PROPOSE REPLACEMENT
-   ┌─────────────────────────────────────────────────────┐
-   │ update_section(                                     │
-   │   heading: "Introduction",                          │
-   │   content: "...improved markdown...",               │
-   │   mode: "suggest"                                   │
-   │ )                                                   │
-   └─────────────────────────────────────────────────────┘
+3. GET REVISION
+   get_document_revision
 
-5. EXPLAIN CHANGES
-   ┌─────────────────────────────────────────────────────┐
-   │ "I've suggested improvements to the Introduction:   │
-   │  - Tightened the opening paragraph                  │
-   │  - Clarified the thesis statement                   │
-   │  - Removed redundant phrases                        │
-   │                                                     │
-   │  Review the highlighted suggestion to accept."      │
-   └─────────────────────────────────────────────────────┘
+   Returns: { revision: "rev_a7b3c9" }
+
+4. ANALYZE AND IMPROVE
+   (AI reasoning)
+   - Identify issues: wordiness, unclear points, etc.
+   - Draft improved version
+   - Preserve writer's voice
+
+5. PROPOSE REPLACEMENT
+   update_section(
+     baseRevision: "rev_a7b3c9",
+     target: { heading: "Introduction" },
+     newContent: "...improved markdown...",
+     mode: "suggest"
+   )
+
+6. EXPLAIN CHANGES
+   "I've suggested improvements to the Introduction:
+    - Tightened the opening paragraph
+    - Clarified the thesis statement
+    - Removed redundant phrases
+
+    Review the highlighted suggestion to accept."
 ```
 
 ### Handling Large Sections
@@ -131,47 +116,42 @@ For sections with many paragraphs, consider:
 
 ```
 1. GET CURRENT STRUCTURE
-   ┌─────────────────────────────────────────────────────┐
-   │ get_document_digest                                 │
-   │                                                     │
-   │ outline: [                                          │
-   │   { level: 1, text: "Title" },                     │
-   │   { level: 2, text: "Introduction" },              │
-   │   { level: 2, text: "Methods" },                   │
-   │   { level: 2, text: "Results" },                   │
-   │   { level: 2, text: "Conclusion" }                 │
-   │ ]                                                   │
-   └─────────────────────────────────────────────────────┘
+   get_document_digest
+
+   outline: [
+     { level: 1, text: "Title" },
+     { level: 2, text: "Introduction" },
+     { level: 2, text: "Methods" },
+     { level: 2, text: "Results" },
+     { level: 2, text: "Conclusion" }
+   ]
 
 2. CONFIRM MOVE WITH WRITER
-   ┌─────────────────────────────────────────────────────┐
-   │ "I see the current order is:                        │
-   │  1. Introduction                                    │
-   │  2. Methods                                         │
-   │  3. Results                                         │
-   │  4. Conclusion                                      │
-   │                                                     │
-   │  You want to move 'Conclusion' before 'Methods'?"   │
-   └─────────────────────────────────────────────────────┘
+   "I see the current order is:
+    1. Introduction
+    2. Methods
+    3. Results
+    4. Conclusion
 
-3. EXECUTE MOVE
-   ┌─────────────────────────────────────────────────────┐
-   │ move_section(                                       │
-   │   heading: "Conclusion",                            │
-   │   before: "Methods"                                 │
-   │ )                                                   │
-   └─────────────────────────────────────────────────────┘
+    You want to move 'Conclusion' after 'Introduction'?"
+
+3. GET REVISION AND EXECUTE MOVE
+   get_document_revision -> "rev_a7b3c9"
+
+   move_section(
+     baseRevision: "rev_a7b3c9",
+     section: { heading: "Conclusion" },
+     after: { heading: "Introduction" }
+   )
 
 4. CONFIRM NEW STRUCTURE
-   ┌─────────────────────────────────────────────────────┐
-   │ get_document_digest                                 │
-   │                                                     │
-   │ "Done. New order:                                   │
-   │  1. Introduction                                    │
-   │  2. Conclusion                                      │
-   │  3. Methods                                         │
-   │  4. Results"                                        │
-   └─────────────────────────────────────────────────────┘
+   get_document_digest
+
+   "Done. New order:
+    1. Introduction
+    2. Conclusion
+    3. Methods
+    4. Results"
 ```
 
 ---
@@ -184,47 +164,37 @@ For sections with many paragraphs, consider:
 
 ```
 1. GET REVISION
-   ┌─────────────────────────────────────────────────────┐
-   │ get_document_revision                               │
-   │                                                     │
-   │ Returns: { revision: "rev_abc123" }                │
-   └─────────────────────────────────────────────────────┘
+   get_document_revision
+
+   Returns: { revision: "rev_abc123" }
 
 2. PREVIEW MATCHES
-   ┌─────────────────────────────────────────────────────┐
-   │ apply_diff(                                         │
-   │   baseRevision: "rev_abc123",                       │
-   │   original: "machine learning",                     │
-   │   replacement: "ML",                                │
-   │   matchPolicy: "error_if_multiple",                 │
-   │   mode: "dryRun"                                    │
-   │ )                                                   │
-   │                                                     │
-   │ Returns: { matchCount: 7, matches: [...] }         │
-   └─────────────────────────────────────────────────────┘
+   apply_diff(
+     baseRevision: "rev_abc123",
+     original: "machine learning",
+     replacement: "ML",
+     matchPolicy: "error_if_multiple",
+     mode: "dryRun"
+   )
+
+   Returns: { matchCount: 7, matches: [...] }
 
 3. CONFIRM WITH WRITER
-   ┌─────────────────────────────────────────────────────┐
-   │ "Found 7 occurrences of 'machine learning'.         │
-   │  Replace all with 'ML'?"                            │
-   └─────────────────────────────────────────────────────┘
+   "Found 7 occurrences of 'machine learning'.
+    Replace all with 'ML'?"
 
 4. EXECUTE REPLACEMENT
-   ┌─────────────────────────────────────────────────────┐
-   │ apply_diff(                                         │
-   │   baseRevision: "rev_abc123",                       │
-   │   original: "machine learning",                     │
-   │   replacement: "ML",                                │
-   │   matchPolicy: "all",                               │
-   │   mode: "suggest"                                   │
-   │ )                                                   │
-   └─────────────────────────────────────────────────────┘
+   apply_diff(
+     baseRevision: "rev_abc123",
+     original: "machine learning",
+     replacement: "ML",
+     matchPolicy: "all",
+     mode: "suggest"
+   )
 
 5. REPORT
-   ┌─────────────────────────────────────────────────────┐
-   │ "Created 7 suggestions. Review and accept each,     │
-   │  or use 'accept all' to apply them at once."        │
-   └─────────────────────────────────────────────────────┘
+   "Created 7 suggestions. Review and accept each,
+    or use 'accept all' to apply them at once."
 ```
 
 ### Match Policy Options
@@ -246,40 +216,32 @@ For sections with many paragraphs, consider:
 
 ```
 1. FIND THE BULLET LIST
-   ┌─────────────────────────────────────────────────────┐
-   │ list_blocks(query: { type: "bulletList" })          │
-   │                                                     │
-   │ Returns: [{ id: "node_456", text: "- Point one..." }]
-   └─────────────────────────────────────────────────────┘
+   list_blocks(query: { type: "bulletList" })
+
+   Returns: [{ id: "node_456", text: "- Point one..." }]
 
 2. GET FULL CONTENT
-   ┌─────────────────────────────────────────────────────┐
-   │ get_document_ast(                                   │
-   │   filter: { type: "bulletList" },                   │
-   │   projection: ["id", "text", "children"]            │
-   │ )                                                   │
-   └─────────────────────────────────────────────────────┘
+   get_document_ast(
+     filter: { type: "bulletList" },
+     projection: ["id", "text", "children"]
+   )
 
 3. TRANSFORM TO PROSE
-   ┌─────────────────────────────────────────────────────┐
-   │ (AI reasoning)                                      │
-   │ - Understand relationships between points           │
-   │ - Create flowing paragraphs                         │
-   │ - Add transitions                                   │
-   └─────────────────────────────────────────────────────┘
+   (AI reasoning)
+   - Understand relationships between points
+   - Create flowing paragraphs
+   - Add transitions
 
 4. REPLACE LIST WITH PARAGRAPHS
-   ┌─────────────────────────────────────────────────────┐
-   │ batch_edit(                                         │
-   │   baseRevision: "...",                              │
-   │   mode: "suggest",                                  │
-   │   operations: [                                     │
-   │     { type: "delete", nodeId: "node_456" },        │
-   │     { type: "insert", after: "node_455",           │
-   │       content: "...prose paragraphs..." }           │
-   │   ]                                                 │
-   │ )                                                   │
-   └─────────────────────────────────────────────────────┘
+   batch_edit(
+     baseRevision: "...",
+     mode: "suggest",
+     operations: [
+       { type: "delete", nodeId: "node_456" },
+       { type: "insert", after: "node_455",
+         content: "...prose paragraphs..." }
+     ]
+   )
 ```
 
 ---
@@ -292,42 +254,29 @@ For sections with many paragraphs, consider:
 
 ```
 1. LIST AVAILABLE DOCUMENTS
-   ┌─────────────────────────────────────────────────────┐
-   │ tabs_list                                           │
-   │                                                     │
-   │ Returns: [                                          │
-   │   { id: "tab_1", title: "Draft.md", active: true }, │
-   │   { id: "tab_2", title: "Notes.md", active: false } │
-   │ ]                                                   │
-   └─────────────────────────────────────────────────────┘
+   tabs_list
+
+   Returns: [
+     { id: "tab_1", title: "Draft.md", active: true },
+     { id: "tab_2", title: "Notes.md", active: false }
+   ]
 
 2. REMEMBER CURRENT POSITION
-   ┌─────────────────────────────────────────────────────┐
-   │ activeTab = "tab_1"                                 │
-   └─────────────────────────────────────────────────────┘
+   activeTab = "tab_1"
 
 3. SWITCH TO SOURCE DOCUMENT
-   ┌─────────────────────────────────────────────────────┐
-   │ tabs_switch(tabId: "tab_2")                         │
-   └─────────────────────────────────────────────────────┘
+   tabs_switch(tabId: "tab_2")
 
 4. READ FROM SOURCE
-   ┌─────────────────────────────────────────────────────┐
-   │ get_section(heading: "Key Points")                  │
-   └─────────────────────────────────────────────────────┘
+   get_section(heading: "Key Points")
 
 5. SWITCH BACK
-   ┌─────────────────────────────────────────────────────┐
-   │ tabs_switch(tabId: "tab_1")                         │
-   └─────────────────────────────────────────────────────┘
+   tabs_switch(tabId: "tab_1")
 
 6. INSERT REFERENCE
-   ┌─────────────────────────────────────────────────────┐
-   │ document_insert_at_cursor(                          │
-   │   text: "...content from notes...",                 │
-   │   mode: "suggest"                                   │
-   │ )                                                   │
-   └─────────────────────────────────────────────────────┘
+   document_insert_at_cursor(
+     text: "...content from notes..."
+   )
 ```
 
 ---
@@ -340,34 +289,28 @@ For sections with many paragraphs, consider:
 
 ```
 1. FIND CONTENT TO FORMAT
-   ┌─────────────────────────────────────────────────────┐
-   │ list_blocks(query: { contains: "important" })       │
-   │                                                     │
-   │ Returns: [                                          │
-   │   { id: "node_101", text: "This is important..." }, │
-   │   { id: "node_205", text: "Another important..." }  │
-   │ ]                                                   │
-   └─────────────────────────────────────────────────────┘
+   list_blocks(query: { contains: "important" })
+
+   Returns: [
+     { id: "node_101", text: "This is important..." },
+     { id: "node_205", text: "Another important..." }
+   ]
 
 2. BATCH APPLY FORMATTING
-   ┌─────────────────────────────────────────────────────┐
-   │ batch_edit(                                         │
-   │   baseRevision: "...",                              │
-   │   mode: "apply",   // Formatting is immediate      │
-   │   operations: [                                     │
-   │     { type: "format", nodeId: "node_101",          │
-   │       marks: [{ type: "bold" }] },                  │
-   │     { type: "format", nodeId: "node_205",          │
-   │       marks: [{ type: "bold" }] }                   │
-   │   ]                                                 │
-   │ )                                                   │
-   └─────────────────────────────────────────────────────┘
+   batch_edit(
+     baseRevision: "...",
+     mode: "apply",   // Formatting is immediate
+     operations: [
+       { type: "format", nodeId: "node_101",
+         marks: [{ type: "bold" }] },
+       { type: "format", nodeId: "node_205",
+         marks: [{ type: "bold" }] }
+     ]
+   )
 
 3. CONFIRM
-   ┌─────────────────────────────────────────────────────┐
-   │ "Applied bold formatting to 2 paragraphs            │
-   │  containing 'important'."                           │
-   └─────────────────────────────────────────────────────┘
+   "Applied bold formatting to 2 paragraphs
+    containing 'important'."
 ```
 
 ---
@@ -390,36 +333,26 @@ batch_edit(...) returns:
 
 ```
 1. ACKNOWLEDGE
-   ┌─────────────────────────────────────────────────────┐
-   │ "The document changed while I was working.          │
-   │  Let me re-read and update my suggestion."          │
-   └─────────────────────────────────────────────────────┘
+   "The document changed while I was working.
+    Let me re-read and update my suggestion."
 
 2. RE-READ
-   ┌─────────────────────────────────────────────────────┐
-   │ get_document_digest  // or get_section if targeted  │
-   │ get_document_revision → "rev_xyz"                   │
-   └─────────────────────────────────────────────────────┘
+   get_document_digest  // or get_section if targeted
+   get_document_revision -> "rev_xyz"
 
 3. RE-ANALYZE
-   ┌─────────────────────────────────────────────────────┐
-   │ (AI re-examines content with fresh state)           │
-   │ - Check if original target still exists             │
-   │ - Adjust suggestion if content changed              │
-   └─────────────────────────────────────────────────────┘
+   (AI re-examines content with fresh state)
+   - Check if original target still exists
+   - Adjust suggestion if content changed
 
 4. RE-PROPOSE
-   ┌─────────────────────────────────────────────────────┐
-   │ batch_edit(                                         │
-   │   baseRevision: "rev_xyz",  // New revision        │
-   │   ...                                               │
-   │ )                                                   │
-   └─────────────────────────────────────────────────────┘
+   batch_edit(
+     baseRevision: "rev_xyz",  // New revision
+     ...
+   )
 
 5. COMMUNICATE
-   ┌─────────────────────────────────────────────────────┐
-   │ "Updated my suggestion based on your recent edits." │
-   └─────────────────────────────────────────────────────┘
+   "Updated my suggestion based on your recent edits."
 ```
 
 ---
@@ -432,27 +365,21 @@ batch_edit(...) returns:
 
 ```
 1. INSERT TABLE
-   ┌─────────────────────────────────────────────────────┐
-   │ table_insert(rows: 3, cols: 4)                      │
-   └─────────────────────────────────────────────────────┘
+   table_insert(rows: 3, cols: 4)
 
 2. POPULATE WITH CONTENT
-   ┌─────────────────────────────────────────────────────┐
-   │ table_modify(                                       │
-   │   operations: [                                     │
-   │     { type: "updateCell", row: 0, col: 0,          │
-   │       content: "Header 1" },                        │
-   │     { type: "updateCell", row: 0, col: 1,          │
-   │       content: "Header 2" },                        │
-   │     // ... more cells                               │
-   │   ]                                                 │
-   │ )                                                   │
-   └─────────────────────────────────────────────────────┘
+   table_modify(
+     operations: [
+       { type: "updateCell", row: 0, col: 0,
+         content: "Header 1" },
+       { type: "updateCell", row: 0, col: 1,
+         content: "Header 2" },
+       // ... more cells
+     ]
+   )
 
 3. SET HEADER ROW
-   ┌─────────────────────────────────────────────────────┐
-   │ table_toggle_header_row                             │
-   └─────────────────────────────────────────────────────┘
+   table_toggle_header_row
 ```
 
 ### Modifying Existing Table
@@ -469,38 +396,122 @@ table_modify(
 
 ---
 
+## Workflow 10: Quick Insert with smart_insert
+
+**Scenario:** Writer wants to add content at a common location.
+
+### Steps
+
+```
+1. GET REVISION
+   get_document_revision -> "rev_abc123"
+
+2. INSERT AT LOCATION
+   smart_insert(
+     baseRevision: "rev_abc123",
+     destination: "end_of_document",
+     content: "## Summary\n\nKey takeaways from this document...",
+     mode: "suggest"
+   )
+
+   // Or after a specific section:
+   smart_insert(
+     baseRevision: "rev_abc123",
+     destination: { after_section: "Introduction" },
+     content: "A transitional paragraph..."
+   )
+
+   // Or after a paragraph containing specific text:
+   smart_insert(
+     baseRevision: "rev_abc123",
+     destination: { after_paragraph_containing: "conclusion" },
+     content: "Supporting evidence..."
+   )
+```
+
+---
+
+## Workflow 11: Using AI Genies
+
+**Scenario:** Writer wants to use a pre-defined AI workflow.
+
+### Steps
+
+```
+1. DISCOVER AVAILABLE GENIES
+   list_genies
+
+   Returns: [
+     { name: "Summarize", path: "/path/to/summarize.md",
+       source: "global", category: "writing" },
+     { name: "Translate to Chinese", path: "/path/to/translate.md",
+       source: "workspace", category: "language" }
+   ]
+
+2. READ GENIE TEMPLATE (optional)
+   read_genie(path: "/path/to/summarize.md")
+
+   Returns: metadata (name, description, scope, category)
+            and the template text
+
+3. SELECT CONTENT
+   // If genie scope is "selection", ensure text is selected
+   // If scope is "document", no selection needed
+
+4. INVOKE GENIE
+   invoke_genie(
+     geniePath: "/path/to/summarize.md",
+     scope: "selection"   // or "block" or "document"
+   )
+
+5. REPORT
+   "Genie 'Summarize' has been invoked on your selection.
+    The AI response will appear as a suggestion."
+```
+
+---
+
 ## Anti-Patterns to Avoid
 
 ### Don't: Edit without reading first
 
 ```
-❌ batch_edit(operations: [...])  // Where does this go?
+BAD:  batch_edit(operations: [...])  // Where does this go?
 
-✓ get_document_digest            // Understand structure
-✓ list_blocks(...)               // Find target
-✓ batch_edit(operations: [...])  // Now edit
+GOOD: get_document_digest            // Understand structure
+      list_blocks(...)               // Find target
+      batch_edit(operations: [...])  // Now edit
 ```
 
 ### Don't: Use apply mode for content changes
 
 ```
-❌ batch_edit(mode: "apply", operations: [{type: "update", ...}])
+BAD:  batch_edit(mode: "apply", operations: [{type: "update", ...}])
 
-✓ batch_edit(mode: "suggest", operations: [{type: "update", ...}])
+GOOD: batch_edit(mode: "suggest", operations: [{type: "update", ...}])
 ```
 
 ### Don't: Assume suggestions are accepted
 
 ```
-❌ "I've made the changes to your document."
+BAD:  "I've made the changes to your document."
 
-✓ "I've suggested changes. Review the highlights to accept or reject."
+GOOD: "I've suggested changes. Review the highlights to accept or reject."
 ```
 
 ### Don't: Ignore conflicts
 
 ```
-❌ (Conflict error) → Retry immediately with same content
+BAD:  (Conflict error) -> Retry immediately with same content
 
-✓ (Conflict error) → Re-read → Re-analyze → Re-propose
+GOOD: (Conflict error) -> Re-read -> Re-analyze -> Re-propose
+```
+
+### Don't: Forget baseRevision
+
+```
+BAD:  update_section(target: {heading: "..."}, newContent: "...")
+
+GOOD: get_document_revision -> rev
+      update_section(baseRevision: rev, target: {heading: "..."}, newContent: "...")
 ```
