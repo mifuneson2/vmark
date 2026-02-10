@@ -1,10 +1,13 @@
 import { useCallback, useState, useRef, type MouseEvent } from "react";
 import { Plus } from "lucide-react";
+import { invoke } from "@tauri-apps/api/core";
+import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { cn } from "@/lib/utils";
 import { useWindowLabel } from "@/contexts/WindowContext";
 import { useTabStore, type Tab as TabType } from "@/stores/tabStore";
 import { useDocumentStore } from "@/stores/documentStore";
 import { closeTabWithDirtyCheck } from "@/hooks/useTabOperations";
+import { useTabDragOut } from "@/hooks/useTabDragOut";
 import { Tab } from "./Tab";
 import { TabContextMenu, type ContextMenuPosition } from "./TabContextMenu";
 
@@ -19,6 +22,54 @@ export function TabBar() {
   } | null>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
+  const tabBarRef = useRef<HTMLDivElement>(null);
+
+  const handleDragOut = useCallback(
+    async (tabId: string) => {
+      const tabState = useTabStore.getState();
+      const windowTabs = tabState.getTabsByWindow(windowLabel);
+      const tab = windowTabs.find((t) => t.id === tabId);
+      if (!tab) return;
+
+      // Prevent drag-out of last tab in main window
+      if (windowLabel === "main" && windowTabs.length <= 1) return;
+
+      const doc = useDocumentStore.getState().getDocument(tabId);
+      if (!doc) return;
+
+      try {
+        await invoke<string>("detach_tab_to_new_window", {
+          data: {
+            tabId: tab.id,
+            title: tab.title,
+            filePath: tab.filePath ?? null,
+            content: doc.content,
+            savedContent: doc.savedContent,
+            isDirty: doc.isDirty,
+          },
+        });
+
+        // Remove tab from source window (no dirty check — content is transferred)
+        tabState.detachTab(windowLabel, tabId);
+        useDocumentStore.getState().removeDocument(tabId);
+
+        // If no tabs remain in a doc window, close it
+        const remaining = useTabStore.getState().getTabsByWindow(windowLabel);
+        if (remaining.length === 0 && windowLabel !== "main") {
+          const win = getCurrentWebviewWindow();
+          invoke("close_window", { label: win.label }).catch(() => {});
+        }
+      } catch (err) {
+        console.error("[TabBar] drag-out failed:", err);
+      }
+    },
+    [windowLabel]
+  );
+
+  const { getTabDragHandlers, isDragging, dragTabId } = useTabDragOut({
+    tabBarRef,
+    onDragOut: handleDragOut,
+  });
 
   const handleActivateTab = useCallback(
     (tabId: string) => {
@@ -62,6 +113,7 @@ export function TabBar() {
   return (
     <>
       <div
+        ref={tabBarRef}
         className={cn(
           "flex items-center h-9",
           "bg-[var(--bg-secondary)] border-b border-[var(--border-primary)]",
@@ -75,16 +127,21 @@ export function TabBar() {
           className="flex-1 flex items-center overflow-x-auto scrollbar-none"
           role="tablist"
         >
-          {tabs.map((tab) => (
-            <Tab
-              key={tab.id}
-              tab={tab}
-              isActive={tab.id === activeTabId}
-              onActivate={() => handleActivateTab(tab.id)}
-              onClose={() => handleCloseTab(tab.id)}
-              onContextMenu={(e) => handleContextMenu(e, tab)}
-            />
-          ))}
+          {tabs.map((tab) => {
+            const dragHandlers = getTabDragHandlers(tab.id, tab.isPinned);
+            return (
+              <Tab
+                key={tab.id}
+                tab={tab}
+                isActive={tab.id === activeTabId}
+                isDragTarget={isDragging && dragTabId === tab.id}
+                onActivate={() => handleActivateTab(tab.id)}
+                onClose={() => handleCloseTab(tab.id)}
+                onContextMenu={(e) => handleContextMenu(e, tab)}
+                onPointerDown={dragHandlers.onPointerDown}
+              />
+            );
+          })}
         </div>
 
         {/* New tab button */}

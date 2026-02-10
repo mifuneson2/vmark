@@ -13,6 +13,7 @@ mod window_manager;
 mod workspace;
 mod file_tree;
 mod hot_exit;
+mod tab_transfer;
 
 #[cfg(target_os = "macos")]
 mod macos_menu;
@@ -149,6 +150,8 @@ pub fn run() {
             hot_exit::commands::hot_exit_restore_multi_window,
             hot_exit::commands::hot_exit_get_window_state,
             hot_exit::commands::hot_exit_window_restore_complete,
+            tab_transfer::detach_tab_to_new_window,
+            tab_transfer::claim_tab_transfer,
             pdf_export::check_weasyprint,
             pdf_export::get_weasyprint_version,
             pdf_export::convert_html_to_pdf,
@@ -319,6 +322,7 @@ pub fn run() {
                 } => {
                     quit::handle_window_destroyed(app, &label);
                     menu_events::clear_window_ready(&label);
+                    tab_transfer::clear_unclaimed_transfer(&label);
                 }
                 // macOS: Clicking dock icon when no windows visible -> create main window
                 #[cfg(target_os = "macos")]

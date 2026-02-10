@@ -37,6 +37,9 @@ interface TabActions {
   updateTabTitle: (tabId: string, title: string) => void;
   togglePin: (windowLabel: string, tabId: string) => void;
 
+  // Detach (drag-out) — remove without adding to closedTabs
+  detachTab: (windowLabel: string, tabId: string) => void;
+
   // Tab order
   reorderTabs: (windowLabel: string, fromIndex: number, toIndex: number) => void;
   moveTabToIndex: (windowLabel: string, tabId: string, toIndex: number) => void;
@@ -217,6 +220,31 @@ export const useTabStore = create<TabState & TabActions>((set, get) => ({
       tabs: { ...state.tabs, [windowLabel]: keptTabs },
       activeTabId: { ...state.activeTabId, [windowLabel]: newActiveId },
       closedTabs: { ...state.closedTabs, [windowLabel]: newClosed },
+    });
+  },
+
+  detachTab: (windowLabel, tabId) => {
+    const state = get();
+    const windowTabs = state.tabs[windowLabel] || [];
+    const tabIndex = windowTabs.findIndex((t) => t.id === tabId);
+    if (tabIndex === -1) return;
+
+    const newTabs = windowTabs.filter((t) => t.id !== tabId);
+
+    // Select adjacent tab if the detached tab was active
+    let newActiveId = state.activeTabId[windowLabel];
+    if (newActiveId === tabId) {
+      if (newTabs.length > 0) {
+        const newIndex = Math.min(tabIndex, newTabs.length - 1);
+        newActiveId = newTabs[newIndex].id;
+      } else {
+        newActiveId = null;
+      }
+    }
+
+    set({
+      tabs: { ...state.tabs, [windowLabel]: newTabs },
+      activeTabId: { ...state.activeTabId, [windowLabel]: newActiveId },
     });
   },
 

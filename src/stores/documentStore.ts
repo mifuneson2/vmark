@@ -27,7 +27,7 @@ interface DocumentStore {
   documents: Record<string, DocumentState>;
 
   // Actions - now take tabId instead of windowLabel
-  initDocument: (tabId: string, content?: string, filePath?: string | null) => void;
+  initDocument: (tabId: string, content?: string, filePath?: string | null, savedContent?: string) => void;
   setContent: (tabId: string, content: string) => void;
   loadContent: (
     tabId: string,
@@ -90,13 +90,16 @@ function updateDoc(
 export const useDocumentStore = create<DocumentStore>((set, get) => ({
   documents: {},
 
-  initDocument: (tabId, content = "", filePath = null) =>
+  initDocument: (tabId, content = "", filePath = null, savedContent?) => {
+    const doc = createInitialDocument(content, filePath);
+    if (savedContent !== undefined) {
+      doc.savedContent = savedContent;
+      doc.isDirty = savedContent !== content;
+    }
     set((state) => ({
-      documents: {
-        ...state.documents,
-        [tabId]: createInitialDocument(content, filePath),
-      },
-    })),
+      documents: { ...state.documents, [tabId]: doc },
+    }));
+  },
 
   setContent: (tabId, content) =>
     set((state) =>
