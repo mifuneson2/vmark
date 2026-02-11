@@ -64,6 +64,7 @@ export function useUpdateChecker() {
   const hasAutoDownloaded = useRef(false);
   const retryCount = useRef(0);
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isManualCheck = useRef(false);
   const { doCheckForUpdates, doDownloadAndInstall, EVENTS } = useUpdateOperationHandler();
 
   const autoCheckEnabled = useSettingsStore((state) => state.update.autoCheckEnabled);
@@ -116,12 +117,13 @@ export function useUpdateChecker() {
         }
         break;
       case "up-to-date":
-        // Only show if user manually triggered the check (prevStatus was "checking")
-        if (prevStatus === "checking") {
+        // Only show if user manually triggered the check
+        if (prevStatus === "checking" && isManualCheck.current) {
           toast.success("You're up to date!", {
             duration: 3000,
           });
         }
+        isManualCheck.current = false;
         break;
     }
   }, [status, updateInfo]);
@@ -206,6 +208,7 @@ export function useUpdateChecker() {
   // Listen for check requests from other windows
   useEffect(() => {
     const unlistenPromise = listen(EVENTS.REQUEST_CHECK, () => {
+      isManualCheck.current = true;
       doCheckForUpdates().catch((error) => {
         console.error("[UpdateChecker] Check request failed:", error);
       });
