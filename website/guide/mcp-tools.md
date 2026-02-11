@@ -505,6 +505,28 @@ graph TD
     B --> C[End]
 ```
 
+### insert_markmap
+
+Insert a Markmap mindmap. Uses standard Markdown headings to define the tree.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `code` | string | Yes | Markdown with headings defining the mindmap tree. |
+| `windowId` | string | No | Window identifier. |
+
+**Example:**
+```markdown
+# Project
+
+## Research
+### Papers
+### Interviews
+
+## Development
+### Frontend
+### Backend
+```
+
 ### insert_svg
 
 Insert an SVG graphic. The SVG renders inline with pan, zoom, and PNG export.

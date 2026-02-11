@@ -149,6 +149,53 @@ export function registerVMarkTools(server: VMarkMcpServer): void {
     }
   );
 
+  // insert_markmap - Insert Markmap mindmap
+  server.registerTool(
+    {
+      name: 'insert_markmap',
+      description:
+        'Insert a Markmap mindmap at the cursor position. ' +
+        'Uses standard Markdown headings (# H1, ## H2, etc.) to define the tree. ' +
+        'Lists, bold, links, and code in nodes are preserved.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          code: {
+            type: 'string',
+            description: 'Markdown with headings defining the mindmap tree.',
+          },
+          windowId: {
+            type: 'string',
+            description: 'Optional window identifier. Defaults to focused window.',
+          },
+        },
+        required: ['code'],
+      },
+    },
+    async (args) => {
+      const code = args.code as string;
+      const windowId = resolveWindowId(args.windowId as string | undefined);
+
+      if (typeof code !== 'string' || code.length === 0) {
+        return VMarkMcpServer.errorResult('code must be a non-empty string');
+      }
+
+      try {
+        await server.sendBridgeRequest<null>({
+          type: 'vmark.insertMarkmap',
+          code,
+          windowId,
+        });
+
+        return VMarkMcpServer.successResult('Inserted Markmap mindmap');
+      } catch (error) {
+        return VMarkMcpServer.errorResult(
+          `Failed to insert Markmap mindmap: ${error instanceof Error ? error.message : String(error)}`
+        );
+      }
+    }
+  );
+
   // insert_svg - Insert SVG graphic
   server.registerTool(
     {

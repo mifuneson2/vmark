@@ -80,6 +80,7 @@ export const ACTION_IDS = [
   "insertFootnote",
   "insertMath",
   "insertDiagram",
+  "insertMarkmap",
   "insertInlineMath",
   "insertDetails",
   "insertAlertNote",

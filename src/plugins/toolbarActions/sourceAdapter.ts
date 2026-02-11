@@ -9,7 +9,7 @@ import type { EditorView } from "@codemirror/view";
 import { undo, redo } from "@codemirror/commands";
 import { toast } from "sonner";
 import { clearAllFormatting } from "@/plugins/sourceContextDetection/clearFormatting";
-import { buildAlertBlock, buildDetailsBlock, buildDiagramBlock, buildMathBlock, type AlertType } from "@/plugins/sourceContextDetection/sourceInsertions";
+import { buildAlertBlock, buildDetailsBlock, buildDiagramBlock, buildMarkmapBlock, buildMathBlock, type AlertType } from "@/plugins/sourceContextDetection/sourceInsertions";
 import { getBlockquoteInfo, nestBlockquote, removeBlockquote, unnestBlockquote } from "@/plugins/sourceContextDetection/blockquoteDetection";
 import { toggleBlockquote } from "@/plugins/sourceContextDetection/blockquoteActions";
 import { convertToHeading, getHeadingInfo, setHeadingLevel } from "@/plugins/sourceContextDetection/headingDetection";
@@ -495,6 +495,8 @@ export function performSourceToolbarAction(action: string, context: SourceToolba
       return handleInsertMath(view);
     case "insertDiagram":
       return handleInsertDiagram(view);
+    case "insertMarkmap":
+      return handleInsertMarkmap(view);
     case "insertInlineMath":
       return insertInlineMath(view);
 
@@ -630,6 +632,14 @@ function handleInsertDiagram(view: EditorView): boolean {
   const { from, to } = view.state.selection.main;
   const selection = from === to ? "" : view.state.doc.sliceString(from, to);
   const { text, cursorOffset } = buildDiagramBlock(selection);
+  insertText(view, text, cursorOffset);
+  return true;
+}
+
+function handleInsertMarkmap(view: EditorView): boolean {
+  const { from, to } = view.state.selection.main;
+  const selection = from === to ? "" : view.state.doc.sliceString(from, to);
+  const { text, cursorOffset } = buildMarkmapBlock(selection);
   insertText(view, text, cursorOffset);
   return true;
 }

@@ -9,7 +9,7 @@ import { EditorView, ViewPlugin, ViewUpdate } from "@codemirror/view";
 import { getMermaidPreviewView } from "@/plugins/mermaidPreview";
 import { useEditorStore } from "@/stores/editorStore";
 
-const DIAGRAM_LANGUAGES = new Set(["mermaid", "svg"]);
+const DIAGRAM_LANGUAGES = new Set(["mermaid", "markmap", "svg"]);
 
 interface DiagramBlock {
   from: number;

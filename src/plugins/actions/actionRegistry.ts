@@ -96,6 +96,7 @@ export const MENU_TO_ACTION: Record<MenuEventId, MenuActionMapping> = {
   "menu:footnote": { actionId: "insertFootnote" },
   "menu:math-block": { actionId: "insertMath" },
   "menu:diagram": { actionId: "insertDiagram" },
+  "menu:mindmap": { actionId: "insertMarkmap" },
   "menu:horizontal-line": { actionId: "horizontalLine" },
   "menu:collapsible-block": { actionId: "insertDetails" },
   "menu:info-note": { actionId: "insertAlertNote" },
@@ -446,6 +447,12 @@ export const ACTION_DEFINITIONS: Record<ActionId, ActionDefinition> = {
   insertDiagram: {
     id: "insertDiagram",
     label: "Insert Diagram",
+    category: "inserts",
+    supports: { wysiwyg: true, source: true },
+  },
+  insertMarkmap: {
+    id: "insertMarkmap",
+    label: "Insert Mindmap",
     category: "inserts",
     supports: { wysiwyg: true, source: true },
   },

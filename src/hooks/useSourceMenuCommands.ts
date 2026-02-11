@@ -57,6 +57,7 @@ const INSERT_ACTIONS = [
   { event: "menu:collapsible-block", action: "insertDetails" },
   { event: "menu:math-block", action: "insertMath" },
   { event: "menu:diagram", action: "insertDiagram" },
+  { event: "menu:mindmap", action: "insertMarkmap" },
 ] as const;
 
 const TABLE_ACTIONS = [

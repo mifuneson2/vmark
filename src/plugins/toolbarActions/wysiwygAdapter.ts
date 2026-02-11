@@ -30,6 +30,7 @@ import type { WysiwygToolbarContext } from "./types";
 import { applyMultiSelectionBlockquoteAction, applyMultiSelectionHeading, applyMultiSelectionListAction } from "./wysiwygMultiSelection";
 import { insertWikiLink, insertBookmarkLink } from "./wysiwygAdapterLinks";
 import { DEFAULT_MERMAID_DIAGRAM } from "@/plugins/mermaid/constants";
+import { DEFAULT_MARKMAP_CONTENT } from "@/plugins/markmap/constants";
 import { toggleTaskList } from "@/plugins/taskToggle/tiptapTaskListUtils";
 import { expandSelectionInView, selectBlockInView, selectLineInView, selectWordInView } from "@/plugins/toolbarActions/tiptapSelectionActions";
 
@@ -527,6 +528,22 @@ function insertDiagramBlock(context: WysiwygToolbarContext): boolean {
   return true;
 }
 
+function insertMarkmapBlock(context: WysiwygToolbarContext): boolean {
+  const editor = context.editor;
+  if (!editor) return false;
+
+  editor
+    .chain()
+    .focus()
+    .insertContent({
+      type: "codeBlock",
+      attrs: { language: "markmap" },
+      content: [{ type: "text", text: DEFAULT_MARKMAP_CONTENT }],
+    })
+    .run();
+  return true;
+}
+
 /**
  * Insert inline math with word expansion.
  *
@@ -761,6 +778,8 @@ export function performWysiwygToolbarAction(action: string, context: WysiwygTool
       return insertMathBlock(context);
     case "insertDiagram":
       return insertDiagramBlock(context);
+    case "insertMarkmap":
+      return insertMarkmapBlock(context);
     case "insertInlineMath":
       return insertInlineMath(context);
     case "insertBulletList":

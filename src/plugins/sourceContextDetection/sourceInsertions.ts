@@ -5,6 +5,7 @@
  */
 
 import { DEFAULT_MERMAID_DIAGRAM } from "@/plugins/mermaid/constants";
+import { DEFAULT_MARKMAP_CONTENT } from "@/plugins/markmap/constants";
 
 export type AlertType = "NOTE" | "TIP" | "IMPORTANT" | "WARNING" | "CAUTION";
 
@@ -68,5 +69,17 @@ export function buildDiagramBlock(selection: string): InsertionResult {
   const content = selection || DEFAULT_MERMAID_DIAGRAM;
   const text = `\`\`\`mermaid\n${content}\n\`\`\``;
   const cursorOffset = "```mermaid\n".length;
+  return { text, cursorOffset };
+}
+
+/**
+ * Build a markmap mindmap code block.
+ * @param selection - Selected text to wrap (empty for default mindmap)
+ * @returns Block text and cursor offset
+ */
+export function buildMarkmapBlock(selection: string): InsertionResult {
+  const content = selection || DEFAULT_MARKMAP_CONTENT;
+  const text = `\`\`\`markmap\n${content}\n\`\`\``;
+  const cursorOffset = "```markmap\n".length;
   return { text, cursorOffset };
 }

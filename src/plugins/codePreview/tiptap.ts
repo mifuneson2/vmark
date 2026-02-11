@@ -8,12 +8,15 @@ import { setupMermaidPanZoom } from "@/plugins/mermaid/mermaidPanZoom";
 import { setupMermaidExport } from "@/plugins/mermaid/mermaidExport";
 import { renderSvgBlock } from "@/plugins/svg/svgRender";
 import { setupSvgExport } from "@/plugins/svg/svgExport";
+import { renderMarkmapToElement, updateMarkmapTheme, disposeMarkmapInContainer, disposeDetachedInstances } from "@/plugins/markmap";
+import { setupMarkmapExport } from "@/plugins/markmap/markmapExport";
+import { registerCleanup, sweepDetachedContainers } from "@/plugins/shared/diagramCleanup";
 import { sanitizeKatex, sanitizeSvg } from "@/utils/sanitize";
 import { useBlockMathEditingStore } from "@/stores/blockMathEditingStore";
 import { parseLatexError } from "@/plugins/latex/latexErrorParser";
 
 const codePreviewPluginKey = new PluginKey("codePreview");
-const PREVIEW_ONLY_LANGUAGES = new Set(["latex", "mermaid", "svg", "$$math$$"]);
+const PREVIEW_ONLY_LANGUAGES = new Set(["latex", "mermaid", "markmap", "svg", "$$math$$"]);
 const DEBOUNCE_MS = 200;
 
 // Store current editor view for button callbacks
@@ -42,6 +45,7 @@ function setupThemeObserver() {
             renderCache.clear();
           }
         });
+        updateMarkmapTheme(isDark);
       }
     }
   });
@@ -82,16 +86,62 @@ function createPreviewElement(
     // Defer panzoom/export setup — Panzoom requires DOM-attached elements,
     // but ProseMirror attaches the widget after the factory returns.
     requestAnimationFrame(() => {
-      setupMermaidPanZoom(wrapper);
+      const pz = setupMermaidPanZoom(wrapper);
+      if (pz) registerCleanup(wrapper, pz.destroy);
       if (sourceContent) {
         if (language === "mermaid") {
-          setupMermaidExport(wrapper, sourceContent);
+          const ex = setupMermaidExport(wrapper, sourceContent);
+          registerCleanup(wrapper, ex.destroy);
         } else {
-          setupSvgExport(wrapper, sourceContent);
+          const ex = setupSvgExport(wrapper, sourceContent);
+          registerCleanup(wrapper, ex.destroy);
         }
       }
     });
   }
+  installDoubleClickHandler(wrapper, onDoubleClick);
+  return wrapper;
+}
+
+/** Create a markmap preview with live interactive SVG */
+function createMarkmapPreview(
+  content: string,
+  onDoubleClick?: () => void,
+): HTMLElement {
+  const wrapper = document.createElement("div");
+  wrapper.className = "code-block-preview markmap-preview";
+
+  const svgEl = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  wrapper.appendChild(svgEl);
+
+  // Defer rendering until DOM-attached
+  requestAnimationFrame(() => {
+    if (!svgEl.isConnected) return; // Widget already removed
+    renderMarkmapToElement(svgEl, content).then((instance) => {
+      if (!instance) return;
+
+      // Add fit button
+      const fitBtn = document.createElement("button");
+      fitBtn.className = "markmap-fit-btn";
+      fitBtn.title = "Fit to view";
+      fitBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="M21 3l-7 7"/><path d="M3 21l7-7"/></svg>`;
+      fitBtn.addEventListener("mousedown", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      });
+      fitBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        instance.fit();
+      });
+      wrapper.appendChild(fitBtn);
+
+      // Add export button
+      const ex = setupMarkmapExport(wrapper, content);
+      registerCleanup(wrapper, ex.destroy);
+    });
+  });
+
   installDoubleClickHandler(wrapper, onDoubleClick);
   return wrapper;
 }
@@ -123,6 +173,7 @@ function createEditHeader(
   const title = document.createElement("span");
   title.className = "code-block-edit-title";
   title.textContent = language === "mermaid" ? "Mermaid"
+    : language === "markmap" ? "Markmap"
     : language === "svg" ? "SVG" : "LaTeX";
 
   const actions = document.createElement("div");
@@ -195,7 +246,8 @@ function createEditHeader(
 function createLivePreview(language: string): HTMLElement {
   const wrapper = document.createElement("div");
   const previewClass = isLatexLanguage(language) ? "latex"
-    : language === "svg" ? "mermaid" : language;
+    : language === "svg" ? "mermaid"
+    : language === "markmap" ? "markmap" : language;
   wrapper.className = `code-block-live-preview ${previewClass}-live-preview`;
   wrapper.innerHTML = '<div class="code-block-live-preview-loading">Rendering...</div>';
   return wrapper;
@@ -246,6 +298,20 @@ function updateLivePreview(
         element.innerHTML = sanitizeSvg(svg);
       } else {
         element.innerHTML = '<div class="code-block-live-preview-error">Invalid syntax</div>';
+      }
+    } else if (language === "markmap") {
+      // Dispose previous markmap instance before clearing
+      disposeMarkmapInContainer(element);
+      element.innerHTML = "";
+      const svgEl = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      element.appendChild(svgEl);
+      const instance = await renderMarkmapToElement(svgEl, trimmed);
+      if (currentToken !== livePreviewToken) {
+        instance?.dispose();
+        return;
+      }
+      if (!instance) {
+        element.innerHTML = '<div class="code-block-live-preview-error">Invalid markmap</div>';
       }
     } else if (language === "svg") {
       const rendered = renderSvgBlock(trimmed);
@@ -371,6 +437,10 @@ export const codePreviewExtension = Extension.create({
               };
             }
 
+            // Sweep diagram instances whose DOM was removed by ProseMirror
+            disposeDetachedInstances();
+            sweepDetachedContainers();
+
             const newDecorations: Decoration[] = [];
             const currentEditingPos = storeEditingPos;
 
@@ -395,7 +465,7 @@ export const codePreviewExtension = Extension.create({
                 const headerWidget = Decoration.widget(
                   nodeStart,
                   (widgetView) => {
-                    const onCopy = (language === "mermaid" || language === "svg")
+                    const onCopy = (language === "mermaid" || language === "markmap" || language === "svg")
                       ? () => {
                           const node = widgetView?.state.doc.nodeAt(nodeStart);
                           if (node) navigator.clipboard.writeText(node.textContent);
@@ -465,11 +535,23 @@ export const codePreviewExtension = Extension.create({
 
               if (!content.trim()) {
                 const placeholderLabel = language === "mermaid" ? "Empty diagram"
+                  : language === "markmap" ? "Empty mindmap"
                   : language === "svg" ? "Empty SVG" : "Empty math block";
                 const widget = Decoration.widget(
                   nodeEnd,
                   (view) => createPreviewPlaceholder(language, placeholderLabel, () => handleEnterEdit(view)),
                   { side: 1, key: `${cacheKey}:placeholder` }
+                );
+                newDecorations.push(widget);
+                return;
+              }
+
+              // Markmap renders to live DOM — skip renderCache, always create fresh
+              if (language === "markmap") {
+                const widget = Decoration.widget(
+                  nodeEnd,
+                  (view) => createMarkmapPreview(content, () => handleEnterEdit(view)),
+                  { side: 1, key: cacheKey }
                 );
                 newDecorations.push(widget);
                 return;
@@ -563,8 +645,10 @@ export const codePreviewExtension = Extension.create({
                         renderCache.set(cacheKey, svg);
                         placeholder.className = "code-block-preview mermaid-preview";
                         placeholder.innerHTML = sanitizeSvg(svg);
-                        setupMermaidPanZoom(placeholder);
-                        setupMermaidExport(placeholder, content);
+                        const pz = setupMermaidPanZoom(placeholder);
+                        if (pz) registerCleanup(placeholder, pz.destroy);
+                        const ex = setupMermaidExport(placeholder, content);
+                        registerCleanup(placeholder, ex.destroy);
                       } else {
                         placeholder.className = "code-block-preview mermaid-error";
                         placeholder.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg> Failed to render diagram`;

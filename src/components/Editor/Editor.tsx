@@ -28,6 +28,7 @@ import "@/plugins/codePreview/code-preview.css";
 import "@/plugins/latex/latex.css";
 import "@/plugins/mathPreview/math-preview.css";
 import "@/plugins/mermaid/mermaid.css";
+import "@/plugins/markmap/markmap.css";
 import "@/plugins/tableUI/table-ui.css";
 import "@/plugins/subSuperscript/sub-super.css";
 import "@/plugins/highlight/highlight.css";

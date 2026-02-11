@@ -121,6 +121,14 @@ export async function handleInsertMermaid(
   return handleInsertCodeBlock(id, args, "mermaid");
 }
 
+/** Handle vmark.insertMarkmap — insert markmap code block at cursor. */
+export async function handleInsertMarkmap(
+  id: string,
+  args: Record<string, unknown>,
+): Promise<void> {
+  return handleInsertCodeBlock(id, args, "markmap");
+}
+
 /** Handle vmark.insertSvg — insert SVG code block at cursor. */
 export async function handleInsertSvg(
   id: string,

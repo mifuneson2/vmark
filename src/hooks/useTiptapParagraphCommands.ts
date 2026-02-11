@@ -10,6 +10,7 @@ import { toggleTaskList } from "@/plugins/taskToggle/tiptapTaskListUtils";
 import { getEditorView } from "@/types/tiptap";
 import { registerMenuListener } from "@/utils/menuListenerHelper";
 import { DEFAULT_MERMAID_DIAGRAM } from "@/plugins/mermaid/constants";
+import { DEFAULT_MARKMAP_CONTENT } from "@/plugins/markmap/constants";
 import { FEATURE_FLAGS } from "@/stores/featureFlagsStore";
 import { safeUnlistenAll } from "@/utils/safeUnlisten";
 
@@ -205,6 +206,18 @@ export function useTiptapParagraphCommands(editor: TiptapEditor | null) {
             type: "codeBlock",
             attrs: { language: "mermaid" },
             content: [{ type: "text", text: DEFAULT_MERMAID_DIAGRAM }],
+          })
+          .run();
+      }))) return;
+
+      if (!(await register("menu:mindmap", (editor) => {
+        editor
+          .chain()
+          .focus()
+          .insertContent({
+            type: "codeBlock",
+            attrs: { language: "markmap" },
+            content: [{ type: "text", text: DEFAULT_MARKMAP_CONTENT }],
           })
           .run();
       }))) return;

@@ -7,6 +7,7 @@
  */
 
 import { renderMermaid } from "@/plugins/mermaid";
+import { renderMarkmapToElement, disposeMarkmapInContainer } from "@/plugins/markmap";
 import { renderSvgBlock } from "@/plugins/svg/svgRender";
 import { sanitizeSvg } from "@/utils/sanitize";
 import {
@@ -384,6 +385,7 @@ export class MermaidPreviewView {
   }
 
   hide() {
+    disposeMarkmapInContainer(this.preview);
     this.container.style.display = "none";
     this.visible = false;
     this.editorDom = null;
@@ -423,6 +425,39 @@ export class MermaidPreviewView {
         this.preview.classList.add("mermaid-preview-error-state");
         this.error.textContent = "Invalid SVG";
       }
+      return;
+    }
+
+    // Markmap blocks: live SVG render
+    if (this.currentLanguage === "markmap") {
+      disposeMarkmapInContainer(this.preview);
+      this.preview.innerHTML = "";
+      const svgEl = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      svgEl.style.width = "100%";
+      svgEl.style.height = "100%";
+      this.preview.appendChild(svgEl);
+
+      const currentToken = ++this.renderToken;
+      renderMarkmapToElement(svgEl, trimmed)
+        .then((instance) => {
+          if (currentToken !== this.renderToken) {
+            instance?.dispose();
+            return;
+          }
+          if (!instance) {
+            this.preview.innerHTML = "";
+            this.preview.classList.add("mermaid-preview-error-state");
+            this.error.textContent = "Invalid markmap syntax";
+          } else {
+            this.error.textContent = "";
+          }
+        })
+        .catch(() => {
+          if (currentToken !== this.renderToken) return;
+          this.preview.innerHTML = "";
+          this.preview.classList.add("mermaid-preview-error-state");
+          this.error.textContent = "Preview failed";
+        });
       return;
     }
 
@@ -475,6 +510,7 @@ export class MermaidPreviewView {
       this.boundResizeUp = null;
     }
 
+    disposeMarkmapInContainer(this.preview);
     this.container.remove();
   }
 }

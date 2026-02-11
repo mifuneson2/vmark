@@ -1,0 +1,93 @@
+/**
+ * Markmap Plugin Styles
+ */
+
+/* Markmap mindmap container */
+.code-block-preview.markmap-preview {
+  padding: 1rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+  background-color: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  min-height: 200px;
+  position: relative;
+}
+
+.code-block-preview.markmap-preview svg {
+  width: 100%;
+  height: 100%;
+  min-height: 200px;
+}
+
+/* Fit button — reuses panzoom reset styling */
+.markmap-fit-btn {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s, background 0.15s, color 0.15s;
+  z-index: 10;
+}
+
+.markmap-fit-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.code-block-preview.markmap-preview:hover .markmap-fit-btn,
+.code-block-preview.markmap-preview:hover .mermaid-export-btn {
+  opacity: 1;
+}
+
+.markmap-fit-btn:hover {
+  background: var(--hover-bg);
+  color: var(--text-color);
+}
+
+/* Live preview in edit mode */
+.markmap-live-preview {
+  min-height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+}
+
+.markmap-live-preview svg {
+  width: 100%;
+  height: 100%;
+  min-height: 200px;
+}
+
+/* Error state */
+.markmap-error {
+  color: var(--error-color);
+  background-color: var(--error-bg);
+  padding: 1rem;
+  border-radius: var(--radius-md);
+  font-family: monospace;
+  font-size: var(--editor-font-size-mono);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Loading state */
+.markmap-loading {
+  color: var(--text-secondary);
+  font-style: italic;
+  padding: 1rem;
+  text-align: center;
+}
