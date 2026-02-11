@@ -96,6 +96,10 @@ export async function renderMarkmapToElement(
 
     const mm = markmapViewModule.Markmap.create(svgEl, options, root);
 
+    // Disable D3's dblclick-to-zoom so the wrapper's dblclick handler
+    // (enter edit mode) can fire without the graph zooming in.
+    mm.svg.on("dblclick.zoom", null);
+
     activeInstances.set(svgEl, { mm, content: trimmed });
 
     // Self-register cleanup so sweepDetached / cleanupDescendants handle it
