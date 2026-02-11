@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { useWindowLabel } from "@/contexts/WindowContext";
 import { useTabStore, type Tab as TabType } from "@/stores/tabStore";
 import { useDocumentStore } from "@/stores/documentStore";
+import { useWorkspaceStore } from "@/stores/workspaceStore";
 import { closeTabWithDirtyCheck } from "@/hooks/useTabOperations";
 import { useTabDragOut } from "@/hooks/useTabDragOut";
 import { Tab } from "./Tab";
@@ -46,6 +47,7 @@ export function TabBar() {
             content: doc.content,
             savedContent: doc.savedContent,
             isDirty: doc.isDirty,
+            workspaceRoot: useWorkspaceStore.getState().rootPath ?? null,
           },
         });
 
@@ -66,9 +68,32 @@ export function TabBar() {
     [windowLabel]
   );
 
-  const { getTabDragHandlers, isDragging, dragTabId } = useTabDragOut({
+  const handleReorder = useCallback(
+    (tabId: string, dropIdx: number) => {
+      const windowTabs = useTabStore.getState().tabs[windowLabel] ?? [];
+      const fromIndex = windowTabs.findIndex((t) => t.id === tabId);
+      if (fromIndex === -1) return;
+
+      // calcDropIndex returns visual insertion point (0..N).
+      // reorderTabs does splice(from,1) then splice(to,0,item),
+      // so when moving forward the target shifts left by 1.
+      let toIndex = dropIdx;
+      if (fromIndex < dropIdx) {
+        toIndex = dropIdx - 1;
+      }
+      // Clamp to valid range
+      toIndex = Math.max(0, Math.min(toIndex, windowTabs.length - 1));
+
+      if (fromIndex === toIndex) return;
+      useTabStore.getState().reorderTabs(windowLabel, fromIndex, toIndex);
+    },
+    [windowLabel]
+  );
+
+  const { getTabDragHandlers, isDragging, isReordering, dragTabId, dropIndex } = useTabDragOut({
     tabBarRef,
     onDragOut: handleDragOut,
+    onReorder: handleReorder,
   });
 
   const handleActivateTab = useCallback(
@@ -127,14 +152,20 @@ export function TabBar() {
           className="flex-1 flex items-center overflow-x-auto scrollbar-none"
           role="tablist"
         >
-          {tabs.map((tab) => {
+          {tabs.map((tab, index) => {
             const dragHandlers = getTabDragHandlers(tab.id, tab.isPinned);
+            const isBeingDragged = dragTabId === tab.id;
+            // Show drop indicator before this tab when reordering
+            const showDropBefore = isReordering && dropIndex === index && !isBeingDragged;
+
             return (
               <Tab
                 key={tab.id}
                 tab={tab}
                 isActive={tab.id === activeTabId}
-                isDragTarget={isDragging && dragTabId === tab.id}
+                isDragTarget={isDragging && isBeingDragged}
+                isReordering={isReordering && isBeingDragged}
+                showDropIndicator={showDropBefore}
                 onActivate={() => handleActivateTab(tab.id)}
                 onClose={() => handleCloseTab(tab.id)}
                 onContextMenu={(e) => handleContextMenu(e, tab)}
@@ -142,6 +173,10 @@ export function TabBar() {
               />
             );
           })}
+          {/* Drop indicator at end of tab list */}
+          {isReordering && dropIndex !== null && dropIndex >= tabs.length && (
+            <div className="tab-drop-indicator" />
+          )}
         </div>
 
         {/* New tab button */}
@@ -153,6 +188,7 @@ export function TabBar() {
             "hover:bg-[var(--bg-tertiary)]",
             "transition-colors duration-100"
           )}
+          style={{ WebkitAppRegion: "no-drag", appRegion: "no-drag" } as React.CSSProperties}
           onClick={handleNewTab}
           aria-label="New tab"
         >

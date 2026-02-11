@@ -16,6 +16,7 @@ pub struct TabTransferData {
     pub content: String,
     pub saved_content: String,
     pub is_dirty: bool,
+    pub workspace_root: Option<String>,
 }
 
 /// Registry of pending tab transfers, keyed by target window label.

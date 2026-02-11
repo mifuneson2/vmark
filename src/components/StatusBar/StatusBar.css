@@ -161,6 +161,9 @@
   white-space: nowrap;
   transition: background-color 0.15s ease, color 0.15s ease;
   flex-shrink: 0;
+  /* Opt out of window drag region so pointer events reach tab handlers */
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
 }
 
 .tab-pill:hover {
@@ -231,6 +234,24 @@
 .tab-pill.tab--dragging {
   opacity: 0.5;
   pointer-events: none;
+}
+
+/* Tab being reordered (dragged horizontally) */
+.tab-pill.tab--reordering {
+  opacity: 0.6;
+}
+
+/* Drop indicator line between tabs during reorder */
+.tab-drop-indicator {
+  width: 2px;
+  height: 16px;
+  background-color: var(--primary-color);
+  border-radius: 1px;
+  flex-shrink: 0;
+  margin: 0 -1px;
+  /* Opt out of window drag region */
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
 }
 
 /* New tab button */

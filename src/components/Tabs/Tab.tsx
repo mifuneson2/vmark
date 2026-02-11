@@ -8,6 +8,8 @@ interface TabProps {
   tab: TabType;
   isActive: boolean;
   isDragTarget?: boolean;
+  isReordering?: boolean;
+  showDropIndicator?: boolean;
   onActivate: () => void;
   onClose: () => void;
   onContextMenu: (e: MouseEvent) => void;
@@ -18,6 +20,8 @@ export const Tab = memo(function Tab({
   tab,
   isActive,
   isDragTarget,
+  isReordering,
+  showDropIndicator,
   onActivate,
   onClose,
   onContextMenu,
@@ -50,51 +54,57 @@ export const Tab = memo(function Tab({
   );
 
   return (
-    <div
-      role="tab"
-      aria-selected={isActive}
-      className={cn(
-        "tab-pill group",
-        isActive && "active",
-        isMissing && "tab-missing",
-        isDragTarget && "tab--dragging"
-      )}
-      onClick={onActivate}
-      onMouseDown={handleMiddleClick}
-      onPointerDown={onPointerDown}
-      onContextMenu={onContextMenu}
-      title={isMissing ? "File deleted from disk" : undefined}
-    >
-      {/* Pin indicator */}
-      {tab.isPinned && (
-        <Pin className="w-3 h-3 text-[var(--text-tertiary)] flex-shrink-0" />
-      )}
+    <>
+      {/* Drop indicator line before this tab */}
+      {showDropIndicator && <div className="tab-drop-indicator" />}
+      <div
+        role="tab"
+        aria-selected={isActive}
+        data-tab-id={tab.id}
+        className={cn(
+          "tab-pill group",
+          isActive && "active",
+          isMissing && "tab-missing",
+          isDragTarget && "tab--dragging",
+          isReordering && "tab--reordering"
+        )}
+        onClick={onActivate}
+        onMouseDown={handleMiddleClick}
+        onPointerDown={onPointerDown}
+        onContextMenu={onContextMenu}
+        title={isMissing ? "File deleted from disk" : undefined}
+      >
+        {/* Pin indicator */}
+        {tab.isPinned && (
+          <Pin className="w-3 h-3 text-[var(--text-tertiary)] flex-shrink-0" />
+        )}
 
-      {/* Missing file indicator (warning icon) */}
-      {isMissing && (
-        <AlertTriangle className="w-3 h-3 text-amber-500 flex-shrink-0" />
-      )}
+        {/* Missing file indicator (warning icon) */}
+        {isMissing && (
+          <AlertTriangle className="w-3 h-3 text-amber-500 flex-shrink-0" />
+        )}
 
-      {/* Dirty indicator (dot before title) */}
-      {isDirty && !isMissing && (
-        <span className="tab-dirty-dot" />
-      )}
+        {/* Dirty indicator (dot before title) */}
+        {isDirty && !isMissing && (
+          <span className="tab-dirty-dot" />
+        )}
 
-      {/* Tab title */}
-      <span className="tab-title">{tab.title}</span>
+        {/* Tab title */}
+        <span className="tab-title">{tab.title}</span>
 
-      {/* Close button (shown on hover for non-pinned) */}
-      {!tab.isPinned && (
-        <button
-          type="button"
-          className="tab-close"
-          onClick={handleClose}
-          aria-label={`Close ${tab.title}`}
-        >
-          <X className="w-3 h-3" />
-        </button>
-      )}
-    </div>
+        {/* Close button (shown on hover for non-pinned) */}
+        {!tab.isPinned && (
+          <button
+            type="button"
+            className="tab-close"
+            onClick={handleClose}
+            aria-label={`Close ${tab.title}`}
+          >
+            <X className="w-3 h-3" />
+          </button>
+        )}
+      </div>
+    </>
   );
 });
 

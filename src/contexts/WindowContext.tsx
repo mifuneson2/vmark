@@ -25,6 +25,7 @@ interface TabTransferData {
   content: string;
   savedContent: string;
   isDirty: boolean;
+  workspaceRoot: string | null;
 }
 
 /**
@@ -41,15 +42,14 @@ async function handleTabTransfer(label: string): Promise<boolean> {
   );
   if (!data) return false;
 
-  // Set up workspace from the file's parent directory (cross-platform)
-  if (data.filePath) {
-    const workspaceRoot = resolveWorkspaceRootForExternalFile(data.filePath);
-    if (workspaceRoot) {
-      try {
-        await openWorkspaceWithConfig(workspaceRoot);
-      } catch {
-        // Non-fatal — proceed without workspace
-      }
+  // Set up workspace: prefer transferred root, fall back to file's parent
+  const workspaceRoot = data.workspaceRoot
+    ?? (data.filePath ? resolveWorkspaceRootForExternalFile(data.filePath) : null);
+  if (workspaceRoot) {
+    try {
+      await openWorkspaceWithConfig(workspaceRoot);
+    } catch {
+      // Non-fatal — proceed without workspace
     }
   }
 
