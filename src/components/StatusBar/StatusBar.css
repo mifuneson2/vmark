@@ -140,6 +140,8 @@
   max-width: 60%;
   overflow-x: auto;
   scrollbar-width: none;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .status-tabs::-webkit-scrollbar {
@@ -164,6 +166,8 @@
   /* Opt out of window drag region so pointer events reach tab handlers */
   -webkit-app-region: no-drag;
   app-region: no-drag;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .tab-pill:hover {
