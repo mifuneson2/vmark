@@ -412,6 +412,20 @@ export class WebSocketBridge implements Bridge {
   private queueRequest<T = unknown>(
     request: BridgeRequest
   ): Promise<BridgeResponse & { data: T }> {
+    // Check queue capacity before creating the promise.
+    // Since JS is single-threaded, the check + push below is atomic
+    // (no other code runs between them), preventing queue overflow.
+    if (this.requestQueue.length >= this.maxQueueSize) {
+      // Drop oldest requests to make room, preventing unbounded growth
+      while (this.requestQueue.length >= this.maxQueueSize) {
+        const dropped = this.requestQueue.shift();
+        if (dropped) {
+          dropped.reject(new Error(`Request dropped — queue overflow (type: ${dropped.request.type})`));
+          this.logger.warn(`Dropped oldest queued request due to queue overflow: ${dropped.request.type}`);
+        }
+      }
+    }
+
     return new Promise((resolve, reject) => {
       if (this.requestQueue.length >= this.maxQueueSize) {
         reject(new Error('Request queue full'));

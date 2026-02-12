@@ -98,8 +98,16 @@ pub(crate) fn login_shell_path() -> String {
                 .args(["-lic", &cmd])
                 .output()
                 .ok()
-                .filter(|o| o.status.success())
-                .map(|o| String::from_utf8_lossy(&o.stdout).to_string());
+                .and_then(|child| {
+                    // stdin(null) + stderr(null) prevent the shell from blocking
+                    // on interactive prompts; wait_with_output itself has no timeout.
+                    let output = child.wait_with_output().ok()?;
+                    if output.status.success() {
+                        Some(String::from_utf8_lossy(&output.stdout).to_string())
+                    } else {
+                        None
+                    }
+                });
 
             if let Some(raw) = output {
                 if let Some(start) = raw.find(START) {
@@ -499,6 +507,27 @@ pub async fn validate_model(
 // Prompt Execution
 // ============================================================================
 
+/// Offload a CLI provider to the blocking thread pool so it doesn't starve tokio.
+async fn run_cli_blocking(
+    window: &WebviewWindow,
+    request_id: &str,
+    provider: &str,
+    args: Vec<String>,
+    stdin_prompt: Option<String>,
+    cli_path: Option<String>,
+) -> Result<(), String> {
+    let w = window.clone();
+    let rid = request_id.to_string();
+    let prov = provider.to_string();
+    tokio::task::spawn_blocking(move || {
+        let arg_refs: Vec<&str> = args.iter().map(|s| s.as_str()).collect();
+        run_cli_provider(&w, &rid, &prov, &arg_refs, stdin_prompt.as_deref(), cli_path.as_deref())
+    })
+    .await
+    .map_err(|e| format!("Task join error: {e}"))??;
+    Ok(())
+}
+
 /// Run an AI prompt and stream results back via `ai:response` events.
 ///
 /// For CLI providers: pipes prompt to stdin of the CLI tool.
@@ -518,10 +547,22 @@ pub async fn run_ai_prompt(
 ) -> Result<(), String> {
     let path_ref = cli_path.as_deref();
     match provider.as_str() {
-        // CLI providers
-        "claude" => run_cli_provider(&window, &request_id, "claude", &["--print", "--output-format", "text"], Some(&prompt), path_ref),
-        "codex" => run_cli_provider(&window, &request_id, "codex", &["exec", &prompt], None, path_ref),
-        "gemini" => run_cli_provider(&window, &request_id, "gemini", &["-p", &prompt], None, path_ref),
+        // CLI providers — run on blocking thread pool to avoid starving tokio
+        "claude" => run_cli_blocking(
+            &window, &request_id, "claude",
+            vec!["--print".into(), "--output-format".into(), "text".into()],
+            Some(prompt), cli_path,
+        ).await,
+        "codex" => run_cli_blocking(
+            &window, &request_id, "codex",
+            vec!["exec".into(), prompt],
+            None, cli_path,
+        ).await,
+        "gemini" => run_cli_blocking(
+            &window, &request_id, "gemini",
+            vec!["-p".into(), prompt],
+            None, cli_path,
+        ).await,
 
         // REST providers
         "anthropic" => {

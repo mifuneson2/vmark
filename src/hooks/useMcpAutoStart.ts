@@ -19,7 +19,8 @@ export function useMcpAutoStart() {
   const hasTriedRef = useRef(false);
 
   useEffect(() => {
-    // Only run once per app session
+    // Only run once per app session — guard unconditionally to prevent
+    // repeated invoke calls on component remounts.
     if (hasTriedRef.current) return;
     hasTriedRef.current = true;
 

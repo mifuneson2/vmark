@@ -34,6 +34,17 @@ pub struct McpHealthInfo {
 /// MCP server process state (for optional local sidecar)
 static MCP_SERVER: Mutex<Option<CommandChild>> = Mutex::new(None);
 
+/// Guard to prevent concurrent sidecar spawn attempts
+static SIDECAR_SPAWNING: AtomicBool = AtomicBool::new(false);
+
+/// RAII guard that clears `SIDECAR_SPAWNING` on drop (including panics).
+struct SpawningGuard;
+impl Drop for SpawningGuard {
+    fn drop(&mut self) {
+        SIDECAR_SPAWNING.store(false, Ordering::SeqCst);
+    }
+}
+
 /// Bridge running state
 static BRIDGE_RUNNING: AtomicBool = AtomicBool::new(false);
 
@@ -141,6 +152,16 @@ pub async fn mcp_server_start(app: AppHandle, port: u16) -> Result<McpServerStat
         *BRIDGE_PORT.lock().map_err(|e| e.to_string())?
     };
 
+    // Prevent concurrent spawn attempts (TOCTOU guard)
+    if SIDECAR_SPAWNING
+        .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
+        .is_err()
+    {
+        return Err("MCP sidecar spawn already in progress".to_string());
+    }
+    // RAII guard — cleared on normal return, early `?`, or panic
+    let _spawning = SpawningGuard;
+
     // Start the bridge first (if not already running)
     let actual_port = if !BRIDGE_RUNNING.load(Ordering::SeqCst) {
         let actual = mcp_bridge::start_bridge(app.clone(), port).await?;
@@ -151,7 +172,8 @@ pub async fn mcp_server_start(app: AppHandle, port: u16) -> Result<McpServerStat
         }
         actual
     } else {
-        current_port.unwrap_or(port)
+        // Re-read the port from the lock to get the actual bridge port
+        BRIDGE_PORT.lock().map_err(|e| e.to_string())?.unwrap_or(port)
     };
 
     // Small delay to ensure bridge is ready
@@ -167,9 +189,15 @@ pub async fn mcp_server_start(app: AppHandle, port: u16) -> Result<McpServerStat
         format!("Failed to spawn MCP server: {}", e)
     })?;
 
-    // Store the child process
+    // Store the child process — kill it if the mutex lock fails to prevent leaking
     {
-        let mut guard = MCP_SERVER.lock().map_err(|e| e.to_string())?;
+        let mut guard = match MCP_SERVER.lock() {
+            Ok(g) => g,
+            Err(e) => {
+                let _ = child.kill();
+                return Err(format!("Failed to lock MCP_SERVER mutex (child killed): {}", e));
+            }
+        };
         *guard = Some(child);
     }
 
@@ -210,6 +238,7 @@ pub async fn mcp_server_start(app: AppHandle, port: u16) -> Result<McpServerStat
     // Emit started event with actual port
     let _ = app.emit("mcp-server:started", actual_port);
 
+    // `_spawning` guard dropped here — clears SIDECAR_SPAWNING
     Ok(McpServerStatus {
         running: true,
         port: Some(actual_port),
