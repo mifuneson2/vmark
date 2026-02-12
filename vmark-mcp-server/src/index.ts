@@ -259,7 +259,6 @@ export const TOOL_CATEGORIES = [
       'document_insert_at_cursor',
       'document_insert_at_position',
       'document_search',
-      'document_replace',
       'document_replace_in_source',
     ],
   },
@@ -270,7 +269,6 @@ export const TOOL_CATEGORIES = [
       'selection_get',
       'selection_set',
       'selection_replace',
-      'selection_delete',
       'cursor_get_context',
       'cursor_set_position',
     ],
@@ -288,7 +286,7 @@ export const TOOL_CATEGORIES = [
   {
     name: 'Block Tools',
     description: 'Manage block-level elements',
-    tools: ['block_set_type', 'block_toggle', 'block_insert_horizontal_rule'],
+    tools: ['block_set_type', 'block_insert_horizontal_rule'],
   },
   {
     name: 'List Tools',
@@ -301,11 +299,6 @@ export const TOOL_CATEGORIES = [
     tools: [
       'table_insert',
       'table_delete',
-      'table_add_row',
-      'table_delete_row',
-      'table_add_column',
-      'table_delete_column',
-      'table_toggle_header_row',
     ],
   },
   {
@@ -345,7 +338,6 @@ export const TOOL_CATEGORIES = [
     description: 'Manage editor tabs within windows',
     tools: [
       'tabs_list',
-      'tabs_get_active',
       'tabs_switch',
       'tabs_close',
       'tabs_create',

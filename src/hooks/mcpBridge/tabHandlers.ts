@@ -56,51 +56,6 @@ export async function handleTabsList(
 }
 
 /**
- * Handle tabs.getActive request.
- * Gets the currently active tab in the window.
- */
-export async function handleTabsGetActive(
-  id: string,
-  args: Record<string, unknown>
-): Promise<void> {
-  try {
-    const windowId = resolveWindowId(args.windowId as string | undefined);
-    const tabStore = useTabStore.getState();
-    const docStore = useDocumentStore.getState();
-
-    const activeTabId = tabStore.activeTabId[windowId];
-    if (!activeTabId) {
-      await respond({ id, success: true, data: null });
-      return;
-    }
-
-    const tabs = tabStore.tabs[windowId] ?? [];
-    const tab = tabs.find((t) => t.id === activeTabId);
-    if (!tab) {
-      await respond({ id, success: true, data: null });
-      return;
-    }
-
-    const doc = docStore.getDocument(tab.id);
-    const tabInfo: TabInfo = {
-      id: tab.id,
-      title: tab.title,
-      filePath: tab.filePath,
-      isDirty: doc?.isDirty ?? false,
-      isActive: true,
-    };
-
-    await respond({ id, success: true, data: tabInfo });
-  } catch (error) {
-    await respond({
-      id,
-      success: false,
-      error: error instanceof Error ? error.message : String(error),
-    });
-  }
-}
-
-/**
  * Handle tabs.switch request.
  * Switches to a specific tab by ID.
  */

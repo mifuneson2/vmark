@@ -3,7 +3,6 @@
  */
 
 import { convertSelectionToTaskList } from "@/plugins/taskToggle/tiptapTaskListUtils";
-import { handleRemoveBlockquote } from "@/plugins/formatToolbar/nodeActions.tiptap";
 import { respond, getEditor } from "./utils";
 
 /**
@@ -37,57 +36,6 @@ export async function handleBlockSetType(
         break;
       case "blockquote":
         editor.commands.setBlockquote();
-        break;
-      default:
-        throw new Error(`Unknown block type: ${blockType}`);
-    }
-
-    await respond({ id, success: true, data: null });
-  } catch (error) {
-    await respond({
-      id,
-      success: false,
-      error: error instanceof Error ? error.message : String(error),
-    });
-  }
-}
-
-/**
- * Handle block.toggle request.
- * Toggles the block type (converts back to paragraph if same type).
- */
-export async function handleBlockToggle(
-  id: string,
-  args: Record<string, unknown>
-): Promise<void> {
-  try {
-    const editor = getEditor();
-    if (!editor) throw new Error("No active editor");
-
-    const blockType = args.blockType as string;
-    const level = args.level as number | undefined;
-
-    switch (blockType) {
-      case "paragraph":
-        editor.commands.setParagraph();
-        break;
-      case "heading":
-        if (level === undefined || level < 1 || level > 6) {
-          throw new Error("level must be between 1 and 6 for heading");
-        }
-        editor.commands.toggleHeading({ level: level as 1 | 2 | 3 | 4 | 5 | 6 });
-        break;
-      case "codeBlock":
-        editor.commands.toggleCodeBlock();
-        break;
-      case "blockquote":
-        // TipTap doesn't have toggleBlockquote by default
-        if (editor.isActive("blockquote")) {
-          // Use handleRemoveBlockquote to unwrap the entire blockquote
-          handleRemoveBlockquote(editor.view);
-        } else {
-          editor.commands.setBlockquote();
-        }
         break;
       default:
         throw new Error(`Unknown block type: ${blockType}`);

@@ -55,44 +55,6 @@ export function registerTabTools(server: VMarkMcpServer): void {
     }
   );
 
-  // tabs_get_active - Get the active tab
-  server.registerTool(
-    {
-      name: 'tabs_get_active',
-      description:
-        'Get information about the currently active tab in the window.',
-      inputSchema: {
-        type: 'object',
-        properties: {
-          windowId: {
-            type: 'string',
-            description: 'Optional window identifier. Defaults to focused window.',
-          },
-        },
-      },
-    },
-    async (args) => {
-      const windowId = resolveWindowId(args.windowId as string | undefined);
-
-      try {
-        const tab = await server.sendBridgeRequest<TabInfo | null>({
-          type: 'tabs.getActive',
-          windowId,
-        });
-
-        if (!tab) {
-          return VMarkMcpServer.errorResult('No active tab');
-        }
-
-        return VMarkMcpServer.successJsonResult(tab);
-      } catch (error) {
-        return VMarkMcpServer.errorResult(
-          `Failed to get active tab: ${error instanceof Error ? error.message : String(error)}`
-        );
-      }
-    }
-  );
-
   // tabs_switch - Switch to a specific tab
   server.registerTool(
     {

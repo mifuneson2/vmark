@@ -59,42 +59,6 @@ describe('Tab Tools', () => {
     });
   });
 
-  describe('tabs_get_active', () => {
-    it('should return active tab info', async () => {
-      bridge.setResponseHandler('tabs.getActive', () => ({
-        success: true,
-        data: { id: 'tab-1', title: 'Untitled', filePath: null, isDirty: false, isActive: true },
-      }));
-
-      const result = await server.callTool('tabs_get_active', {});
-
-      expect(result.success).toBe(true);
-      const tab = JSON.parse(result.content[0].text!);
-      expect(tab.id).toBe('tab-1');
-      expect(tab.isActive).toBe(true);
-    });
-
-    it('should handle no active tab', async () => {
-      bridge.setResponseHandler('tabs.getActive', () => ({
-        success: true,
-        data: null,
-      }));
-
-      const result = await server.callTool('tabs_get_active', {});
-
-      expect(result.success).toBe(false);
-      expect(result.content[0].text).toContain('No active tab');
-    });
-
-    it('should handle bridge errors', async () => {
-      bridge.setNextError(new Error('Window not found'));
-
-      const result = await server.callTool('tabs_get_active', {});
-
-      expect(result.success).toBe(false);
-    });
-  });
-
   describe('tabs_switch', () => {
     it('should switch to a tab', async () => {
       bridge.setResponseHandler('tabs.switch', () => ({

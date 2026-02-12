@@ -2,7 +2,7 @@
 
 This page documents all MCP tools available when Claude (or other AI assistants) connects to VMark.
 
-VMark exposes **86 tools** across 18 categories — from high-level section editing to low-level AST manipulation. All tools are always available; no configuration needed.
+VMark exposes **77 tools** across 18 categories — from high-level section editing to low-level AST manipulation. All tools are always available; no configuration needed.
 
 ::: tip Recommended Workflow
 For most writing tasks, you only need a handful of tools:
@@ -44,7 +44,7 @@ Replace the entire document content.
 ::: warning Empty Documents Only
 For safety, this tool is only allowed when the target document is **empty**. If the document has existing content, an error is returned.
 
-For non-empty documents, use `document_insert_at_cursor` or `selection_replace` instead. These tools create suggestions that require user approval.
+For non-empty documents, use `document_insert_at_cursor`, `apply_diff`, or `selection_replace` instead. These tools create suggestions that require user approval.
 :::
 
 ### document_insert_at_cursor
@@ -95,30 +95,9 @@ Search for text in the document.
 
 **Returns:** Array of matches with positions and line numbers.
 
-### document_replace
-
-Replace text occurrences in the document.
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `search` | string | Yes | Text to find. |
-| `replace` | string | Yes | Replacement text (markdown supported). |
-| `all` | boolean | No | Replace all occurrences. Default: false. |
-| `windowId` | string | No | Window identifier. |
-
-**Returns:** `{ count, message, suggestionIds?, applied }`
-
-- `count` - Number of replacements made.
-- `suggestionIds` - Array of suggestion IDs when edits are staged (auto-approve disabled).
-- `applied` - `true` if immediately applied, `false` if staged as suggestions.
-
-::: tip Prefer `apply_diff`
-For advanced use cases, [`apply_diff`](#apply_diff) offers more control with match policies (`first`, `all`, `nth`, `error_if_multiple`) and dry-run support. `document_replace` is a simpler convenience wrapper.
-:::
-
 ### document_replace_in_source
 
-Replace text at the markdown source level, bypassing ProseMirror node boundaries. Use when `document_replace` returns "No matches found" because the search text spans formatting boundaries (e.g. partially bold text).
+Replace text at the markdown source level, bypassing ProseMirror node boundaries. Use when `apply_diff` returns "No matches found" because the search text spans formatting boundaries (e.g. partially bold text).
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
@@ -134,7 +113,7 @@ Replace text at the markdown source level, bypassing ProseMirror node boundaries
 - `applied` - `true` if immediately applied, `false` if staged as suggestions.
 
 ::: tip When to use
-Use `document_replace` first — it's faster and more precise. Fall back to `document_replace_in_source` only when the search text crosses formatting boundaries (bold, italic, links, etc.) and `document_replace` can't find it.
+Use `apply_diff` first — it's faster and more precise. Fall back to `document_replace_in_source` only when the search text crosses formatting boundaries (bold, italic, links, etc.) and `apply_diff` can't find it.
 
 **Important:** The `search` string must match the raw markdown source, including syntax markers like `**` for bold, `_` for italic, `[]()` for links, etc. Use `document_get_content` to see the exact markdown source before searching.
 :::
@@ -184,22 +163,6 @@ Replace selected text with new text.
 By default, this tool creates a **suggestion** that requires user approval. The original text appears with strikethrough, and the new text appears as ghost text. Users can accept (Enter) or reject (Escape) the suggestion.
 
 If **Auto-approve edits** is enabled in Settings → Integrations, changes are applied immediately without preview.
-:::
-
-### selection_delete
-
-Delete the selected text. Equivalent to calling `selection_replace` with empty text.
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `windowId` | string | No | Window identifier. |
-
-**Returns:** `{ message, range, content, suggestionId?, applied }`
-
-::: tip Suggestion System
-By default, this tool creates a **suggestion** that requires user approval. The text to be deleted appears with strikethrough. Users can accept (Enter) or reject (Escape) the deletion.
-
-If **Auto-approve edits** is enabled in Settings → Integrations, the deletion is applied immediately without preview.
 :::
 
 ### cursor_get_context
@@ -293,16 +256,6 @@ Convert the current block to a specific type.
 | `language` | string | No | Code language (for `codeBlock`). |
 | `windowId` | string | No | Window identifier. |
 
-### block_toggle
-
-Toggle block type (converts back to paragraph if same type). For deterministic behavior, prefer [`block_set_type`](#block_set_type) which always sets the exact type you specify.
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `type` | string | Yes | Block type to toggle. |
-| `level` | number | No | Heading level (for `heading`). |
-| `windowId` | string | No | Window identifier. |
-
 ### block_insert_horizontal_rule
 
 Insert a horizontal rule (`---`) at the cursor.
@@ -348,10 +301,6 @@ Decrease indentation of the current list item.
 
 Tools for creating and editing tables.
 
-::: tip Batch Operations
-For multiple table changes at once, use [`table_modify`](#table_modify) instead of calling individual tools. It supports `addRow`, `deleteRow`, `addColumn`, `deleteColumn`, `setHeaderRow`, and `setCellContent` in a single atomic operation.
-:::
-
 ### table_insert
 
 Insert a new table at the cursor.
@@ -371,47 +320,9 @@ Delete the table at the cursor position.
 |-----------|------|----------|-------------|
 | `windowId` | string | No | Window identifier. |
 
-### table_add_row
-
-Add a row to the current table.
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `position` | string | Yes | Position: `before` or `after` current row. |
-| `windowId` | string | No | Window identifier. |
-
-### table_delete_row
-
-Delete the current row.
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `windowId` | string | No | Window identifier. |
-
-### table_add_column
-
-Add a column to the current table.
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `position` | string | Yes | Position: `before` or `after` current column. |
-| `windowId` | string | No | Window identifier. |
-
-### table_delete_column
-
-Delete the current column.
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `windowId` | string | No | Window identifier. |
-
-### table_toggle_header_row
-
-Toggle the header row styling.
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `windowId` | string | No | Window identifier. |
+::: tip Use `table_modify` for row/column operations
+To add rows, delete columns, toggle headers, or update cells, use [`table_modify`](#table_modify). It handles all table structure changes in a single atomic operation.
+:::
 
 ---
 
@@ -683,16 +594,6 @@ List all tabs in a window.
 
 **Returns:** Array of `{ id, title, filePath, isDirty, isActive }`
 
-### tabs_get_active
-
-Get the active tab information. Equivalent to calling `tabs_get_info` without a `tabId`.
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `windowId` | string | No | Window identifier. |
-
-**Returns:** `{ id, title, filePath, isDirty, isActive }`
-
 ### tabs_switch
 
 Switch to a specific tab.
@@ -748,7 +649,7 @@ VMark keeps track of the last 10 closed tabs per window. Use this to restore acc
 
 ## AI Suggestion Tools
 
-Tools for managing AI-generated content suggestions. When AI uses `document_insert_at_cursor`, `document_insert_at_position`, `document_replace`, `document_replace_in_source`, `selection_replace`, or `selection_delete`, the changes are staged as suggestions that require user approval.
+Tools for managing AI-generated content suggestions. When AI uses `document_insert_at_cursor`, `document_insert_at_position`, `document_replace_in_source`, `selection_replace`, `apply_diff`, or `batch_edit`, the changes are staged as suggestions that require user approval.
 
 ::: info Undo/Redo Safety
 Suggestions don't modify the document until accepted. This preserves full undo/redo functionality - users can undo after accepting, and rejecting leaves no trace in history.

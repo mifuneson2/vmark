@@ -227,15 +227,6 @@ describe('MockBridge', () => {
       expect(content.data).toBe('Hello universe');
     });
 
-    it('should delete selection', async () => {
-      bridge.setContent('Hello cruel world');
-      bridge.setSelection(6, 12); // "cruel "
-
-      await bridge.send({ type: 'selection.delete' });
-
-      const content = await bridge.send({ type: 'document.getContent' });
-      expect(content.data).toBe('Hello world');
-    });
   });
 
   describe('search and replace', () => {
@@ -267,36 +258,6 @@ describe('MockBridge', () => {
       expect(data.count).toBe(1);
     });
 
-    it('should replace first occurrence', async () => {
-      bridge.setContent('foo bar foo baz');
-
-      await bridge.send({
-        type: 'document.replace',
-        search: 'foo',
-        replace: 'qux',
-        all: false,
-      });
-
-      const content = await bridge.send({ type: 'document.getContent' });
-      expect(content.data).toBe('qux bar foo baz');
-    });
-
-    it('should replace all occurrences', async () => {
-      bridge.setContent('foo bar foo baz');
-
-      const response = await bridge.send({
-        type: 'document.replace',
-        search: 'foo',
-        replace: 'qux',
-        all: true,
-      });
-
-      const data = response.data as { count: number };
-      expect(data.count).toBe(2);
-
-      const content = await bridge.send({ type: 'document.getContent' });
-      expect(content.data).toBe('qux bar qux baz');
-    });
   });
 
   describe('cursor context', () => {

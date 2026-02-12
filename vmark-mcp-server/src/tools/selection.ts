@@ -163,49 +163,6 @@ export function registerSelectionTools(server: VMarkMcpServer): void {
     }
   );
 
-  // selection_delete - Delete the selected text
-  server.registerTool(
-    {
-      name: 'selection_delete',
-      description:
-        'Delete the currently selected text. ' +
-        'If no text is selected, this is a no-op. ' +
-        'The cursor will be positioned at the start of the deleted range.',
-      inputSchema: {
-        type: 'object',
-        properties: {
-          windowId: {
-            type: 'string',
-            description: 'Optional window identifier. Defaults to focused window.',
-          },
-        },
-      },
-    },
-    async (args) => {
-      const windowId = resolveWindowId(args.windowId as string | undefined);
-
-      try {
-        const result = await server.sendBridgeRequest<EditResult>({
-          type: 'selection.delete',
-          windowId,
-        });
-
-        // Return structured result including suggestionId if edit was staged
-        return VMarkMcpServer.successJsonResult({
-          message: result.message,
-          range: result.range,
-          content: result.content,
-          suggestionId: result.suggestionId,
-          applied: !result.suggestionId,
-        });
-      } catch (error) {
-        return VMarkMcpServer.errorResult(
-          `Failed to delete selection: ${error instanceof Error ? error.message : String(error)}`
-        );
-      }
-    }
-  );
-
   // cursor_get_context - Get text around the cursor
   server.registerTool(
     {

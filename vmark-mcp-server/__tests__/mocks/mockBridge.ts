@@ -484,7 +484,7 @@ export class MockBridge implements Bridge {
             success: false,
             error:
               'document_set_content is only allowed on empty documents. ' +
-              'Use document_insert_at_cursor, document_replace, or selection_replace for non-empty documents.',
+              'Use document_insert_at_cursor, apply_diff, or selection_replace for non-empty documents.',
           };
         }
         this.setContent(request.content, windowId);
@@ -540,20 +540,6 @@ export class MockBridge implements Bridge {
         return { success: true, data: result };
       }
 
-      case 'document.replace': {
-        if (!window) {
-          return { success: false, error: `Window ${windowId} not found` };
-        }
-        const result = this.replaceInDocument(
-          window,
-          windowId,
-          request.search,
-          request.replace,
-          request.all ?? false
-        );
-        return { success: true, data: result };
-      }
-
       case 'selection.get':
         if (!window) {
           return { success: false, error: `Window ${windowId} not found` };
@@ -584,27 +570,6 @@ export class MockBridge implements Bridge {
             message: 'Selection replaced (auto-approved).',
             range: { from: replaceFrom, to: replaceTo },
             originalContent,
-          },
-        };
-      }
-
-      case 'selection.delete': {
-        if (!window) {
-          return { success: false, error: `Window ${windowId} not found` };
-        }
-        const { from: deleteFrom, to: deleteTo } = window.selection.range;
-        const deletedContent = window.content.slice(deleteFrom, deleteTo);
-        const before = window.content.slice(0, deleteFrom);
-        const after = window.content.slice(deleteTo);
-        this.setContent(before + after, windowId);
-        this.setCursorPosition(deleteFrom, windowId);
-        // Return structured result (simulating auto-approve mode)
-        return {
-          success: true,
-          data: {
-            message: 'Selection deleted (auto-approved).',
-            range: { from: deleteFrom, to: deleteTo },
-            content: deletedContent,
           },
         };
       }
@@ -667,20 +632,12 @@ export class MockBridge implements Bridge {
       case 'format.removeLink':
       case 'format.clear':
       case 'block.setType':
-      case 'block.toggle':
       case 'block.insertHorizontalRule':
       case 'list.toggle':
       case 'list.increaseIndent':
       case 'list.decreaseIndent':
       case 'table.insert':
       case 'table.delete':
-      case 'table.addRowBefore':
-      case 'table.addRowAfter':
-      case 'table.deleteRow':
-      case 'table.addColumnBefore':
-      case 'table.addColumnAfter':
-      case 'table.deleteColumn':
-      case 'table.toggleHeaderRow':
       // Phase 3: VMark-specific tools
       case 'vmark.insertMathInline':
       case 'vmark.insertMathBlock':

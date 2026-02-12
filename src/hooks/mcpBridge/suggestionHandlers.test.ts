@@ -9,9 +9,7 @@ import {
   handleSetContent,
   handleInsertAtCursorWithSuggestion,
   handleInsertAtPositionWithSuggestion,
-  handleDocumentReplaceWithSuggestion,
   handleSelectionReplaceWithSuggestion,
-  handleSelectionDeleteWithSuggestion,
 } from "./suggestionHandlers";
 
 // Mock utils
@@ -122,7 +120,7 @@ describe("suggestionHandlers", () => {
         success: false,
         error:
           "document.setContent is only allowed on empty documents. " +
-          "Use document.insertAtCursor, document.replace, or selection.replace for non-empty documents.",
+          "Use document.insertAtCursor, apply_diff, or selection.replace for non-empty documents.",
       });
     });
 
@@ -308,95 +306,6 @@ describe("suggestionHandlers", () => {
     });
   });
 
-  describe("handleDocumentReplaceWithSuggestion", () => {
-    it("creates suggestions when autoApproveEdits is OFF and matches found", async () => {
-      const editor = createMockEditor({ docText: "hello world" });
-      vi.mocked(getEditor).mockReturnValue(editor as never);
-
-      const addSuggestion = vi.fn(() => "suggestion-replace");
-      vi.mocked(useAiSuggestionStore.getState).mockReturnValue({
-        addSuggestion,
-      } as unknown as ReturnType<typeof useAiSuggestionStore.getState>);
-
-      await handleDocumentReplaceWithSuggestion("req-1", {
-        search: "hello",
-        replace: "hi",
-        all: false,
-      });
-
-      expect(addSuggestion).toHaveBeenCalledWith({
-        tabId: "test-tab",
-        type: "replace",
-        from: 0,
-        to: 5,
-        newContent: "hi",
-        originalContent: "hello",
-      });
-      expect(respond).toHaveBeenCalledWith({
-        id: "req-1",
-        success: true,
-        data: {
-          suggestionIds: ["suggestion-replace"],
-          count: 1,
-          message: "1 replacement(s) staged as suggestions. Awaiting user approval.",
-        },
-      });
-    });
-
-    it("applies directly when autoApproveEdits is ON", async () => {
-      setAutoApprove(true);
-      const editor = createMockEditor({ docText: "hello world" });
-      vi.mocked(getEditor).mockReturnValue(editor as never);
-
-      await handleDocumentReplaceWithSuggestion("req-2", {
-        search: "hello",
-        replace: "hi",
-        all: false,
-      });
-
-      // New implementation uses createMarkdownPasteSlice + tr.replaceRange
-      expect(editor.mockTr.replaceRange).toHaveBeenCalled();
-      expect(editor.view.dispatch).toHaveBeenCalled();
-      expect(respond).toHaveBeenCalledWith({
-        id: "req-2",
-        success: true,
-        data: {
-          count: 1,
-          message: "1 replacement(s) applied (auto-approved).",
-        },
-      });
-    });
-
-    it("returns no matches when search text not found", async () => {
-      const editor = createMockEditor({ docText: "hello world" });
-      vi.mocked(getEditor).mockReturnValue(editor as never);
-
-      await handleDocumentReplaceWithSuggestion("req-3", {
-        search: "xyz",
-        replace: "abc",
-      });
-
-      expect(respond).toHaveBeenCalledWith({
-        id: "req-3",
-        success: true,
-        data: { count: 0, message: "No matches found" },
-      });
-    });
-
-    it("returns error when search is not a string", async () => {
-      const editor = createMockEditor();
-      vi.mocked(getEditor).mockReturnValue(editor as never);
-
-      await handleDocumentReplaceWithSuggestion("req-4", { search: 123, replace: "abc" });
-
-      expect(respond).toHaveBeenCalledWith({
-        id: "req-4",
-        success: false,
-        error: "search must be a string",
-      });
-    });
-  });
-
   describe("handleSelectionReplaceWithSuggestion", () => {
     it("creates suggestion when autoApproveEdits is OFF and text is selected", async () => {
       const editor = createMockEditor({
@@ -483,82 +392,4 @@ describe("suggestionHandlers", () => {
     });
   });
 
-  describe("handleSelectionDeleteWithSuggestion", () => {
-    it("creates delete suggestion when autoApproveEdits is OFF", async () => {
-      const editor = createMockEditor({
-        selectionFrom: 0,
-        selectionTo: 5,
-        docText: "hello",
-      });
-      vi.mocked(getEditor).mockReturnValue(editor as never);
-
-      const addSuggestion = vi.fn(() => "suggestion-del");
-      vi.mocked(useAiSuggestionStore.getState).mockReturnValue({
-        addSuggestion,
-      } as unknown as ReturnType<typeof useAiSuggestionStore.getState>);
-
-      await handleSelectionDeleteWithSuggestion("req-1");
-
-      expect(addSuggestion).toHaveBeenCalledWith({
-        tabId: "test-tab",
-        type: "delete",
-        from: 0,
-        to: 5,
-        originalContent: "hello",
-      });
-      expect(respond).toHaveBeenCalledWith({
-        id: "req-1",
-        success: true,
-        data: {
-          suggestionId: "suggestion-del",
-          message: "Content marked for deletion. Awaiting user approval.",
-          range: { from: 0, to: 5 },
-          content: "hello",
-        },
-      });
-    });
-
-    it("deletes directly when autoApproveEdits is ON", async () => {
-      setAutoApprove(true);
-      const editor = createMockEditor({
-        selectionFrom: 0,
-        selectionTo: 5,
-        docText: "hello",
-      });
-      const mockChain = editor.chain();
-      vi.mocked(getEditor).mockReturnValue(editor as never);
-
-      await handleSelectionDeleteWithSuggestion("req-2");
-
-      expect(editor.chain).toHaveBeenCalled();
-      expect(mockChain.setTextSelection).toHaveBeenCalledWith({ from: 0, to: 5 });
-      expect(mockChain.deleteSelection).toHaveBeenCalled();
-      expect(mockChain.run).toHaveBeenCalled();
-      expect(respond).toHaveBeenCalledWith({
-        id: "req-2",
-        success: true,
-        data: {
-          message: "Selection deleted (auto-approved).",
-          range: { from: 0, to: 5 },
-          content: "hello",
-        },
-      });
-    });
-
-    it("returns error when no text is selected", async () => {
-      const editor = createMockEditor({
-        selectionFrom: 5,
-        selectionTo: 5, // No selection
-      });
-      vi.mocked(getEditor).mockReturnValue(editor as never);
-
-      await handleSelectionDeleteWithSuggestion("req-3");
-
-      expect(respond).toHaveBeenCalledWith({
-        id: "req-3",
-        success: false,
-        error: "No text selected",
-      });
-    });
-  });
 });

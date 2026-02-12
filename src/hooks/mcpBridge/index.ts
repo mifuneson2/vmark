@@ -26,10 +26,8 @@ import {
   handleSetContent,
   handleInsertAtCursorWithSuggestion,
   handleInsertAtPositionWithSuggestion,
-  handleDocumentReplaceWithSuggestion,
   handleDocumentReplaceInSourceWithSuggestion,
   handleSelectionReplaceWithSuggestion,
-  handleSelectionDeleteWithSuggestion,
   handleSuggestionAccept,
   handleSuggestionReject,
   handleSuggestionList,
@@ -54,7 +52,6 @@ import { handleUndo, handleRedo, handleFocus, handleGetUndoState } from "./edito
 // Block and list handlers
 import {
   handleBlockSetType,
-  handleBlockToggle,
   handleListToggle,
   handleInsertHorizontalRule,
   handleListIncreaseIndent,
@@ -64,14 +61,7 @@ import {
 // Table handlers
 import {
   handleTableInsert,
-  handleTableAddRowBefore,
-  handleTableAddRowAfter,
-  handleTableAddColumnBefore,
-  handleTableAddColumnAfter,
   handleTableDelete,
-  handleTableDeleteRow,
-  handleTableDeleteColumn,
-  handleTableToggleHeaderRow,
 } from "./tableHandlers";
 
 // Workspace handlers
@@ -93,7 +83,6 @@ import {
 // Tab handlers
 import {
   handleTabsList,
-  handleTabsGetActive,
   handleTabsSwitch,
   handleTabsClose,
   handleTabsCreate,
@@ -191,10 +180,6 @@ async function handleRequest(event: McpRequestEvent): Promise<void> {
       case "document.search":
         await handleDocumentSearch(id, args);
         break;
-      case "document.replace":
-        // Wrapped with suggestion for approval
-        await handleDocumentReplaceWithSuggestion(id, args);
-        break;
       case "document.replaceInSource":
         // Wrapped with suggestion for approval (source-level replace)
         await handleDocumentReplaceInSourceWithSuggestion(id, args);
@@ -219,11 +204,6 @@ async function handleRequest(event: McpRequestEvent): Promise<void> {
         // Wrapped with suggestion for approval
         await handleSelectionReplaceWithSuggestion(id, args);
         break;
-      case "selection.delete":
-        // Wrapped with suggestion for approval (soft delete)
-        await handleSelectionDeleteWithSuggestion(id);
-        break;
-
       // AI Suggestion operations
       case "suggestion.accept":
         await handleSuggestionAccept(id, args);
@@ -281,9 +261,6 @@ async function handleRequest(event: McpRequestEvent): Promise<void> {
       case "block.setType":
         await handleBlockSetType(id, args);
         break;
-      case "block.toggle":
-        await handleBlockToggle(id, args);
-        break;
       case "block.insertHorizontalRule":
         await handleInsertHorizontalRule(id);
         break;
@@ -303,29 +280,8 @@ async function handleRequest(event: McpRequestEvent): Promise<void> {
       case "table.insert":
         await handleTableInsert(id, args);
         break;
-      case "table.addRowBefore":
-        await handleTableAddRowBefore(id);
-        break;
-      case "table.addRowAfter":
-        await handleTableAddRowAfter(id);
-        break;
-      case "table.addColumnBefore":
-        await handleTableAddColumnBefore(id);
-        break;
-      case "table.addColumnAfter":
-        await handleTableAddColumnAfter(id);
-        break;
       case "table.delete":
         await handleTableDelete(id);
-        break;
-      case "table.deleteRow":
-        await handleTableDeleteRow(id);
-        break;
-      case "table.deleteColumn":
-        await handleTableDeleteColumn(id);
-        break;
-      case "table.toggleHeaderRow":
-        await handleTableToggleHeaderRow(id);
         break;
 
       // Window operations
@@ -371,9 +327,6 @@ async function handleRequest(event: McpRequestEvent): Promise<void> {
       // Tab operations
       case "tabs.list":
         await handleTabsList(id, args);
-        break;
-      case "tabs.getActive":
-        await handleTabsGetActive(id, args);
         break;
       case "tabs.switch":
         await handleTabsSwitch(id, args);

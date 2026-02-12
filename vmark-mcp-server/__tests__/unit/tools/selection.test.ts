@@ -272,62 +272,6 @@ describe('selection tools', () => {
     });
   });
 
-  describe('selection_delete', () => {
-    it('should be registered as a tool', () => {
-      const tool = client.getTool('selection_delete');
-      expect(tool).toBeDefined();
-    });
-
-    it('should delete selected text', async () => {
-      bridge.setContent('Hello world');
-      bridge.setSelection(5, 11);
-
-      const result = await client.callTool('selection_delete');
-
-      expect(result.success).toBe(true);
-      expect(bridge.getWindowState()?.content).toBe('Hello');
-    });
-
-    it('should be no-op with no selection', async () => {
-      bridge.setContent('Hello');
-      bridge.setCursorPosition(3);
-
-      const result = await client.callTool('selection_delete');
-
-      expect(result.success).toBe(true);
-      expect(bridge.getWindowState()?.content).toBe('Hello');
-    });
-
-    it('should position cursor at start of deleted range', async () => {
-      bridge.setContent('Hello world');
-      bridge.setSelection(6, 11);
-
-      await client.callTool('selection_delete');
-
-      expect(bridge.getWindowState()?.cursorPosition).toBe(6);
-    });
-
-    it('should handle delete at start', async () => {
-      bridge.setContent('Hello world');
-      bridge.setSelection(0, 6);
-
-      await client.callTool('selection_delete');
-
-      expect(bridge.getWindowState()?.content).toBe('world');
-    });
-
-    it('should use specified windowId', async () => {
-      bridge.addWindow('other');
-      bridge.setContent('delete me', 'other');
-      bridge.setSelection(0, 9, 'other');
-
-      await client.callTool('selection_delete', { windowId: 'other' });
-
-      expect(bridge.getWindowState('other')?.content).toBe('');
-      expect(bridge.getWindowState('main')?.content).toBe('');
-    });
-  });
-
   describe('cursor_get_context', () => {
     it('should be registered as a tool', () => {
       const tool = client.getTool('cursor_get_context');

@@ -42,7 +42,7 @@ export async function handleSetContent(
         success: false,
         error:
           "document.setContent is only allowed on empty documents. " +
-          "Use document.insertAtCursor, document.replace, or selection.replace for non-empty documents.",
+          "Use document.insertAtCursor, apply_diff, or selection.replace for non-empty documents.",
       });
       return;
     }
@@ -212,116 +212,6 @@ export async function handleInsertAtPositionWithSuggestion(
 }
 
 /**
- * Handle document.replace with suggestion wrapping.
- * If autoApproveEdits is enabled, applies directly. Otherwise creates suggestions.
- */
-export async function handleDocumentReplaceWithSuggestion(
-  id: string,
-  args: Record<string, unknown>
-): Promise<void> {
-  try {
-    const editor = getEditor();
-    if (!editor) throw new Error("No active editor");
-
-    const search = args.search as string;
-    const replace = args.replace as string;
-    const replaceAll = (args.all as boolean) ?? false;
-
-    if (typeof search !== "string") {
-      throw new Error("search must be a string");
-    }
-    if (typeof replace !== "string") {
-      throw new Error("replace must be a string");
-    }
-
-    // Find all matches in the document
-    const doc = editor.state.doc;
-    const matches: Array<{ from: number; to: number }> = [];
-
-    doc.descendants((node, pos) => {
-      if (node.isText && node.text) {
-        let searchPos = 0;
-        while (searchPos < node.text.length) {
-          const idx = node.text.indexOf(search, searchPos);
-          if (idx === -1) break;
-
-          // Convert node-relative position to document position
-          const from = pos + idx;
-          const to = from + search.length;
-          matches.push({ from, to });
-
-          if (!replaceAll) return false; // Stop traversal after first match
-          searchPos = idx + 1;
-        }
-      }
-    });
-
-    if (matches.length === 0) {
-      await respond({
-        id,
-        success: true,
-        data: { count: 0, message: "No matches found" },
-      });
-      return;
-    }
-
-    // Auto-approve: apply replacements directly
-    if (isAutoApproveEnabled()) {
-      // Parse markdown once for replacement content
-      const slice = createMarkdownPasteSlice(editor.state, replace);
-      // Apply in reverse order to maintain correct positions
-      let tr = editor.state.tr;
-      for (const match of [...matches].reverse()) {
-        tr = tr.replaceRange(match.from, match.to, slice);
-      }
-      editor.view.dispatch(tr);
-
-      await respond({
-        id,
-        success: true,
-        data: {
-          count: matches.length,
-          message: `${matches.length} replacement(s) applied (auto-approved).`,
-        },
-      });
-      return;
-    }
-
-    // Create suggestions in reverse order to maintain correct positions
-    const suggestionIds: string[] = [];
-    const reversedMatches = [...matches].reverse();
-
-    for (const match of reversedMatches) {
-      const suggestionId = useAiSuggestionStore.getState().addSuggestion({
-        tabId: getActiveTabId(),
-        type: "replace",
-        from: match.from,
-        to: match.to,
-        newContent: replace,
-        originalContent: search,
-      });
-      suggestionIds.unshift(suggestionId); // Maintain original order in response
-    }
-
-    await respond({
-      id,
-      success: true,
-      data: {
-        suggestionIds,
-        count: matches.length,
-        message: `${matches.length} replacement(s) staged as suggestions. Awaiting user approval.`,
-      },
-    });
-  } catch (error) {
-    await respond({
-      id,
-      success: false,
-      error: error instanceof Error ? error.message : String(error),
-    });
-  }
-}
-
-/**
  * Handle selection.replace with suggestion wrapping.
  * If autoApproveEdits is enabled, applies directly. Otherwise stores suggestion for preview.
  */
@@ -384,66 +274,6 @@ export async function handleSelectionReplaceWithSuggestion(
         message: "Replacement staged as suggestion. Awaiting user approval.",
         range: { from, to },
         originalContent,
-      },
-    });
-  } catch (error) {
-    await respond({
-      id,
-      success: false,
-      error: error instanceof Error ? error.message : String(error),
-    });
-  }
-}
-
-/**
- * Handle selection.delete with suggestion wrapping.
- * If autoApproveEdits is enabled, deletes directly. Otherwise marks for deletion.
- */
-export async function handleSelectionDeleteWithSuggestion(id: string): Promise<void> {
-  try {
-    const editor = getEditor();
-    if (!editor) throw new Error("No active editor");
-
-    const { from, to } = editor.state.selection;
-    if (from === to) {
-      throw new Error("No text selected");
-    }
-
-    // Get content that would be deleted
-    const originalContent = editor.state.doc.textBetween(from, to, "\n");
-
-    // Auto-approve: delete directly without suggestion preview
-    if (isAutoApproveEnabled()) {
-      editor.chain().setTextSelection({ from, to }).deleteSelection().run();
-      await respond({
-        id,
-        success: true,
-        data: {
-          message: "Selection deleted (auto-approved).",
-          range: { from, to },
-          content: originalContent,
-        },
-      });
-      return;
-    }
-
-    // Create suggestion - content shown with strikethrough decoration
-    const suggestionId = useAiSuggestionStore.getState().addSuggestion({
-      tabId: getActiveTabId(),
-      type: "delete",
-      from,
-      to,
-      originalContent,
-    });
-
-    await respond({
-      id,
-      success: true,
-      data: {
-        suggestionId,
-        message: "Content marked for deletion. Awaiting user approval.",
-        range: { from, to },
-        content: originalContent,
       },
     });
   } catch (error) {
