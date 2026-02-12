@@ -1,15 +1,26 @@
 /**
- * Tests for useFileOperations hook - Move to functionality
+ * Tests for useFileOperations hook
  *
  * @module hooks/useFileOperations.test
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // Hoist mocks to avoid "Cannot access before initialization" errors
-const { mockInvoke, mockClose, mockCloseTab } = vi.hoisted(() => ({
+const {
+  mockInvoke, mockClose, mockCloseTab, mockDetachTab, mockReadTextFile,
+  mockInitDocument, mockSetLineMetadata, mockAddFile,
+  mockCreateTab, mockSetActiveTab,
+} = vi.hoisted(() => ({
   mockInvoke: vi.fn(() => Promise.resolve()),
   mockClose: vi.fn(() => Promise.resolve()),
   mockCloseTab: vi.fn(),
+  mockDetachTab: vi.fn(),
+  mockReadTextFile: vi.fn(() => Promise.resolve("# Hello")),
+  mockInitDocument: vi.fn(),
+  mockSetLineMetadata: vi.fn(),
+  mockAddFile: vi.fn(),
+  mockCreateTab: vi.fn(() => "new-tab-id"),
+  mockSetActiveTab: vi.fn(),
 }));
 
 vi.mock("@tauri-apps/api/webviewWindow", () => ({
@@ -20,6 +31,14 @@ vi.mock("@tauri-apps/api/webviewWindow", () => ({
 
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: mockInvoke,
+}));
+
+vi.mock("@tauri-apps/plugin-fs", () => ({
+  readTextFile: mockReadTextFile,
+}));
+
+vi.mock("sonner", () => ({
+  toast: { error: vi.fn(), info: vi.fn(), warning: vi.fn() },
 }));
 
 vi.mock("@/stores/workspaceStore", () => ({
@@ -34,6 +53,23 @@ vi.mock("@/stores/tabStore", () => ({
   },
 }));
 
+vi.mock("@/stores/documentStore", () => ({
+  useDocumentStore: {
+    getState: vi.fn(() => ({
+      initDocument: mockInitDocument,
+      setLineMetadata: mockSetLineMetadata,
+    })),
+  },
+}));
+
+vi.mock("@/stores/recentFilesStore", () => ({
+  useRecentFilesStore: {
+    getState: vi.fn(() => ({
+      addFile: mockAddFile,
+    })),
+  },
+}));
+
 vi.mock("@/utils/paths", () => ({
   isWithinRoot: vi.fn(),
   getParentDir: vi.fn((path: string) => {
@@ -42,10 +78,26 @@ vi.mock("@/utils/paths", () => ({
   }),
 }));
 
-import { moveTabToNewWorkspaceWindow } from "./useFileOperations";
+vi.mock("@/utils/perfLog", () => ({
+  perfReset: vi.fn(),
+  perfStart: vi.fn(),
+  perfEnd: vi.fn(),
+  perfMark: vi.fn(),
+}));
+
+vi.mock("@/utils/linebreakDetection", () => ({
+  detectLinebreaks: vi.fn(() => ({ lineEnding: "lf", hasMixedLineEndings: false })),
+}));
+
+vi.mock("@/hooks/useReplaceableTab", () => ({
+  findExistingTabForPath: vi.fn(() => null),
+}));
+
+import { moveTabToNewWorkspaceWindow, openFileInNewTabCore } from "./useFileOperations";
 import { useWorkspaceStore } from "@/stores/workspaceStore";
 import { useTabStore } from "@/stores/tabStore";
 import { isWithinRoot } from "@/utils/paths";
+import { toast } from "sonner";
 
 describe("moveTabToNewWorkspaceWindow", () => {
   beforeEach(() => {
@@ -175,5 +227,58 @@ describe("moveTabToNewWorkspaceWindow", () => {
     await moveTabToNewWorkspaceWindow("main", "tab-1", "/workspace-other/file.md");
 
     expect(mockInvoke).toHaveBeenCalled();
+  });
+});
+
+describe("openFileInNewTabCore", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+
+    vi.mocked(useTabStore.getState).mockReturnValue({
+      createTab: mockCreateTab,
+      setActiveTab: mockSetActiveTab,
+      closeTab: mockCloseTab,
+      detachTab: mockDetachTab,
+    } as unknown as ReturnType<typeof useTabStore.getState>);
+
+    mockReadTextFile.mockResolvedValue("# Hello World");
+    mockCreateTab.mockReturnValue("new-tab-id");
+  });
+
+  it("creates tab and initializes document on success", async () => {
+    await openFileInNewTabCore("main", "/path/to/file.md");
+
+    expect(mockCreateTab).toHaveBeenCalledWith("main", "/path/to/file.md");
+    expect(mockReadTextFile).toHaveBeenCalledWith("/path/to/file.md");
+    expect(mockInitDocument).toHaveBeenCalledWith("new-tab-id", "# Hello World", "/path/to/file.md");
+    expect(mockAddFile).toHaveBeenCalledWith("/path/to/file.md");
+  });
+
+  it("closes orphaned tab when readTextFile throws", async () => {
+    mockReadTextFile.mockRejectedValue(new Error("Permission denied"));
+
+    await openFileInNewTabCore("main", "/path/to/file.md");
+
+    // Tab was created, then read failed — tab must be detached (not closeTab,
+    // to avoid polluting "reopen closed tab" history)
+    expect(mockCreateTab).toHaveBeenCalledWith("main", "/path/to/file.md");
+    expect(mockDetachTab).toHaveBeenCalledWith("main", "new-tab-id");
+    expect(mockInitDocument).not.toHaveBeenCalled();
+  });
+
+  it("shows toast error when readTextFile throws", async () => {
+    mockReadTextFile.mockRejectedValue(new Error("File not found"));
+
+    await openFileInNewTabCore("main", "/path/missing.md");
+
+    expect(toast.error).toHaveBeenCalled();
+  });
+
+  it("does not add to recent files when readTextFile throws", async () => {
+    mockReadTextFile.mockRejectedValue(new Error("Binary file"));
+
+    await openFileInNewTabCore("main", "/path/to/binary.png");
+
+    expect(mockAddFile).not.toHaveBeenCalled();
   });
 });

@@ -65,6 +65,46 @@ export async function moveTabToNewWorkspaceWindow(
   }
 }
 
+/**
+ * Open a file in a new tab (core logic).
+ * Creates the tab, reads the file, and initializes the document.
+ * On failure, cleans up the orphaned tab and shows a toast error.
+ * @internal Exported for testing
+ */
+export async function openFileInNewTabCore(
+  windowLabel: string,
+  path: string
+): Promise<void> {
+  perfStart("createTab");
+  const tabId = useTabStore.getState().createTab(windowLabel, path);
+  perfEnd("createTab");
+
+  try {
+    perfStart("readTextFile");
+    const content = await readTextFile(path);
+    perfEnd("readTextFile", { size: content.length });
+
+    perfStart("initDocument");
+    useDocumentStore.getState().initDocument(tabId, content, path);
+    perfEnd("initDocument");
+
+    perfStart("detectLinebreaks");
+    const lineMeta = detectLinebreaks(content);
+    useDocumentStore.getState().setLineMetadata(tabId, lineMeta);
+    perfEnd("detectLinebreaks");
+
+    useRecentFilesStore.getState().addFile(path);
+    perfMark("openFileInNewTab:complete");
+  } catch (error) {
+    console.error("[FileOps] Failed to open file:", path, error);
+    // Clean up the orphaned tab — without initDocument, it renders blank.
+    // Use detachTab (not closeTab) to avoid polluting the "reopen closed tab" history.
+    useTabStore.getState().detachTab(windowLabel, tabId);
+    const msg = error instanceof Error ? error.message : String(error);
+    toast.error(`Failed to open file: ${msg}`);
+  }
+}
+
 export function useFileOperations() {
   const windowLabel = useWindowLabel();
 
@@ -85,30 +125,7 @@ export function useFileOperations() {
         return;
       }
 
-      // Create new tab
-      perfStart("createTab");
-      const tabId = useTabStore.getState().createTab(windowLabel, path);
-      perfEnd("createTab");
-
-      try {
-        perfStart("readTextFile");
-        const content = await readTextFile(path);
-        perfEnd("readTextFile", { size: content.length });
-
-        perfStart("initDocument");
-        useDocumentStore.getState().initDocument(tabId, content, path);
-        perfEnd("initDocument");
-
-        perfStart("detectLinebreaks");
-        const lineMeta = detectLinebreaks(content);
-        useDocumentStore.getState().setLineMetadata(tabId, lineMeta);
-        perfEnd("detectLinebreaks");
-
-        useRecentFilesStore.getState().addFile(path);
-        perfMark("openFileInNewTab:complete");
-      } catch (error) {
-        console.error("[FileOps] Failed to open file:", path, error);
-      }
+      await openFileInNewTabCore(windowLabel, path);
     },
     [windowLabel]
   );
