@@ -18,7 +18,15 @@ export default defineConfig({
         "**/*.d.ts",
         "**/*.config.*",
         "**/index.ts",
+        "**/*.css",
+        "src/assets/**",
       ],
+      thresholds: {
+        statements: 43,
+        branches: 37,
+        functions: 50,
+        lines: 44,
+      },
     },
   },
   resolve: {

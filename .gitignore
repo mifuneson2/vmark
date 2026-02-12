@@ -6,14 +6,19 @@ vectors.d*
 dev-docs/
 
 # =============================================================================
-# AI Assistant Config (local only)
+# AI Assistant Config & Artifacts (local only)
 # =============================================================================
-.claude/
-.codex/
-.mcp.json
-CLAUDE.md
+# .claude/
+# .codex/
+# .mcp.json
+# CLAUDE.md
 CLAUDE.local.md
-AGENTS.md
+.claude/settings.local.json
+.codex/prompts/
+# AGENTS.md
+*_ANALYSIS.md
+*_PLAN.md
+*_ROADMAP.md
 
 # =============================================================================
 # Node.js / pnpm
