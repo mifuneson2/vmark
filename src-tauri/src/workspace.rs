@@ -1,24 +1,10 @@
+use crate::app_paths;
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 use std::fs;
 use std::path::Path;
+use tauri::Manager;
 use tauri_plugin_dialog::{DialogExt, FilePath};
-
-/// VS Code-compatible workspace file with VMark namespace extensions.
-/// Stored in `.vmark/vmark.code-workspace`.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct WorkspaceFile {
-    /// Workspace folders (VS Code compatible)
-    #[serde(default)]
-    pub folders: Vec<WorkspaceFolder>,
-    /// Settings namespace (VS Code compatible)
-    #[serde(default)]
-    pub settings: WorkspaceSettings,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
-pub struct WorkspaceFolder {
-    pub path: String,
-}
 
 /// Workspace identity and trust information
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -36,63 +22,8 @@ pub struct WorkspaceIdentity {
     pub trusted_at: Option<i64>,
 }
 
-/// Settings block with VMark-namespaced fields
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
-pub struct WorkspaceSettings {
-    /// Folders to exclude from file tree (VMark extension)
-    #[serde(rename = "vmark.excludeFolders", default)]
-    pub exclude_folders: Vec<String>,
-    /// Show hidden files in file explorer (VMark extension)
-    #[serde(rename = "vmark.showHiddenFiles", default)]
-    pub show_hidden_files: bool,
-    /// Last open tabs for session restore (VMark extension)
-    #[serde(rename = "vmark.lastOpenTabs", default)]
-    pub last_open_tabs: Vec<String>,
-    /// AI configuration (VMark extension)
-    #[serde(rename = "vmark.ai", default, skip_serializing_if = "Option::is_none")]
-    pub ai: Option<serde_json::Value>,
-    /// Workspace identity and trust info (VMark extension)
-    #[serde(rename = "vmark.identity", default, skip_serializing_if = "Option::is_none")]
-    pub identity: Option<WorkspaceIdentity>,
-}
-
-impl Default for WorkspaceFile {
-    fn default() -> Self {
-        Self {
-            folders: vec![WorkspaceFolder {
-                path: ".".to_string(),
-            }],
-            settings: WorkspaceSettings {
-                exclude_folders: vec![
-                    ".git".to_string(),
-                    "node_modules".to_string(),
-                    ".vmark".to_string(),
-                ],
-                show_hidden_files: false,
-                last_open_tabs: vec![],
-                ai: None,
-                identity: None,
-            },
-        }
-    }
-}
-
-/// Legacy workspace configuration (stored in root/.vmark file)
-/// Kept for migration purposes only.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-struct LegacyWorkspaceConfig {
-    #[serde(default)]
-    pub version: u32,
-    #[serde(rename = "excludeFolders", default)]
-    pub exclude_folders: Vec<String>,
-    #[serde(rename = "lastOpenTabs", default)]
-    pub last_open_tabs: Vec<String>,
-    #[serde(default)]
-    pub ai: Option<serde_json::Value>,
-}
-
-/// Workspace configuration - the public API type.
-/// Maps to/from WorkspaceFile for storage.
+/// Workspace configuration — the public API type.
+/// Stored as `<app_data>/workspaces/<hash>.json`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WorkspaceConfig {
     pub version: u32,
@@ -112,11 +43,7 @@ impl Default for WorkspaceConfig {
     fn default() -> Self {
         Self {
             version: 1,
-            exclude_folders: vec![
-                ".git".to_string(),
-                "node_modules".to_string(),
-                ".vmark".to_string(),
-            ],
+            exclude_folders: vec![".git".to_string(), "node_modules".to_string()],
             show_hidden_files: false,
             last_open_tabs: vec![],
             ai: None,
@@ -125,128 +52,162 @@ impl Default for WorkspaceConfig {
     }
 }
 
-impl From<WorkspaceFile> for WorkspaceConfig {
-    fn from(file: WorkspaceFile) -> Self {
-        Self {
-            version: 1,
-            exclude_folders: file.settings.exclude_folders,
-            show_hidden_files: file.settings.show_hidden_files,
-            last_open_tabs: file.settings.last_open_tabs,
-            ai: file.settings.ai,
-            identity: file.settings.identity,
-        }
-    }
+// ============================================================================
+// Path hashing
+// ============================================================================
+
+/// Hash a workspace root path to a deterministic 16-hex-char filename.
+/// Normalizes trailing separators before hashing for cross-platform consistency.
+fn hash_root_path(root_path: &str) -> String {
+    let normalized = root_path
+        .trim_end_matches('/')
+        .trim_end_matches('\\');
+    let hash = Sha256::digest(normalized.as_bytes());
+    hash.iter()
+        .take(8)
+        .map(|b| format!("{:02x}", b))
+        .collect()
 }
 
-impl From<WorkspaceConfig> for WorkspaceFile {
-    fn from(config: WorkspaceConfig) -> Self {
-        Self {
-            folders: vec![WorkspaceFolder {
-                path: ".".to_string(),
-            }],
-            settings: WorkspaceSettings {
-                exclude_folders: config.exclude_folders,
-                show_hidden_files: config.show_hidden_files,
-                last_open_tabs: config.last_open_tabs,
-                ai: config.ai,
-                identity: config.identity,
-            },
-        }
-    }
+/// Get the workspaces directory inside app data.
+fn get_workspaces_dir(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
+    let app_data = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    Ok(app_data.join("workspaces"))
 }
 
-impl From<LegacyWorkspaceConfig> for WorkspaceConfig {
-    fn from(legacy: LegacyWorkspaceConfig) -> Self {
-        Self {
-            version: legacy.version,
-            exclude_folders: legacy.exclude_folders,
+/// Get the path to a workspace config file in app data.
+fn get_workspace_config_path(
+    app: &tauri::AppHandle,
+    root_path: &str,
+) -> Result<std::path::PathBuf, String> {
+    let ws_dir = get_workspaces_dir(app)?;
+    let hash = hash_root_path(root_path);
+    Ok(ws_dir.join(format!("{hash}.json")))
+}
+
+// ============================================================================
+// Legacy migration types (kept private)
+// ============================================================================
+
+/// VS Code-compatible workspace file — legacy `.vmark/vmark.code-workspace`.
+#[derive(Debug, Deserialize)]
+struct LegacyWorkspaceFile {
+    #[serde(default)]
+    settings: LegacyWorkspaceSettings,
+}
+
+#[derive(Debug, Deserialize, Default)]
+struct LegacyWorkspaceSettings {
+    #[serde(rename = "vmark.excludeFolders", default)]
+    exclude_folders: Vec<String>,
+    #[serde(rename = "vmark.showHiddenFiles", default)]
+    show_hidden_files: bool,
+    #[serde(rename = "vmark.lastOpenTabs", default)]
+    last_open_tabs: Vec<String>,
+    #[serde(rename = "vmark.ai", default)]
+    ai: Option<serde_json::Value>,
+    #[serde(rename = "vmark.identity", default)]
+    identity: Option<WorkspaceIdentity>,
+}
+
+/// Ancient legacy workspace configuration (plain `.vmark` file).
+#[derive(Debug, Deserialize)]
+struct AncientLegacyConfig {
+    #[serde(default)]
+    version: u32,
+    #[serde(rename = "excludeFolders", default)]
+    exclude_folders: Vec<String>,
+    #[serde(rename = "lastOpenTabs", default)]
+    last_open_tabs: Vec<String>,
+    #[serde(default)]
+    ai: Option<serde_json::Value>,
+}
+
+// ============================================================================
+// Legacy migration
+// ============================================================================
+
+/// Try to read config from legacy `.vmark/` directory or ancient `.vmark` file.
+/// Returns `Ok(Some(config))` if found, `Ok(None)` if no legacy exists.
+fn migrate_from_legacy(root_path: &str) -> Result<Option<WorkspaceConfig>, String> {
+    let root = Path::new(root_path);
+    let dot_vmark = root.join(".vmark");
+
+    // 1. Try .vmark/vmark.code-workspace (directory format)
+    if dot_vmark.is_dir() {
+        let ws_file_path = dot_vmark.join("vmark.code-workspace");
+        if ws_file_path.exists() {
+            let content = fs::read_to_string(&ws_file_path)
+                .map_err(|e| format!("Failed to read legacy workspace file: {e}"))?;
+            let ws_file: LegacyWorkspaceFile = serde_json::from_str(&content)
+                .map_err(|e| format!("Failed to parse legacy workspace file: {e}"))?;
+
+            // Strip ".vmark" from exclude_folders if present (no longer needed)
+            let exclude_folders: Vec<String> = ws_file
+                .settings
+                .exclude_folders
+                .into_iter()
+                .filter(|f| f != ".vmark")
+                .collect();
+
+            return Ok(Some(WorkspaceConfig {
+                version: 1,
+                exclude_folders,
+                show_hidden_files: ws_file.settings.show_hidden_files,
+                last_open_tabs: ws_file.settings.last_open_tabs,
+                ai: ws_file.settings.ai,
+                identity: ws_file.settings.identity,
+            }));
+        }
+    }
+
+    // 2. Try .vmark as a plain file (ancient format)
+    if dot_vmark.exists() && dot_vmark.is_file() {
+        let content = fs::read_to_string(&dot_vmark)
+            .map_err(|e| format!("Failed to read ancient .vmark: {e}"))?;
+        let ancient: AncientLegacyConfig = serde_json::from_str(&content)
+            .map_err(|e| format!("Failed to parse ancient .vmark: {e}"))?;
+
+        let exclude_folders: Vec<String> = ancient
+            .exclude_folders
+            .into_iter()
+            .filter(|f| f != ".vmark")
+            .collect();
+
+        return Ok(Some(WorkspaceConfig {
+            version: ancient.version,
+            exclude_folders,
             show_hidden_files: false,
-            last_open_tabs: legacy.last_open_tabs,
-            ai: legacy.ai,
-            identity: None, // Legacy configs don't have identity
-        }
+            last_open_tabs: ancient.last_open_tabs,
+            ai: ancient.ai,
+            identity: None,
+        }));
+    }
+
+    Ok(None)
+}
+
+/// Best-effort cleanup of legacy `.vmark/` in a workspace root.
+/// Removes workspace file, then tries to remove the directory (only if empty).
+fn cleanup_old_vmark(root_path: &str) {
+    let root = Path::new(root_path);
+    let dot_vmark = root.join(".vmark");
+
+    if dot_vmark.is_dir() {
+        // Remove known file
+        let _ = fs::remove_file(dot_vmark.join("vmark.code-workspace"));
+        // Try rmdir (fails if not empty — that's fine)
+        let _ = fs::remove_dir(&dot_vmark);
+    } else if dot_vmark.is_file() {
+        let _ = fs::remove_file(&dot_vmark);
     }
 }
 
-/// Get the path to the new workspace file (.vmark/vmark.code-workspace)
-fn get_workspace_file_path(root_path: &Path) -> std::path::PathBuf {
-    root_path.join(".vmark").join("vmark.code-workspace")
-}
+// ============================================================================
+// Tauri commands
+// ============================================================================
 
-/// Get the path to the legacy config file (.vmark as a file)
-fn get_legacy_config_path(root_path: &Path) -> std::path::PathBuf {
-    root_path.join(".vmark")
-}
-
-/// Check if the legacy .vmark is a file (not a directory)
-fn is_legacy_config(root_path: &Path) -> bool {
-    let path = get_legacy_config_path(root_path);
-    path.exists() && path.is_file()
-}
-
-/// Read legacy config from .vmark file
-fn read_legacy_config(root_path: &Path) -> Result<Option<LegacyWorkspaceConfig>, String> {
-    let config_path = get_legacy_config_path(root_path);
-
-    if !config_path.exists() || !config_path.is_file() {
-        return Ok(None);
-    }
-
-    let content = fs::read_to_string(&config_path)
-        .map_err(|e| format!("Failed to read legacy .vmark: {e}"))?;
-
-    let config: LegacyWorkspaceConfig = serde_json::from_str(&content)
-        .map_err(|e| format!("Failed to parse legacy .vmark: {e}"))?;
-
-    Ok(Some(config))
-}
-
-/// Migrate legacy .vmark file to new .vmark/vmark.code-workspace format.
-/// Returns true if migration occurred, false if no migration needed.
-fn migrate_legacy_config(root_path: &Path) -> Result<bool, String> {
-    if !is_legacy_config(root_path) {
-        return Ok(false);
-    }
-
-    // Read legacy config
-    let legacy = match read_legacy_config(root_path)? {
-        Some(c) => c,
-        None => return Ok(false),
-    };
-
-    // Convert to new format
-    let config: WorkspaceConfig = legacy.into();
-    let workspace_file: WorkspaceFile = config.into();
-
-    // Ensure .vmark directory exists
-    let vmark_dir = root_path.join(".vmark");
-
-    // Rename legacy file to backup before creating directory
-    let legacy_path = get_legacy_config_path(root_path);
-    let backup_path = root_path.join(".vmark.backup");
-
-    fs::rename(&legacy_path, &backup_path)
-        .map_err(|e| format!("Failed to backup legacy .vmark: {e}"))?;
-
-    // Create .vmark directory
-    fs::create_dir_all(&vmark_dir)
-        .map_err(|e| format!("Failed to create .vmark directory: {e}"))?;
-
-    // Write new workspace file
-    let workspace_path = get_workspace_file_path(root_path);
-    let content = serde_json::to_string_pretty(&workspace_file)
-        .map_err(|e| format!("Failed to serialize workspace: {e}"))?;
-
-    fs::write(&workspace_path, content)
-        .map_err(|e| format!("Failed to write workspace file: {e}"))?;
-
-    // Remove backup after successful migration
-    let _ = fs::remove_file(&backup_path);
-
-    Ok(true)
-}
-
-/// Open folder dialog and return selected path
+/// Open folder dialog and return selected path.
 #[tauri::command]
 pub async fn open_folder_dialog(app: tauri::AppHandle) -> Result<Option<String>, String> {
     let (tx, rx) = std::sync::mpsc::channel::<Option<FilePath>>();
@@ -265,64 +226,66 @@ pub async fn open_folder_dialog(app: tauri::AppHandle) -> Result<Option<String>,
     }
 }
 
-/// Read workspace config, with automatic migration from legacy format.
+/// Read workspace config from app data, with one-time migration from legacy `.vmark/`.
 #[tauri::command]
-pub fn read_workspace_config(root_path: &str) -> Result<Option<WorkspaceConfig>, String> {
-    let root = Path::new(root_path);
+pub fn read_workspace_config(
+    app: tauri::AppHandle,
+    root_path: &str,
+) -> Result<Option<WorkspaceConfig>, String> {
+    let ws_path = get_workspace_config_path(&app, root_path)?;
 
-    // Try to migrate legacy config first
-    let _ = migrate_legacy_config(root);
+    // New location exists — read directly
+    if ws_path.exists() {
+        let content = fs::read_to_string(&ws_path)
+            .map_err(|e| format!("Failed to read workspace config: {e}"))?;
+        let config: WorkspaceConfig = serde_json::from_str(&content)
+            .map_err(|e| format!("Failed to parse workspace config: {e}"))?;
+        return Ok(Some(config));
+    }
 
-    // Read from new location
-    let workspace_path = get_workspace_file_path(root);
+    // Try migrate from legacy locations
+    if let Some(config) = migrate_from_legacy(root_path)? {
+        // Write to new location — only cleanup old .vmark/ on success
+        let ws_dir = get_workspaces_dir(&app)?;
+        fs::create_dir_all(&ws_dir)
+            .map_err(|e| format!("Failed to create workspaces dir: {e}"))?;
+        let content = serde_json::to_string_pretty(&config)
+            .map_err(|e| format!("Failed to serialize config: {e}"))?;
 
-    if !workspace_path.exists() {
-        // Fall back to legacy location for backwards compatibility
-        if let Some(legacy) = read_legacy_config(root)? {
-            return Ok(Some(legacy.into()));
+        if app_paths::atomic_write_file(&ws_path, content.as_bytes()).is_ok() {
+            cleanup_old_vmark(root_path);
         }
-        return Ok(None);
+
+        return Ok(Some(config));
     }
 
-    let content = fs::read_to_string(&workspace_path)
-        .map_err(|e| format!("Failed to read workspace file: {e}"))?;
-
-    let workspace_file: WorkspaceFile = serde_json::from_str(&content)
-        .map_err(|e| format!("Failed to parse workspace file: {e}"))?;
-
-    Ok(Some(workspace_file.into()))
+    Ok(None)
 }
 
-/// Write workspace config to .vmark/vmark.code-workspace
+/// Write workspace config to `<app_data>/workspaces/<hash>.json`.
 #[tauri::command]
-pub fn write_workspace_config(root_path: &str, config: WorkspaceConfig) -> Result<(), String> {
-    let root = Path::new(root_path);
-    let vmark_dir = root.join(".vmark");
+pub fn write_workspace_config(
+    app: tauri::AppHandle,
+    root_path: &str,
+    config: WorkspaceConfig,
+) -> Result<(), String> {
+    let ws_path = get_workspace_config_path(&app, root_path)?;
 
-    // Ensure .vmark directory exists
-    if !vmark_dir.exists() {
-        fs::create_dir_all(&vmark_dir)
-            .map_err(|e| format!("Failed to create .vmark directory: {e}"))?;
+    // Ensure parent directory exists
+    if let Some(parent) = ws_path.parent() {
+        fs::create_dir_all(parent)
+            .map_err(|e| format!("Failed to create workspaces dir: {e}"))?;
     }
 
-    let workspace_file: WorkspaceFile = config.into();
-    let workspace_path = get_workspace_file_path(root);
+    let content = serde_json::to_string_pretty(&config)
+        .map_err(|e| format!("Failed to serialize config: {e}"))?;
 
-    let content = serde_json::to_string_pretty(&workspace_file)
-        .map_err(|e| format!("Failed to serialize workspace: {e}"))?;
-
-    fs::write(&workspace_path, content)
-        .map_err(|e| format!("Failed to write workspace file: {e}"))?;
-
-    Ok(())
+    app_paths::atomic_write_file(&ws_path, content.as_bytes())
 }
 
-/// Check if workspace config exists (in either new or legacy location)
-#[tauri::command]
-pub fn has_workspace_config(root_path: &str) -> bool {
-    let root = Path::new(root_path);
-    get_workspace_file_path(root).exists() || is_legacy_config(root)
-}
+// ============================================================================
+// Tests
+// ============================================================================
 
 #[cfg(test)]
 mod tests {
@@ -331,16 +294,151 @@ mod tests {
     use tempfile::tempdir;
 
     #[test]
-    fn test_default_workspace_file() {
-        let ws = WorkspaceFile::default();
-        assert_eq!(ws.folders.len(), 1);
-        assert_eq!(ws.folders[0].path, ".");
-        assert!(ws.settings.exclude_folders.contains(&".git".to_string()));
-        assert!(!ws.settings.show_hidden_files);
+    fn test_hash_root_path_deterministic() {
+        let h1 = hash_root_path("/Users/test/project");
+        let h2 = hash_root_path("/Users/test/project");
+        assert_eq!(h1, h2);
+        assert_eq!(h1.len(), 16); // 8 bytes = 16 hex chars
     }
 
     #[test]
-    fn test_workspace_config_to_file_roundtrip() {
+    fn test_hash_root_path_normalizes_trailing_slash() {
+        let h1 = hash_root_path("/Users/test/project");
+        let h2 = hash_root_path("/Users/test/project/");
+        assert_eq!(h1, h2);
+    }
+
+    #[test]
+    fn test_hash_root_path_normalizes_trailing_backslash() {
+        let h1 = hash_root_path("C:\\Users\\test\\project");
+        let h2 = hash_root_path("C:\\Users\\test\\project\\");
+        assert_eq!(h1, h2);
+    }
+
+    #[test]
+    fn test_hash_root_path_different_paths_differ() {
+        let h1 = hash_root_path("/Users/test/project-a");
+        let h2 = hash_root_path("/Users/test/project-b");
+        assert_ne!(h1, h2);
+    }
+
+    #[test]
+    fn test_default_workspace_config() {
+        let config = WorkspaceConfig::default();
+        assert_eq!(config.version, 1);
+        assert!(config.exclude_folders.contains(&".git".to_string()));
+        assert!(config.exclude_folders.contains(&"node_modules".to_string()));
+        assert!(!config.exclude_folders.contains(&".vmark".to_string()));
+        assert!(!config.show_hidden_files);
+        assert!(config.last_open_tabs.is_empty());
+    }
+
+    #[test]
+    fn test_migrate_from_legacy_directory_format() {
+        let dir = tempdir().unwrap();
+        let root = dir.path();
+
+        // Create .vmark/vmark.code-workspace
+        let vmark_dir = root.join(".vmark");
+        fs::create_dir_all(&vmark_dir).unwrap();
+        let ws_content = r#"{
+            "folders": [{"path": "."}],
+            "settings": {
+                "vmark.excludeFolders": [".git", "node_modules", ".vmark"],
+                "vmark.showHiddenFiles": true,
+                "vmark.lastOpenTabs": ["doc.md"]
+            }
+        }"#;
+        fs::write(vmark_dir.join("vmark.code-workspace"), ws_content).unwrap();
+
+        let config = migrate_from_legacy(root.to_str().unwrap())
+            .unwrap()
+            .unwrap();
+        assert!(config.show_hidden_files);
+        assert!(config.last_open_tabs.contains(&"doc.md".to_string()));
+        // .vmark should be stripped from exclude_folders
+        assert!(!config.exclude_folders.contains(&".vmark".to_string()));
+        assert!(config.exclude_folders.contains(&".git".to_string()));
+    }
+
+    #[test]
+    fn test_migrate_from_legacy_ancient_file_format() {
+        let dir = tempdir().unwrap();
+        let root = dir.path();
+
+        // Create .vmark as plain file
+        let legacy_content = r#"{
+            "version": 1,
+            "excludeFolders": ["legacy_folder", ".vmark"],
+            "lastOpenTabs": ["old.md"]
+        }"#;
+        fs::write(root.join(".vmark"), legacy_content).unwrap();
+
+        let config = migrate_from_legacy(root.to_str().unwrap())
+            .unwrap()
+            .unwrap();
+        assert!(config.exclude_folders.contains(&"legacy_folder".to_string()));
+        assert!(!config.exclude_folders.contains(&".vmark".to_string()));
+        assert!(config.last_open_tabs.contains(&"old.md".to_string()));
+    }
+
+    #[test]
+    fn test_migrate_from_legacy_nothing() {
+        let dir = tempdir().unwrap();
+        let result = migrate_from_legacy(dir.path().to_str().unwrap()).unwrap();
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_cleanup_old_vmark_directory() {
+        let dir = tempdir().unwrap();
+        let root = dir.path();
+
+        // Create .vmark directory with workspace file
+        let vmark_dir = root.join(".vmark");
+        fs::create_dir_all(&vmark_dir).unwrap();
+        fs::write(vmark_dir.join("vmark.code-workspace"), "{}").unwrap();
+
+        cleanup_old_vmark(root.to_str().unwrap());
+
+        // Directory should be removed (was empty after file removal)
+        assert!(!vmark_dir.exists());
+    }
+
+    #[test]
+    fn test_cleanup_old_vmark_directory_non_empty() {
+        let dir = tempdir().unwrap();
+        let root = dir.path();
+
+        // Create .vmark directory with extra file
+        let vmark_dir = root.join(".vmark");
+        fs::create_dir_all(&vmark_dir).unwrap();
+        fs::write(vmark_dir.join("vmark.code-workspace"), "{}").unwrap();
+        fs::write(vmark_dir.join("other-file"), "keep").unwrap();
+
+        cleanup_old_vmark(root.to_str().unwrap());
+
+        // Directory should still exist (has other files)
+        assert!(vmark_dir.exists());
+        // But workspace file should be gone
+        assert!(!vmark_dir.join("vmark.code-workspace").exists());
+    }
+
+    #[test]
+    fn test_cleanup_old_vmark_file() {
+        let dir = tempdir().unwrap();
+        let root = dir.path();
+
+        // Create .vmark as plain file
+        fs::write(root.join(".vmark"), "{}").unwrap();
+
+        cleanup_old_vmark(root.to_str().unwrap());
+
+        assert!(!root.join(".vmark").exists());
+    }
+
+    #[test]
+    fn test_workspace_config_serialization_roundtrip() {
         let config = WorkspaceConfig {
             version: 1,
             exclude_folders: vec!["test".to_string()],
@@ -350,109 +448,11 @@ mod tests {
             identity: None,
         };
 
-        let file: WorkspaceFile = config.clone().into();
-        let back: WorkspaceConfig = file.into();
+        let json = serde_json::to_string_pretty(&config).unwrap();
+        let back: WorkspaceConfig = serde_json::from_str(&json).unwrap();
 
         assert_eq!(back.exclude_folders, config.exclude_folders);
         assert_eq!(back.show_hidden_files, config.show_hidden_files);
         assert_eq!(back.last_open_tabs, config.last_open_tabs);
-    }
-
-    #[test]
-    fn test_read_nonexistent_workspace() {
-        let dir = tempdir().unwrap();
-        let result = read_workspace_config(dir.path().to_str().unwrap());
-        assert!(result.is_ok());
-        assert!(result.unwrap().is_none());
-    }
-
-    #[test]
-    fn test_write_and_read_workspace() {
-        let dir = tempdir().unwrap();
-        let root = dir.path().to_str().unwrap();
-
-        let config = WorkspaceConfig {
-            version: 1,
-            exclude_folders: vec!["custom".to_string()],
-            show_hidden_files: false,
-            last_open_tabs: vec!["doc.md".to_string()],
-            ai: None,
-            identity: None,
-        };
-
-        write_workspace_config(root, config.clone()).unwrap();
-
-        // Verify file was created in new location
-        assert!(dir.path().join(".vmark").join("vmark.code-workspace").exists());
-
-        let read = read_workspace_config(root).unwrap().unwrap();
-        assert_eq!(read.exclude_folders, config.exclude_folders);
-        assert_eq!(read.last_open_tabs, config.last_open_tabs);
-    }
-
-    #[test]
-    fn test_migrate_legacy_config() {
-        let dir = tempdir().unwrap();
-        let root = dir.path();
-
-        // Create legacy .vmark file
-        let legacy = r#"{
-            "version": 1,
-            "excludeFolders": ["legacy_folder"],
-            "lastOpenTabs": ["old.md"]
-        }"#;
-        fs::write(root.join(".vmark"), legacy).unwrap();
-
-        // Verify it's detected as legacy
-        assert!(is_legacy_config(root));
-
-        // Read should trigger migration
-        let config = read_workspace_config(root.to_str().unwrap()).unwrap().unwrap();
-
-        // Verify migration occurred
-        assert!(!is_legacy_config(root)); // Legacy file should be gone
-        assert!(root.join(".vmark").is_dir()); // .vmark should be a directory now
-        assert!(get_workspace_file_path(root).exists()); // New file should exist
-
-        // Verify data was preserved
-        assert!(config.exclude_folders.contains(&"legacy_folder".to_string()));
-        assert!(config.last_open_tabs.contains(&"old.md".to_string()));
-    }
-
-    #[test]
-    fn test_has_workspace_config_new_format() {
-        let dir = tempdir().unwrap();
-        let root = dir.path();
-
-        assert!(!has_workspace_config(root.to_str().unwrap()));
-
-        // Create new format
-        fs::create_dir_all(root.join(".vmark")).unwrap();
-        fs::write(root.join(".vmark").join("vmark.code-workspace"), "{}").unwrap();
-
-        assert!(has_workspace_config(root.to_str().unwrap()));
-    }
-
-    #[test]
-    fn test_has_workspace_config_legacy_format() {
-        let dir = tempdir().unwrap();
-        let root = dir.path();
-
-        // Create legacy format
-        fs::write(root.join(".vmark"), "{}").unwrap();
-
-        assert!(has_workspace_config(root.to_str().unwrap()));
-    }
-
-    #[test]
-    fn test_malformed_legacy_json_error() {
-        let dir = tempdir().unwrap();
-        let root = dir.path();
-
-        // Create malformed legacy file
-        fs::write(root.join(".vmark"), "not valid json").unwrap();
-
-        let result = read_workspace_config(root.to_str().unwrap());
-        assert!(result.is_err());
     }
 }

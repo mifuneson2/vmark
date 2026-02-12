@@ -54,7 +54,7 @@ export type PortResolver = () => number | undefined;
 export interface WebSocketBridgeConfig {
   /** Host to connect to (default: localhost) */
   host?: string;
-  /** Port to connect to (default: auto-discover from ~/.vmark/mcp-port) */
+  /** Port to connect to (default: auto-discover from app data mcp-port file) */
   port?: number;
   /** Function to resolve port dynamically (called on each connect attempt) */
   portResolver?: PortResolver;
@@ -262,7 +262,7 @@ export class WebSocketBridge implements Bridge {
       }
       throw new Error(
         'Cannot determine VMark port. Is VMark running? ' +
-          'The port file (~/.vmark/mcp-port) was not found.'
+          'The port file (mcp-port) was not found in the app data directory.'
       );
     }
 

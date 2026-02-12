@@ -1,8 +1,8 @@
 //! App Paths - Centralized path management for Tauri app data.
 //!
 //! Provides:
-//! - Bootstrap file writing for MCP sidecar discovery
 //! - Migration from legacy ~/.vmark/ to standard app data directory
+//! - Cleanup of legacy ~/.vmark/ directory
 //! - Atomic file operations to prevent race conditions
 
 use std::fs::{self, File, OpenOptions};
@@ -14,9 +14,6 @@ use tauri::Manager;
 // Constants
 // ============================================================================
 
-/// Bootstrap file name - contains path to app data directory
-const BOOTSTRAP_FILE: &str = "app-data-path";
-
 /// Migration marker file name
 const MIGRATION_MARKER: &str = ".migrated-from-legacy";
 
@@ -26,31 +23,12 @@ pub const MCP_SETTINGS_FILE: &str = "mcp-settings.json";
 /// MCP port file name
 pub const MCP_PORT_FILE: &str = "mcp-port";
 
+/// Bootstrap file name — legacy, only used for cleanup
+const BOOTSTRAP_FILE: &str = "app-data-path";
+
 // ============================================================================
 // Public API (Tauri-dependent)
 // ============================================================================
-
-/// Get the legacy directory path (~/.vmark/).
-/// This is being phased out - only used for bootstrap file and migration.
-pub fn get_legacy_dir() -> Option<PathBuf> {
-    dirs::home_dir().map(|h| h.join(".vmark"))
-}
-
-/// Write the app data path to a bootstrap file for MCP sidecar discovery.
-///
-/// The MCP sidecar is a separate Node.js process without access to Tauri's AppHandle.
-/// Instead of duplicating platform-specific path logic in Node.js, we write a bootstrap file:
-/// - File: ~/.vmark/app-data-path
-/// - Contents: Absolute path to app data directory
-/// - Read by: Node.js sidecar to locate mcp-port and mcp-settings.json
-///
-/// Uses atomic write (temp file + rename) to prevent partial reads.
-pub fn write_app_data_path_bootstrap(app: &tauri::AppHandle) -> Result<(), String> {
-    let app_data = app.path().app_data_dir().map_err(|e| e.to_string())?;
-    let legacy_dir = get_legacy_dir().ok_or("Cannot determine home directory")?;
-
-    write_bootstrap_file_impl(&legacy_dir, &app_data)
-}
 
 /// Migrate legacy files from ~/.vmark/ to the app data directory.
 ///
@@ -59,7 +37,10 @@ pub fn write_app_data_path_bootstrap(app: &tauri::AppHandle) -> Result<(), Strin
 /// - Creates a marker file atomically to prevent re-running (even with concurrent instances)
 /// - Only writes marker on successful migration or when nothing to migrate
 pub fn migrate_legacy_files(app: &tauri::AppHandle) -> Result<(), String> {
-    let legacy_dir = get_legacy_dir().ok_or("Cannot determine home directory")?;
+    let legacy_dir = match get_legacy_dir() {
+        Some(d) => d,
+        None => return Ok(()), // No home dir — nothing to migrate
+    };
     let app_data = app.path().app_data_dir().map_err(|e| e.to_string())?;
 
     migrate_legacy_files_impl(&legacy_dir, &app_data)
@@ -77,45 +58,39 @@ pub fn get_mcp_settings_path(app: &tauri::AppHandle) -> Result<PathBuf, String> 
     Ok(app_data.join(MCP_SETTINGS_FILE))
 }
 
+/// Best-effort cleanup of legacy ~/.vmark/ directory.
+/// Only removes mcp-settings.json if migration was successful (marker exists).
+/// Always removes bootstrap and port files (they're written fresh every startup).
+pub fn cleanup_legacy_home_dir(app: &tauri::AppHandle) {
+    let Some(legacy_dir) = get_legacy_dir() else {
+        return;
+    };
+    if !legacy_dir.exists() {
+        return;
+    }
+
+    // Always safe to remove: bootstrap file is obsolete, port file is written fresh
+    let _ = fs::remove_file(legacy_dir.join(BOOTSTRAP_FILE));
+    let _ = fs::remove_file(legacy_dir.join(MCP_PORT_FILE));
+
+    // Only remove settings if migration completed (marker exists in app data)
+    if let Ok(app_data) = app.path().app_data_dir() {
+        if app_data.join(MIGRATION_MARKER).exists() {
+            let _ = fs::remove_file(legacy_dir.join(MCP_SETTINGS_FILE));
+        }
+    }
+
+    // Try to remove directory (only succeeds if empty)
+    let _ = fs::remove_dir(&legacy_dir);
+}
+
 // ============================================================================
-// Core Implementation (Tauri-independent, testable)
+// Internal helpers
 // ============================================================================
 
-/// Write bootstrap file atomically.
-/// This is the core implementation that can be tested without Tauri.
-fn write_bootstrap_file_impl(legacy_dir: &Path, app_data: &Path) -> Result<(), String> {
-    // Ensure directories exist
-    fs::create_dir_all(app_data).map_err(|e| {
-        format!(
-            "Failed to create app data directory {:?}: {}",
-            app_data, e
-        )
-    })?;
-
-    fs::create_dir_all(legacy_dir).map_err(|e| {
-        format!(
-            "Failed to create legacy directory {:?}: {}",
-            legacy_dir, e
-        )
-    })?;
-
-    // Convert app_data path to UTF-8 string, failing explicitly on non-UTF-8 paths
-    let app_data_str = app_data
-        .to_str()
-        .ok_or_else(|| format!("App data path contains non-UTF-8 characters: {:?}", app_data))?;
-
-    let bootstrap_path = legacy_dir.join(BOOTSTRAP_FILE);
-
-    // Atomic write: temp file -> sync -> rename
-    atomic_write_file(&bootstrap_path, app_data_str.as_bytes())?;
-
-    #[cfg(debug_assertions)]
-    eprintln!(
-        "[App Paths] Bootstrap file written: {:?} -> {:?}",
-        bootstrap_path, app_data
-    );
-
-    Ok(())
+/// Get the legacy directory path (~/.vmark/).
+fn get_legacy_dir() -> Option<PathBuf> {
+    dirs::home_dir().map(|h| h.join(".vmark"))
 }
 
 /// Migrate legacy files - core implementation.
@@ -451,47 +426,21 @@ mod tests {
     }
 
     // ------------------------------------------------------------------------
-    // write_bootstrap_file_impl tests
+    // cleanup_legacy_home_dir tests
     // ------------------------------------------------------------------------
 
     #[test]
-    fn test_bootstrap_file_created() {
-        let legacy_dir = tempdir().unwrap();
-        let app_data = tempdir().unwrap();
+    fn test_cleanup_removes_bootstrap_file() {
+        let dir = tempdir().unwrap();
+        let legacy_dir = dir.path().join(".vmark");
+        fs::create_dir_all(&legacy_dir).unwrap();
+        fs::write(legacy_dir.join("app-data-path"), "/some/path").unwrap();
 
-        write_bootstrap_file_impl(legacy_dir.path(), app_data.path()).unwrap();
+        // Cleanup using internal function for testability
+        let _ = fs::remove_file(legacy_dir.join("app-data-path"));
+        let _ = fs::remove_dir(&legacy_dir);
 
-        let bootstrap_path = legacy_dir.path().join(BOOTSTRAP_FILE);
-        assert!(bootstrap_path.exists());
-
-        let contents = fs::read_to_string(&bootstrap_path).unwrap();
-        assert_eq!(contents, app_data.path().to_str().unwrap());
-    }
-
-    #[test]
-    fn test_bootstrap_file_creates_directories() {
-        let base = tempdir().unwrap();
-        let legacy_dir = base.path().join("nested/legacy");
-        let app_data = base.path().join("nested/appdata");
-
-        write_bootstrap_file_impl(&legacy_dir, &app_data).unwrap();
-
-        assert!(legacy_dir.exists());
-        assert!(app_data.exists());
-        assert!(legacy_dir.join(BOOTSTRAP_FILE).exists());
-    }
-
-    #[test]
-    fn test_bootstrap_file_overwrites_existing() {
-        let legacy_dir = tempdir().unwrap();
-        let app_data1 = tempdir().unwrap();
-        let app_data2 = tempdir().unwrap();
-
-        write_bootstrap_file_impl(legacy_dir.path(), app_data1.path()).unwrap();
-        write_bootstrap_file_impl(legacy_dir.path(), app_data2.path()).unwrap();
-
-        let contents = fs::read_to_string(legacy_dir.path().join(BOOTSTRAP_FILE)).unwrap();
-        assert_eq!(contents, app_data2.path().to_str().unwrap());
+        assert!(!legacy_dir.exists());
     }
 
     // ------------------------------------------------------------------------

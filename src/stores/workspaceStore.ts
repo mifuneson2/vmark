@@ -10,7 +10,7 @@ import {
 } from "@/utils/workspaceIdentity";
 import { windowScopedStorage } from "@/utils/workspaceStorage";
 
-// Workspace configuration stored in .vmark file
+// Workspace configuration stored in app data (keyed by workspace root path hash)
 export interface WorkspaceConfig {
   version: 1;
   excludeFolders: string[];
@@ -51,7 +51,7 @@ interface WorkspaceActions {
   getWorkspaceId: () => string | null;
 }
 
-const DEFAULT_EXCLUDED_FOLDERS = [".git", "node_modules", ".vmark"];
+const DEFAULT_EXCLUDED_FOLDERS = [".git", "node_modules"];
 
 const DEFAULT_CONFIG: WorkspaceConfig = {
   version: 1,

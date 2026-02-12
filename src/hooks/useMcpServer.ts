@@ -38,8 +38,8 @@ interface UseMcpServerResult {
  * The bridge is a WebSocket server that AI client sidecars connect to.
  * VMark only starts the bridge; AI clients spawn their own sidecars.
  *
- * The port is automatically assigned by the OS and written to ~/.vmark/mcp-port
- * for sidecar discovery. Users don't need to configure it.
+ * The port is automatically assigned by the OS and written to the app data
+ * directory (mcp-port file) for sidecar discovery. Users don't need to configure it.
  *
  * Usage:
  * ```tsx

@@ -295,7 +295,7 @@ fn extract_vmark_binary_path(content: &str, provider_id: &str) -> Option<String>
 }
 
 /// Generate proposed config content for a provider.
-/// Note: No --port argument needed - sidecar auto-discovers port from ~/.vmark/mcp-port
+/// Note: No --port argument needed - sidecar auto-discovers port from app data directory
 fn generate_config_content(
     provider_id: &str,
     binary_path: &str,
@@ -313,7 +313,7 @@ fn generate_config_content(
                 .entry("mcpServers")
                 .or_insert_with(|| serde_json::json!({}));
 
-            // No args needed - sidecar auto-discovers port from ~/.vmark/mcp-port
+            // No args needed - sidecar auto-discovers port from app data directory
             mcp_servers
                 .as_object_mut()
                 .ok_or("mcpServers is not an object")?
@@ -336,7 +336,7 @@ fn generate_config_content(
                 .or_insert_with(|| toml::Value::Table(toml::Table::new()));
 
             if let toml::Value::Table(servers) = mcp_servers {
-                // No args needed - sidecar auto-discovers port from ~/.vmark/mcp-port
+                // No args needed - sidecar auto-discovers port from app data directory
                 let mut vmark_config = toml::Table::new();
                 vmark_config.insert("command".to_string(), toml::Value::String(binary_path.to_string()));
                 servers.insert("vmark".to_string(), toml::Value::Table(vmark_config));

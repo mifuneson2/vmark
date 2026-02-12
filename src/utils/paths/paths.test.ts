@@ -174,7 +174,7 @@ describe("paths", () => {
   });
 
   describe("isPathExcluded", () => {
-    const excludeFolders = [".git", "node_modules", ".vmark"];
+    const excludeFolders = [".git", "node_modules"];
 
     it("excludes path containing .git", () => {
       expect(

@@ -8,7 +8,7 @@
 //! Port discovery:
 //! - Server binds to port 0 (OS assigns available port)
 //! - Actual port written to Tauri's app data directory (platform-specific)
-//! - MCP sidecar reads app data path from ~/.vmark/app-data-path bootstrap file
+//! - MCP sidecar uses platform-specific path to find the app data directory
 
 use crate::app_paths;
 use futures_util::{SinkExt, StreamExt};

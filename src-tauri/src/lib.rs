@@ -134,7 +134,6 @@ pub fn run() {
             workspace::open_folder_dialog,
             workspace::read_workspace_config,
             workspace::write_workspace_config,
-            workspace::has_workspace_config,
             mcp_server::mcp_bridge_start,
             mcp_server::mcp_bridge_stop,
             mcp_server::mcp_server_start,
@@ -186,16 +185,13 @@ pub fn run() {
             #[cfg(target_os = "macos")]
             macos_menu::apply_menu_fixes();
 
-            // Write bootstrap file for MCP sidecar discovery
-            // This file contains the path to the app data directory
-            if let Err(e) = app_paths::write_app_data_path_bootstrap(app.handle()) {
-                eprintln!("[Tauri] Warning: Failed to write app-data-path bootstrap: {}", e);
-            }
-
             // Migrate legacy files from ~/.vmark/ to app data directory
             if let Err(e) = app_paths::migrate_legacy_files(app.handle()) {
                 eprintln!("[Tauri] Warning: Failed to migrate legacy files: {}", e);
             }
+
+            // Best-effort cleanup of legacy ~/.vmark/ directory
+            app_paths::cleanup_legacy_home_dir(app.handle());
 
             // Install default AI genies (no-op if already present)
             if let Err(e) = genies::install_default_genies(app.handle()) {

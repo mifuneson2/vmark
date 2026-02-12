@@ -35,7 +35,7 @@ export type { Snapshot, HistoryIndex, HistorySettings };
 // Path helpers
 
 /**
- * Get the base history directory path (~/.vmark/history/)
+ * Get the base history directory path (<app_data>/history/)
  */
 async function getHistoryBaseDir(): Promise<string> {
   const appDir = await appDataDir();

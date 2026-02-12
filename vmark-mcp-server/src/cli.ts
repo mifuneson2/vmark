@@ -6,12 +6,12 @@
  * It starts the MCP server and connects to VMark via WebSocket.
  *
  * Port Discovery:
- * - VMark writes its bridge port to ~/.vmark/mcp-port
+ * - VMark writes its bridge port to the app data directory (mcp-port file)
  * - This sidecar reads the port from that file automatically
  * - No user configuration needed!
  *
  * Usage:
- *   vmark-mcp-server              # Auto-discovers port from ~/.vmark/mcp-port
+ *   vmark-mcp-server              # Auto-discovers port from app data directory
  *   vmark-mcp-server --port 9223  # Manual port override (legacy)
  *   vmark-mcp-server --version    # Print version and exit
  *   vmark-mcp-server --health-check # Run self-test and exit
@@ -138,14 +138,6 @@ const APP_IDENTIFIER = process.env.VMARK_APP_IDENTIFIER || 'app.vmark';
 const HOME_DIR = homedir();
 
 /**
- * Get the legacy directory path (~/.vmark/).
- * Used for reading the bootstrap file.
- */
-function getLegacyDir(): string {
-  return join(HOME_DIR, '.vmark');
-}
-
-/**
  * Check if an error is ENOENT (file not found).
  */
 function isNotFoundError(err: unknown): boolean {
@@ -158,39 +150,14 @@ function isNotFoundError(err: unknown): boolean {
 }
 
 /**
- * Get the app data directory path.
+ * Get the app data directory path (platform-specific).
  *
- * Resolution order:
- * 1. Read from bootstrap file (~/.vmark/app-data-path) written by VMark Rust
- * 2. Fall back to platform-specific path
- *
- * The bootstrap file is the source of truth - if it contains a path, we use it
- * even if the directory doesn't exist yet (it will be created by VMark).
+ * Uses the same path convention as Tauri's app_data_dir():
+ * - macOS: ~/Library/Application Support/<identifier>
+ * - Linux: $XDG_DATA_HOME/<identifier> (default: ~/.local/share)
+ * - Windows: %APPDATA%/<identifier>
  */
 function getAppDataDir(): string {
-  // 1. Try bootstrap file (written by Rust on app startup)
-  const bootstrapPath = join(getLegacyDir(), 'app-data-path');
-  try {
-    const appDataPath = readFileSync(bootstrapPath, 'utf8').trim();
-    // Trust the bootstrap file if it contains an absolute path
-    if (appDataPath && appDataPath.startsWith('/')) {
-      return appDataPath;
-    }
-    // On Windows, check for drive letter (C:\...)
-    if (appDataPath && /^[A-Za-z]:[\\/]/.test(appDataPath)) {
-      return appDataPath;
-    }
-  } catch (err) {
-    if (!isNotFoundError(err)) {
-      // Real error (permission denied, etc.) - log for debugging
-      if (process.env.VMARK_DEBUG) {
-        console.error('[VMark MCP] Failed to read bootstrap file:', err);
-      }
-    }
-    // ENOENT is expected if VMark hasn't started yet - fall through
-  }
-
-  // 2. Platform-specific fallback
   const xdgDataHome = process.env.XDG_DATA_HOME || join(HOME_DIR, '.local', 'share');
   const appDataRoaming = process.env.APPDATA || join(HOME_DIR, 'AppData', 'Roaming');
 
@@ -202,8 +169,8 @@ function getAppDataDir(): string {
     case 'win32':
       return join(appDataRoaming, APP_IDENTIFIER);
     default:
-      // Unknown platform - fall back to legacy directory
-      return getLegacyDir();
+      // Unknown platform — best guess
+      return join(HOME_DIR, '.local', 'share', APP_IDENTIFIER);
   }
 }
 
@@ -279,7 +246,7 @@ function readPortFromFile(): number | undefined {
  * Parse command line arguments.
  * Port resolution order:
  * 1. --port CLI argument (manual override)
- * 2. Port file (~/.vmark/mcp-port) - auto-discovery
+ * 2. Port file in app data directory (mcp-port) — auto-discovery
  * 3. Default to undefined (will retry reading port file on connect)
  */
 function parseArgs(): { port: number | undefined } {

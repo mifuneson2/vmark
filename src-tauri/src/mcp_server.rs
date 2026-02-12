@@ -55,7 +55,7 @@ pub struct McpServerStatus {
 /// Start only the MCP bridge WebSocket server (no sidecar).
 /// This is the recommended way to enable MCP - AI clients spawn their own sidecars.
 /// The port parameter is ignored - the OS assigns an available port automatically.
-/// The actual port is written to ~/.vmark/mcp-port for sidecar discovery.
+/// The actual port is written to the app data directory (mcp-port) for sidecar discovery.
 #[command]
 pub async fn mcp_bridge_start(app: AppHandle, port: u16) -> Result<McpServerStatus, String> {
     // Check if bridge is already running

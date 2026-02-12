@@ -290,7 +290,6 @@ describe("workspaceStore", () => {
 
       const state = useWorkspaceStore.getState();
       expect(state.config?.excludeFolders).toContain("node_modules");
-      expect(state.config?.excludeFolders).toContain(".vmark");
     });
   });
 
@@ -485,7 +484,10 @@ describe("workspaceStore", () => {
     it("exports expected default folders", () => {
       expect(DEFAULT_EXCLUDED_FOLDERS).toContain(".git");
       expect(DEFAULT_EXCLUDED_FOLDERS).toContain("node_modules");
-      expect(DEFAULT_EXCLUDED_FOLDERS).toContain(".vmark");
+    });
+
+    it("does not include .vmark (no longer created)", () => {
+      expect(DEFAULT_EXCLUDED_FOLDERS).not.toContain(".vmark");
     });
   });
 });
