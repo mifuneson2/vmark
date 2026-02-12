@@ -1,4 +1,4 @@
-import { memo, useCallback, type MouseEvent, type PointerEvent } from "react";
+import { memo, useCallback, type KeyboardEvent, type MouseEvent, type PointerEvent } from "react";
 import { X, Pin, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Tab as TabType } from "@/stores/tabStore";
@@ -9,11 +9,14 @@ interface TabProps {
   isActive: boolean;
   isDragTarget?: boolean;
   isReordering?: boolean;
+  isInvalidDrop?: boolean;
+  isSnapback?: boolean;
   showDropIndicator?: boolean;
   onActivate: () => void;
   onClose: () => void;
   onContextMenu: (e: MouseEvent) => void;
   onPointerDown?: (e: PointerEvent) => void;
+  onKeyDown?: (e: KeyboardEvent) => void;
 }
 
 export const Tab = memo(function Tab({
@@ -21,11 +24,14 @@ export const Tab = memo(function Tab({
   isActive,
   isDragTarget,
   isReordering,
+  isInvalidDrop,
+  isSnapback,
   showDropIndicator,
   onActivate,
   onClose,
   onContextMenu,
   onPointerDown,
+  onKeyDown,
 }: TabProps) {
   // Get dirty and missing state from document store
   const isDirty = useDocumentStore(
@@ -66,9 +72,13 @@ export const Tab = memo(function Tab({
           isActive && "active",
           isMissing && "tab-missing",
           isDragTarget && "tab--dragging",
-          isReordering && "tab--reordering"
+          isReordering && "tab--reordering",
+          isInvalidDrop && "tab--invalid-drop",
+          isSnapback && "tab--snapback"
         )}
+        tabIndex={isActive ? 0 : -1}
         onClick={onActivate}
+        onKeyDown={onKeyDown}
         onMouseDown={handleMiddleClick}
         onPointerDown={onPointerDown}
         onContextMenu={onContextMenu}

@@ -17,6 +17,10 @@
   color: var(--text-secondary);
 }
 
+.status-bar-container--drop-target .status-bar {
+  box-shadow: inset 0 0 0 2px var(--accent-primary);
+}
+
 .status-bar-left,
 .status-bar-right {
   display: flex;
@@ -175,6 +179,10 @@
   color: var(--text-color);
 }
 
+.tab-pill:focus-visible {
+  box-shadow: inset 0 -2px 0 var(--accent-primary);
+}
+
 .tab-pill.active {
   background-color: var(--bg-primary);
   color: var(--text-color);
@@ -245,6 +253,26 @@
   opacity: 0.6;
 }
 
+.tab-pill.tab--invalid-drop {
+  opacity: 0.45;
+}
+
+.tab-pill.tab--snapback {
+  animation: tab-snapback 180ms ease-out;
+}
+
+@keyframes tab-snapback {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  40% {
+    transform: translate3d(-6px, 0, 0) scale(0.98);
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
 /* Drop indicator line between tabs during reorder */
 .tab-drop-indicator {
   width: 2px;
@@ -278,6 +306,59 @@
 .status-new-tab:hover {
   background-color: var(--hover-bg-strong);
   color: var(--text-color);
+}
+
+.tab-drag-ghost {
+  position: fixed;
+  z-index: 1200;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  border-radius: var(--radius-md);
+  background: var(--bg-color);
+  color: var(--text-color);
+  box-shadow: var(--popup-shadow);
+  border: 1px solid var(--border-color);
+  transform: translate3d(-1000px, -1000px, 0);
+}
+
+.tab-drag-ghost-title {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.tab-drag-ghost-hint {
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+.tab-drag-ghost.invalid {
+  border-color: var(--warning-border);
+}
+
+@media (pointer: coarse) {
+  .tab-pill {
+    height: 28px;
+    padding: 0 10px;
+    border-radius: 14px;
+  }
+
+  .status-new-tab {
+    width: 28px;
+    height: 28px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tab-pill,
+  .tab-drag-ghost,
+  .status-autosave,
+  .status-ai-running svg {
+    transition: none !important;
+    animation: none !important;
+  }
 }
 
 /* ========================================

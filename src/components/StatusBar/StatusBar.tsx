@@ -4,8 +4,10 @@ import { useMemo, useState, useEffect, useCallback, useRef, type MouseEvent, typ
 const EMPTY_TABS: never[] = [];
 import { Code2, Type, Save, Plus, AlertTriangle, GitFork, Satellite, Sparkles, Terminal } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
+import { emit, listen } from "@tauri-apps/api/event";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { countWords as alfaazCount } from "alfaaz";
+import { toast } from "sonner";
 import { useEditorStore } from "@/stores/editorStore";
 import { useUIStore } from "@/stores/uiStore";
 import { useWindowLabel, useIsDocumentWindow } from "@/contexts/WindowContext";
@@ -29,6 +31,7 @@ import { Tab } from "@/components/Tabs/Tab";
 import { TabContextMenu, type ContextMenuPosition } from "@/components/Tabs/TabContextMenu";
 import { useShortcutsStore, formatKeyForDisplay } from "@/stores/shortcutsStore";
 import { useMcpServer } from "@/hooks/useMcpServer";
+import { planReorder } from "./tabDragRules";
 import { openSettingsWindow } from "@/utils/settingsWindow";
 import { UpdateIndicator } from "./UpdateIndicator";
 import "./StatusBar.css";
@@ -94,6 +97,13 @@ interface TabTransferPayload {
   workspaceRoot: string | null;
 }
 
+interface TabDropPreviewEvent {
+  sourceWindowLabel: string;
+  targetWindowLabel: string | null;
+}
+
+const SPRING_LOAD_FOCUS_MS = 420;
+
 export function StatusBar() {
   const isDocumentWindow = useIsDocumentWindow();
   const windowLabel = useWindowLabel();
@@ -137,6 +147,15 @@ export function StatusBar() {
   const [showAutoSave, setShowAutoSave] = useState(false);
   const [autoSaveTime, setAutoSaveTime] = useState<string>("");
   const tabDragScopeRef = useRef<HTMLDivElement>(null);
+  const [dragTargetWindowLabel, setDragTargetWindowLabel] = useState<string | null>(null);
+  const [isDropPreviewTarget, setIsDropPreviewTarget] = useState(false);
+  const [snapbackTabId, setSnapbackTabId] = useState<string | null>(null);
+  const [ariaAnnouncement, setAriaAnnouncement] = useState("");
+  const ariaClearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const springFocusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const springFocusedWindowRef = useRef<string | null>(null);
+  const previewProbeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const latestDragPointRef = useRef<DragOutPoint | null>(null);
 
   // Auto-save indicator effect
   useEffect(() => {
@@ -194,18 +213,60 @@ export function StatusBar() {
     useDocumentStore.getState().initDocument(tabId, "", null);
   }, [windowLabel]);
 
+  const announce = useCallback((message: string) => {
+    setAriaAnnouncement(message);
+    if (ariaClearTimerRef.current) {
+      clearTimeout(ariaClearTimerRef.current);
+    }
+    ariaClearTimerRef.current = setTimeout(() => {
+      setAriaAnnouncement("");
+      ariaClearTimerRef.current = null;
+    }, 1200);
+  }, []);
+
+  const triggerSnapback = useCallback((tabId: string) => {
+    setSnapbackTabId(tabId);
+    setTimeout(() => {
+      setSnapbackTabId((prev) => (prev === tabId ? null : prev));
+    }, 180);
+  }, []);
+
+  const clearDropPreviewBroadcast = useCallback(() => {
+    setDragTargetWindowLabel(null);
+    void emit("tab:drop-preview", {
+      sourceWindowLabel: windowLabel,
+      targetWindowLabel: null,
+    } satisfies TabDropPreviewEvent);
+    if (springFocusTimerRef.current) {
+      clearTimeout(springFocusTimerRef.current);
+      springFocusTimerRef.current = null;
+    }
+    springFocusedWindowRef.current = null;
+  }, [windowLabel]);
+
   const handleDragOut = useCallback(
     async (tabId: string, point: DragOutPoint) => {
       const tabState = useTabStore.getState();
       const windowTabs = tabState.getTabsByWindow(windowLabel);
       const tab = windowTabs.find((t) => t.id === tabId);
-      if (!tab) return;
+      if (!tab) {
+        clearDropPreviewBroadcast();
+        return;
+      }
 
       // Prevent drag-out of last tab in main window
-      if (windowLabel === "main" && windowTabs.length <= 1) return;
+      if (windowLabel === "main" && windowTabs.length <= 1) {
+        triggerSnapback(tabId);
+        announce("Cannot move the last tab in the main window.");
+        clearDropPreviewBroadcast();
+        return;
+      }
 
       const doc = useDocumentStore.getState().getDocument(tabId);
-      if (!doc) return;
+      if (!doc) {
+        clearDropPreviewBroadcast();
+        return;
+      }
 
       const transferData: TabTransferPayload = {
         tabId: tab.id,
@@ -229,10 +290,64 @@ export function StatusBar() {
             targetWindowLabel,
             data: transferData,
           });
+          toast.message(`Moved "${tab.title}"`, {
+            action: {
+              label: "Undo",
+              onClick: () => {
+                void invoke("remove_tab_from_window", {
+                  targetWindowLabel,
+                  tabId: transferData.tabId,
+                }).then(() => {
+                  const restoredTabId = useTabStore.getState().createTransferredTab(windowLabel, {
+                    id: transferData.tabId,
+                    filePath: transferData.filePath,
+                    title: transferData.title,
+                    isPinned: false,
+                  });
+                  useDocumentStore.getState().initDocument(
+                    restoredTabId,
+                    transferData.content,
+                    transferData.filePath,
+                    transferData.savedContent
+                  );
+                }).catch((error) => {
+                  console.error("[StatusBar] Undo cross-window move failed:", error);
+                });
+              },
+            },
+          });
+          announce(`Moved tab ${tab.title} to another window.`);
         } else {
-          await invoke<string>("detach_tab_to_new_window", {
+          const createdWindowLabel = await invoke<string>("detach_tab_to_new_window", {
             data: transferData,
           });
+          toast.message(`Detached "${tab.title}"`, {
+            action: {
+              label: "Undo",
+              onClick: () => {
+                void invoke("remove_tab_from_window", {
+                  targetWindowLabel: createdWindowLabel,
+                  tabId: transferData.tabId,
+                }).then(() => {
+                  const restoredTabId = useTabStore.getState().createTransferredTab(windowLabel, {
+                    id: transferData.tabId,
+                    filePath: transferData.filePath,
+                    title: transferData.title,
+                    isPinned: false,
+                  });
+                  useDocumentStore.getState().initDocument(
+                    restoredTabId,
+                    transferData.content,
+                    transferData.filePath,
+                    transferData.savedContent
+                  );
+                }).catch((error) => {
+                  console.error("[StatusBar] Undo detach failed:", error);
+                });
+              },
+            },
+          });
+          announce(`Detached tab ${tab.title} into a new window.`);
         }
 
         // Remove tab from source window (no dirty check — content is transferred)
@@ -247,9 +362,13 @@ export function StatusBar() {
         }
       } catch (err) {
         console.error("[StatusBar] drag-out failed:", err);
+        triggerSnapback(tabId);
+        announce(`Failed to move tab ${tab.title}.`);
+      } finally {
+        clearDropPreviewBroadcast();
       }
     },
-    [windowLabel]
+    [announce, clearDropPreviewBroadcast, triggerSnapback, windowLabel]
   );
 
   const handleReorder = useCallback(
@@ -257,28 +376,176 @@ export function StatusBar() {
       const windowTabs = useTabStore.getState().tabs[windowLabel] ?? [];
       const fromIndex = windowTabs.findIndex((t) => t.id === tabId);
       if (fromIndex === -1) return;
-
-      // calcDropIndex returns visual insertion point (0..N).
-      // reorderTabs does splice(from,1) then splice(to,0,item),
-      // so when moving forward the target shifts left by 1.
-      let toIndex = dropIdx;
-      if (fromIndex < dropIdx) {
-        toIndex = dropIdx - 1;
+      const tab = windowTabs[fromIndex];
+      if (!tab) return;
+      const plan = planReorder(windowTabs, fromIndex, dropIdx);
+      if (!plan.allowed || fromIndex === plan.toIndex) {
+        if (!plan.allowed && plan.blockedReason === "pinned-zone") {
+          triggerSnapback(tabId);
+          announce("Pinned tabs stay at the left. Drop blocked.");
+        }
+        return;
       }
-      // Clamp to valid range
-      toIndex = Math.max(0, Math.min(toIndex, windowTabs.length - 1));
 
-      if (fromIndex === toIndex) return;
-      useTabStore.getState().reorderTabs(windowLabel, fromIndex, toIndex);
+      useTabStore.getState().reorderTabs(windowLabel, fromIndex, plan.toIndex);
+      toast.message(`Moved "${tab.title}"`, {
+        action: {
+          label: "Undo",
+          onClick: () => {
+            const currentTabs = useTabStore.getState().tabs[windowLabel] ?? [];
+            const currentIndex = currentTabs.findIndex((t) => t.id === tab.id);
+            if (currentIndex !== -1) {
+              useTabStore.getState().reorderTabs(windowLabel, currentIndex, fromIndex);
+            }
+          },
+        },
+      });
+      announce(`Reordered tab ${tab.title}.`);
     },
-    [windowLabel]
+    [announce, triggerSnapback, windowLabel]
   );
 
-  const { getTabDragHandlers, isDragging, isReordering, dragTabId, dropIndex } = useTabDragOut({
+  const handleTabKeyDown = useCallback(
+    (tabId: string, e: KeyboardEvent) => {
+      if (e.nativeEvent.isComposing) return;
+      if (e.altKey && e.shiftKey && (e.key === "ArrowLeft" || e.key === "ArrowRight")) {
+        e.preventDefault();
+        const windowTabs = useTabStore.getState().tabs[windowLabel] ?? [];
+        const fromIndex = windowTabs.findIndex((tab) => tab.id === tabId);
+        if (fromIndex === -1) return;
+        const visualDropIndex = e.key === "ArrowLeft" ? fromIndex : fromIndex + 2;
+        handleReorder(tabId, visualDropIndex);
+        return;
+      }
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        handleActivateTab(tabId);
+      }
+    },
+    [handleActivateTab, handleReorder, windowLabel]
+  );
+
+  const { getTabDragHandlers, isDragging, isReordering, dragMode, dragTabId, dropIndex, dragPoint } = useTabDragOut({
     tabBarRef: tabDragScopeRef,
     onDragOut: handleDragOut,
     onReorder: handleReorder,
+    onDragMove: ({ mode, point }) => {
+      if (mode !== "dragout") return;
+      latestDragPointRef.current = point;
+      if (previewProbeTimerRef.current) return;
+      previewProbeTimerRef.current = setTimeout(() => {
+        previewProbeTimerRef.current = null;
+        const currentPoint = latestDragPointRef.current;
+        if (!currentPoint) return;
+        void invoke<string | null>("find_drop_target_window", {
+          sourceWindowLabel: windowLabel,
+          screenX: currentPoint.screenX,
+          screenY: currentPoint.screenY,
+        }).then((targetWindowLabel) => {
+          setDragTargetWindowLabel(targetWindowLabel);
+          void emit("tab:drop-preview", {
+            sourceWindowLabel: windowLabel,
+            targetWindowLabel,
+          } satisfies TabDropPreviewEvent);
+        }).catch((error) => {
+          console.error("[StatusBar] Failed to probe drop target:", error);
+        });
+      }, 60);
+    },
   });
+
+  const dragTab = dragTabId ? tabs.find((tab) => tab.id === dragTabId) ?? null : null;
+  const dragFromIndex = dragTabId ? tabs.findIndex((tab) => tab.id === dragTabId) : -1;
+  const reorderPlan = (dragMode === "reorder" && dragFromIndex !== -1 && dropIndex !== null)
+    ? planReorder(tabs, dragFromIndex, dropIndex)
+    : null;
+  const isReorderBlocked = Boolean(reorderPlan && !reorderPlan.allowed);
+  const isDragOutBlocked = dragMode === "dragout" && windowLabel === "main" && tabs.length <= 1;
+  const isDropInvalid = isReorderBlocked || isDragOutBlocked;
+  const dragHint = isDragOutBlocked
+    ? "Cannot move the last tab in main window"
+    : dragTargetWindowLabel
+      ? `Drop to move to ${dragTargetWindowLabel}`
+      : dragMode === "dragout"
+        ? "Drop to create a new window"
+        : isReorderBlocked
+          ? "Pinned zone is locked"
+          : "Reorder tab";
+
+  useEffect(() => {
+    let unlisten: (() => void) | null = null;
+    let cancelled = false;
+    listen<TabDropPreviewEvent>("tab:drop-preview", (event) => {
+      if (cancelled) return;
+      const payload = event.payload;
+      if (payload.sourceWindowLabel === windowLabel) return;
+      setIsDropPreviewTarget(payload.targetWindowLabel === windowLabel);
+    }).then((fn) => {
+      if (cancelled) {
+        fn();
+      } else {
+        unlisten = fn;
+      }
+    }).catch((error) => {
+      console.error("[StatusBar] Failed to listen for drop preview events:", error);
+    });
+
+    return () => {
+      cancelled = true;
+      if (unlisten) unlisten();
+    };
+  }, [windowLabel]);
+
+  useEffect(() => {
+    if (dragMode !== "dragout" || !dragTargetWindowLabel) {
+      if (springFocusTimerRef.current) {
+        clearTimeout(springFocusTimerRef.current);
+        springFocusTimerRef.current = null;
+      }
+      springFocusedWindowRef.current = null;
+      return;
+    }
+    if (springFocusedWindowRef.current === dragTargetWindowLabel) return;
+    if (springFocusTimerRef.current) {
+      clearTimeout(springFocusTimerRef.current);
+    }
+    springFocusTimerRef.current = setTimeout(() => {
+      springFocusTimerRef.current = null;
+      springFocusedWindowRef.current = dragTargetWindowLabel;
+      void invoke("focus_existing_window", {
+        windowLabel: dragTargetWindowLabel,
+      }).catch((error) => {
+        console.error("[StatusBar] Failed to focus spring-loaded target:", error);
+      });
+    }, SPRING_LOAD_FOCUS_MS);
+  }, [dragMode, dragTargetWindowLabel]);
+
+  useEffect(() => {
+    if (dragMode !== "idle") return;
+    clearDropPreviewBroadcast();
+  }, [clearDropPreviewBroadcast, dragMode]);
+
+  useEffect(() => {
+    if (dragMode !== "dragout" && previewProbeTimerRef.current) {
+      clearTimeout(previewProbeTimerRef.current);
+      previewProbeTimerRef.current = null;
+    }
+  }, [dragMode]);
+
+  useEffect(() => {
+    if (dragMode !== "dragout" && dragMode !== "reorder") return;
+    const previousCursor = document.body.style.cursor;
+    document.body.style.cursor = isDropInvalid ? "not-allowed" : "grabbing";
+    return () => {
+      document.body.style.cursor = previousCursor;
+    };
+  }, [dragMode, isDropInvalid]);
+
+  useEffect(() => () => {
+    if (ariaClearTimerRef.current) clearTimeout(ariaClearTimerRef.current);
+    if (springFocusTimerRef.current) clearTimeout(springFocusTimerRef.current);
+    if (previewProbeTimerRef.current) clearTimeout(previewProbeTimerRef.current);
+  }, []);
 
   // Memoize stripped content once, then derive both counts from it
   // This avoids running the expensive stripMarkdown regex twice per keystroke
@@ -295,7 +562,10 @@ export function StatusBar() {
 
   return (
     <>
-      <div className="status-bar-container visible" onKeyDown={preventSelectAllOnButtons}>
+      <div
+        className={`status-bar-container visible${isDropPreviewTarget ? " status-bar-container--drop-target" : ""}`}
+        onKeyDown={preventSelectAllOnButtons}
+      >
         <div className="status-bar">
           {/* Left section: tabs */}
           <div className="status-bar-left" ref={tabDragScopeRef}>
@@ -318,7 +588,7 @@ export function StatusBar() {
                 {tabs.map((tab, index) => {
                   const dragHandlers = getTabDragHandlers(tab.id, tab.isPinned);
                   const isBeingDragged = dragTabId === tab.id;
-                  const showDropBefore = isReordering && dropIndex === index && !isBeingDragged;
+                  const showDropBefore = isReordering && dropIndex === index && !isBeingDragged && !isReorderBlocked;
 
                   return (
                     <Tab
@@ -327,15 +597,18 @@ export function StatusBar() {
                       isActive={tab.id === activeTabId}
                       isDragTarget={isDragging && isBeingDragged}
                       isReordering={isReordering && isBeingDragged}
+                      isInvalidDrop={isDropInvalid && isBeingDragged}
+                      isSnapback={snapbackTabId === tab.id}
                       showDropIndicator={showDropBefore}
                       onActivate={() => handleActivateTab(tab.id)}
+                      onKeyDown={(e) => handleTabKeyDown(tab.id, e)}
                       onClose={() => handleCloseTab(tab.id)}
                       onContextMenu={(e) => handleContextMenu(e, tab)}
                       onPointerDown={dragHandlers.onPointerDown}
                     />
                   );
                 })}
-                {isReordering && dropIndex !== null && dropIndex >= tabs.length && (
+                {isReordering && dropIndex !== null && dropIndex >= tabs.length && !isReorderBlocked && (
                   <div className="tab-drop-indicator" />
                 )}
               </div>
@@ -425,6 +698,34 @@ export function StatusBar() {
             </button>
           </div>
         </div>
+      </div>
+
+      {dragPoint && dragTab && dragMode !== "idle" && (
+        <div
+          className={`tab-drag-ghost${isDropInvalid ? " invalid" : ""}`}
+          style={{ transform: `translate3d(${dragPoint.clientX + 14}px, ${dragPoint.clientY + 14}px, 0)` }}
+        >
+          <span className="tab-drag-ghost-title">{dragTab.title}</span>
+          <span className="tab-drag-ghost-hint">{dragHint}</span>
+        </div>
+      )}
+
+      <div
+        aria-live="polite"
+        aria-atomic="true"
+        style={{
+          position: "absolute",
+          width: 1,
+          height: 1,
+          padding: 0,
+          margin: -1,
+          overflow: "hidden",
+          clip: "rect(0, 0, 0, 0)",
+          whiteSpace: "nowrap",
+          border: 0,
+        }}
+      >
+        {ariaAnnouncement}
       </div>
 
       {/* Tab context menu */}

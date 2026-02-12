@@ -160,6 +160,8 @@ pub fn run() {
             tab_transfer::transfer_tab_to_existing_window,
             tab_transfer::claim_tab_transfer,
             tab_transfer::find_drop_target_window,
+            tab_transfer::focus_existing_window,
+            tab_transfer::remove_tab_from_window,
             get_default_shell,
             genies::get_genies_dir,
             genies::list_genies,

@@ -26,6 +26,7 @@ interface TabState {
 interface TabActions {
   // Tab CRUD
   createTab: (windowLabel: string, filePath?: string | null) => string;
+  createTransferredTab: (windowLabel: string, tab: Tab) => string;
   closeTab: (windowLabel: string, tabId: string) => void;
   closeOtherTabs: (windowLabel: string, tabId: string) => void;
   closeTabsToRight: (windowLabel: string, tabId: string) => void;
@@ -115,6 +116,25 @@ export const useTabStore = create<TabState & TabActions>((set, get) => ({
     });
 
     return id;
+  },
+
+  createTransferredTab: (windowLabel, tab) => {
+    const state = get();
+    const windowTabs = state.tabs[windowLabel] || [];
+    const existing = windowTabs.find((t) => t.id === tab.id);
+    if (existing) {
+      set({
+        activeTabId: { ...state.activeTabId, [windowLabel]: existing.id },
+      });
+      return existing.id;
+    }
+
+    set({
+      tabs: { ...state.tabs, [windowLabel]: [...windowTabs, tab] },
+      activeTabId: { ...state.activeTabId, [windowLabel]: tab.id },
+    });
+
+    return tab.id;
   },
 
   closeTab: (windowLabel, tabId) => {

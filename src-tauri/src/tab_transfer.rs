@@ -110,6 +110,34 @@ pub fn find_drop_target_window(
     focused_match.or(fallback_match)
 }
 
+/// Focus an existing window by label (used for spring-loaded drag targeting).
+#[tauri::command]
+pub fn focus_existing_window(app: AppHandle, window_label: String) -> Result<(), String> {
+    let Some(window) = app.get_webview_window(&window_label) else {
+        return Err(format!("Window '{}' not found", window_label));
+    };
+    if window.is_minimized().unwrap_or(false) {
+        let _ = window.unminimize();
+    }
+    let _ = window.show();
+    window.set_focus().map_err(|e| e.to_string())
+}
+
+/// Ask a target window to remove a transferred tab by id.
+#[tauri::command]
+pub fn remove_tab_from_window(
+    app: AppHandle,
+    target_window_label: String,
+    tab_id: String,
+) -> Result<(), String> {
+    let Some(window) = app.get_webview_window(&target_window_label) else {
+        return Err(format!("Target window '{}' not found", target_window_label));
+    };
+    window
+        .emit("tab:remove-by-id", serde_json::json!({ "tabId": tab_id }))
+        .map_err(|e| e.to_string())
+}
+
 /// Claim transfer data for a window. Returns the data and removes it from the registry.
 #[tauri::command]
 pub fn claim_tab_transfer(window_label: String) -> Option<TabTransferData> {

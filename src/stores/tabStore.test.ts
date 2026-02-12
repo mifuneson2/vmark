@@ -103,6 +103,43 @@ describe("tabStore", () => {
     });
   });
 
+  describe("createTransferredTab", () => {
+    it("inserts tab with provided id and activates it", () => {
+      const store = useTabStore.getState();
+      store.createTransferredTab("main", {
+        id: "tab-transfer-1",
+        filePath: "/docs/moved.md",
+        title: "moved",
+        isPinned: false,
+      });
+
+      const tabs = store.getTabsByWindow("main");
+      expect(tabs).toHaveLength(1);
+      expect(tabs[0].id).toBe("tab-transfer-1");
+      expect(store.getActiveTab("main")?.id).toBe("tab-transfer-1");
+    });
+
+    it("does not duplicate existing transfer id", () => {
+      const store = useTabStore.getState();
+      store.createTransferredTab("main", {
+        id: "tab-transfer-1",
+        filePath: "/docs/moved.md",
+        title: "moved",
+        isPinned: false,
+      });
+      store.createTransferredTab("main", {
+        id: "tab-transfer-1",
+        filePath: "/docs/other.md",
+        title: "other",
+        isPinned: false,
+      });
+
+      const tabs = store.getTabsByWindow("main");
+      expect(tabs).toHaveLength(1);
+      expect(tabs[0].filePath).toBe("/docs/moved.md");
+    });
+  });
+
   describe("closeTab", () => {
     it("cannot close pinned tabs", () => {
       const store = useTabStore.getState();
