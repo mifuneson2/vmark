@@ -41,7 +41,6 @@ async function runHealthCheck(): Promise<void> {
   try {
     // 1. Can we import the server module?
     const { createVMarkMcpServer } = await import('./index.js');
-    const { isWriterModeTool } = await import('./writerModeTools.js');
 
     // 2. Create a mock bridge that doesn't connect (implements Bridge interface)
     const mockBridge = {
@@ -71,22 +70,13 @@ async function runHealthCheck(): Promise<void> {
       }
     }
 
-    // 6. Read tool mode and filter tools
-    const toolMode = readToolMode();
-    const filteredTools =
-      toolMode === 'writer'
-        ? allTools.filter((tool) => isWriterModeTool(tool.name))
-        : allTools;
-
     // Success - output structured result
     const result = {
       status: 'ok',
       version: VERSION,
-      toolMode,
-      toolCount: filteredTools.length,
-      totalToolCount: allTools.length,
+      toolCount: allTools.length,
       resourceCount: resources.length,
-      tools: filteredTools.map((t) => t.name),
+      tools: allTools.map((t) => t.name),
     };
 
     console.log(JSON.stringify(result, null, 2));
@@ -105,7 +95,6 @@ async function runHealthCheck(): Promise<void> {
 
 import { createVMarkMcpServer } from './index.js';
 import { WebSocketBridge, ClientIdentity } from './bridge/websocket.js';
-import { isWriterModeTool } from './writerModeTools.js';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z, ZodTypeAny } from 'zod';
@@ -113,20 +102,6 @@ import { execSync } from 'child_process';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import { homedir, platform } from 'os';
-
-/**
- * Tool mode setting.
- * - "writer": ~15 tools focused on reading and writing content
- * - "full": All 76 tools including low-level controls
- */
-type ToolMode = 'writer' | 'full';
-
-/**
- * MCP settings stored in app data directory.
- */
-interface McpSettings {
-  toolMode?: ToolMode;
-}
 
 /**
  * Tauri app identifier for path resolution.
@@ -172,40 +147,6 @@ function getAppDataDir(): string {
       // Unknown platform — best guess
       return join(HOME_DIR, '.local', 'share', APP_IDENTIFIER);
   }
-}
-
-/**
- * Get the path to the MCP settings file in the app data directory.
- */
-function getMcpSettingsPath(): string {
-  return join(getAppDataDir(), 'mcp-settings.json');
-}
-
-/**
- * Read tool mode from the settings file.
- * Returns 'writer' as default if file doesn't exist or is invalid.
- */
-function readToolMode(): ToolMode {
-  const settingsPath = getMcpSettingsPath();
-
-  try {
-    const content = readFileSync(settingsPath, 'utf8');
-    const settings: McpSettings = JSON.parse(content);
-
-    if (settings.toolMode === 'full' || settings.toolMode === 'writer') {
-      return settings.toolMode;
-    }
-  } catch (err) {
-    if (!isNotFoundError(err)) {
-      // Real error (not just missing file) - log for debugging
-      if (process.env.VMARK_DEBUG) {
-        console.error('[VMark MCP] Failed to read settings file:', err);
-      }
-    }
-    // ENOENT or parse error - use default
-  }
-
-  return 'writer'; // Default to writer mode
 }
 
 /**
@@ -534,16 +475,7 @@ async function main(): Promise<void> {
 
   // Create the VMark MCP server with all tools
   const vmarkServer = createVMarkMcpServer(bridge);
-
-  // Read tool mode from settings
-  const toolMode = readToolMode();
-
-  // Get tools filtered by mode
   const allTools = vmarkServer.listTools();
-  const filteredTools =
-    toolMode === 'writer'
-      ? allTools.filter((tool) => isWriterModeTool(tool.name))
-      : allTools;
 
   // Create high-level MCP server
   const mcpServer = new McpServer(
@@ -559,8 +491,8 @@ async function main(): Promise<void> {
     }
   );
 
-  // Register tools based on mode (filtered or all)
-  for (const tool of filteredTools) {
+  // Register all tools
+  for (const tool of allTools) {
     // Convert JSON Schema to Zod schema for proper parameter exposure
     const zodSchema = jsonSchemaToZod(tool.inputSchema as JsonSchemaInput);
 
