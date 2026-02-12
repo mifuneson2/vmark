@@ -23,7 +23,6 @@ Update website docs when:
 | Change terminal feature | `website/guide/terminal.md` |
 | Change SVG handling | `website/guide/svg.md` |
 | Change Markmap support | `website/guide/markmap.md` |
-| Add/modify Claude Code skill | `website/guide/claude-code-skill.md` |
 | New major feature | Consider adding new guide page |
 
 ## File Mapping

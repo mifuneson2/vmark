@@ -125,8 +125,6 @@ That's it. Your AI can now read, edit, and write to your VMark documents.
 - Codex CLI
 - Gemini CLI
 
-For Claude Code users, install the [vmark-mcp skill](https://vmark.app/guide/claude-code-skill) for enhanced writing workflows.
-
 ---
 
 ## Keyboard Shortcuts

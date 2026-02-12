@@ -128,5 +128,4 @@ No extra setup needed. Just start asking your AI to help.
 ## Next Steps
 
 - [MCP Setup](/guide/mcp-setup) — Connect AI assistants to VMark's editor
-- [Claude Code Skill](/guide/claude-code-skill) — Enhanced AI writing assistance
-- [MCP Tools Reference](/guide/mcp-tools) — All 76 editor tools
+- [MCP Tools Reference](/guide/mcp-tools) — All 77 editor tools

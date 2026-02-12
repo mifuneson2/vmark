@@ -48,7 +48,6 @@ export default defineConfig({
             { text: 'AI Providers', link: '/guide/ai-providers' },
             { text: 'MCP Setup', link: '/guide/mcp-setup' },
             { text: 'MCP Tools Reference', link: '/guide/mcp-tools' },
-            { text: 'Claude Code Skill', link: '/guide/claude-code-skill' },
             { text: 'Users as Developers', link: '/guide/users-as-developers' },
           ]
         }
