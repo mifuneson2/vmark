@@ -23,6 +23,7 @@ import { openSettingsWindow } from "@/utils/settingsWindow";
 import { countCharsFromPlain, countWordsFromPlain, stripMarkdown } from "./statusTextMetrics";
 import { StatusBarRight } from "./StatusBarRight";
 import { useStatusBarTabDrag } from "./useStatusBarTabDrag";
+import { useQuitFeedback } from "./useQuitFeedback";
 import "./StatusBar.css";
 
 // Stable empty array to avoid creating new reference on each render.
@@ -81,6 +82,7 @@ export function StatusBar() {
   } | null>(null);
   const [showAutoSave, setShowAutoSave] = useState(false);
   const [autoSaveTime, setAutoSaveTime] = useState("");
+  const quitMessage = useQuitFeedback();
 
   const tabDragScopeRef = useRef<HTMLDivElement>(null);
 
@@ -217,6 +219,12 @@ export function StatusBar() {
                   <div className="tab-drop-indicator" />
                 )}
               </div>
+            )}
+
+            {quitMessage && (
+              <span className="status-quit-message">
+                Press {navigator.platform.includes("Mac") ? "⌘Q" : "Ctrl+Q"} again to quit
+              </span>
             )}
           </div>
 

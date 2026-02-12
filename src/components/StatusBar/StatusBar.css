@@ -133,6 +133,18 @@
 }
 
 /* ========================================
+   Confirm-quit message
+   ======================================== */
+
+.status-quit-message {
+  color: var(--text-secondary);
+  font-size: 11px;
+  padding: 0 8px;
+  white-space: nowrap;
+  animation: popup-fade-in 0.1s ease-out;
+}
+
+/* ========================================
    Pill-style Tabs in Status Bar
    ======================================== */
 

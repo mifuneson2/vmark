@@ -213,8 +213,9 @@ pub fn handle_menu_event(app: &AppHandle, event: tauri::menu::MenuEvent) {
     let id = event.id().as_ref();
 
     // Custom Quit (Cmd+Q) is handled in Rust so we can coordinate unsaved-changes prompts.
+    // request_quit applies the confirm-quit gate internally before starting coordinated quit.
     if id == "quit" {
-        quit::start_quit(app);
+        quit::request_quit(app);
         return;
     }
 

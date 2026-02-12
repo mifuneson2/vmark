@@ -1,0 +1,33 @@
+import { useEffect, useState } from "react";
+import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
+
+/** Duration to show the quit feedback message (matches Rust CONFIRM_QUIT_WINDOW). */
+const FEEDBACK_DURATION_MS = 2000;
+
+/**
+ * Listens for `app:quit-first-press` on the current window and manages
+ * a transient boolean for showing "Press Cmd+Q again to quit".
+ *
+ * Uses window-scoped listening (consistent with useWindowClose).
+ */
+export function useQuitFeedback(): boolean {
+  const [visible, setVisible] = useState(false);
+
+  // Listen for the first-press event from Rust
+  useEffect(() => {
+    const currentWindow = getCurrentWebviewWindow();
+    const unlisten = currentWindow.listen("app:quit-first-press", () => {
+      setVisible(true);
+    });
+    return () => { unlisten.then((fn) => fn()); };
+  }, []);
+
+  // Auto-hide after timeout
+  useEffect(() => {
+    if (!visible) return;
+    const timer = setTimeout(() => setVisible(false), FEEDBACK_DURATION_MS);
+    return () => clearTimeout(timer);
+  }, [visible]);
+
+  return visible;
+}

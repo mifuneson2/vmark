@@ -126,6 +126,7 @@ pub fn run() {
             window_manager::force_quit,
             window_manager::request_quit,
             quit::cancel_quit,
+            quit::set_confirm_quit,
             watcher::start_watching,
             watcher::stop_watching,
             watcher::stop_all_watchers,

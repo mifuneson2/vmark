@@ -66,6 +66,7 @@ import { useSearchCommands } from "@/hooks/useSearchCommands";
 import { useAutoSave } from "@/hooks/useAutoSave";
 import { useTheme } from "@/hooks/useTheme";
 import { useSettingsSync } from "@/hooks/useSettingsSync";
+import { useConfirmQuitSync } from "@/hooks/useConfirmQuitSync";
 import { useRecentFilesSync } from "@/hooks/useRecentFilesSync";
 import { useRecentWorkspacesSync } from "@/hooks/useRecentWorkspacesSync";
 import { useRecentWorkspacesMenuEvents } from "@/hooks/useRecentWorkspacesMenuEvents";
@@ -186,6 +187,7 @@ function MainLayout() {
   useFileOperations();
   useSearchCommands();
   useSettingsSync(); // Sync settings across windows
+  useConfirmQuitSync(); // Push confirmQuit setting to Rust
   useTheme();
   useAutoSave(); // Auto-save when dirty
   useRecentFilesSync(); // Sync recent files to native menu

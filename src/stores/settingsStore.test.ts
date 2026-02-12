@@ -57,6 +57,28 @@ describe("settingsStore MCP server settings", () => {
   });
 });
 
+describe("settingsStore confirmQuit", () => {
+  it("defaults confirmQuit to true", () => {
+    expect(useSettingsStore.getState().general.confirmQuit).toBe(true);
+  });
+
+  it("toggles confirmQuit off and on", () => {
+    useSettingsStore.getState().updateGeneralSetting("confirmQuit", false);
+    expect(useSettingsStore.getState().general.confirmQuit).toBe(false);
+
+    useSettingsStore.getState().updateGeneralSetting("confirmQuit", true);
+    expect(useSettingsStore.getState().general.confirmQuit).toBe(true);
+  });
+
+  it("resets confirmQuit to true on resetSettings", () => {
+    useSettingsStore.getState().updateGeneralSetting("confirmQuit", false);
+    expect(useSettingsStore.getState().general.confirmQuit).toBe(false);
+
+    useSettingsStore.getState().resetSettings();
+    expect(useSettingsStore.getState().general.confirmQuit).toBe(true);
+  });
+});
+
 describe("settingsStore line break defaults", () => {
   it("sets default line ending and hard break style preferences", () => {
     const state = useSettingsStore.getState();

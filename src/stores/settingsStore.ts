@@ -251,6 +251,8 @@ export interface GeneralSettings {
   // Editor
   tabSize: number; // Number of spaces for Tab key (2 or 4)
   lineEndingsOnSave: LineEndingOnSave; // Preserve or normalize line endings
+  // Quit behavior
+  confirmQuit: boolean; // Require double Cmd+Q to quit (default: true)
 }
 
 export type UpdateCheckFrequency = "startup" | "daily" | "weekly" | "manual";
@@ -322,6 +324,7 @@ const initialState: SettingsState = {
     historyMaxAgeDays: 7,
     tabSize: 2,
     lineEndingsOnSave: "preserve",
+    confirmQuit: true,
   },
   appearance: {
     theme: "paper",

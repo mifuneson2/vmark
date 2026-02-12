@@ -50,6 +50,19 @@ export function FilesImagesSettings() {
         </SettingRow>
       </SettingsGroup>
 
+      {/* Quit Behavior */}
+      <SettingsGroup title="Quit Behavior">
+        <SettingRow
+          label="Confirm quit"
+          description={`Press ${navigator.platform.includes("Mac") ? "⌘Q" : "Ctrl+Q"} twice to quit — prevents accidental exits`}
+        >
+          <Toggle
+            checked={general.confirmQuit}
+            onChange={(v) => updateGeneralSetting("confirmQuit", v)}
+          />
+        </SettingRow>
+      </SettingsGroup>
+
       {/* Saving */}
       <SettingsGroup title="Saving">
         <SettingRow
