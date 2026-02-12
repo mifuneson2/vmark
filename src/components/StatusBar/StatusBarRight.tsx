@@ -49,6 +49,9 @@ export function StatusBarRight({
 }: StatusBarRightProps) {
   return (
     <div className="status-bar-right">
+      <span className="status-item">{wordCount} words</span>
+      <span className="status-item">{charCount} chars</span>
+
       {aiRunning && (
         <span className="status-ai-running" title="AI genie is working...">
           <Sparkles size={12} />
@@ -99,9 +102,6 @@ export function StatusBarRight({
           {autoSaveTime}
         </span>
       )}
-
-      <span className="status-item">{wordCount} words</span>
-      <span className="status-item">{charCount} chars</span>
 
       <button
         className={`status-terminal ${terminalVisible ? "active" : ""}`}
