@@ -232,7 +232,13 @@ export const useAiProviderStore = create<AiProviderState & AiProviderActions>()(
     {
       name: "vmark-ai-providers",
       version: 2,
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(() =>
+        typeof window !== "undefined" ? localStorage : {
+          getItem: () => null,
+          setItem: () => {},
+          removeItem: () => {},
+        }
+      ),
       partialize: (state) => ({
         activeProvider: state.activeProvider,
         restProviders: state.restProviders,
