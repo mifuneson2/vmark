@@ -14,12 +14,14 @@
  *     to access the workspace root.
  *   - The disposed() callback lets the caller abort if the session was removed
  *     while the async spawn was in flight.
+ *   - Watermark-based flow control pauses the PTY when xterm.js can't keep up
+ *     with rapid output (e.g. AI tool redraws), preventing lag and freezes.
  *
  * @coordinates-with useTerminalSessions.ts — calls spawnPty when starting a shell
  * @coordinates-with createTerminalInstance.ts — provides the xterm Terminal instance
  * @module components/Terminal/spawnPty
  */
-import { spawn, type IPty } from "tauri-pty";
+import { spawn, type IPty, type IEvent } from "tauri-pty";
 import { invoke } from "@tauri-apps/api/core";
 import type { Terminal } from "@xterm/xterm";
 import { useWorkspaceStore } from "@/stores/workspaceStore";
@@ -57,6 +59,54 @@ export interface SpawnOptions {
   disposed: () => boolean;
 }
 
+/** Flow control constants — exported for tests. */
+export const CALLBACK_BYTE_LIMIT = 100_000;
+export const HIGH_WATERMARK = 5;
+export const LOW_WATERMARK = 2;
+
+/**
+ * Wire PTY → xterm with watermark-based flow control.
+ * Fast producers (e.g. claude-code with rapid ANSI redraws) can overwhelm
+ * xterm.js. We pause the PTY when too many write callbacks are pending,
+ * and resume when the parser catches up.
+ */
+/** Minimal PTY interface for flow control wiring (testable without full IPty). */
+export interface FlowControlPty {
+  onData: IEvent<Uint8Array>;
+  pause(): void;
+  resume(): void;
+}
+
+export function wirePtyFlowControl(
+  pty: FlowControlPty,
+  term: Pick<Terminal, "write">,
+  disposed: () => boolean,
+): void {
+  let written = 0;
+  let pendingCallbacks = 0;
+
+  pty.onData((data) => {
+    if (disposed()) return;
+    written += data.length;
+
+    if (written > CALLBACK_BYTE_LIMIT) {
+      term.write(data, () => {
+        pendingCallbacks = Math.max(pendingCallbacks - 1, 0);
+        if (pendingCallbacks < LOW_WATERMARK) {
+          pty.resume();
+        }
+      });
+      pendingCallbacks++;
+      written = 0;
+      if (pendingCallbacks > HIGH_WATERMARK) {
+        pty.pause();
+      }
+    } else {
+      term.write(data);
+    }
+  });
+}
+
 /**
  * Spawn a PTY process connected to the terminal.
  * Reads shell from Tauri backend, accepts optional cwd, wires data streams.
@@ -85,10 +135,8 @@ export async function spawnPty(options: SpawnOptions): Promise<IPty> {
     env,
   });
 
-  // PTY → xterm
-  pty.onData((data) => {
-    if (!disposed()) term.write(data);
-  });
+  // PTY → xterm with watermark-based flow control
+  wirePtyFlowControl(pty, term, disposed);
 
   // PTY exit
   pty.onExit(({ exitCode }) => {
