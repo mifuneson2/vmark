@@ -93,13 +93,15 @@ export function wirePtyFlowControl(
       term.write(data, () => {
         pendingCallbacks = Math.max(pendingCallbacks - 1, 0);
         if (pendingCallbacks < LOW_WATERMARK) {
-          pty.resume();
+          // tauri-pty 0.2.x doesn't implement resume() — degrade gracefully
+          try { pty.resume(); } catch { /* noop */ }
         }
       });
       pendingCallbacks++;
       written = 0;
       if (pendingCallbacks > HIGH_WATERMARK) {
-        pty.pause();
+        // tauri-pty 0.2.x doesn't implement pause() — degrade gracefully
+        try { pty.pause(); } catch { /* noop */ }
       }
     } else {
       term.write(data);

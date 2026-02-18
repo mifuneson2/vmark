@@ -202,6 +202,34 @@ describe("wirePtyFlowControl", () => {
     expect(writeCallbacks).toHaveLength(1); // no new callback
   });
 
+  it("survives when pause() throws (tauri-pty 0.2.x unimplemented)", () => {
+    mockPty.pause = vi.fn(() => { throw new Error("Method not implemented."); });
+    wirePtyFlowControl(mockPty, mockTerm, () => false);
+
+    // Should not throw even when pause() is unimplemented
+    expect(() => {
+      for (let i = 0; i <= HIGH_WATERMARK; i++) {
+        sendChunk(CALLBACK_BYTE_LIMIT + 1);
+      }
+    }).not.toThrow();
+  });
+
+  it("survives when resume() throws (tauri-pty 0.2.x unimplemented)", () => {
+    mockPty.resume = vi.fn(() => { throw new Error("Method not implemented."); });
+    wirePtyFlowControl(mockPty, mockTerm, () => false);
+
+    // Build up callbacks then flush — resume() should not throw
+    for (let i = 0; i <= HIGH_WATERMARK; i++) {
+      sendChunk(CALLBACK_BYTE_LIMIT + 1);
+    }
+    expect(() => {
+      const toFlush = writeCallbacks.length - LOW_WATERMARK + 1;
+      for (let i = 0; i < toFlush; i++) {
+        writeCallbacks.shift()?.();
+      }
+    }).not.toThrow();
+  });
+
   it("does not resume when callbacks drop but stay at LOW_WATERMARK", () => {
     wirePtyFlowControl(mockPty, mockTerm, () => false);
 
