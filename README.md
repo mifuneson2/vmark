@@ -32,6 +32,12 @@ When you file an issue, AI fixes the codebase under the maintainer's supervision
 - **[Bug Report](.github/ISSUE_TEMPLATE/bug_report.yml)**
 - **[Feature Request](.github/ISSUE_TEMPLATE/feature_request.yml)**
 
+**Why no "Co-authored-by: Claude" in commits?**
+
+VMark is built with multiple AI tools — Claude Code, Codex CLI, and Gemini CLI. Only Claude automatically adds a `Co-authored-by` trailer to commits. Codex and Gemini do not. Giving credit to one AI while the others contribute silently would misrepresent how this project is built. Since there's no fair way to attribute every AI involved, we turned off `Co-authored-by` entirely. The commit history belongs to the maintainer who supervised the work.
+
+Read more: **[Why Issues, Not PRs](https://vmark.app/guide/users-as-developers/why-issues-not-prs)**
+
 ---
 
 ## Why VMark?
