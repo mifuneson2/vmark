@@ -12,7 +12,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/refine_prompt.mjs",
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/refine_prompt.sh",
             "timeout": 60
           }
         ]
