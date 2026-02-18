@@ -66,6 +66,9 @@ export function createTerminalKeyHandler(
         return true;
       }
       case "v": {
+        // Prevent the browser's native paste on xterm's hidden textarea,
+        // which would cause a second write to PTY (double-paste bug).
+        event.preventDefault();
         readText().then((text) => {
           if (text && ptyRef.current) {
             ptyRef.current.write(text);

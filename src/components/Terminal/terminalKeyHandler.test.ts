@@ -28,6 +28,7 @@ function makeEvent(
     ctrlKey: false,
     isComposing: false,
     keyCode: 0,
+    preventDefault: vi.fn(),
     ...overrides,
   } as unknown as KeyboardEvent;
 }
