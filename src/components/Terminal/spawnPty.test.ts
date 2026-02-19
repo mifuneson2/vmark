@@ -6,6 +6,7 @@ import {
   HIGH_WATERMARK,
   LOW_WATERMARK,
   type FlowControlPty,
+  type PtyPayload,
 } from "./spawnPty";
 
 // Mock stores
@@ -93,7 +94,7 @@ describe("resolveTerminalCwd", () => {
 });
 
 describe("wirePtyFlowControl", () => {
-  let dataHandler: (data: Uint8Array) => void;
+  let dataHandler: (data: PtyPayload) => void;
   let writeCallbacks: Array<() => void>;
   let mockPty: FlowControlPty;
   let mockTerm: Pick<import("@xterm/xterm").Terminal, "write">;
@@ -101,7 +102,7 @@ describe("wirePtyFlowControl", () => {
   beforeEach(() => {
     writeCallbacks = [];
     mockPty = {
-      onData: vi.fn((handler: (e: Uint8Array) => void) => {
+      onData: vi.fn((handler: (e: PtyPayload) => void) => {
         dataHandler = handler;
         return { dispose: vi.fn() };
       }) as unknown as FlowControlPty["onData"],
@@ -118,6 +119,11 @@ describe("wirePtyFlowControl", () => {
   /** Send a chunk of the given byte size through the PTY data handler. */
   function sendChunk(size: number): void {
     dataHandler(new Uint8Array(size));
+  }
+
+  /** Send raw data (as received from Tauri IPC) through the PTY data handler. */
+  function sendRaw(data: PtyPayload): void {
+    dataHandler(data);
   }
 
   it("writes small chunks directly without callback (fast path)", () => {
@@ -228,6 +234,42 @@ describe("wirePtyFlowControl", () => {
         writeCallbacks.shift()?.();
       }
     }).not.toThrow();
+  });
+
+  it("converts plain number array to Uint8Array for correct UTF-8 decoding", () => {
+    wirePtyFlowControl(mockPty, mockTerm, () => false);
+
+    // Tauri IPC serializes Vec<u8> as a JSON array of numbers.
+    // "中" in UTF-8 is [228, 184, 173].
+    const cjkBytes = [228, 184, 173];
+    sendRaw(cjkBytes);
+
+    expect(mockTerm.write).toHaveBeenCalledTimes(1);
+    const written = vi.mocked(mockTerm.write).mock.calls[0][0];
+    expect(written).toBeInstanceOf(Uint8Array);
+    expect(Array.from(written as Uint8Array)).toEqual(cjkBytes);
+  });
+
+  it("passes Uint8Array through unchanged", () => {
+    wirePtyFlowControl(mockPty, mockTerm, () => false);
+
+    const original = new Uint8Array([228, 184, 173]);
+    sendRaw(original);
+
+    expect(mockTerm.write).toHaveBeenCalledTimes(1);
+    const written = vi.mocked(mockTerm.write).mock.calls[0][0];
+    expect(written).toBe(original); // exact same reference
+  });
+
+  it("drops invalid payload types silently", () => {
+    wirePtyFlowControl(mockPty, mockTerm, () => false);
+
+    // Simulate unexpected IPC payloads — should be ignored, not crash or write garbage.
+    dataHandler("unexpected string" as unknown as PtyPayload);
+    dataHandler(null as unknown as PtyPayload);
+    dataHandler({} as unknown as PtyPayload);
+
+    expect(mockTerm.write).not.toHaveBeenCalled();
   });
 
   it("does not resume when callbacks drop but stay at LOW_WATERMARK", () => {
