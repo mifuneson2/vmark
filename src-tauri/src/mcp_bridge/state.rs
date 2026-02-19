@@ -169,3 +169,83 @@ pub(crate) fn is_read_only_operation(request_type: &str) -> bool {
             | "structure.getSection"
     )
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // -- is_read_only_operation ------------------------------------------------
+
+    #[test]
+    fn read_only_document_operations() {
+        assert!(is_read_only_operation("document.getContent"));
+        assert!(is_read_only_operation("document.search"));
+    }
+
+    #[test]
+    fn read_only_selection_operations() {
+        assert!(is_read_only_operation("selection.get"));
+        assert!(is_read_only_operation("cursor.getContext"));
+    }
+
+    #[test]
+    fn read_only_metadata_operations() {
+        assert!(is_read_only_operation("outline.get"));
+        assert!(is_read_only_operation("metadata.get"));
+    }
+
+    #[test]
+    fn read_only_window_workspace_operations() {
+        assert!(is_read_only_operation("windows.list"));
+        assert!(is_read_only_operation("windows.getFocused"));
+        assert!(is_read_only_operation("workspace.getDocumentInfo"));
+        assert!(is_read_only_operation("workspace.listRecentFiles"));
+        assert!(is_read_only_operation("workspace.getInfo"));
+    }
+
+    #[test]
+    fn read_only_tab_operations() {
+        assert!(is_read_only_operation("tabs.list"));
+        assert!(is_read_only_operation("tabs.getActive"));
+        assert!(is_read_only_operation("tabs.getInfo"));
+    }
+
+    #[test]
+    fn read_only_structure_operations() {
+        assert!(is_read_only_operation("protocol.getCapabilities"));
+        assert!(is_read_only_operation("protocol.getRevision"));
+        assert!(is_read_only_operation("structure.getAst"));
+        assert!(is_read_only_operation("structure.getDigest"));
+        assert!(is_read_only_operation("structure.listBlocks"));
+        assert!(is_read_only_operation("structure.resolveTargets"));
+        assert!(is_read_only_operation("structure.getSection"));
+    }
+
+    #[test]
+    fn read_only_other_operations() {
+        assert!(is_read_only_operation("editor.getUndoState"));
+        assert!(is_read_only_operation("suggestion.list"));
+        assert!(is_read_only_operation("paragraph.read"));
+    }
+
+    #[test]
+    fn write_operations_not_read_only() {
+        assert!(!is_read_only_operation("document.insertAtCursor"));
+        assert!(!is_read_only_operation("document.insertAtPosition"));
+        assert!(!is_read_only_operation("document.replaceInSource"));
+        assert!(!is_read_only_operation("document.setContent"));
+        assert!(!is_read_only_operation("selection.replace"));
+        assert!(!is_read_only_operation("editor.undo"));
+        assert!(!is_read_only_operation("editor.redo"));
+        assert!(!is_read_only_operation("tabs.create"));
+        assert!(!is_read_only_operation("tabs.close"));
+        assert!(!is_read_only_operation("tabs.switch"));
+    }
+
+    #[test]
+    fn unknown_operations_not_read_only() {
+        assert!(!is_read_only_operation(""));
+        assert!(!is_read_only_operation("nonexistent.operation"));
+        assert!(!is_read_only_operation("document.getContent ")); // trailing space
+    }
+}

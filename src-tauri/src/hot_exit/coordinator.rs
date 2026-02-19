@@ -477,3 +477,207 @@ pub fn mark_window_restore_complete(window_label: &str) -> bool {
 
     state.all_complete()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // Tests mutate a global OnceLock, so they must run serially.
+    static TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+    fn make_window_state(label: &str, is_main: bool) -> WindowState {
+        WindowState {
+            window_label: label.to_string(),
+            is_main_window: is_main,
+            active_tab_id: None,
+            tabs: vec![],
+            ui_state: super::super::session::UiState {
+                sidebar_visible: true,
+                sidebar_width: 260,
+                outline_visible: false,
+                sidebar_view_mode: "files".to_string(),
+                status_bar_visible: true,
+                source_mode_enabled: false,
+                focus_mode_enabled: false,
+                typewriter_mode_enabled: false,
+            },
+            geometry: None,
+        }
+    }
+
+    // -- PendingRestoreState ---------------------------------------------------
+
+    #[test]
+    fn pending_restore_state_all_complete_empty() {
+        let _lock = TEST_LOCK.lock().unwrap();
+        let state = PendingRestoreState::default();
+        // Empty expected_labels → not complete (guard against vacuous truth)
+        assert!(!state.all_complete());
+    }
+
+    #[test]
+    fn pending_restore_state_all_complete_partial() {
+        let _lock = TEST_LOCK.lock().unwrap();
+        let mut state = PendingRestoreState::default();
+        state.expected_labels.insert("main".to_string());
+        state.expected_labels.insert("doc-1".to_string());
+        state.completed_windows.insert("main".to_string());
+        assert!(!state.all_complete());
+    }
+
+    #[test]
+    fn pending_restore_state_all_complete_full() {
+        let _lock = TEST_LOCK.lock().unwrap();
+        let mut state = PendingRestoreState::default();
+        state.expected_labels.insert("main".to_string());
+        state.expected_labels.insert("doc-1".to_string());
+        state.completed_windows.insert("main".to_string());
+        state.completed_windows.insert("doc-1".to_string());
+        assert!(state.all_complete());
+    }
+
+    #[test]
+    fn pending_restore_state_clear() {
+        let _lock = TEST_LOCK.lock().unwrap();
+        let mut state = PendingRestoreState::default();
+        state.expected_labels.insert("main".to_string());
+        state.window_states.insert("main".to_string(), make_window_state("main", true));
+        state.completed_windows.insert("main".to_string());
+        state.clear();
+        assert!(state.expected_labels.is_empty());
+        assert!(state.window_states.is_empty());
+        assert!(state.completed_windows.is_empty());
+    }
+
+    // -- normalize_window_label ------------------------------------------------
+
+    #[test]
+    fn normalize_matching_label_is_noop() {
+        let _lock = TEST_LOCK.lock().unwrap();
+        let mut ws = make_window_state("main", true);
+        normalize_window_label(&mut ws, "main");
+        assert_eq!(ws.window_label, "main");
+    }
+
+    #[test]
+    fn normalize_mismatched_label_updates() {
+        let _lock = TEST_LOCK.lock().unwrap();
+        let mut ws = make_window_state("old-label", false);
+        normalize_window_label(&mut ws, "doc-5");
+        assert_eq!(ws.window_label, "doc-5");
+    }
+
+    // -- Global state functions ------------------------------------------------
+
+    #[test]
+    fn store_and_retrieve_window_state() {
+        let _lock = TEST_LOCK.lock().unwrap();
+        clear_pending_restore();
+
+        let ws = make_window_state("main", true);
+        let expected: HashSet<String> = ["main".to_string()].into_iter().collect();
+        init_pending_restore_state_sync(
+            std::iter::once(("main".to_string(), ws.clone())),
+            expected,
+        );
+
+        let retrieved = get_window_restore_state("main");
+        assert!(retrieved.is_some());
+        assert_eq!(retrieved.unwrap().window_label, "main");
+    }
+
+    #[test]
+    fn retrieve_nonexistent_window_returns_none() {
+        let _lock = TEST_LOCK.lock().unwrap();
+        clear_pending_restore();
+
+        let result = get_window_restore_state("nonexistent");
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn mark_complete_tracks_expected_only() {
+        let _lock = TEST_LOCK.lock().unwrap();
+        clear_pending_restore();
+
+        let expected: HashSet<String> = ["main".to_string(), "doc-1".to_string()].into_iter().collect();
+        init_pending_restore_state_sync(
+            [
+                ("main".to_string(), make_window_state("main", true)),
+                ("doc-1".to_string(), make_window_state("doc-1", false)),
+            ],
+            expected,
+        );
+
+        // Unexpected window is ignored
+        assert!(!mark_window_restore_complete("unknown"));
+
+        // First expected window
+        assert!(!mark_window_restore_complete("main"));
+
+        // Second expected window — now all complete
+        assert!(mark_window_restore_complete("doc-1"));
+    }
+
+    #[test]
+    fn clear_pending_restore_resets_state() {
+        let _lock = TEST_LOCK.lock().unwrap();
+        clear_pending_restore();
+
+        let expected: HashSet<String> = ["main".to_string()].into_iter().collect();
+        init_pending_restore_state_sync(
+            std::iter::once(("main".to_string(), make_window_state("main", true))),
+            expected,
+        );
+        assert!(get_window_restore_state("main").is_some());
+
+        clear_pending_restore();
+        assert!(get_window_restore_state("main").is_none());
+    }
+
+    // -- prepare_session_for_restore -------------------------------------------
+
+    #[test]
+    fn prepare_session_valid() {
+        let _lock = TEST_LOCK.lock().unwrap();
+        let session = SessionData {
+            version: SCHEMA_VERSION,
+            timestamp: chrono::Utc::now().timestamp(),
+            vmark_version: "0.4.38".to_string(),
+            windows: vec![],
+            workspace: None,
+        };
+        assert!(prepare_session_for_restore(session).is_ok());
+    }
+
+    #[test]
+    fn prepare_session_stale_rejected() {
+        let _lock = TEST_LOCK.lock().unwrap();
+        let stale_timestamp = chrono::Utc::now().timestamp() - (8 * 86_400); // 8 days ago
+        let session = SessionData {
+            version: SCHEMA_VERSION,
+            timestamp: stale_timestamp,
+            vmark_version: "0.4.38".to_string(),
+            windows: vec![],
+            workspace: None,
+        };
+        let result = prepare_session_for_restore(session);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("too old"));
+    }
+
+    #[test]
+    fn prepare_session_incompatible_version_rejected() {
+        let _lock = TEST_LOCK.lock().unwrap();
+        let session = SessionData {
+            version: 999,
+            timestamp: chrono::Utc::now().timestamp(),
+            vmark_version: "0.4.38".to_string(),
+            windows: vec![],
+            workspace: None,
+        };
+        let result = prepare_session_for_restore(session);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Incompatible"));
+    }
+}

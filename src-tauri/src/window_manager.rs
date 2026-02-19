@@ -584,4 +584,89 @@ mod tests {
         queue_pending_file_opens(&mut pending, vec![], Some("/a"));
         assert!(pending.is_empty());
     }
+
+    // -- get_cascaded_position ------------------------------------------------
+
+    #[test]
+    fn cascade_first_window() {
+        let (x, y) = get_cascaded_position(0);
+        assert_eq!(x, BASE_X);
+        assert_eq!(y, BASE_Y);
+    }
+
+    #[test]
+    fn cascade_third_window() {
+        let (x, y) = get_cascaded_position(3);
+        assert_eq!(x, BASE_X + 3.0 * CASCADE_OFFSET);
+        assert_eq!(y, BASE_Y + 3.0 * CASCADE_OFFSET);
+    }
+
+    #[test]
+    fn cascade_wraps_after_max() {
+        // Position at MAX_CASCADE should wrap to 0
+        let (x, y) = get_cascaded_position(MAX_CASCADE);
+        assert_eq!(x, BASE_X);
+        assert_eq!(y, BASE_Y);
+    }
+
+    #[test]
+    fn cascade_wraps_correctly() {
+        // Position at MAX_CASCADE + 2 should be same as position 2
+        let (x1, y1) = get_cascaded_position(2);
+        let (x2, y2) = get_cascaded_position(MAX_CASCADE + 2);
+        assert_eq!(x1, x2);
+        assert_eq!(y1, y2);
+    }
+
+    // -- build_window_url -----------------------------------------------------
+
+    #[test]
+    fn url_no_params() {
+        assert_eq!(build_window_url(None, None), "/");
+    }
+
+    #[test]
+    fn url_file_only() {
+        let url = build_window_url(Some("/path/to/file.md"), None);
+        assert!(url.starts_with("/?file="));
+        assert!(url.contains("%2Fpath%2Fto%2Ffile.md"));
+    }
+
+    #[test]
+    fn url_workspace_only() {
+        let url = build_window_url(None, Some("/workspace"));
+        assert!(url.starts_with("/?workspaceRoot="));
+    }
+
+    #[test]
+    fn url_both_params() {
+        let url = build_window_url(Some("/a/b.md"), Some("/a"));
+        assert!(url.contains("file="));
+        assert!(url.contains("workspaceRoot="));
+        assert!(url.contains("&"));
+    }
+
+    // -- build_window_url_with_files ------------------------------------------
+
+    #[test]
+    fn url_with_files_empty() {
+        assert_eq!(build_window_url_with_files(&[], None), "/");
+    }
+
+    #[test]
+    fn url_with_files_single() {
+        let url = build_window_url_with_files(&["/a/b.md".to_string()], Some("/a"));
+        assert!(url.contains("workspaceRoot="));
+        assert!(url.contains("files="));
+    }
+
+    #[test]
+    fn url_with_files_multiple() {
+        let files = vec!["/a/x.md".to_string(), "/a/y.md".to_string()];
+        let url = build_window_url_with_files(&files, Some("/a"));
+        assert!(url.contains("files="));
+        // Files are JSON-encoded so they should contain the array
+        assert!(url.contains("x.md"));
+        assert!(url.contains("y.md"));
+    }
 }

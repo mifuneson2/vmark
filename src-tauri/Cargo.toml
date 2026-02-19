@@ -45,3 +45,4 @@ objc2-app-kit = { version = "0.3", features = ["NSApplication", "NSMenu", "NSMen
 objc2-foundation = { version = "0.3", features = ["NSString", "NSURL"] }
 
 [dev-dependencies]
+tokio = { version = "1", features = ["test-util", "macros", "rt-multi-thread"] }
