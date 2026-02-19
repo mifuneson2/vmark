@@ -10,12 +10,17 @@
  *   - Shell is determined by the Rust backend (get_default_shell), not hardcoded,
  *     to respect the user's configured shell on any platform.
  *   - Sets TERM_PROGRAM=vmark and EDITOR=vmark so CLI tools can detect the host.
+ *   - Sets LC_CTYPE=UTF-8 because macOS GUI apps have minimal env; without it
+ *     the shell defaults to C locale and tools emit "?" for CJK characters.
+ *     LC_CTYPE (not LANG) avoids overriding the user's full locale.
  *   - Sets VMARK_WORKSPACE when a workspace is open, enabling shell scripts
  *     to access the workspace root.
  *   - The disposed() callback lets the caller abort if the session was removed
  *     while the async spawn was in flight.
  *   - Watermark-based flow control pauses the PTY when xterm.js can't keep up
  *     with rapid output (e.g. AI tool redraws), preventing lag and freezes.
+ *   - PTY data is coerced to Uint8Array before passing to xterm.js because
+ *     tauri-plugin-pty serializes Vec<u8> as a JSON number array, not a typed array.
  *
  * @coordinates-with useTerminalSessions.ts — calls spawnPty when starting a shell
  * @coordinates-with createTerminalInstance.ts — provides the xterm Terminal instance
@@ -70,9 +75,12 @@ export const LOW_WATERMARK = 2;
  * xterm.js. We pause the PTY when too many write callbacks are pending,
  * and resume when the parser catches up.
  */
+/** Runtime PTY data: real Uint8Array or JSON-deserialized number[] from Tauri IPC. */
+export type PtyPayload = Uint8Array | number[];
+
 /** Minimal PTY interface for flow control wiring (testable without full IPty). */
 export interface FlowControlPty {
-  onData: IEvent<Uint8Array>;
+  onData: IEvent<PtyPayload>;
   pause(): void;
   resume(): void;
 }
@@ -85,8 +93,12 @@ export function wirePtyFlowControl(
   let written = 0;
   let pendingCallbacks = 0;
 
-  pty.onData((data) => {
+  pty.onData((rawData) => {
     if (disposed()) return;
+    // tauri-plugin-pty serializes Vec<u8> as a JSON array of numbers.
+    // xterm.js needs a real Uint8Array for correct UTF-8 multibyte decoding (CJK, emoji, etc.).
+    if (!(rawData instanceof Uint8Array) && !Array.isArray(rawData)) return;
+    const data = rawData instanceof Uint8Array ? rawData : new Uint8Array(rawData);
     written += data.length;
 
     if (written > CALLBACK_BYTE_LIMIT) {
@@ -125,6 +137,10 @@ export async function spawnPty(options: SpawnOptions): Promise<IPty> {
     TERM: "xterm-256color",
     TERM_PROGRAM: "vmark",
     EDITOR: "vmark",
+    // macOS GUI apps launched from Dock/Spotlight have minimal environment —
+    // set UTF-8 encoding so the shell and tools handle CJK/multibyte correctly.
+    // LC_CTYPE (not LANG) to only affect encoding without overriding the user's locale.
+    LC_CTYPE: "UTF-8",
   };
   if (workspaceRoot) {
     env.VMARK_WORKSPACE = workspaceRoot;
