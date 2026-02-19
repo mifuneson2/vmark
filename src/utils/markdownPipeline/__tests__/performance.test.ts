@@ -16,7 +16,7 @@
  * background load, and slower machines without flaking.
  */
 
-import { describe, it, expect, beforeAll, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeAll, beforeEach } from "vitest";
 
 // Skip performance tests in CI — timing thresholds are meaningless on shared runners
 const isCI = !!process.env.CI;
