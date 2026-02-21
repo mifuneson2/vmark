@@ -24,7 +24,7 @@ jobs:
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
 
-          claude_args: "--allowedTools Bash,Read,Write,Edit,Glob,Grep"
+          claude_args: "--model claude-opus-4-6 --allowedTools Bash,Read,Write,Edit,Glob,Grep"
 
           prompt: |
             You are a senior developer for VMark. An automated audit found the issue below.
