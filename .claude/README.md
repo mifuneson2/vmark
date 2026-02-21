@@ -145,6 +145,31 @@ Hooks run automatically at specific points in the Claude Code lifecycle:
 
 **`refine_prompt.sh`** — Opt-in via `::` or `>>` prefix. Translates non-English prompts to English and optimizes prompt structure for better AI coding results. See the [Prompt Refinement guide](https://vmark.app/guide/users-as-developers/prompt-refinement) for details.
 
+## Bot Cost Reports
+
+Each Claude bot workflow (review, audit, fix) appends a cost report after every run.
+
+- **Per-run summary**: visible in the Actions run's **Step Summary** tab
+- **Persistent log**: appended to a [private Gist](https://gist.github.com/xiaolai/6fb8484c42efc8bc1fca6c240f7b6a74) as JSONL
+
+Query the log:
+
+```bash
+# All runs grouped by workflow
+gh gist view 6fb8484c42efc8bc1fca6c240f7b6a74 -f bot-reports.jsonl | jq -s 'group_by(.workflow) | map({workflow: .[0].workflow, runs: length})'
+
+# Total duration by workflow
+gh gist view 6fb8484c42efc8bc1fca6c240f7b6a74 -f bot-reports.jsonl | jq -s 'group_by(.workflow) | map({workflow: .[0].workflow, total_min: (map(.duration_sec) | add / 60 | round)})'
+
+# Last 5 runs
+gh gist view 6fb8484c42efc8bc1fca6c240f7b6a74 -f bot-reports.jsonl | jq -s '.[-5:]'
+```
+
+**Setup** (already configured):
+- Repo variable `BOT_REPORTS_GIST_ID` — Gist ID
+- Repo secret `GIST_PAT` — token with `gist` scope
+- Composite action at `.github/actions/claude-report/action.yml`
+
 ## Related Files (Project Root)
 
 | File | Purpose |
