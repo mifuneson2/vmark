@@ -29,7 +29,7 @@ Read the plan content and display a brief summary to the user.
 
 ### Step 2: Let user choose model and settings
 
-Follow the instructions in `commands/_model-selection.md` to discover available models and present choices.
+Follow the instructions in `commands/shared/model-selection.md` to discover available models and present choices.
 
 - **Recommended model**: `gpt-5.3-codex`
 - **Recommended reasoning effort**: `medium`
@@ -45,11 +45,14 @@ Show the final configuration:
 - Reasoning effort: {chosen_effort}
 - Sandbox: {chosen_sandbox}
 
-Then call `mcp__codex__codex` with:
+Follow `commands/shared/codex-call.md` for availability test and call pattern.
+
+- **Command persona**: "You are an autonomous implementation agent. Execute plans completely."
+- **Sandbox**: `{chosen_sandbox}`
+- **Approval-policy**: `never`
 
 ```
-mcp__codex__codex with:
-  prompt: "Execute the following plan completely from start to finish in the current working directory.
+prompt: "Execute the following plan completely from start to finish in the current working directory.
 
 IMPORTANT RULES:
 - Implement EVERY step in the plan. Do not skip anything.
@@ -61,14 +64,9 @@ IMPORTANT RULES:
 
 THE PLAN:
 {plan_content}"
-  model: {chosen_model}
-  config: {"model_reasoning_effort": "{chosen_effort}"}
-  sandbox: {chosen_sandbox}
-  approval-policy: never
-  developer-instructions: "You are an autonomous implementation agent. Execute plans completely."
 ```
 
-**IMPORTANT**: Wait for Codex to fully complete before proceeding. Do NOT run multiple Codex calls in parallel.
+**IMPORTANT**: Wait for Codex to fully complete before proceeding.
 
 ### Step 4: Verify results
 
@@ -83,7 +81,7 @@ After Codex finishes:
 ## Codex Implementation Complete
 
 **Model**: {chosen_model} | **Effort**: {chosen_effort} | **Sandbox**: {chosen_sandbox}
-**Thread ID**: `{threadId}` _(use `/codex-continue {threadId}` to iterate)_
+**Thread ID**: `{threadId}` _(use `/continue {threadId}` to iterate)_
 
 **Files created**: {list}
 **Files modified**: {list}
@@ -104,3 +102,14 @@ Ask the user what to do next:
 - Commit the changes
 - Run additional tests
 - Revert if something went wrong (`git checkout .`)
+
+### Fallback
+
+If Codex is unavailable (availability test fails), inform the user:
+
+```
+Codex is not available. To implement this plan:
+- Use Claude directly (I can implement it step by step)
+- Check Codex connectivity with /preflight
+- Try again later
+```
