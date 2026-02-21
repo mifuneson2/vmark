@@ -57,7 +57,10 @@
     ],
     "macOS": {
       "entitlements": "sidecar-entitlements.plist",
-      "minimumSystemVersion": "10.15"
+      "minimumSystemVersion": "10.15",
+      "files": {
+        "PlugIns/.gitkeep": "PlugIns/.gitkeep"
+      }
     }
   },
   "plugins": {
