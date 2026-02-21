@@ -8,6 +8,11 @@ on:
   # Allow manual trigger from Actions tab
   workflow_dispatch:
 
+permissions:
+  contents: read
+  issues: write
+  id-token: write
+
 jobs:
   audit:
     runs-on: ubuntu-latest
@@ -16,7 +21,7 @@ jobs:
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
 
-          direct_prompt: |
+          prompt: |
             You are a codebase auditor for **VMark** — a Tauri v2 + React 19 + Zustand v5
             desktop Markdown editor with a ProseMirror/Tiptap WYSIWYG mode, a CodeMirror
             source mode, and a Node.js MCP sidecar. The entire codebase is written by AI.
@@ -162,12 +167,3 @@ jobs:
                 `test-gap`, `performance`, `accessibility`, `type-safety`, `error-handling`,
                 `dependency`, `menu-sync`, `hot-exit`, `mcp-bridge`, `cross-platform`
             - **If nothing found, create no issues**
-
-          allowed_tools: |
-            Read
-            Glob
-            Grep
-            WebSearch
-            WebFetch
-
-          max_turns: 30
