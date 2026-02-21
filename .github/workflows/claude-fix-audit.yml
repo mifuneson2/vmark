@@ -48,6 +48,7 @@ jobs:
             4. Run `pnpm test` to verify tests pass (if TypeScript changes)
             5. Run `cargo check --manifest-path src-tauri/Cargo.toml` (if Rust changes)
             6. Create a branch and open a PR that closes #${{ github.event.issue.number }}
+            7. Request @xiaolai to review the PR
 
             If the issue is unclear, too risky, or requires architectural decisions,
             comment on the issue explaining why and do NOT create a PR.
