@@ -18,7 +18,7 @@ on:
     types: [created]
 
 permissions:
-  contents: read
+  contents: write
   issues: write
   pull-requests: write
   id-token: write
@@ -38,6 +38,7 @@ jobs:
           fetch-depth: 1
 
       - uses: anthropics/claude-code-action@v1
+        id: claude
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
 
@@ -46,3 +47,15 @@ jobs:
           # PR review: consolidate into one comment, add "Fix this" links
           use_sticky_comment: true
           include_fix_links: true
+
+      - name: Bot Cost Report
+        if: always()
+        uses: ./.github/actions/claude-report
+        with:
+          workflow_name: "review"
+          event_type: ${{ github.event_name }}
+          target: ${{ github.event.issue.number || github.event.pull_request.number || '' }}
+          model: "opus"
+          execution_file: ${{ steps.claude.outputs.execution_file || '' }}
+          gist_token: ${{ secrets.GIST_PAT }}
+          gist_id: ${{ vars.BOT_REPORTS_GIST_ID }}

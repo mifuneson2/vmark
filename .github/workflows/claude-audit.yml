@@ -23,6 +23,7 @@ jobs:
           fetch-depth: 1
 
       - uses: anthropics/claude-code-action@v1
+        id: claude
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
 
@@ -174,3 +175,15 @@ jobs:
                 `test-gap`, `performance`, `accessibility`, `type-safety`, `error-handling`,
                 `dependency`, `menu-sync`, `hot-exit`, `mcp-bridge`, `cross-platform`
             - **If nothing found, create no issues**
+
+      - name: Bot Cost Report
+        if: always()
+        uses: ./.github/actions/claude-report
+        with:
+          workflow_name: "audit"
+          event_type: ${{ github.event_name }}
+          target: ""
+          model: "opus"
+          execution_file: ${{ steps.claude.outputs.execution_file || '' }}
+          gist_token: ${{ secrets.GIST_PAT }}
+          gist_id: ${{ vars.BOT_REPORTS_GIST_ID }}

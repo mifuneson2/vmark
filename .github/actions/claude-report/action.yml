@@ -1,0 +1,154 @@
+name: Bot Cost Report
+description: Generate step summary and append to persistent JSONL log in a GitHub Gist
+
+inputs:
+  workflow_name:
+    description: "Name of the workflow (review, audit, fix)"
+    required: true
+  event_type:
+    description: "GitHub event that triggered the run"
+    required: true
+  target:
+    description: "Issue/PR number (empty for scheduled runs)"
+    required: false
+    default: ""
+  model:
+    description: "Claude model used"
+    required: false
+    default: "opus"
+  execution_file:
+    description: "Path to claude-code-action execution file (for token data)"
+    required: false
+    default: ""
+  gist_token:
+    description: "PAT with gist scope for persistent storage"
+    required: true
+  gist_id:
+    description: "Gist ID to append reports to"
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Generate report
+      shell: bash
+      env:
+        WORKFLOW_NAME: ${{ inputs.workflow_name }}
+        EVENT_TYPE: ${{ inputs.event_type }}
+        TARGET: ${{ inputs.target }}
+        MODEL: ${{ inputs.model }}
+        EXECUTION_FILE: ${{ inputs.execution_file }}
+        RUN_ID: ${{ github.run_id }}
+        RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        GITHUB_TOKEN: ${{ github.token }}
+        GIST_TOKEN: ${{ inputs.gist_token }}
+        GIST_ID: ${{ inputs.gist_id }}
+      run: |
+        set -euo pipefail
+
+        # --- Calculate duration via GitHub API ---
+        STARTED_AT=$(gh api "repos/${{ github.repository }}/actions/runs/${RUN_ID}" --jq '.run_started_at' 2>/dev/null || echo "")
+        NOW=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+        DURATION_SEC=0
+        if [[ -n "$STARTED_AT" ]]; then
+          START_EPOCH=$(date -d "$STARTED_AT" +%s 2>/dev/null || date -j -f "%Y-%m-%dT%H:%M:%SZ" "$STARTED_AT" +%s 2>/dev/null || echo "0")
+          NOW_EPOCH=$(date +%s)
+          if [[ "$START_EPOCH" -gt 0 ]]; then
+            DURATION_SEC=$(( NOW_EPOCH - START_EPOCH ))
+          fi
+        fi
+
+        # Format duration as Xm Ys
+        DURATION_MIN=$(( DURATION_SEC / 60 ))
+        DURATION_REM=$(( DURATION_SEC % 60 ))
+        DURATION_FMT="${DURATION_MIN}m ${DURATION_REM}s"
+
+        # --- Determine status ---
+        STATUS="${{ job.status }}"
+        if [[ -z "$STATUS" ]]; then
+          STATUS="unknown"
+        fi
+
+        # --- Try to parse execution file for token info ---
+        INPUT_TOKENS=""
+        OUTPUT_TOKENS=""
+        COST_USD=""
+        if [[ -n "$EXECUTION_FILE" && -f "$EXECUTION_FILE" ]]; then
+          INPUT_TOKENS=$(jq -r '.result.input_tokens // empty' "$EXECUTION_FILE" 2>/dev/null || echo "")
+          OUTPUT_TOKENS=$(jq -r '.result.output_tokens // empty' "$EXECUTION_FILE" 2>/dev/null || echo "")
+          COST_USD=$(jq -r '.result.cost_usd // empty' "$EXECUTION_FILE" 2>/dev/null || echo "")
+        fi
+
+        # --- Build JSON line ---
+        JSON_LINE=$(jq -nc \
+          --arg ts "$NOW" \
+          --arg workflow "$WORKFLOW_NAME" \
+          --arg event "$EVENT_TYPE" \
+          --arg target "$TARGET" \
+          --arg model "$MODEL" \
+          --argjson duration "$DURATION_SEC" \
+          --arg status "$STATUS" \
+          --arg run_url "$RUN_URL" \
+          --argjson run_id "$RUN_ID" \
+          --arg input_tokens "${INPUT_TOKENS:-}" \
+          --arg output_tokens "${OUTPUT_TOKENS:-}" \
+          --arg cost_usd "${COST_USD:-}" \
+          '{
+            ts: $ts,
+            workflow: $workflow,
+            event: $event,
+            target: $target,
+            model: $model,
+            duration_sec: $duration,
+            status: $status,
+            run_url: $run_url,
+            run_id: $run_id
+          }
+          + (if $input_tokens != "" then {input_tokens: ($input_tokens | tonumber)} else {} end)
+          + (if $output_tokens != "" then {output_tokens: ($output_tokens | tonumber)} else {} end)
+          + (if $cost_usd != "" then {cost_usd: ($cost_usd | tonumber)} else {} end)')
+
+        # --- Write Step Summary ---
+        {
+          echo "## Bot Cost Report"
+          echo ""
+          echo "| Field | Value |"
+          echo "|-------|-------|"
+          echo "| Workflow | \`${WORKFLOW_NAME}\` |"
+          echo "| Event | \`${EVENT_TYPE}\` |"
+          if [[ -n "$TARGET" ]]; then
+            echo "| Target | #${TARGET} |"
+          fi
+          echo "| Model | \`${MODEL}\` |"
+          echo "| Duration | ${DURATION_FMT} |"
+          echo "| Status | \`${STATUS}\` |"
+          if [[ -n "$INPUT_TOKENS" ]]; then
+            echo "| Input tokens | ${INPUT_TOKENS} |"
+          fi
+          if [[ -n "$OUTPUT_TOKENS" ]]; then
+            echo "| Output tokens | ${OUTPUT_TOKENS} |"
+          fi
+          if [[ -n "$COST_USD" ]]; then
+            echo "| Cost | \$${COST_USD} |"
+          fi
+          echo "| Run | [${RUN_ID}](${RUN_URL}) |"
+        } >> "$GITHUB_STEP_SUMMARY"
+
+        # --- Append to Gist ---
+        if [[ -z "$GIST_ID" || -z "$GIST_TOKEN" ]]; then
+          echo "::warning::Gist ID or token not configured, skipping persistent log"
+          exit 0
+        fi
+
+        # Download current gist content
+        EXISTING=$(GH_TOKEN="$GIST_TOKEN" gh api "gists/${GIST_ID}" --jq '.files["bot-reports.jsonl"].content // ""' 2>/dev/null || echo "")
+
+        # Append new line
+        UPDATED="${EXISTING}${EXISTING:+$'\n'}${JSON_LINE}"
+
+        # Upload back via API (gh gist edit doesn't support stdin well)
+        PAYLOAD=$(jq -nc --arg content "$UPDATED" '{"files": {"bot-reports.jsonl": {"content": $content}}}')
+        GH_TOKEN="$GIST_TOKEN" gh api "gists/${GIST_ID}" -X PATCH --input - <<< "$PAYLOAD" > /dev/null
+
+        echo "Report appended to gist ${GIST_ID}"
