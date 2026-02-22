@@ -184,6 +184,3 @@ jobs:
           event_type: ${{ github.event_name }}
           target: ""
           model: "opus"
-          execution_file: ${{ steps.claude.outputs.execution_file || '' }}
-          gist_token: ${{ secrets.GIST_PAT }}
-          gist_id: ${{ vars.BOT_REPORTS_GIST_ID }}
