@@ -9,6 +9,7 @@
  *     (heading, paragraph, codeBlock, etc.) to add sourceLine attributes
  *   - Extensions are loaded eagerly (not lazy) since WYSIWYG is the default mode
  *   - Link extension configured with openOnClick:false (we have custom popups)
+ *   - Bold/Italic replaced with CJK-aware versions (lookbehind regexes)
  *   - Custom marks (highlight, underline, sub/superscript) registered here
  *   - Media extensions (block_video, block_audio, video_embed) with NodeViews
  *   - Media popup and handler extensions for editing and drag-drop
@@ -87,6 +88,7 @@ import { CJKLetterSpacing } from "@/plugins/cjkLetterSpacing";
 import { sourcePeekInlineExtension } from "@/plugins/sourcePeekInline";
 import { smartSelectAllExtension } from "@/plugins/smartSelectAll/tiptap";
 import { inlineCodeBoundaryExtension } from "@/plugins/inlineCodeBoundary/tiptap";
+import { CJKBold, CJKItalic } from "@/plugins/markInputRules/tiptap";
 
 /**
  * Creates the array of Tiptap extensions for the WYSIWYG editor.
@@ -99,6 +101,9 @@ export function createTiptapExtensions(): Extensions {
       // Keep Tiptap defaults for schema names and commands.
       listItem: false,
       underline: false,
+      // Disable bold/italic — replaced with CJK-aware versions below
+      bold: false,
+      italic: false,
       // Disable nodes replaced with sourceLine-enabled versions
       heading: false,
       paragraph: false,
@@ -128,6 +133,9 @@ export function createTiptapExtensions(): Extensions {
         rel: null,
       },
     }),
+    // CJK-aware bold/italic (replaces StarterKit defaults)
+    CJKBold,
+    CJKItalic,
     // Extended nodes with sourceLine attribute for cursor sync
     HeadingWithSourceLine,
     ParagraphWithSourceLine,
