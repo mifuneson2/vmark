@@ -176,11 +176,3 @@ jobs:
                 `dependency`, `menu-sync`, `hot-exit`, `mcp-bridge`, `cross-platform`
             - **If nothing found, create no issues**
 
-      - name: Bot Cost Report
-        if: always()
-        uses: ./.github/actions/claude-report
-        with:
-          workflow_name: "audit"
-          event_type: ${{ github.event_name }}
-          target: ""
-          model: "opus"

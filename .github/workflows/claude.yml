@@ -48,11 +48,3 @@ jobs:
           use_sticky_comment: true
           include_fix_links: true
 
-      - name: Bot Cost Report
-        if: always()
-        uses: ./.github/actions/claude-report
-        with:
-          workflow_name: "review"
-          event_type: ${{ github.event_name }}
-          target: ${{ github.event.issue.number || github.event.pull_request.number || '' }}
-          model: "opus"
