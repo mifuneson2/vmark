@@ -5,6 +5,7 @@ import { describe, it, expect } from "vitest";
 import {
   shouldBlockReload,
   getReloadWarningMessage,
+  isReloadShortcut,
   type ReloadGuardInput,
 } from "./reloadGuard";
 
@@ -56,6 +57,37 @@ describe("reloadGuard", () => {
     it("returns plural message for two documents", () => {
       const message = getReloadWarningMessage(2);
       expect(message).toContain("2 documents");
+    });
+  });
+
+  describe("isReloadShortcut", () => {
+    it("detects F5", () => {
+      expect(isReloadShortcut({ key: "F5", metaKey: false, ctrlKey: false })).toBe(true);
+    });
+
+    it("detects Cmd+R (macOS)", () => {
+      expect(isReloadShortcut({ key: "r", metaKey: true, ctrlKey: false })).toBe(true);
+    });
+
+    it("detects Ctrl+R (Windows/Linux)", () => {
+      expect(isReloadShortcut({ key: "r", metaKey: false, ctrlKey: true })).toBe(true);
+    });
+
+    it("detects Cmd+Shift+R (uppercase R)", () => {
+      expect(isReloadShortcut({ key: "R", metaKey: true, ctrlKey: false })).toBe(true);
+    });
+
+    it("detects Ctrl+Shift+R (uppercase R)", () => {
+      expect(isReloadShortcut({ key: "R", metaKey: false, ctrlKey: true })).toBe(true);
+    });
+
+    it("ignores plain R key", () => {
+      expect(isReloadShortcut({ key: "r", metaKey: false, ctrlKey: false })).toBe(false);
+    });
+
+    it("ignores unrelated shortcuts", () => {
+      expect(isReloadShortcut({ key: "s", metaKey: true, ctrlKey: false })).toBe(false);
+      expect(isReloadShortcut({ key: "F4", metaKey: false, ctrlKey: false })).toBe(false);
     });
   });
 });

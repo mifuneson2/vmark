@@ -1,11 +1,12 @@
 /**
  * Reload Guard Logic
  *
- * Purpose: Pure helper for determining if browser/webview page reload
- * should be blocked due to unsaved changes (beforeunload equivalent).
+ * Purpose: Pure helpers for reload prevention. Includes dirty-document
+ *   checks (dev mode) and keyboard shortcut detection (production mode).
  *
  * @coordinates-with closeDecision.ts — similar dirty-check logic for window close
  * @coordinates-with documentStore.ts — provides dirty tab IDs
+ * @coordinates-with useReloadGuard.ts — hook that consumes these helpers
  * @module utils/reloadGuard
  */
 
@@ -55,4 +56,18 @@ export function getReloadWarningMessage(count: number): string {
     return "You have unsaved changes. Are you sure you want to leave?";
   }
   return `You have ${count} documents with unsaved changes. Are you sure you want to leave?`;
+}
+
+/**
+ * Check if a keyboard event is a browser/webview reload shortcut.
+ *
+ * Detected shortcuts:
+ *   - F5
+ *   - Cmd+R / Ctrl+R
+ *   - Cmd+Shift+R / Ctrl+Shift+R
+ */
+export function isReloadShortcut(e: Pick<KeyboardEvent, "key" | "metaKey" | "ctrlKey">): boolean {
+  if (e.key === "F5") return true;
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "r") return true;
+  return false;
 }
