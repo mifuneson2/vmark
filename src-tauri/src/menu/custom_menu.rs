@@ -421,7 +421,7 @@ pub(crate) fn create_menu_with_shortcuts(
             &MenuItem::with_id(app, "horizontal-line", "Horizontal Line", true, get_accel("horizontal-line", "Alt+CmdOrCtrl+-"))?,
             &PredefinedMenuItem::separator(app)?,
             &MenuItem::with_id(app, "footnote", "Footnote", true, None::<&str>)?,
-            &MenuItem::with_id(app, "collapsible-block", "Collapsible Block", true, get_accel("collapsible-block", ""))?,
+            &MenuItem::with_id(app, "collapsible-block", "Collapsible Block", true, get_accel("collapsible-block", "Alt+CmdOrCtrl+D"))?,
             &info_boxes_submenu,
         ],
     )?;

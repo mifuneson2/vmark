@@ -211,10 +211,16 @@ pub async fn capture_session(app: &AppHandle) -> Result<SessionData, String> {
 
     if result.is_err() {
         // Timeout occurred
+        let missing: Vec<&String> = final_state
+            .expected_windows
+            .iter()
+            .filter(|w| !final_state.responses.contains_key(*w))
+            .collect();
         eprintln!(
-            "[HotExit] Timeout: Got {}/{} window responses",
+            "[HotExit] Timeout: Got {}/{} window responses. Missing: {:?}",
             got_responses,
-            expected_responses
+            expected_responses,
+            missing
         );
         if let Err(e) = app.emit(EVENT_CAPTURE_TIMEOUT, ()) {
             eprintln!("[HotExit] Failed to emit capture timeout event: {}", e);
@@ -224,6 +230,14 @@ pub async fn capture_session(app: &AppHandle) -> Result<SessionData, String> {
         if got_responses == 0 {
             return Err("Capture timeout: no windows responded".to_string());
         }
+
+        // Partial capture — log warning so it's traceable
+        eprintln!(
+            "[HotExit] WARNING: Saving partial session ({}/{} windows). State for {:?} was lost.",
+            got_responses,
+            expected_responses,
+            missing
+        );
     }
 
     // Build session from collected responses, sorted deterministically

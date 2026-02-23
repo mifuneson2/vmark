@@ -417,7 +417,7 @@ pub fn create_menu(app: &tauri::AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
             &MenuItem::with_id(app, "horizontal-line", "Horizontal Line", true, Some("Alt+CmdOrCtrl+-"))?,
             &PredefinedMenuItem::separator(app)?,
             &MenuItem::with_id(app, "footnote", "Footnote", true, None::<&str>)?,
-            &MenuItem::with_id(app, "collapsible-block", "Collapsible Block", true, None::<&str>)?,
+            &MenuItem::with_id(app, "collapsible-block", "Collapsible Block", true, Some("Alt+CmdOrCtrl+D"))?,
             &info_boxes_submenu,
         ],
     )?;

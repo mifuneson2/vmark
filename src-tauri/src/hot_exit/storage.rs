@@ -97,30 +97,66 @@ pub async fn write_session_atomic(
     .map_err(|e| format!("Task join error: {}", e))?
 }
 
-/// Read session from disk
+/// Try to read and parse a session file at the given path.
+/// Returns Ok(None) if the file doesn't exist, Ok(Some) on success,
+/// or Err on read/parse failure.
+async fn try_read_session_file(
+    path: &std::path::Path,
+) -> Result<Option<SessionData>, String> {
+    if !path.exists() {
+        return Ok(None);
+    }
+
+    let contents = tokio::fs::read_to_string(path)
+        .await
+        .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
+
+    let session: SessionData = serde_json::from_str(&contents)
+        .map_err(|e| format!("Failed to parse {}: {}", path.display(), e))?;
+
+    Ok(Some(session))
+}
+
+/// Read session from disk, falling back to backup if main file is corrupt.
 pub async fn read_session(
     app: &tauri::AppHandle,
 ) -> Result<Option<SessionData>, String> {
     let session_path = get_session_path(app)?;
 
-    if !session_path.exists() {
-        return Ok(None);
+    // Try main session file first
+    match try_read_session_file(&session_path).await {
+        Ok(Some(mut session)) => {
+            let warnings = validate_and_repair(&mut session);
+            for warning in &warnings {
+                eprintln!("[HotExit] Session repair: {}", warning);
+            }
+            return Ok(Some(session));
+        }
+        Ok(None) => {
+            // Main file doesn't exist — check backup before giving up
+        }
+        Err(e) => {
+            eprintln!("[HotExit] Main session corrupt ({}), trying backup", e);
+        }
     }
 
-    let contents = tokio::fs::read_to_string(&session_path)
-        .await
-        .map_err(|e| format!("Failed to read session file: {}", e))?;
-
-    let mut session: SessionData = serde_json::from_str(&contents)
-        .map_err(|e| format!("Failed to parse session JSON: {}", e))?;
-
-    // Validate structural consistency and auto-repair if needed
-    let warnings = validate_and_repair(&mut session);
-    for warning in &warnings {
-        eprintln!("[HotExit] Session repair: {}", warning);
+    // Fall back to backup session
+    let backup_path = get_backup_session_path(app)?;
+    match try_read_session_file(&backup_path).await {
+        Ok(Some(mut session)) => {
+            eprintln!("[HotExit] Restored session from backup");
+            let warnings = validate_and_repair(&mut session);
+            for warning in &warnings {
+                eprintln!("[HotExit] Session repair (backup): {}", warning);
+            }
+            Ok(Some(session))
+        }
+        Ok(None) => Ok(None),
+        Err(e) => {
+            eprintln!("[HotExit] Backup session also failed: {}", e);
+            Ok(None) // Both files unusable — start fresh
+        }
     }
-
-    Ok(Some(session))
 }
 
 /// Delete session file after successful restore

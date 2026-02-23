@@ -8,6 +8,8 @@
  *   - Display-only: uses inline decorations (CSS class) rather than document mutations
  *   - Performance: when disabled (cjkLetterSpacing === "0"), no regex scanning or
  *     decoration creation occurs — completely zero-cost
+ *   - Performance: on doc change, uses incremental updates (scan only changed ranges
+ *     via transaction step maps) instead of full-document rescan
  *   - Tracks enabled state in plugin state to detect setting toggles and rebuild decorations
  *   - Covers CJK Unified Ideographs, Extension A, Compatibility, Hiragana, Katakana,
  *     Hangul Syllables, and Bopomofo ranges
@@ -18,6 +20,7 @@
 
 import { Extension } from "@tiptap/core";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
+import type { Transaction } from "@tiptap/pm/state";
 import { Decoration, DecorationSet } from "@tiptap/pm/view";
 import type { Node as PMNode } from "@tiptap/pm/model";
 import { useSettingsStore } from "@/stores/settingsStore";
@@ -78,6 +81,68 @@ function createCJKDecorations(doc: PMNode, className: string): DecorationSet {
   return DecorationSet.create(doc, decorations);
 }
 
+/**
+ * Scan a document range for CJK text runs and return decorations.
+ * Used for incremental updates — only scans nodes overlapping [from, to].
+ */
+function scanRangeForCJK(
+  doc: PMNode,
+  from: number,
+  to: number,
+  className: string,
+): Decoration[] {
+  const decorations: Decoration[] = [];
+  doc.nodesBetween(from, to, (node: PMNode, pos: number) => {
+    if (!node.isText || !node.text) return;
+    CJK_REGEX.lastIndex = 0;
+    let match;
+    while ((match = CJK_REGEX.exec(node.text)) !== null) {
+      const decoFrom = pos + match.index;
+      const decoTo = decoFrom + match[0].length;
+      decorations.push(Decoration.inline(decoFrom, decoTo, { class: className }));
+    }
+  });
+  return decorations;
+}
+
+/**
+ * Apply incremental decoration updates for a transaction.
+ * Maps old decorations through the change, removes stale ones in changed
+ * ranges, then re-scans only those ranges.
+ */
+function applyIncrementalUpdate(
+  tr: Transaction,
+  oldDecorations: DecorationSet,
+  className: string,
+): DecorationSet {
+  let decorations = oldDecorations.map(tr.mapping, tr.doc);
+
+  tr.steps.forEach((_step, i) => {
+    const map = tr.mapping.maps[i];
+    map.forEach((_oldStart: number, _oldEnd: number, newStart: number, newEnd: number) => {
+      // Expand range to full node boundaries for correctness
+      const $from = tr.doc.resolve(newStart);
+      const $to = tr.doc.resolve(Math.min(newEnd, tr.doc.content.size));
+      const rangeFrom = $from.start($from.depth);
+      const rangeTo = $to.end($to.depth);
+
+      // Remove old decorations in the changed range
+      const stale = decorations.find(rangeFrom, rangeTo);
+      if (stale.length > 0) {
+        decorations = decorations.remove(stale);
+      }
+
+      // Re-scan the changed range
+      const newDecos = scanRangeForCJK(tr.doc, rangeFrom, rangeTo, className);
+      if (newDecos.length > 0) {
+        decorations = decorations.add(tr.doc, newDecos);
+      }
+    });
+  });
+
+  return decorations;
+}
+
 /** Plugin state includes decorations and the enabled state at creation time */
 interface PluginState {
   decorations: DecorationSet;
@@ -124,12 +189,14 @@ export const CJKLetterSpacing = Extension.create<CJKLetterSpacingOptions>({
               };
             }
 
-            // Normal case: recalculate only on doc change
+            // No doc change — just remap existing decorations
             if (!tr.docChanged) {
               return { decorations: oldDecorations.map(tr.mapping, tr.doc), wasEnabled: true };
             }
+
+            // Doc changed — incremental update (scan only changed ranges)
             return {
-              decorations: createCJKDecorations(tr.doc, className),
+              decorations: applyIncrementalUpdate(tr, oldDecorations, className),
               wasEnabled: true,
             };
           },
