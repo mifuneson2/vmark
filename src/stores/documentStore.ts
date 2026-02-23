@@ -72,7 +72,7 @@ interface DocumentStore {
   markMissing: (tabId: string) => void;
   clearMissing: (tabId: string) => void;
   markDivergent: (tabId: string) => void;
-  clearDivergent: (tabId: string) => void;
+
   markSaved: (tabId: string, lastDiskContent?: string) => void;
   markAutoSaved: (tabId: string, lastDiskContent?: string) => void;
   setCursorInfo: (tabId: string, info: CursorInfo | null) => void;
@@ -169,9 +169,6 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
 
   markDivergent: (tabId) =>
     set((state) => updateDoc(state, tabId, () => ({ isDivergent: true }))),
-
-  clearDivergent: (tabId) =>
-    set((state) => updateDoc(state, tabId, () => ({ isDivergent: false }))),
 
   markSaved: (tabId, lastDiskContent) =>
     set((state) =>

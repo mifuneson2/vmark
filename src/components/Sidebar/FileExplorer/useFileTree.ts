@@ -168,6 +168,9 @@ export function useFileTree(
       } else {
         unlistenRef.current = unlisten;
       }
+    }).catch((error: unknown) => {
+      console.error("[FileTree] Failed to listen for fs changes:",
+        error instanceof Error ? error.message : String(error));
     });
 
     return () => {
