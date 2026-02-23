@@ -32,7 +32,7 @@ function VersionInfo() {
   const [version, setVersion] = useState<string>("");
 
   useEffect(() => {
-    getVersion().then(setVersion);
+    getVersion().then(setVersion).catch(() => setVersion("Unknown"));
   }, []);
 
   return (

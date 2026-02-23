@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
+import { safeUnlistenAsync } from "@/utils/safeUnlisten";
 
 /** Duration to show the quit feedback message (matches Rust CONFIRM_QUIT_WINDOW). */
 const FEEDBACK_DURATION_MS = 2000;
@@ -19,7 +20,7 @@ export function useQuitFeedback(): boolean {
     const unlisten = currentWindow.listen("app:quit-first-press", () => {
       setVisible(true);
     });
-    return () => { unlisten.then((fn) => fn()); };
+    return () => { safeUnlistenAsync(unlisten); };
   }, []);
 
   // Auto-hide after timeout
