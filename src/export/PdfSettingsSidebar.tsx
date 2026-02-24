@@ -1,20 +1,25 @@
 /**
  * PDF Export Settings Sidebar
  *
- * Left panel of the PDF export dialog with page, typography, and element options.
+ * Right panel of the PDF export dialog with page, typography, and element options.
+ * Includes a visual page margin diagram and the Export button at the bottom.
  *
  * @module export/PdfSettingsSidebar
  * @coordinates-with PdfExportDialog.tsx — parent component
- * @coordinates-with pdfHtmlTemplate.ts — PdfOptions type
+ * @coordinates-with pdfHtmlTemplate.ts — PdfOptions type, MARGIN_PRESETS
  */
 
-import type { PdfOptions } from "./pdfHtmlTemplate";
+import { useState, useCallback } from "react";
+import { type PdfOptions, MARGIN_PRESETS } from "./pdfHtmlTemplate";
 import { FileText, Type, Layers } from "lucide-react";
 import {
   SettingRow,
   Select,
   Toggle,
+  Button,
 } from "@/pages/settings/components";
+
+import "./pdf-margin-layout.css";
 
 // --- Option definitions ---
 
@@ -30,10 +35,11 @@ const ORIENTATION_OPTIONS = [
   { value: "landscape" as const, label: "Landscape" },
 ];
 
-const MARGIN_OPTIONS = [
-  { value: "normal" as const, label: "Normal" },
-  { value: "narrow" as const, label: "Narrow" },
-  { value: "wide" as const, label: "Wide" },
+const MARGIN_PRESET_OPTIONS = [
+  { value: "normal", label: "Normal" },
+  { value: "narrow", label: "Narrow" },
+  { value: "wide", label: "Wide" },
+  { value: "custom", label: "Custom" },
 ];
 
 const FONT_SIZE_OPTIONS = [
@@ -74,6 +80,23 @@ const CJK_FONT_OPTIONS = [
   { value: "notoserif", label: "Noto Serif CJK" },
 ];
 
+// --- Helpers ---
+
+/** Detect which preset matches the current margin values, or "custom". */
+function detectMarginPreset(options: PdfOptions): string {
+  for (const [name, p] of Object.entries(MARGIN_PRESETS)) {
+    if (
+      options.marginTop === p.top &&
+      options.marginRight === p.right &&
+      options.marginBottom === p.bottom &&
+      options.marginLeft === p.left
+    ) {
+      return name;
+    }
+  }
+  return "custom";
+}
+
 // --- Components ---
 
 function PdfSettingsGroup({
@@ -91,12 +114,120 @@ function PdfSettingsGroup({
   );
 }
 
+/** Visual page margin diagram with editable mm inputs on all 4 sides. */
+function MarginLayoutDiagram({
+  top,
+  right,
+  bottom,
+  left,
+  landscape,
+  onChange,
+}: {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+  landscape: boolean;
+  onChange: (side: "marginTop" | "marginRight" | "marginBottom" | "marginLeft", value: number) => void;
+}) {
+  const handleChange = (side: "marginTop" | "marginRight" | "marginBottom" | "marginLeft", raw: string) => {
+    const v = parseFloat(raw);
+    if (!Number.isNaN(v) && v >= 0 && v <= 100) {
+      onChange(side, Math.round(v * 10) / 10);
+    }
+  };
+
+  return (
+    <div className="margin-layout">
+      <div className="margin-layout-top">
+        <input
+          type="number"
+          className="margin-layout-input"
+          value={top}
+          min={0}
+          max={100}
+          step={1}
+          onChange={(e) => handleChange("marginTop", e.target.value)}
+        />
+      </div>
+      <div className="margin-layout-middle">
+        <input
+          type="number"
+          className="margin-layout-input"
+          value={left}
+          min={0}
+          max={100}
+          step={1}
+          onChange={(e) => handleChange("marginLeft", e.target.value)}
+        />
+        <div className={`margin-layout-page ${landscape ? "margin-layout-page--landscape" : ""}`} />
+        <input
+          type="number"
+          className="margin-layout-input"
+          value={right}
+          min={0}
+          max={100}
+          step={1}
+          onChange={(e) => handleChange("marginRight", e.target.value)}
+        />
+      </div>
+      <div className="margin-layout-bottom">
+        <input
+          type="number"
+          className="margin-layout-input"
+          value={bottom}
+          min={0}
+          max={100}
+          step={1}
+          onChange={(e) => handleChange("marginBottom", e.target.value)}
+        />
+      </div>
+      <span className="margin-layout-unit">mm</span>
+    </div>
+  );
+}
+
+// --- Main sidebar ---
+
 interface PdfSettingsSidebarProps {
   options: PdfOptions;
   onOptionChange: <K extends keyof PdfOptions>(key: K, value: PdfOptions[K]) => void;
+  onExport: () => void;
+  exporting: boolean;
+  exportStage: string;
 }
 
-export function PdfSettingsSidebar({ options, onOptionChange: set }: PdfSettingsSidebarProps) {
+export function PdfSettingsSidebar({ options, onOptionChange: set, onExport, exporting, exportStage }: PdfSettingsSidebarProps) {
+  const [marginPreset, setMarginPreset] = useState(() => detectMarginPreset(options));
+
+  const handlePresetChange = useCallback((preset: string) => {
+    setMarginPreset(preset);
+    const p = MARGIN_PRESETS[preset];
+    if (p) {
+      set("marginTop", p.top);
+      set("marginRight", p.right);
+      set("marginBottom", p.bottom);
+      set("marginLeft", p.left);
+    }
+  }, [set]);
+
+  const handleMarginChange = useCallback(
+    (side: "marginTop" | "marginRight" | "marginBottom" | "marginLeft", value: number) => {
+      set(side, value);
+      // After changing an individual margin, re-detect preset
+      const next = { ...options, [side]: value };
+      for (const [name, p] of Object.entries(MARGIN_PRESETS)) {
+        if (next.marginTop === p.top && next.marginRight === p.right &&
+            next.marginBottom === p.bottom && next.marginLeft === p.left) {
+          setMarginPreset(name);
+          return;
+        }
+      }
+      setMarginPreset("custom");
+    },
+    [set, options],
+  );
+
   return (
     <div className="pdf-export-sidebar">
       <div data-tauri-drag-region className="pdf-export-drag-region" />
@@ -118,11 +249,19 @@ export function PdfSettingsSidebar({ options, onOptionChange: set }: PdfSettings
           </SettingRow>
           <SettingRow label="Margins">
             <Select
-              value={options.margins}
-              options={MARGIN_OPTIONS}
-              onChange={(v) => set("margins", v)}
+              value={marginPreset}
+              options={MARGIN_PRESET_OPTIONS}
+              onChange={handlePresetChange}
             />
           </SettingRow>
+          <MarginLayoutDiagram
+            top={options.marginTop}
+            right={options.marginRight}
+            bottom={options.marginBottom}
+            left={options.marginLeft}
+            landscape={options.orientation === "landscape"}
+            onChange={handleMarginChange}
+          />
         </PdfSettingsGroup>
 
         <PdfSettingsGroup icon={<Type className="w-3.5 h-3.5" />}>
@@ -185,6 +324,16 @@ export function PdfSettingsSidebar({ options, onOptionChange: set }: PdfSettings
             />
           </SettingRow>
         </PdfSettingsGroup>
+      </div>
+      <div className="pdf-export-action-bar">
+        <Button
+          variant="primary"
+          size="sm"
+          onClick={onExport}
+          disabled={exporting}
+        >
+          {exporting ? exportStage || "Exporting…" : "Export PDF"}
+        </Button>
       </div>
     </div>
   );

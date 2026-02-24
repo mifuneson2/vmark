@@ -1,0 +1,77 @@
+/**
+ * Visual page margin diagram for the PDF export sidebar.
+ *
+ * A compact page representation with number inputs on all 4 sides.
+ * The central "page" rectangle shows the content area.
+ */
+
+.margin-layout {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 4px 4px;
+}
+
+.margin-layout-top,
+.margin-layout-bottom {
+  display: flex;
+  justify-content: center;
+}
+
+.margin-layout-middle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* The page rectangle — represents the content area */
+.margin-layout-page {
+  width: 72px;
+  height: 96px;
+  border: 1px solid var(--border-color);
+  border-radius: 2px;
+  background: var(--bg-color);
+  transition: width 0.15s, height 0.15s;
+}
+
+.margin-layout-page--landscape {
+  width: 96px;
+  height: 72px;
+}
+
+/* Number inputs on each side */
+.margin-layout-input {
+  width: 44px;
+  height: 22px;
+  padding: 0 2px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-color);
+  font-size: 11px;
+  font-family: var(--font-mono);
+  text-align: center;
+  outline: none;
+  -moz-appearance: textfield;
+}
+
+.margin-layout-input::-webkit-inner-spin-button,
+.margin-layout-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.margin-layout-input:focus {
+  border-color: var(--primary-color);
+}
+
+/* Unit label */
+.margin-layout-unit {
+  position: absolute;
+  bottom: 4px;
+  right: 6px;
+  font-size: 9px;
+  color: var(--text-tertiary);
+}

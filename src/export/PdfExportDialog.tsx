@@ -25,7 +25,6 @@ import { captureThemeCSS } from "./themeSnapshot";
 import { getEditorContentCSS } from "./htmlExportStyles";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { PdfSettingsSidebar } from "./PdfSettingsSidebar";
-import { Button } from "@/pages/settings/components";
 
 import "./pdf-export-dialog.css";
 
@@ -64,7 +63,10 @@ export function PdfExportContent({
   const [options, setOptions] = useState<PdfOptions>({
     pageSize: "a4",
     orientation: "portrait",
-    margins: "normal",
+    marginTop: 25.4,
+    marginRight: 25.4,
+    marginBottom: 25.4,
+    marginLeft: 25.4,
     showPageNumbers: true,
     showHeader: true,
     showDate: false,
@@ -93,12 +95,12 @@ export function PdfExportContent({
 
     const updateScale = () => {
       const rect = container.getBoundingClientRect();
-      const padding = 32; // visual padding around the page
+      const padding = 64; // generous padding so page always has breathing room
       const availW = rect.width - padding;
       const availH = rect.height - padding;
       if (availW <= 0 || availH <= 0) return;
       const scale = Math.min(availW / pageDims.w, availH / pageDims.h);
-      setPreviewScale(Math.min(scale, 1)); // never upscale
+      setPreviewScale(Math.min(scale, 0.9)); // cap at 90% for visual clarity
     };
 
     updateScale();
@@ -243,9 +245,7 @@ export function PdfExportContent({
 
   return (
     <div className="pdf-export-body">
-      <PdfSettingsSidebar options={options} onOptionChange={setOption} />
-
-      {/* Preview — full height */}
+      {/* Preview — left side */}
       <div className="pdf-export-preview-wrapper">
         <div data-tauri-drag-region className="pdf-export-drag-region" />
         <div className="pdf-export-preview" ref={previewContainerRef}>
@@ -282,17 +282,16 @@ export function PdfExportContent({
           </div>
         </div>
         </div>
-        <div className="pdf-export-action-bar">
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={handleExport}
-            disabled={exporting}
-          >
-            {exporting ? exportStage || "Exporting…" : "Export PDF"}
-          </Button>
-        </div>
       </div>
+
+      {/* Settings — right side */}
+      <PdfSettingsSidebar
+        options={options}
+        onOptionChange={setOption}
+        onExport={handleExport}
+        exporting={exporting}
+        exportStage={exportStage}
+      />
     </div>
   );
 }

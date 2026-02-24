@@ -22,7 +22,10 @@ const katexCSS = _katexCSSRaw.replace(
 export interface PdfOptions {
   pageSize: "a4" | "letter" | "a3" | "legal";
   orientation: "portrait" | "landscape";
-  margins: "normal" | "narrow" | "wide";
+  marginTop: number;    // mm
+  marginRight: number;
+  marginBottom: number;
+  marginLeft: number;
   showPageNumbers: boolean;
   showHeader: boolean;
   showDate: boolean;
@@ -34,6 +37,13 @@ export interface PdfOptions {
   cjkFont: string;
 }
 
+/** Named margin presets (values in mm). */
+export const MARGIN_PRESETS: Record<string, { top: number; right: number; bottom: number; left: number }> = {
+  normal: { top: 25.4, right: 25.4, bottom: 25.4, left: 25.4 },
+  narrow: { top: 12.7, right: 12.7, bottom: 12.7, left: 12.7 },
+  wide:   { top: 25.4, right: 38.1, bottom: 25.4, left: 38.1 },
+};
+
 const PAGE_SIZES: Record<string, string> = {
   a4: "210mm 297mm",
   letter: "8.5in 11in",
@@ -41,11 +51,6 @@ const PAGE_SIZES: Record<string, string> = {
   legal: "8.5in 14in",
 };
 
-const MARGIN_VALUES: Record<string, string> = {
-  normal: "2.54cm",
-  narrow: "1.27cm",
-  wide: "3.81cm",
-};
 
 /** Escape a string for use in CSS `content: "..."` property. */
 function escapeCSSString(str: string): string {
@@ -73,7 +78,7 @@ function buildPageCSS(options: PdfOptions): string {
     options.orientation === "landscape"
       ? `${sizeSpec} landscape`
       : sizeSpec;
-  const margin = MARGIN_VALUES[options.margins] ?? MARGIN_VALUES.normal;
+  const margin = `${options.marginTop}mm ${options.marginRight}mm ${options.marginBottom}mm ${options.marginLeft}mm`;
 
   const marginBoxes: string[] = [];
 
