@@ -19,7 +19,7 @@
  * @coordinates-with useHistoryOperations.ts — creates version history snapshots
  * @module utils/saveToPath
  */
-import { writeTextFile } from "@tauri-apps/plugin-fs";
+import { invoke } from "@tauri-apps/api/core";
 import { toast } from "sonner";
 import { useDocumentStore } from "@/stores/documentStore";
 import { useTabStore } from "@/stores/tabStore";
@@ -58,7 +58,7 @@ export async function saveToPath(
   registerPendingSave(path, output);
 
   try {
-    await writeTextFile(path, output);
+    await invoke("atomic_write_file", { path, content: output });
   } catch (error) {
     // CRITICAL: Always clear pending save on failure to prevent stale entries
     clearPendingSave(path);

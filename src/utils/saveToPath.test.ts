@@ -6,8 +6,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { saveToPath } from "./saveToPath";
 
-vi.mock("@tauri-apps/plugin-fs", () => ({
-  writeTextFile: vi.fn(),
+vi.mock("@tauri-apps/api/core", () => ({
+  invoke: vi.fn(),
 }));
 
 vi.mock("@/hooks/useHistoryOperations", () => ({
@@ -43,7 +43,7 @@ vi.mock("@/utils/pendingSaves", () => ({
   clearPendingSave: vi.fn(),
 }));
 
-import { writeTextFile } from "@tauri-apps/plugin-fs";
+import { invoke } from "@tauri-apps/api/core";
 import { createSnapshot } from "@/hooks/useHistoryOperations";
 import { useDocumentStore } from "@/stores/documentStore";
 import { useTabStore } from "@/stores/tabStore";
@@ -97,12 +97,12 @@ describe("saveToPath", () => {
   });
 
   it("writes content and updates stores on success", async () => {
-    vi.mocked(writeTextFile).mockResolvedValue(undefined);
+    vi.mocked(invoke).mockResolvedValue(undefined);
 
     const result = await saveToPath("tab-1", "/tmp/doc.md", "Hello", "manual");
 
     expect(result).toBe(true);
-    expect(writeTextFile).toHaveBeenCalledWith("/tmp/doc.md", "Hello");
+    expect(invoke).toHaveBeenCalledWith("atomic_write_file", { path: "/tmp/doc.md", content: "Hello" });
     expect(mockSetFilePath).toHaveBeenCalledWith("tab-1", "/tmp/doc.md");
     expect(mockMarkSaved).toHaveBeenCalledWith("tab-1", "Hello");
     expect(mockUpdateTabPath).toHaveBeenCalledWith("tab-1", "/tmp/doc.md");
@@ -116,13 +116,13 @@ describe("saveToPath", () => {
   });
 
   it("normalizes line endings based on settings", async () => {
-    vi.mocked(writeTextFile).mockResolvedValue(undefined);
+    vi.mocked(invoke).mockResolvedValue(undefined);
     mockGetDocument.mockReturnValue({ lineEnding: "crlf" });
 
     const result = await saveToPath("tab-1", "/tmp/doc.md", "a\nb\n", "manual");
 
     expect(result).toBe(true);
-    expect(writeTextFile).toHaveBeenCalledWith("/tmp/doc.md", "a\r\nb\r\n");
+    expect(invoke).toHaveBeenCalledWith("atomic_write_file", { path: "/tmp/doc.md", content: "a\r\nb\r\n" });
     expect(mockSetLineMetadata).toHaveBeenCalledWith("tab-1", {
       lineEnding: "crlf",
       hardBreakStyle: "twoSpaces", // Default for unknown docs (wider compatibility)
@@ -130,7 +130,7 @@ describe("saveToPath", () => {
   });
 
   it("normalizes hard breaks based on settings", async () => {
-    vi.mocked(writeTextFile).mockResolvedValue(undefined);
+    vi.mocked(invoke).mockResolvedValue(undefined);
     mockGetDocument.mockReturnValue({ lineEnding: "lf", hardBreakStyle: "backslash" });
     vi.mocked(useSettingsStore.getState).mockReturnValue({
       general: {
@@ -149,7 +149,7 @@ describe("saveToPath", () => {
     const result = await saveToPath("tab-1", "/tmp/doc.md", "a\\\nb\n", "manual");
 
     expect(result).toBe(true);
-    expect(writeTextFile).toHaveBeenCalledWith("/tmp/doc.md", "a  \nb\n");
+    expect(invoke).toHaveBeenCalledWith("atomic_write_file", { path: "/tmp/doc.md", content: "a  \nb\n" });
     expect(mockSetLineMetadata).toHaveBeenCalledWith("tab-1", {
       lineEnding: "lf",
       hardBreakStyle: "twoSpaces",
@@ -157,7 +157,7 @@ describe("saveToPath", () => {
   });
 
   it("skips history snapshot when disabled", async () => {
-    vi.mocked(writeTextFile).mockResolvedValue(undefined);
+    vi.mocked(invoke).mockResolvedValue(undefined);
     vi.mocked(useSettingsStore.getState).mockReturnValue({
       general: {
         historyEnabled: false,
@@ -179,7 +179,7 @@ describe("saveToPath", () => {
   });
 
   it("returns false and skips updates when write fails", async () => {
-    vi.mocked(writeTextFile).mockRejectedValue(new Error("disk error"));
+    vi.mocked(invoke).mockRejectedValue(new Error("disk error"));
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
 
     const result = await saveToPath("tab-3", "/tmp/fail.md", "fail", "manual");
@@ -195,7 +195,7 @@ describe("saveToPath", () => {
 
   describe("saveType handling", () => {
     it("uses markSaved for manual saves", async () => {
-      vi.mocked(writeTextFile).mockResolvedValue(undefined);
+      vi.mocked(invoke).mockResolvedValue(undefined);
 
       await saveToPath("tab-1", "/tmp/doc.md", "content", "manual");
 
@@ -204,7 +204,7 @@ describe("saveToPath", () => {
     });
 
     it("uses markAutoSaved for auto saves", async () => {
-      vi.mocked(writeTextFile).mockResolvedValue(undefined);
+      vi.mocked(invoke).mockResolvedValue(undefined);
 
       await saveToPath("tab-1", "/tmp/doc.md", "content", "auto");
 
@@ -213,7 +213,7 @@ describe("saveToPath", () => {
     });
 
     it("adds to recent files for manual saves", async () => {
-      vi.mocked(writeTextFile).mockResolvedValue(undefined);
+      vi.mocked(invoke).mockResolvedValue(undefined);
 
       await saveToPath("tab-1", "/tmp/doc.md", "content", "manual");
 
@@ -221,7 +221,7 @@ describe("saveToPath", () => {
     });
 
     it("skips recent files for auto saves", async () => {
-      vi.mocked(writeTextFile).mockResolvedValue(undefined);
+      vi.mocked(invoke).mockResolvedValue(undefined);
 
       await saveToPath("tab-1", "/tmp/doc.md", "content", "auto");
 
@@ -231,19 +231,19 @@ describe("saveToPath", () => {
 
   describe("pending save handling", () => {
     it("registers pending save before write", async () => {
-      vi.mocked(writeTextFile).mockResolvedValue(undefined);
+      vi.mocked(invoke).mockResolvedValue(undefined);
 
       await saveToPath("tab-1", "/tmp/doc.md", "content", "manual");
 
       expect(registerPendingSave).toHaveBeenCalledWith("/tmp/doc.md", "content");
-      // registerPendingSave should be called before writeTextFile
+      // registerPendingSave should be called before invoke (atomic write)
       const registerCall = vi.mocked(registerPendingSave).mock.invocationCallOrder[0];
-      const writeCall = vi.mocked(writeTextFile).mock.invocationCallOrder[0];
+      const writeCall = vi.mocked(invoke).mock.invocationCallOrder[0];
       expect(registerCall).toBeLessThan(writeCall);
     });
 
     it("clears pending save after successful write (delayed)", async () => {
-      vi.mocked(writeTextFile).mockResolvedValue(undefined);
+      vi.mocked(invoke).mockResolvedValue(undefined);
 
       await saveToPath("tab-1", "/tmp/doc.md", "content", "manual");
 
@@ -254,7 +254,7 @@ describe("saveToPath", () => {
     });
 
     it("clears pending save on write failure", async () => {
-      vi.mocked(writeTextFile).mockRejectedValue(new Error("disk error"));
+      vi.mocked(invoke).mockRejectedValue(new Error("disk error"));
       const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
 
       await saveToPath("tab-1", "/tmp/doc.md", "content", "manual");

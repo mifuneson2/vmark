@@ -97,6 +97,46 @@ fn write_temp_html(app: tauri::AppHandle, html: String) -> Result<String, String
     Ok(path.to_string_lossy().into_owned())
 }
 
+/// Atomic file write using temp file + rename.
+///
+/// Prevents data loss on crash by writing to a temporary file in the same
+/// directory, flushing to disk, then atomically renaming over the target.
+#[tauri::command]
+async fn atomic_write_file(path: String, content: String) -> Result<(), String> {
+    tokio::task::spawn_blocking(move || {
+        use std::io::Write;
+        use tempfile::NamedTempFile;
+
+        let target = std::path::Path::new(&path);
+        let dir = target.parent().ok_or("File path has no parent directory")?;
+
+        let mut tmp = NamedTempFile::new_in(dir)
+            .map_err(|e| format!("Failed to create temp file: {}", e))?;
+
+        tmp.write_all(content.as_bytes())
+            .map_err(|e| format!("Failed to write temp file: {}", e))?;
+
+        tmp.flush()
+            .map_err(|e| format!("Failed to flush temp file: {}", e))?;
+
+        tmp.as_file()
+            .sync_all()
+            .map_err(|e| format!("Failed to sync temp file: {}", e))?;
+
+        tmp.persist(target)
+            .map_err(|e| format!("Failed to persist file: {}", e))?;
+
+        // Sync parent directory for crash safety
+        if let Ok(dir_file) = std::fs::File::open(dir) {
+            let _ = dir_file.sync_all();
+        }
+
+        Ok(())
+    })
+    .await
+    .map_err(|e| format!("Task join error: {}", e))?
+}
+
 /// Return the user's default shell.
 ///
 /// - macOS/Linux: reads `$SHELL` (fallback: `/bin/sh`)
@@ -206,6 +246,7 @@ pub fn run() {
             #[cfg(debug_assertions)]
             debug_log,
             write_temp_html,
+            atomic_write_file,
             #[cfg(target_os = "macos")]
             register_dock_recent,
             #[cfg(target_os = "macos")]
