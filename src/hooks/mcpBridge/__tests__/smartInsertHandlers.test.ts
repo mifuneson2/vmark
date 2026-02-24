@@ -100,6 +100,7 @@ function createMockEditor() {
       },
       tr: {
         replaceRange: vi.fn().mockReturnThis(),
+        scrollIntoView: vi.fn().mockReturnThis(),
       },
     },
     view: {

@@ -65,7 +65,8 @@ export async function handleSetContent(
     const slice = createMarkdownPasteSlice(editor.state, content);
     const tr = editor.state.tr
       .replaceWith(0, editor.state.doc.content.size, slice.content)
-      .setMeta("addToHistory", false);
+      .setMeta("addToHistory", false)
+      .scrollIntoView();
     editor.view.dispatch(tr);
 
     await respond({
@@ -105,7 +106,7 @@ export async function handleInsertAtCursorWithSuggestion(
     if (isAutoApproveEnabled()) {
       // Parse markdown and insert as rich content
       const slice = createMarkdownPasteSlice(editor.state, text);
-      const tr = editor.state.tr.replaceSelection(slice);
+      const tr = editor.state.tr.replaceSelection(slice).scrollIntoView();
       editor.view.dispatch(tr);
       await respond({
         id,
@@ -179,7 +180,7 @@ export async function handleInsertAtPositionWithSuggestion(
       // Parse markdown and insert as rich content at position
       // Use replaceRange to preserve slice open depth and block structure
       const slice = createMarkdownPasteSlice(editor.state, text);
-      const tr = editor.state.tr.replaceRange(position, position, slice);
+      const tr = editor.state.tr.replaceRange(position, position, slice).scrollIntoView();
       editor.view.dispatch(tr);
       await respond({
         id,
@@ -249,7 +250,7 @@ export async function handleSelectionReplaceWithSuggestion(
     if (isAutoApproveEnabled()) {
       // Parse markdown and replace selection with rich content
       const slice = createMarkdownPasteSlice(editor.state, text);
-      const tr = editor.state.tr.replaceRange(from, to, slice);
+      const tr = editor.state.tr.replaceRange(from, to, slice).scrollIntoView();
       editor.view.dispatch(tr);
       await respond({
         id,
@@ -386,11 +387,9 @@ export async function handleDocumentReplaceInSourceWithSuggestion(
     // Auto-approve: parse and replace entire document
     if (isAutoApproveEnabled()) {
       const slice = createMarkdownPasteSlice(editor.state, newMarkdown);
-      const tr = editor.state.tr.replaceWith(
-        0,
-        editor.state.doc.content.size,
-        slice.content
-      );
+      const tr = editor.state.tr
+        .replaceWith(0, editor.state.doc.content.size, slice.content)
+        .scrollIntoView();
       editor.view.dispatch(tr);
 
       await respond({

@@ -67,6 +67,7 @@ function createMockEditor(options: {
     replaceRange: vi.fn().mockReturnThis(),
     delete: vi.fn().mockReturnThis(),
     setMeta: vi.fn().mockReturnThis(),
+    scrollIntoView: vi.fn().mockReturnThis(),
   };
 
   return {

@@ -236,7 +236,7 @@ export async function handleSmartInsert(
 
     // Apply the insert directly — parse markdown to preserve special characters
     const slice = createMarkdownPasteSlice(editor.state, contentToInsert);
-    const tr = editor.state.tr.replaceRange(insertPos, insertPos, slice);
+    const tr = editor.state.tr.replaceRange(insertPos, insertPos, slice).scrollIntoView();
     editor.view.dispatch(tr);
 
     const newRevision = getCurrentRevision();
