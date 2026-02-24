@@ -1,9 +1,9 @@
 /**
  * PDF Export Content
  *
- * Orchestrates PDF export: settings sidebar (left) and live preview (right).
- * Uses Paged.js for paginated preview in an iframe. Preview is always
- * light/white theme. Dialog chrome respects user's theme.
+ * Orchestrates PDF export: live scrollable multi-page preview (left) and
+ * settings sidebar (right). Uses Paged.js for paginated preview in an iframe.
+ * Preview is always light/white theme. Dialog chrome respects user's theme.
  *
  * Rendered as a native Tauri window via PdfExportPage.tsx.
  *
@@ -81,33 +81,34 @@ export function PdfExportContent({
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
   const [exportStage, setExportStage] = useState("");
+  const [pageCount, setPageCount] = useState(0);
+  const [contentHeight, setContentHeight] = useState(0);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const previewContainerRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const [previewScale, setPreviewScale] = useState(0.5);
 
-  // Compute scale to fit page into preview container
   const pageDims = getPageDims(options.pageSize, options.orientation);
 
+  // Compute scale: fit page WIDTH into the preview container width
   useEffect(() => {
     const container = previewContainerRef.current;
     if (!container) return;
 
     const updateScale = () => {
       const rect = container.getBoundingClientRect();
-      const padding = 64; // generous padding so page always has breathing room
+      const padding = 64;
       const availW = rect.width - padding;
-      const availH = rect.height - padding;
-      if (availW <= 0 || availH <= 0) return;
-      const scale = Math.min(availW / pageDims.w, availH / pageDims.h);
-      setPreviewScale(Math.min(scale, 0.9)); // cap at 90% for visual clarity
+      if (availW <= 0) return;
+      const scale = availW / pageDims.w;
+      setPreviewScale(Math.min(scale, 0.9));
     };
 
     updateScale();
     const observer = new ResizeObserver(updateScale);
     observer.observe(container);
     return () => observer.disconnect();
-  }, [pageDims.w, pageDims.h]);
+  }, [pageDims.w]);
 
   // Capture theme + content CSS once (light theme values)
   const themeCSSRef = useRef(captureThemeCSS());
@@ -123,7 +124,7 @@ export function PdfExportContent({
     );
   }, [renderedHtml, options]);
 
-  // Build lightweight HTML for export (no Paged.js — uses native createPDF)
+  // Build lightweight HTML for export (no Paged.js — uses native print pipeline)
   const buildExportHtml = useCallback(() => {
     return buildPdfExportHtml(
       renderedHtml,
@@ -136,6 +137,8 @@ export function PdfExportContent({
   // Update iframe on options change (debounced)
   useEffect(() => {
     setLoading(true);
+    setPageCount(0);
+    setContentHeight(0);
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
     debounceRef.current = setTimeout(() => {
@@ -158,6 +161,12 @@ export function PdfExportContent({
       ) {
         setLoading(false);
         setPreviewError(false);
+        if (typeof e.data.pageCount === "number") {
+          setPageCount(e.data.pageCount);
+        }
+        if (typeof e.data.contentHeight === "number") {
+          setContentHeight(e.data.contentHeight);
+        }
       }
     };
     window.addEventListener("message", handler);
@@ -243,9 +252,13 @@ export function PdfExportContent({
     [],
   );
 
+  // Iframe dimensions: full content height when available, else single page
+  const iframeW = pageDims.w;
+  const iframeH = contentHeight > 0 ? contentHeight : pageDims.h;
+
   return (
     <div className="pdf-export-body">
-      {/* Preview — left side */}
+      {/* Preview — left side, scrollable multi-page */}
       <div className="pdf-export-preview-wrapper">
         <div data-tauri-drag-region className="pdf-export-drag-region" />
         <div className="pdf-export-preview" ref={previewContainerRef}>
@@ -262,15 +275,15 @@ export function PdfExportContent({
         <div
           className="pdf-export-page-sizer"
           style={{
-            width: pageDims.w * previewScale,
-            height: pageDims.h * previewScale,
+            width: iframeW * previewScale,
+            height: iframeH * previewScale,
           }}
         >
           <div
             className="pdf-export-page-frame"
             style={{
-              width: pageDims.w,
-              height: pageDims.h,
+              width: iframeW,
+              height: iframeH,
               transform: `scale(${previewScale})`,
             }}
           >
@@ -282,6 +295,12 @@ export function PdfExportContent({
           </div>
         </div>
         </div>
+        {/* Page count indicator */}
+        {pageCount > 0 && (
+          <div className="pdf-export-page-count">
+            {pageCount} {pageCount === 1 ? "page" : "pages"}
+          </div>
+        )}
       </div>
 
       {/* Settings — right side */}

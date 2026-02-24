@@ -1,17 +1,29 @@
 /**
  * PDF Export Settings Sidebar
  *
- * Right panel of the PDF export dialog with page, typography, and element options.
- * Includes a visual page margin diagram and the Export button at the bottom.
+ * Right panel of the PDF export dialog. Features:
+ * - Style presets (Default/Academic/Compact/Elegant) at the top
+ * - Page Setup section (always open)
+ * - Typography section (collapsible)
+ * - Headers & Footers section (collapsible) with title input
+ * - Export button at the bottom
  *
  * @module export/PdfSettingsSidebar
  * @coordinates-with PdfExportDialog.tsx — parent component
+ * @coordinates-with pdfPresets.ts — style presets and option definitions
  * @coordinates-with pdfHtmlTemplate.ts — PdfOptions type, MARGIN_PRESETS
  */
 
 import { useState, useCallback } from "react";
 import { type PdfOptions, MARGIN_PRESETS } from "./pdfHtmlTemplate";
-import { FileText, Type, Layers } from "lucide-react";
+import {
+  STYLE_PRESETS, STYLE_PRESET_OPTIONS,
+  detectMarginPreset, detectStylePreset,
+  PAGE_SIZE_OPTIONS, ORIENTATION_OPTIONS, MARGIN_PRESET_OPTIONS,
+  FONT_SIZE_OPTIONS, LINE_HEIGHT_OPTIONS, CJK_SPACING_OPTIONS,
+  LATIN_FONT_OPTIONS, CJK_FONT_OPTIONS,
+} from "./pdfPresets";
+import { ChevronRight, FileText, Type, Layers } from "lucide-react";
 import {
   SettingRow,
   Select,
@@ -20,82 +32,6 @@ import {
 } from "@/pages/settings/components";
 
 import "./pdf-margin-layout.css";
-
-// --- Option definitions ---
-
-const PAGE_SIZE_OPTIONS = [
-  { value: "a4" as const, label: "A4" },
-  { value: "letter" as const, label: "Letter" },
-  { value: "a3" as const, label: "A3" },
-  { value: "legal" as const, label: "Legal" },
-];
-
-const ORIENTATION_OPTIONS = [
-  { value: "portrait" as const, label: "Portrait" },
-  { value: "landscape" as const, label: "Landscape" },
-];
-
-const MARGIN_PRESET_OPTIONS = [
-  { value: "normal", label: "Normal" },
-  { value: "narrow", label: "Narrow" },
-  { value: "wide", label: "Wide" },
-  { value: "custom", label: "Custom" },
-];
-
-const FONT_SIZE_OPTIONS = [
-  { value: "10", label: "10pt" },
-  { value: "11", label: "11pt" },
-  { value: "12", label: "12pt" },
-  { value: "13", label: "13pt" },
-  { value: "14", label: "14pt" },
-];
-
-const LINE_HEIGHT_OPTIONS = [
-  { value: "1.4", label: "1.4" },
-  { value: "1.6", label: "1.6" },
-  { value: "1.8", label: "1.8" },
-  { value: "2.0", label: "2.0" },
-];
-
-const CJK_SPACING_OPTIONS = [
-  { value: "0", label: "Off" },
-  { value: "0.02", label: "0.02em" },
-  { value: "0.05", label: "0.05em" },
-  { value: "0.08", label: "0.08em" },
-];
-
-const LATIN_FONT_OPTIONS = [
-  { value: "system", label: "System Default" },
-  { value: "athelas", label: "Athelas" },
-  { value: "palatino", label: "Palatino" },
-  { value: "georgia", label: "Georgia" },
-  { value: "charter", label: "Charter" },
-];
-
-const CJK_FONT_OPTIONS = [
-  { value: "system", label: "System Default" },
-  { value: "pingfang", label: "PingFang SC" },
-  { value: "songti", label: "Songti SC" },
-  { value: "kaiti", label: "Kaiti SC" },
-  { value: "notoserif", label: "Noto Serif CJK" },
-];
-
-// --- Helpers ---
-
-/** Detect which preset matches the current margin values, or "custom". */
-function detectMarginPreset(options: PdfOptions): string {
-  for (const [name, p] of Object.entries(MARGIN_PRESETS)) {
-    if (
-      options.marginTop === p.top &&
-      options.marginRight === p.right &&
-      options.marginBottom === p.bottom &&
-      options.marginLeft === p.left
-    ) {
-      return name;
-    }
-  }
-  return "custom";
-}
 
 // --- Components ---
 
@@ -114,14 +50,35 @@ function PdfSettingsGroup({
   );
 }
 
+/** Collapsible section for the sidebar. */
+function CollapsibleSection({
+  title,
+  defaultOpen = false,
+  children,
+}: {
+  title: string;
+  defaultOpen?: boolean;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div style={{ marginBottom: "0.5rem" }}>
+      <button
+        className="pdf-collapsible-header"
+        data-open={open}
+        onClick={() => setOpen(!open)}
+      >
+        <ChevronRight />
+        {title}
+      </button>
+      {open && children}
+    </div>
+  );
+}
+
 /** Visual page margin diagram with editable mm inputs on all 4 sides. */
 function MarginLayoutDiagram({
-  top,
-  right,
-  bottom,
-  left,
-  landscape,
-  onChange,
+  top, right, bottom, left, landscape, onChange,
 }: {
   top: number;
   right: number;
@@ -144,9 +101,7 @@ function MarginLayoutDiagram({
           type="number"
           className="margin-layout-input"
           value={top}
-          min={0}
-          max={100}
-          step={1}
+          min={0} max={100} step={1}
           onChange={(e) => handleChange("marginTop", e.target.value)}
         />
       </div>
@@ -155,9 +110,7 @@ function MarginLayoutDiagram({
           type="number"
           className="margin-layout-input"
           value={left}
-          min={0}
-          max={100}
-          step={1}
+          min={0} max={100} step={1}
           onChange={(e) => handleChange("marginLeft", e.target.value)}
         />
         <div className={`margin-layout-page ${landscape ? "margin-layout-page--landscape" : ""}`} />
@@ -165,9 +118,7 @@ function MarginLayoutDiagram({
           type="number"
           className="margin-layout-input"
           value={right}
-          min={0}
-          max={100}
-          step={1}
+          min={0} max={100} step={1}
           onChange={(e) => handleChange("marginRight", e.target.value)}
         />
       </div>
@@ -176,9 +127,7 @@ function MarginLayoutDiagram({
           type="number"
           className="margin-layout-input"
           value={bottom}
-          min={0}
-          max={100}
-          step={1}
+          min={0} max={100} step={1}
           onChange={(e) => handleChange("marginBottom", e.target.value)}
         />
       </div>
@@ -198,9 +147,41 @@ interface PdfSettingsSidebarProps {
 }
 
 export function PdfSettingsSidebar({ options, onOptionChange: set, onExport, exporting, exportStage }: PdfSettingsSidebarProps) {
+  const [stylePreset, setStylePreset] = useState(() => detectStylePreset(options));
   const [marginPreset, setMarginPreset] = useState(() => detectMarginPreset(options));
 
-  const handlePresetChange = useCallback((preset: string) => {
+  // Apply a style preset — sets fonts, sizes, margins in one click
+  const handleStylePresetChange = useCallback((preset: string) => {
+    setStylePreset(preset);
+    const p = STYLE_PRESETS[preset];
+    if (!p) return;
+    set("fontSize", p.fontSize);
+    set("lineHeight", p.lineHeight);
+    set("latinFont", p.latinFont);
+    set("cjkFont", p.cjkFont);
+    set("marginTop", p.marginTop);
+    set("marginRight", p.marginRight);
+    set("marginBottom", p.marginBottom);
+    set("marginLeft", p.marginLeft);
+    // Also sync the margin preset dropdown
+    setMarginPreset(detectMarginPreset({
+      ...options,
+      marginTop: p.marginTop, marginRight: p.marginRight,
+      marginBottom: p.marginBottom, marginLeft: p.marginLeft,
+    }));
+  }, [set, options]);
+
+  // When any individual setting changes, re-detect style preset
+  const setAndDetect = useCallback(
+    <K extends keyof PdfOptions>(key: K, value: PdfOptions[K]) => {
+      set(key, value);
+      const next = { ...options, [key]: value };
+      setStylePreset(detectStylePreset(next));
+    },
+    [set, options],
+  );
+
+  const handleMarginPresetChange = useCallback((preset: string) => {
     setMarginPreset(preset);
     const p = MARGIN_PRESETS[preset];
     if (p) {
@@ -208,22 +189,27 @@ export function PdfSettingsSidebar({ options, onOptionChange: set, onExport, exp
       set("marginRight", p.right);
       set("marginBottom", p.bottom);
       set("marginLeft", p.left);
+      const next = { ...options, marginTop: p.top, marginRight: p.right, marginBottom: p.bottom, marginLeft: p.left };
+      setStylePreset(detectStylePreset(next));
     }
-  }, [set]);
+  }, [set, options]);
 
   const handleMarginChange = useCallback(
     (side: "marginTop" | "marginRight" | "marginBottom" | "marginLeft", value: number) => {
       set(side, value);
-      // After changing an individual margin, re-detect preset
       const next = { ...options, [side]: value };
+      // Re-detect margin preset
+      let found = false;
       for (const [name, p] of Object.entries(MARGIN_PRESETS)) {
         if (next.marginTop === p.top && next.marginRight === p.right &&
             next.marginBottom === p.bottom && next.marginLeft === p.left) {
           setMarginPreset(name);
-          return;
+          found = true;
+          break;
         }
       }
-      setMarginPreset("custom");
+      if (!found) setMarginPreset("custom");
+      setStylePreset(detectStylePreset(next));
     },
     [set, options],
   );
@@ -232,6 +218,16 @@ export function PdfSettingsSidebar({ options, onOptionChange: set, onExport, exp
     <div className="pdf-export-sidebar">
       <div data-tauri-drag-region className="pdf-export-drag-region" />
       <div className="pdf-export-sidebar-content">
+        {/* Style preset — top-level, most prominent */}
+        <div className="pdf-preset-row">
+          <Select
+            value={stylePreset}
+            options={STYLE_PRESET_OPTIONS}
+            onChange={handleStylePresetChange}
+          />
+        </div>
+
+        {/* Page Setup — always visible */}
         <PdfSettingsGroup icon={<FileText className="w-3.5 h-3.5" />}>
           <SettingRow label="Size">
             <Select
@@ -251,7 +247,7 @@ export function PdfSettingsSidebar({ options, onOptionChange: set, onExport, exp
             <Select
               value={marginPreset}
               options={MARGIN_PRESET_OPTIONS}
-              onChange={handlePresetChange}
+              onChange={handleMarginPresetChange}
             />
           </SettingRow>
           <MarginLayoutDiagram
@@ -264,66 +260,80 @@ export function PdfSettingsSidebar({ options, onOptionChange: set, onExport, exp
           />
         </PdfSettingsGroup>
 
-        <PdfSettingsGroup icon={<Type className="w-3.5 h-3.5" />}>
-          <SettingRow label="Font Size">
-            <Select
-              value={String(options.fontSize)}
-              options={FONT_SIZE_OPTIONS}
-              onChange={(v) => set("fontSize", Number(v))}
-            />
-          </SettingRow>
-          <SettingRow label="Line Height">
-            <Select
-              value={String(options.lineHeight)}
-              options={LINE_HEIGHT_OPTIONS}
-              onChange={(v) => set("lineHeight", Number(v))}
-            />
-          </SettingRow>
-          <SettingRow label="CJK Spacing">
-            <Select
-              value={options.cjkLetterSpacing.replace("em", "")}
-              options={CJK_SPACING_OPTIONS}
-              onChange={(v) =>
-                set("cjkLetterSpacing", v === "0" ? "0" : `${v}em`)
-              }
-            />
-          </SettingRow>
-          <SettingRow label="Latin Font">
-            <Select
-              value={options.latinFont}
-              options={LATIN_FONT_OPTIONS}
-              onChange={(v) => set("latinFont", v)}
-            />
-          </SettingRow>
-          <SettingRow label="CJK Font">
-            <Select
-              value={options.cjkFont}
-              options={CJK_FONT_OPTIONS}
-              onChange={(v) => set("cjkFont", v)}
-            />
-          </SettingRow>
-        </PdfSettingsGroup>
+        {/* Typography — collapsible */}
+        <CollapsibleSection title="Typography">
+          <PdfSettingsGroup icon={<Type className="w-3.5 h-3.5" />}>
+            <SettingRow label="Font Size">
+              <Select
+                value={String(options.fontSize)}
+                options={FONT_SIZE_OPTIONS}
+                onChange={(v) => setAndDetect("fontSize", Number(v))}
+              />
+            </SettingRow>
+            <SettingRow label="Line Height">
+              <Select
+                value={String(options.lineHeight)}
+                options={LINE_HEIGHT_OPTIONS}
+                onChange={(v) => setAndDetect("lineHeight", Number(v))}
+              />
+            </SettingRow>
+            <SettingRow label="CJK Spacing">
+              <Select
+                value={options.cjkLetterSpacing.replace("em", "")}
+                options={CJK_SPACING_OPTIONS}
+                onChange={(v) =>
+                  set("cjkLetterSpacing", v === "0" ? "0" : `${v}em`)
+                }
+              />
+            </SettingRow>
+            <SettingRow label="Latin Font">
+              <Select
+                value={options.latinFont}
+                options={LATIN_FONT_OPTIONS}
+                onChange={(v) => setAndDetect("latinFont", v)}
+              />
+            </SettingRow>
+            <SettingRow label="CJK Font">
+              <Select
+                value={options.cjkFont}
+                options={CJK_FONT_OPTIONS}
+                onChange={(v) => setAndDetect("cjkFont", v)}
+              />
+            </SettingRow>
+          </PdfSettingsGroup>
+        </CollapsibleSection>
 
-        <PdfSettingsGroup icon={<Layers className="w-3.5 h-3.5" />}>
-          <SettingRow label="Page Numbers">
-            <Toggle
-              checked={options.showPageNumbers}
-              onChange={(v) => set("showPageNumbers", v)}
-            />
-          </SettingRow>
-          <SettingRow label="Header">
-            <Toggle
-              checked={options.showHeader}
-              onChange={(v) => set("showHeader", v)}
-            />
-          </SettingRow>
-          <SettingRow label="Date">
-            <Toggle
-              checked={options.showDate}
-              onChange={(v) => set("showDate", v)}
-            />
-          </SettingRow>
-        </PdfSettingsGroup>
+        {/* Headers & Footers — collapsible */}
+        <CollapsibleSection title="Headers & Footers">
+          <PdfSettingsGroup icon={<Layers className="w-3.5 h-3.5" />}>
+            <SettingRow label="Title">
+              <input
+                type="text"
+                className="pdf-title-input"
+                value={options.title ?? ""}
+                onChange={(e) => set("title", e.target.value)}
+              />
+            </SettingRow>
+            <SettingRow label="Header">
+              <Toggle
+                checked={options.showHeader}
+                onChange={(v) => set("showHeader", v)}
+              />
+            </SettingRow>
+            <SettingRow label="Page Numbers">
+              <Toggle
+                checked={options.showPageNumbers}
+                onChange={(v) => set("showPageNumbers", v)}
+              />
+            </SettingRow>
+            <SettingRow label="Date">
+              <Toggle
+                checked={options.showDate}
+                onChange={(v) => set("showDate", v)}
+              />
+            </SettingRow>
+          </PdfSettingsGroup>
+        </CollapsibleSection>
       </div>
       <div className="pdf-export-action-bar">
         <Button

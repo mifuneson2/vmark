@@ -357,7 +357,11 @@ class CompletionHandler extends Paged.Handler {
     try {
       if (window.parent !== window) {
         window.parent.postMessage(
-          { type: "pagedjs-complete", pageCount: pages.length },
+          {
+            type: "pagedjs-complete",
+            pageCount: pages.length,
+            contentHeight: document.body.scrollHeight,
+          },
           "*"
         );
       }

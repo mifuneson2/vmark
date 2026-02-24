@@ -6,7 +6,7 @@
  * Window chrome respects the user's theme.
  *
  * Layout: preview (left) + settings sidebar (right), like macOS print dialogs.
- * Each pane is full-height with its own drag region above the scrollable area.
+ * Preview is vertically scrollable to show all pages.
  */
 
 .pdf-export-body {
@@ -72,8 +72,80 @@
   padding-bottom: 0.125rem;
 }
 
+/* --- Collapsible section styling --- */
 
-/* Export button bar — bottom-right of preview pane */
+.pdf-collapsible-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 0;
+  margin-bottom: 2px;
+  border: none;
+  background: none;
+  color: var(--text-secondary);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.pdf-collapsible-header:hover {
+  color: var(--text-color);
+}
+
+.pdf-collapsible-header svg {
+  width: 10px;
+  height: 10px;
+  transition: transform 0.15s;
+}
+
+.pdf-collapsible-header[data-open="true"] svg {
+  transform: rotate(90deg);
+}
+
+/* --- Style preset selector --- */
+
+.pdf-preset-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.pdf-preset-row label {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.pdf-preset-row select {
+  flex: 1;
+}
+
+/* --- Title input --- */
+
+.pdf-title-input {
+  width: 100%;
+  padding: 3px 6px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-color);
+  font-size: 0.8125rem;
+  font-family: var(--font-sans);
+  outline: none;
+}
+
+.pdf-title-input:focus {
+  border-color: var(--primary-color);
+}
+
+.pdf-title-input:disabled {
+  opacity: 0.5;
+}
+
+/* Export button bar — bottom of sidebar */
 .pdf-export-action-bar {
   display: flex;
   justify-content: flex-end;
@@ -81,8 +153,7 @@
   flex-shrink: 0;
 }
 
-/* Preview wrapper (left) — full height, flex column. Drag region sits above overflow area.
-   Uses --bg-secondary (darker) to contrast with --bg-primary sidebar. */
+/* Preview wrapper (left) — full height, flex column. Drag region sits above scroll area. */
 .pdf-export-preview-wrapper {
   flex: 1;
   display: flex;
@@ -91,31 +162,28 @@
   background: var(--bg-secondary);
 }
 
-/* Preview content area — centered page, below the drag region */
+/* Preview content area — vertically scrollable to show all pages */
 .pdf-export-preview {
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
   min-width: 0;
   min-height: 0;
   position: relative;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
   padding: 1rem;
 }
 
-/* Sizer constrains layout to the scaled dimensions so nothing overflows */
+/* Sizer constrains layout to the scaled dimensions */
 .pdf-export-page-sizer {
   flex-shrink: 0;
-  overflow: hidden;
 }
 
 .pdf-export-page-frame {
   transform-origin: top left;
   overflow: hidden;
-  background: white;
-  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.15);
 }
 
 .pdf-export-page-frame iframe {
@@ -136,5 +204,14 @@
   background: var(--bg-secondary);
   color: var(--text-secondary);
   font-size: 0.8125rem;
+  z-index: 1;
 }
 
+/* Page count indicator — bottom of preview pane */
+.pdf-export-page-count {
+  flex-shrink: 0;
+  text-align: center;
+  padding: 6px 0 10px;
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+}
