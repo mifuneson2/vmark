@@ -28,7 +28,6 @@
   width: 18rem; /* w-72 */
   flex-shrink: 0;
   background: var(--bg-primary);
-  border-left: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
 }

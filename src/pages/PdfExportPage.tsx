@@ -98,10 +98,11 @@ export function PdfExportPage() {
         onClose={handleClose}
       />
 
-      {/* Centered title overlay */}
+      {/* Title centered over the preview pane (excludes 18rem sidebar on right) */}
       <div
         data-tauri-drag-region
-        className="absolute top-0 left-0 right-0 h-12 flex items-center justify-center pointer-events-none"
+        className="absolute top-0 left-0 h-12 flex items-center justify-center pointer-events-none"
+        style={{ right: "18rem" }}
       >
         <span className="text-sm font-medium text-[var(--text-primary)]">
           Export PDF
