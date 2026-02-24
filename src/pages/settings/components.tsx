@@ -93,7 +93,7 @@ export function Select<T extends string>({
       value={value}
       disabled={disabled}
       onChange={(e) => onChange(e.target.value as T)}
-      className={`appearance-none px-2 pt-[2px] pb-0 pr-6 rounded border border-[var(--border-color)]
+      className={`appearance-none px-2 pt-[1px] pb-0 pr-6 rounded border border-[var(--border-color)]
                  bg-[var(--bg-primary)] text-sm text-[var(--text-primary)]
                  bg-[length:16px_16px] bg-[position:right_4px_center] bg-no-repeat
                  ${disabled ? "cursor-not-allowed" : ""}`}
