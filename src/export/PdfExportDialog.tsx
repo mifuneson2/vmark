@@ -191,7 +191,6 @@ export function PdfExportContent({
     const stageLabels: Record<string, string> = {
       loading: "Loading content…",
       rendering: "Generating PDF…",
-      writing: "Saving file…",
       done: "Done",
     };
     const unlisten = listen<{ stage: string }>(

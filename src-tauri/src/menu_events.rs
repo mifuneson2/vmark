@@ -426,8 +426,8 @@ pub fn handle_menu_event(app: &AppHandle, event: tauri::menu::MenuEvent) {
     // 3. Windows exist but none focused → queue event for when ready
     if matches!(id, "open" | "open-folder") {
         let event = make_menu_event(&format!("menu:{id}"));
-        if let Some(focused) = get_focused_window(app) {
-            // Case 1: Focused window - emit directly (window is ready)
+        if let Some(focused) = get_focused_document_window(app) {
+            // Case 1: Focused document window - emit directly (window is ready)
             emit_event(&focused, &event);
         } else if !has_document_windows(app) {
             // Case 2: No windows - create one and queue event

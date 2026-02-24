@@ -86,7 +86,11 @@ fn write_temp_html(app: tauri::AppHandle, html: String) -> Result<String, String
     let app_data = app.path().app_data_dir().map_err(|e| e.to_string())?;
     let dir = app_data.join("temp");
     std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
-    let filename = format!("print-{}.html", std::process::id());
+    let unique_id = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_nanos())
+        .unwrap_or(0);
+    let filename = format!("print-{}-{}.html", std::process::id(), unique_id);
     let path = dir.join(filename);
     let mut file = std::fs::File::create(&path).map_err(|e| e.to_string())?;
     file.write_all(html.as_bytes()).map_err(|e| e.to_string())?;

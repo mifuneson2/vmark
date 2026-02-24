@@ -1,11 +1,11 @@
 /**
  * PDF HTML Template Builder
  *
- * Builds self-contained HTML pages for PDF preview (Paged.js) and export (native createPDF).
+ * Builds self-contained HTML pages for PDF preview (Paged.js) and export (native printOperationWithPrintInfo).
  * Both templates include @page CSS rules, typography overrides, and light theme forcing.
  *
  * @module export/pdfHtmlTemplate
- * @coordinates-with pdf_export/renderer.rs — WKWebView loads export HTML, creates PDF
+ * @coordinates-with pdf_export/renderer.rs — WKWebView loads export HTML, generates PDF via printOperationWithPrintInfo
  * @coordinates-with PdfExportDialog.tsx — passes options from the dialog UI
  */
 
@@ -27,6 +27,11 @@ export function getKatexCSS(): string {
 /** Get light theme CSS overrides (for use in print — always light on paper). */
 export function getForceLightThemeCSS(): string {
   return forceLightThemeCSS();
+}
+
+/** Get shared content CSS for table/page-break handling (for use in print iframes). */
+export function getSharedContentCSS(): string {
+  return sharedContentCSS();
 }
 
 export interface PdfOptions {

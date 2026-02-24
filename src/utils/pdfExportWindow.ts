@@ -7,7 +7,7 @@
  *
  * Key decisions:
  *   - Uses write_temp_html to pass large HTML content (can be MBs with embedded images)
- *   - Singleton pattern: if window exists, focuses it (user must close and re-open for new content)
+ *   - Singleton pattern: if window exists, closes and recreates it with fresh content
  *   - Centers over parent window using physical-to-logical pixel conversion
  *
  * @coordinates-with PdfExportPage.tsx — renders the PDF export UI in the new window
@@ -46,7 +46,7 @@ async function calculateCenteredPosition(): Promise<{ x: number; y: number } | n
  * Open the PDF Export window with rendered HTML content.
  *
  * - Writes HTML to a temp file via Rust command
- * - If window already exists, focuses it (no re-render)
+ * - If window already exists, closes and recreates with fresh content
  * - If not, creates a new window centered on the current window
  */
 export async function openPdfExportWindow(data: {

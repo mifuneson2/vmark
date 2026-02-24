@@ -146,7 +146,6 @@ pub fn create_menu(app: &tauri::AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
             &MenuItem::with_id(app, "move-to", "Move to...", true, None::<&str>)?,
             &PredefinedMenuItem::separator(app)?,
             &export_submenu,
-            &MenuItem::with_id(app, "export-pdf", "Print...", true, Some("CmdOrCtrl+P"))?,
             &PredefinedMenuItem::separator(app)?,
             &history_submenu,
             &PredefinedMenuItem::separator(app)?,

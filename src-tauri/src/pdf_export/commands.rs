@@ -6,7 +6,7 @@ use std::path::Path;
 /// Export HTML content to a PDF file using WKWebView.
 ///
 /// Emits `pdf-export-progress` events to the `pdf-export` window
-/// with status updates: "loading", "rendering", "writing", "done".
+/// with status updates: "loading", "rendering", "done".
 ///
 /// After PDF generation, injects heading-based bookmarks using PDFKit.
 #[tauri::command]

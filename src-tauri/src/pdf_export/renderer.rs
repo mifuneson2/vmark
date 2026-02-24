@@ -45,7 +45,11 @@ pub async fn render_pdf(
 ) -> Result<(), String> {
     // Write HTML to temp file on the async thread (no main thread needed)
     let temp_dir = std::env::temp_dir();
-    let temp_html = temp_dir.join(format!("vmark-pdf-export-{}.html", std::process::id()));
+    let unique_id = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_nanos())
+        .unwrap_or(0);
+    let temp_html = temp_dir.join(format!("vmark-pdf-export-{}-{}.html", std::process::id(), unique_id));
     std::fs::write(&temp_html, &html)
         .map_err(|e| format!("Failed to write temp HTML: {}", e))?;
 
@@ -206,12 +210,12 @@ fn print_to_pdf(
         NSPrintInfo, NSPrintJobSavingURL, NSPrintSaveJob,
         NSPrintingPaginationMode,
     };
-    use objc2_foundation::NSURL;
+    use objc2_foundation::{NSCopying, NSURL};
 
     eprintln!("[PDF] configuring NSPrintInfo...");
 
-    // Start from shared print info (gets system defaults)
-    let print_info = NSPrintInfo::sharedPrintInfo();
+    // Copy shared print info to avoid mutating global state between operations
+    let print_info = NSPrintInfo::sharedPrintInfo().copy();
 
     // Configure pagination
     print_info.setHorizontalPagination(NSPrintingPaginationMode::Fit);
@@ -236,6 +240,9 @@ fn print_to_pdf(
         let dict = print_info.dictionary();
         let _: () = objc2::msg_send![&*dict, setObject: &*output_url, forKey: NSPrintJobSavingURL];
     }
+
+    // Remove any stale file to avoid false-positive success detection
+    let _ = std::fs::remove_file(output_path);
 
     eprintln!("[PDF] creating print operation...");
 
@@ -323,7 +330,11 @@ fn print_to_pdf(
 /// silently saving to file. The user selects a printer and prints.
 pub async fn print_document(app: AppHandle, html: String) -> Result<(), String> {
     let temp_dir = std::env::temp_dir();
-    let temp_html = temp_dir.join(format!("vmark-print-{}.html", std::process::id()));
+    let unique_id = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_nanos())
+        .unwrap_or(0);
+    let temp_html = temp_dir.join(format!("vmark-print-{}-{}.html", std::process::id(), unique_id));
     std::fs::write(&temp_html, &html)
         .map_err(|e| format!("Failed to write temp HTML: {}", e))?;
 
@@ -390,18 +401,26 @@ fn print_on_main_thread(
     let dir_url = NSURL::fileURLWithPath(&NSString::from_str(read_access_dir));
     unsafe { webview.loadFileURL_allowingReadAccessToURL(&file_url, &dir_url) };
 
-    // Wait for load
+    // Wait for load (with timeout)
+    let mut print_loaded = false;
     for i in 0..200 {
         run_loop_tick(0.05);
         let is_loading: bool = unsafe { objc2::msg_send![&webview, isLoading] };
         if !is_loading && i > 2 {
+            print_loaded = true;
             break;
         }
     }
+    if !print_loaded {
+        return Err("Print HTML load timeout (10s)".to_string());
+    }
     run_loop_tick(0.2);
 
-    // Configure NSPrintInfo — same pagination as PDF export
-    let print_info = NSPrintInfo::sharedPrintInfo();
+    // Copy shared print info to avoid mutating global state
+    let print_info = {
+        use objc2_foundation::NSCopying;
+        NSPrintInfo::sharedPrintInfo().copy()
+    };
     print_info.setHorizontalPagination(NSPrintingPaginationMode::Fit);
     print_info.setVerticalPagination(NSPrintingPaginationMode::Automatic);
     print_info.setTopMargin(0.0);

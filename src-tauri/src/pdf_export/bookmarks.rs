@@ -47,8 +47,10 @@ pub fn add_bookmarks(pdf_path: &str, headings: &[Heading]) -> Result<(), String>
     // Track outline hierarchy using a stack of (level, outline_ref_index)
     let mut items: Vec<(u32, objc2::rc::Retained<PDFOutline>)> = Vec::new();
 
+    let mut last_page: usize = 0;
     for heading in headings {
-        let page_idx = find_heading_page(&page_texts, &heading.text);
+        let page_idx = find_heading_page(&page_texts, &heading.text, last_page);
+        last_page = page_idx;
         let page = unsafe { doc.pageAtIndex(page_idx as objc2_foundation::NSUInteger) };
 
         let item = unsafe { PDFOutline::new() };
@@ -124,17 +126,32 @@ fn build_page_texts(
 }
 
 /// Find which page contains a heading by searching page text.
-/// Returns 0 (first page) if not found.
-fn find_heading_page(page_texts: &[String], heading_text: &str) -> usize {
+/// Searches forward from `start_page` to handle duplicate heading texts correctly.
+/// Falls back to searching from page 0 if not found after start_page.
+/// Returns 0 (first page) if not found anywhere.
+fn find_heading_page(page_texts: &[String], heading_text: &str, start_page: usize) -> usize {
     let needle = heading_text.trim();
-    for (i, text) in page_texts.iter().enumerate() {
+
+    // Search forward from start_page first (handles duplicate headings)
+    for (i, text) in page_texts.iter().enumerate().skip(start_page) {
         if text.contains(needle) {
             return i;
         }
     }
-    // Fallback: try case-insensitive or partial match
+    // Fallback: search from beginning (heading might be on an earlier page)
+    for (i, text) in page_texts.iter().enumerate().take(start_page) {
+        if text.contains(needle) {
+            return i;
+        }
+    }
+    // Last resort: case-insensitive search from start_page
     let lower = needle.to_lowercase();
-    for (i, text) in page_texts.iter().enumerate() {
+    for (i, text) in page_texts.iter().enumerate().skip(start_page) {
+        if text.to_lowercase().contains(&lower) {
+            return i;
+        }
+    }
+    for (i, text) in page_texts.iter().enumerate().take(start_page) {
         if text.to_lowercase().contains(&lower) {
             return i;
         }

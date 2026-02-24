@@ -224,8 +224,8 @@ export interface ExportToPdfOptions {
 }
 
 /**
- * Print: opens a self-contained HTML in the system browser for printing.
- * Works on all platforms via `window.print()`.
+ * Print via native macOS print dialog (Rust-side WKWebView).
+ * On non-macOS platforms, print is not supported (menu item hidden).
  */
 export async function exportToPdf(options: ExportToPdfOptions): Promise<void> {
   const { markdown } = options;
@@ -233,6 +233,12 @@ export async function exportToPdf(options: ExportToPdfOptions): Promise<void> {
   const trimmedContent = markdown.trim();
   if (!trimmedContent) {
     toast.error("No content to export!");
+    return;
+  }
+
+  const isMacOS = navigator.platform.includes("Mac");
+  if (!isMacOS) {
+    toast.error("Print requires macOS.");
     return;
   }
 
@@ -298,6 +304,10 @@ export async function exportToPdfNative(options: ExportToPdfOptions): Promise<vo
  */
 async function exportToPdfBrowser(_markdown: string): Promise<void> {
   try {
+    // Read HTML directly from the live editor DOM for instant print.
+    // This bypasses ExportSurface (used by Export PDF) for speed — trade-off
+    // is that local images use asset:// URLs which the off-screen WKWebView
+    // can resolve via file URL access. For visual-parity export, use Export PDF.
     const editorEl = document.querySelector(".ProseMirror");
     if (!editorEl) {
       toast.error("No editor content to print");
@@ -308,7 +318,7 @@ async function exportToPdfBrowser(_markdown: string): Promise<void> {
     const themeCSS = captureThemeCSS();
     const { getEditorContentCSS } = await import("./htmlExportStyles");
     const contentCSS = getEditorContentCSS();
-    const { getKatexCSS, getForceLightThemeCSS } = await import("./pdfHtmlTemplate");
+    const { getKatexCSS, getForceLightThemeCSS, getSharedContentCSS } = await import("./pdfHtmlTemplate");
 
     // Build a self-contained HTML document for the print WKWebView
     // Always force light theme — dark backgrounds waste ink and look wrong on paper
@@ -325,14 +335,7 @@ ${contentCSS}
 
 @page { margin: 1.5cm; }
 body { background: white; color: #1a1a1a; margin: 0; padding: 2em; }
-.export-surface { max-width: none; padding: 0; }
-.export-surface-editor .table-scroll-wrapper { overflow-x: visible; }
-.export-surface-editor .table-scroll-wrapper table { width: 100% !important; table-layout: fixed; }
-.export-surface-editor td, .export-surface-editor th { overflow-wrap: break-word; word-break: break-word; }
-.export-surface-editor td img { max-width: 100%; height: auto; }
-pre, .code-block-wrapper { break-inside: avoid; }
-img { break-inside: avoid; }
-h1, h2, h3, h4, h5, h6 { break-after: avoid; }
+${getSharedContentCSS()}
   </style>
 </head>
 <body>
