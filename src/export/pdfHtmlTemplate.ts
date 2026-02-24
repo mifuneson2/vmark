@@ -24,6 +24,11 @@ export function getKatexCSS(): string {
   return katexCSS;
 }
 
+/** Get light theme CSS overrides (for use in print — always light on paper). */
+export function getForceLightThemeCSS(): string {
+  return forceLightThemeCSS();
+}
+
 export interface PdfOptions {
   pageSize: "a4" | "letter" | "a3" | "legal";
   orientation: "portrait" | "landscape";

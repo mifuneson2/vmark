@@ -1,4 +1,4 @@
-//! Tauri commands for PDF export.
+//! Tauri commands for PDF export and native printing.
 
 use super::{bookmarks, renderer};
 use std::path::Path;
@@ -46,4 +46,13 @@ pub async fn export_pdf(
     }
 
     Ok(())
+}
+
+/// Print HTML content via native macOS print dialog.
+///
+/// Creates an off-screen WKWebView, loads the HTML, and shows the
+/// system print dialog. The user selects a printer and prints directly.
+#[tauri::command]
+pub async fn print_document(app: tauri::AppHandle, html: String) -> Result<(), String> {
+    renderer::print_document(app, html).await
 }

@@ -212,6 +212,8 @@ pub fn run() {
             cli_install::cli_uninstall,
             #[cfg(target_os = "macos")]
             pdf_export::commands::export_pdf,
+            #[cfg(target_os = "macos")]
+            pdf_export::commands::print_document,
         ])
         .setup(|app| {
             let menu = menu::create_menu(app.handle())?;

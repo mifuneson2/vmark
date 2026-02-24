@@ -317,6 +317,126 @@ fn print_to_pdf(
     Err("Print operation timeout (60s)".to_string())
 }
 
+/// Print HTML via native macOS print dialog.
+///
+/// Same pipeline as render_pdf but shows the print panel instead of
+/// silently saving to file. The user selects a printer and prints.
+pub async fn print_document(app: AppHandle, html: String) -> Result<(), String> {
+    let temp_dir = std::env::temp_dir();
+    let temp_html = temp_dir.join(format!("vmark-print-{}.html", std::process::id()));
+    std::fs::write(&temp_html, &html)
+        .map_err(|e| format!("Failed to write temp HTML: {}", e))?;
+
+    let (tx, rx) = oneshot::channel::<Result<(), String>>();
+    let tx = Arc::new(Mutex::new(Some(tx)));
+    let tx_clone = tx.clone();
+    let temp_html_str = temp_html.to_string_lossy().to_string();
+    let temp_dir_str = temp_dir.to_string_lossy().to_string();
+
+    let app_clone = app.clone();
+    app.run_on_main_thread(move || {
+        let result =
+            print_on_main_thread(&app_clone, &temp_html_str, &temp_dir_str);
+        let _ = std::fs::remove_file(&temp_html_str);
+        if let Some(sender) = tx_clone.lock().unwrap().take() {
+            let _ = sender.send(result);
+        }
+    })
+    .map_err(|e| format!("Failed to dispatch to main thread: {}", e))?;
+
+    rx.await
+        .map_err(|_| "Print channel closed".to_string())?
+}
+
+/// Main-thread native print logic.
+fn print_on_main_thread(
+    _app: &AppHandle,
+    html_path: &str,
+    read_access_dir: &str,
+) -> Result<(), String> {
+    use objc2::MainThreadMarker;
+    use objc2_app_kit::{
+        NSApplication, NSBackingStoreType, NSPrintInfo, NSPrintingPaginationMode, NSWindow,
+        NSWindowStyleMask,
+    };
+    use objc2_core_foundation::CGRect;
+    use objc2_foundation::NSURL;
+    use objc2_web_kit::{WKWebView, WKWebViewConfiguration};
+
+    let mtm = MainThreadMarker::new().ok_or("Print must run on the main thread")?;
+
+    // Hidden window + WKWebView to render the HTML
+    let frame = CGRect::new(
+        objc2_core_foundation::CGPoint::new(0.0, 0.0),
+        objc2_core_foundation::CGSize::new(800.0, 600.0),
+    );
+    let hidden_window = unsafe {
+        NSWindow::initWithContentRect_styleMask_backing_defer(
+            NSWindow::alloc(mtm),
+            frame,
+            NSWindowStyleMask::Borderless,
+            NSBackingStoreType::Buffered,
+            true,
+        )
+    };
+    let config = unsafe { WKWebViewConfiguration::new(mtm) };
+    let webview = unsafe {
+        WKWebView::initWithFrame_configuration(WKWebView::alloc(mtm), frame, &config)
+    };
+    hidden_window.setContentView(Some(&webview));
+
+    // Load HTML from file URL
+    let file_url = NSURL::fileURLWithPath(&NSString::from_str(html_path));
+    let dir_url = NSURL::fileURLWithPath(&NSString::from_str(read_access_dir));
+    unsafe { webview.loadFileURL_allowingReadAccessToURL(&file_url, &dir_url) };
+
+    // Wait for load
+    for i in 0..200 {
+        run_loop_tick(0.05);
+        let is_loading: bool = unsafe { objc2::msg_send![&webview, isLoading] };
+        if !is_loading && i > 2 {
+            break;
+        }
+    }
+    run_loop_tick(0.2);
+
+    // Configure NSPrintInfo — same pagination as PDF export
+    let print_info = NSPrintInfo::sharedPrintInfo();
+    print_info.setHorizontalPagination(NSPrintingPaginationMode::Fit);
+    print_info.setVerticalPagination(NSPrintingPaginationMode::Automatic);
+    print_info.setTopMargin(0.0);
+    print_info.setBottomMargin(0.0);
+    print_info.setLeftMargin(0.0);
+    print_info.setRightMargin(0.0);
+
+    // Get print operation — show the print panel (unlike PDF export)
+    let print_op = unsafe { webview.printOperationWithPrintInfo(&print_info) };
+    print_op.setShowsPrintPanel(true);
+    print_op.setShowsProgressPanel(true);
+
+    // Attach the print dialog to the app's key window (the focused document window)
+    // so the sheet appears on the main window and can be interacted with normally.
+    let ns_app = NSApplication::sharedApplication(mtm);
+    let parent_window = ns_app.keyWindow().unwrap_or(hidden_window.clone());
+
+    // Run modal — shows native macOS print dialog as a sheet on the main window
+    unsafe {
+        print_op.runOperationModalForWindow_delegate_didRunSelector_contextInfo(
+            &parent_window,
+            None,
+            None,
+            std::ptr::null_mut(),
+        );
+    }
+
+    // Spin run loop to let the dialog and print operation complete
+    for _ in 0..20 {
+        run_loop_tick(0.1);
+    }
+
+    Ok(())
+}
+
 /// Tick the run loop using NSRunLoop.
 fn run_loop_tick(seconds: f64) {
     use objc2_foundation::{NSDate, NSRunLoop};

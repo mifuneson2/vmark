@@ -1,7 +1,7 @@
 /**
  * Export Operations
  *
- * Print: Renders content in a hidden iframe and invokes the OS print dialog.
+ * Print: Injects @media print styles and calls window.print() on the main webview.
  * HTML Export: Uses ExportSurface for visual-parity rendering.
  */
 
@@ -214,19 +214,6 @@ export async function exportToHtml(
   }
 }
 
-/**
- * Rewrite asset:// URLs to file:// so the system browser can load local images.
- *
- * In the Tauri webview, images are served via `asset://localhost/path` or
- * `https://asset.localhost/path`. Browsers can't resolve these, but they can
- * load `file:///path` from a locally-opened HTML file.
- */
-function rewriteAssetUrls(html: string): string {
-  return html
-    .replace(/asset:\/\/localhost/g, "file://")
-    .replace(/https:\/\/asset\.localhost/g, "file://");
-}
-
 export interface ExportToPdfOptions {
   /** Markdown content */
   markdown: string;
@@ -301,28 +288,30 @@ export async function exportToPdfNative(options: ExportToPdfOptions): Promise<vo
 }
 
 /**
- * Print via hidden iframe: grabs editor HTML, invokes OS print dialog directly.
+ * Print via native macOS print dialog (Rust-side WKWebView).
  *
- * Reads the editor's rendered HTML from the DOM (no re-render needed).
- * Uses a hidden iframe with srcdoc so contentWindow.print() triggers the native
- * macOS/Windows print dialog within the Tauri webview.
+ * The app's WKWebView can't paginate properly with window.print() because
+ * printOperationWithPrintInfo uses the webview's frame size. Instead, we
+ * invoke a Rust command that creates a separate off-screen WKWebView,
+ * loads the rendered HTML, and shows the native print dialog — same
+ * approach as PDF export but with the print panel visible.
  */
 async function exportToPdfBrowser(_markdown: string): Promise<void> {
   try {
-    // Grab the already-rendered HTML from the active editor
     const editorEl = document.querySelector(".ProseMirror");
     if (!editorEl) {
       toast.error("No editor content to print");
       return;
     }
+
     const html = editorEl.innerHTML;
     const themeCSS = captureThemeCSS();
     const { getEditorContentCSS } = await import("./htmlExportStyles");
     const contentCSS = getEditorContentCSS();
-    const resolvedHtml = rewriteAssetUrls(html);
+    const { getKatexCSS, getForceLightThemeCSS } = await import("./pdfHtmlTemplate");
 
-    const { getKatexCSS } = await import("./pdfHtmlTemplate");
-
+    // Build a self-contained HTML document for the print WKWebView
+    // Always force light theme — dark backgrounds waste ink and look wrong on paper
     const fullHtml = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -331,55 +320,32 @@ async function exportToPdfBrowser(_markdown: string): Promise<void> {
   <style>
 ${getKatexCSS()}
 ${themeCSS}
+${getForceLightThemeCSS()}
 ${contentCSS}
 
-@media print {
-  @page { margin: 1.5cm; }
-  body { background: white; }
-  .export-surface { max-width: none; padding: 0; }
-  .export-surface-editor .table-scroll-wrapper { overflow-x: visible; }
-  .export-surface-editor .table-scroll-wrapper table { width: 100% !important; table-layout: fixed; }
-  .export-surface-editor td, .export-surface-editor th { overflow-wrap: break-word; word-break: break-word; }
-  .export-surface-editor td img { max-width: 100%; height: auto; }
-}
+@page { margin: 1.5cm; }
 body { background: white; color: #1a1a1a; margin: 0; padding: 2em; }
+.export-surface { max-width: none; padding: 0; }
+.export-surface-editor .table-scroll-wrapper { overflow-x: visible; }
+.export-surface-editor .table-scroll-wrapper table { width: 100% !important; table-layout: fixed; }
+.export-surface-editor td, .export-surface-editor th { overflow-wrap: break-word; word-break: break-word; }
+.export-surface-editor td img { max-width: 100%; height: auto; }
+pre, .code-block-wrapper { break-inside: avoid; }
+img { break-inside: avoid; }
+h1, h2, h3, h4, h5, h6 { break-after: avoid; }
   </style>
 </head>
 <body>
   <div class="export-surface">
     <div class="export-surface-editor">
-${resolvedHtml}
+${html}
     </div>
   </div>
 </body>
 </html>`;
 
-    // Create hidden iframe, load content, invoke print dialog
-    const iframe = document.createElement("iframe");
-    iframe.style.cssText = "position: fixed; left: -9999px; top: -9999px; width: 0; height: 0;";
-    document.body.appendChild(iframe);
-
-    iframe.srcdoc = fullHtml;
-    await new Promise<void>((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        reject(new Error("Print iframe load timeout"));
-      }, 10000);
-
-      iframe.onload = () => {
-        clearTimeout(timeout);
-        try {
-          iframe.contentWindow?.print();
-        } catch (e) {
-          reject(e instanceof Error ? e : new Error(String(e)));
-          return;
-        }
-        // Remove iframe after a short delay to let the print dialog finish
-        setTimeout(() => {
-          document.body.removeChild(iframe);
-        }, 1000);
-        resolve();
-      };
-    });
+    const { invoke } = await import("@tauri-apps/api/core");
+    await invoke("print_document", { html: fullHtml });
   } catch (error) {
     console.error("[Print] Failed to print:", error);
     toast.error("Failed to open print dialog");
