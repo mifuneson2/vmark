@@ -301,15 +301,21 @@ export async function exportToPdfNative(options: ExportToPdfOptions): Promise<vo
 }
 
 /**
- * Print via hidden iframe: renders content, invokes OS print dialog directly.
+ * Print via hidden iframe: grabs editor HTML, invokes OS print dialog directly.
  *
- * Uses a hidden iframe with srcdoc to avoid file:// URL issues and external
- * browser dependencies. The iframe's contentWindow.print() triggers the native
+ * Reads the editor's rendered HTML from the DOM (no re-render needed).
+ * Uses a hidden iframe with srcdoc so contentWindow.print() triggers the native
  * macOS/Windows print dialog within the Tauri webview.
  */
-async function exportToPdfBrowser(markdown: string): Promise<void> {
+async function exportToPdfBrowser(_markdown: string): Promise<void> {
   try {
-    const html = await renderMarkdownToHtml(markdown, true);
+    // Grab the already-rendered HTML from the active editor
+    const editorEl = document.querySelector(".ProseMirror");
+    if (!editorEl) {
+      toast.error("No editor content to print");
+      return;
+    }
+    const html = editorEl.innerHTML;
     const themeCSS = captureThemeCSS();
     const { getEditorContentCSS } = await import("./htmlExportStyles");
     const contentCSS = getEditorContentCSS();
