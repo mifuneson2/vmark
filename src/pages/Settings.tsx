@@ -240,10 +240,11 @@ export function SettingsPage() {
         </div>
       </div>
 
-      {/* Centered title overlay */}
+      {/* Centered title overlay — offset past w-52 sidebar so it centers over the content pane */}
       <div
         data-tauri-drag-region
-        className="absolute top-0 left-0 right-0 h-12 flex items-center justify-center pointer-events-none"
+        className="absolute top-0 right-0 h-12 flex items-center justify-center pointer-events-none"
+        style={{ left: "13rem" }}
       >
         <span className="text-sm font-medium text-[var(--text-primary)]">
           Settings

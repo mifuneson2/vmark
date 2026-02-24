@@ -158,11 +158,16 @@ function buildTypographyCSS(options: PdfOptions): string {
   const latin = resolveFontFamily(options.latinFont, "system-ui");
   const cjk = resolveFontFamily(options.cjkFont, "system-ui");
   const fontStack = `${latin}, ${cjk}, system-ui, -apple-system, sans-serif`;
+  const fs = options.fontSize;
+  const lh = options.lineHeight;
 
   return `
 :root {
-  --editor-font-size: ${options.fontSize}pt;
-  --editor-line-height: ${options.lineHeight};
+  --editor-font-size: ${fs}pt;
+  --editor-font-size-sm: ${fs * 0.9}pt;
+  --editor-font-size-mono: ${fs * 0.85}pt;
+  --editor-line-height: ${lh};
+  --editor-line-height-px: ${fs * lh}pt;
   --cjk-letter-spacing: ${options.cjkLetterSpacing};
   --font-sans: ${fontStack};
 }`;
