@@ -1,17 +1,23 @@
 /**
  * PDF HTML Template Builder
  *
- * Builds a self-contained HTML page with Paged.js for paginated PDF export.
- * The template includes @page CSS rules, typography overrides, and a
- * completion signal handler that the Rust renderer polls for.
+ * Builds self-contained HTML pages for PDF preview (Paged.js) and export (native createPDF).
+ * Both templates include @page CSS rules, typography overrides, and light theme forcing.
  *
  * @module export/pdfHtmlTemplate
- * @coordinates-with pdf_export/renderer.rs — polls document.title for completion
+ * @coordinates-with pdf_export/renderer.rs — WKWebView loads export HTML, creates PDF
  * @coordinates-with PdfExportDialog.tsx — passes options from the dialog UI
  */
 
-// Paged.js polyfill (minified, ~500KB) — bundled for offline use
 import pagedPolyfillRaw from "./assets/paged.polyfill.js?raw";
+import _katexCSSRaw from "katex/dist/katex.min.css?raw";
+
+// Rewrite relative font URLs to absolute CDN paths so they resolve in srcdoc iframes
+const KATEX_FONT_BASE = "https://cdn.jsdelivr.net/npm/katex@0.16.28/dist/";
+const katexCSS = _katexCSSRaw.replace(
+  /url\(fonts\//g,
+  `url(${KATEX_FONT_BASE}fonts/`,
+);
 
 export interface PdfOptions {
   pageSize: "a4" | "letter" | "a3" | "legal";
@@ -19,7 +25,7 @@ export interface PdfOptions {
   margins: "normal" | "narrow" | "wide";
   showPageNumbers: boolean;
   showHeader: boolean;
-  showFooter: boolean;
+  showDate: boolean;
   title?: string;
   fontSize: number;
   lineHeight: number;
@@ -89,7 +95,7 @@ function buildPageCSS(options: PdfOptions): string {
     }`);
   }
 
-  if (options.showFooter) {
+  if (options.showDate) {
     marginBoxes.push(`
     @bottom-right {
       content: "${new Date().toLocaleDateString()}";
@@ -103,6 +109,42 @@ function buildPageCSS(options: PdfOptions): string {
   size: ${size};
   margin: ${margin};
   ${marginBoxes.join("\n  ")}
+}`;
+}
+
+/** Shared CSS for table layout, page breaks, and content surface — used by both preview and export. */
+function sharedContentCSS(): string {
+  return `
+.export-surface {
+  max-width: none;
+  padding: 0;
+}
+
+.export-surface-editor .table-scroll-wrapper {
+  overflow-x: visible;
+}
+.export-surface-editor .table-scroll-wrapper table {
+  width: 100% !important;
+  table-layout: fixed;
+}
+.export-surface-editor td,
+.export-surface-editor th {
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+.export-surface-editor td img {
+  max-width: 100%;
+  height: auto;
+}
+
+pre, .code-block-wrapper {
+  break-inside: avoid;
+}
+img {
+  break-inside: avoid;
+}
+h1, h2, h3, h4, h5, h6 {
+  break-after: avoid;
 }`;
 }
 
@@ -162,13 +204,72 @@ function forceLightThemeCSS(): string {
 }
 
 /**
- * Build a complete HTML document for PDF export via Paged.js.
+ * Build lightweight HTML for the Rust WKWebView PDF renderer.
+ *
+ * No Paged.js — relies on WebKit's native print pipeline
+ * (printOperationWithPrintInfo) which respects @page CSS rules
+ * for page size, margins, and pagination. All CSS (including KaTeX)
+ * is inlined so the off-screen WKWebView needs no network access.
+ *
+ * Note: @page margin boxes (@top-center, @bottom-center) are NOT
+ * supported by WebKit's native print — headers/footers/page numbers
+ * are only rendered in the Paged.js preview template.
+ *
+ * @coordinates-with renderer.rs — loads HTML via WKWebView, uses printOperationWithPrintInfo
+ */
+export function buildPdfExportHtml(
+  content: string,
+  themeCSS: string,
+  contentCSS: string,
+  options: PdfOptions,
+): string {
+  const pageCSS = buildPageCSS(options);
+  const typographyCSS = buildTypographyCSS(options);
+  const lightOverrides = forceLightThemeCSS();
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>PDF Export</title>
+  <style>
+/* KaTeX (bundled) */
+${katexCSS}
+  </style>
+  <style>
+${themeCSS}
+${lightOverrides}
+${typographyCSS}
+${pageCSS}
+${contentCSS}
+
+body {
+  background: white;
+  color: #1a1a1a;
+  margin: 0;
+  padding: 0;
+}
+${sharedContentCSS()}
+  </style>
+</head>
+<body>
+  <div class="export-surface">
+    <div class="export-surface-editor">
+${content}
+    </div>
+  </div>
+</body>
+</html>`;
+}
+
+/**
+ * Build a complete HTML document for PDF preview via Paged.js.
  *
  * @param content - Rendered HTML content (from ExportSurface)
  * @param themeCSS - Captured theme CSS variables (light theme only)
  * @param contentCSS - Editor content CSS styles
  * @param options - PDF configuration options
- * @returns Complete HTML string ready for WKWebView rendering
+ * @returns Complete HTML string ready for iframe preview
  */
 export function buildPdfHtml(
   content: string,
@@ -186,7 +287,10 @@ export function buildPdfHtml(
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Rendering...</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" crossorigin="anonymous">
+  <style>
+/* KaTeX (bundled) */
+${katexCSS}
+  </style>
   <style>
 /* Theme Variables (captured from app) */
 ${themeCSS}
@@ -227,42 +331,7 @@ body::-webkit-scrollbar {
   margin-bottom: 16px;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
 }
-
-.export-surface {
-  max-width: none;
-  padding: 0;
-}
-
-/* Ensure tables don't break across pages poorly */
-.export-surface-editor .table-scroll-wrapper {
-  overflow-x: visible;
-}
-.export-surface-editor .table-scroll-wrapper table {
-  width: 100% !important;
-  table-layout: fixed;
-}
-.export-surface-editor td,
-.export-surface-editor th {
-  overflow-wrap: break-word;
-  word-break: break-word;
-}
-.export-surface-editor td img {
-  max-width: 100%;
-  height: auto;
-}
-
-/* Avoid breaking inside code blocks and images */
-pre, .code-block-wrapper {
-  break-inside: avoid;
-}
-img {
-  break-inside: avoid;
-}
-
-/* Avoid orphan headings */
-h1, h2, h3, h4, h5, h6 {
-  break-after: avoid;
-}
+${sharedContentCSS()}
   </style>
 </head>
 <body>
@@ -275,11 +344,11 @@ ${content}
 ${pagedPolyfillRaw}
   </script>
   <script>
-// Completion signal handler — Rust renderer polls document.title for this
+// Completion signal — notifies parent iframe that Paged.js rendering is done
 class CompletionHandler extends Paged.Handler {
   afterRendered(pages) {
-    document.title = "PAGEDJS_COMPLETE:" + pages.length;
-    // Also notify parent iframe (for live preview in dialog)
+    document.title = "PDF Preview (" + pages.length + " pages)";
+    // Notify parent iframe (for live preview in dialog)
     try {
       if (window.parent !== window) {
         window.parent.postMessage(

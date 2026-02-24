@@ -134,7 +134,7 @@ fn get_focused_window(app: &AppHandle) -> Option<tauri::WebviewWindow> {
         .cloned()
 }
 
-/// Get the focused document window (excludes settings window)
+/// Get the focused document window (excludes settings and pdf-export windows)
 fn get_focused_document_window(app: &AppHandle) -> Option<tauri::WebviewWindow> {
     app.webview_windows()
         .values()
@@ -261,8 +261,8 @@ pub fn handle_menu_event(app: &AppHandle, event: tauri::menu::MenuEvent) {
             // This prevents race conditions if store changed since menu creation
             if let Some(path) = crate::menu::get_recent_file_path(index) {
                 let event = make_recent_file_event(&path);
-                if let Some(focused) = get_focused_window(app) {
-                    // Case 1: Focused window - emit directly (window is ready)
+                if let Some(focused) = get_focused_document_window(app) {
+                    // Case 1: Focused document window - emit directly (window is ready)
                     emit_event(&focused, &event);
                 } else if !has_document_windows(app) {
                     // Case 2: No windows - create one and queue event
@@ -282,7 +282,7 @@ pub fn handle_menu_event(app: &AppHandle, event: tauri::menu::MenuEvent) {
         if let Ok(index) = index_str.parse::<usize>() {
             if let Some(path) = crate::menu::get_recent_workspace_path(index) {
                 let event = make_recent_workspace_event(&path);
-                if let Some(focused) = get_focused_window(app) {
+                if let Some(focused) = get_focused_document_window(app) {
                     emit_event(&focused, &event);
                 } else if !has_document_windows(app) {
                     create_window_and_queue(app, event);
@@ -302,7 +302,7 @@ pub fn handle_menu_event(app: &AppHandle, event: tauri::menu::MenuEvent) {
                     event_name: "menu:invoke-genie".to_string(),
                     recent_file_path: Some(path),
                 };
-                if let Some(focused) = get_focused_window(app) {
+                if let Some(focused) = get_focused_document_window(app) {
                     emit_event(&focused, &event);
                 }
                 return;
@@ -312,7 +312,7 @@ pub fn handle_menu_event(app: &AppHandle, event: tauri::menu::MenuEvent) {
 
     // Handle clear-recent-workspaces
     if id == "clear-recent-workspaces" {
-        if let Some(focused) = get_focused_window(app) {
+        if let Some(focused) = get_focused_document_window(app) {
             let _ = focused.emit("menu:clear-recent-workspaces", focused.label());
         }
         return;

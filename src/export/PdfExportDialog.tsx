@@ -1,13 +1,14 @@
 /**
  * PDF Export Content
  *
- * Settings panel (left) and live preview (right) for PDF export.
+ * Orchestrates PDF export: settings sidebar (left) and live preview (right).
  * Uses Paged.js for paginated preview in an iframe. Preview is always
  * light/white theme. Dialog chrome respects user's theme.
  *
  * Rendered as a native Tauri window via PdfExportPage.tsx.
  *
  * @module export/PdfExportDialog
+ * @coordinates-with PdfSettingsSidebar.tsx — settings panel component
  * @coordinates-with pdfHtmlTemplate.ts — builds the HTML for preview and export
  * @coordinates-with pdf_export/commands.rs — Rust backend for final PDF generation
  * @coordinates-with PdfExportPage.tsx — page wrapper that hosts this component
@@ -15,39 +16,18 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { save } from "@tauri-apps/plugin-dialog";
 import { toast } from "sonner";
 
-import { buildPdfHtml, type PdfOptions } from "./pdfHtmlTemplate";
+import { buildPdfHtml, buildPdfExportHtml, type PdfOptions } from "./pdfHtmlTemplate";
 import { captureThemeCSS } from "./themeSnapshot";
 import { getEditorContentCSS } from "./htmlExportStyles";
 import { useSettingsStore } from "@/stores/settingsStore";
-import { FileText, Type, Layers } from "lucide-react";
-import {
-  SettingRow,
-  Select,
-  Toggle,
-  Button,
-} from "@/pages/settings/components";
+import { PdfSettingsSidebar } from "./PdfSettingsSidebar";
+import { Button } from "@/pages/settings/components";
 
 import "./pdf-export-dialog.css";
-
-/** Compact settings group with icon for PDF export sidebar */
-function PdfSettingsGroup({
-  icon,
-  children,
-}: {
-  icon: React.ReactNode;
-  title?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="pdf-settings-group">
-      <div className="pdf-settings-group-icon">{icon}</div>
-      <div className="pdf-settings-group-items">{children}</div>
-    </div>
-  );
-}
 
 // --- Page dimensions (px at 96dpi) ---
 
@@ -62,64 +42,6 @@ function getPageDims(size: string, orientation: string): { w: number; h: number 
   const dims = PAGE_DIMS[size] ?? PAGE_DIMS.a4;
   return orientation === "landscape" ? { w: dims.h, h: dims.w } : dims;
 }
-
-// --- Option definitions ---
-
-const PAGE_SIZE_OPTIONS = [
-  { value: "a4" as const, label: "A4" },
-  { value: "letter" as const, label: "Letter" },
-  { value: "a3" as const, label: "A3" },
-  { value: "legal" as const, label: "Legal" },
-];
-
-const ORIENTATION_OPTIONS = [
-  { value: "portrait" as const, label: "Portrait" },
-  { value: "landscape" as const, label: "Landscape" },
-];
-
-const MARGIN_OPTIONS = [
-  { value: "normal" as const, label: "Normal" },
-  { value: "narrow" as const, label: "Narrow" },
-  { value: "wide" as const, label: "Wide" },
-];
-
-const FONT_SIZE_OPTIONS = [
-  { value: "10", label: "10pt" },
-  { value: "11", label: "11pt" },
-  { value: "12", label: "12pt" },
-  { value: "13", label: "13pt" },
-  { value: "14", label: "14pt" },
-];
-
-const LINE_HEIGHT_OPTIONS = [
-  { value: "1.4", label: "1.4" },
-  { value: "1.6", label: "1.6" },
-  { value: "1.8", label: "1.8" },
-  { value: "2.0", label: "2.0" },
-];
-
-const CJK_SPACING_OPTIONS = [
-  { value: "0", label: "Off" },
-  { value: "0.02", label: "0.02em" },
-  { value: "0.05", label: "0.05em" },
-  { value: "0.08", label: "0.08em" },
-];
-
-const LATIN_FONT_OPTIONS = [
-  { value: "system", label: "System Default" },
-  { value: "athelas", label: "Athelas" },
-  { value: "palatino", label: "Palatino" },
-  { value: "georgia", label: "Georgia" },
-  { value: "charter", label: "Charter" },
-];
-
-const CJK_FONT_OPTIONS = [
-  { value: "system", label: "System Default" },
-  { value: "pingfang", label: "PingFang SC" },
-  { value: "songti", label: "Songti SC" },
-  { value: "kaiti", label: "Kaiti SC" },
-  { value: "notoserif", label: "Noto Serif CJK" },
-];
 
 // --- Types ---
 
@@ -145,7 +67,7 @@ export function PdfExportContent({
     margins: "normal",
     showPageNumbers: true,
     showHeader: true,
-    showFooter: false,
+    showDate: false,
     title: defaultName?.replace(/\.[^.]+$/, "") ?? "Document",
     fontSize: 11,
     lineHeight: 1.6,
@@ -156,6 +78,7 @@ export function PdfExportContent({
 
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
+  const [exportStage, setExportStage] = useState("");
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const previewContainerRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -184,13 +107,23 @@ export function PdfExportContent({
     return () => observer.disconnect();
   }, [pageDims.w, pageDims.h]);
 
-  // Capture theme CSS once (light theme values)
+  // Capture theme + content CSS once (light theme values)
   const themeCSSRef = useRef(captureThemeCSS());
   const contentCSSRef = useRef(getEditorContentCSS());
 
-  // Build HTML for the iframe
+  // Build HTML for the iframe preview (with Paged.js)
   const buildHtml = useCallback(() => {
     return buildPdfHtml(
+      renderedHtml,
+      themeCSSRef.current,
+      contentCSSRef.current,
+      options,
+    );
+  }, [renderedHtml, options]);
+
+  // Build lightweight HTML for export (no Paged.js — uses native createPDF)
+  const buildExportHtml = useCallback(() => {
+    return buildPdfExportHtml(
       renderedHtml,
       themeCSSRef.current,
       contentCSSRef.current,
@@ -217,7 +150,6 @@ export function PdfExportContent({
   // Listen for Paged.js completion messages from iframe
   useEffect(() => {
     const handler = (e: MessageEvent) => {
-      // Validate sender is our preview iframe
       if (
         e.data?.type === "pagedjs-complete" &&
         e.source === iframeRef.current?.contentWindow
@@ -243,10 +175,40 @@ export function PdfExportContent({
     return () => clearTimeout(timer);
   }, [loading]);
 
-  // Export to PDF
+  // Listen for progress events from Rust PDF renderer
+  useEffect(() => {
+    const stageLabels: Record<string, string> = {
+      loading: "Loading content…",
+      rendering: "Generating PDF…",
+      writing: "Saving file…",
+      done: "Done",
+    };
+    const unlisten = listen<{ stage: string }>(
+      "pdf-export-progress",
+      (event) => {
+        const label = stageLabels[event.payload.stage] ?? event.payload.stage;
+        setExportStage(label);
+      },
+    );
+    return () => { unlisten.then((f) => f()); };
+  }, []);
+
+  // Extract headings from rendered HTML for PDF bookmarks
+  const extractHeadings = useCallback(() => {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(renderedHtml, "text/html");
+    const nodes = doc.querySelectorAll("h1, h2, h3, h4, h5, h6");
+    return Array.from(nodes).map((el) => ({
+      level: parseInt(el.tagName[1], 10),
+      text: (el.textContent ?? "").trim(),
+    })).filter((h) => h.text.length > 0);
+  }, [renderedHtml]);
+
+  // Export to PDF — uses WebKit's native print pipeline for pagination.
   const handleExport = useCallback(async () => {
     try {
       setExporting(true);
+      setExportStage("Preparing…");
       const outputPath = await save({
         defaultPath: `${options.title ?? "document"}.pdf`,
         title: "Export PDF",
@@ -254,22 +216,25 @@ export function PdfExportContent({
       });
       if (!outputPath) {
         setExporting(false);
+        setExportStage("");
         return;
       }
 
-      const html = buildHtml();
-      await invoke("export_pdf", { html, outputPath });
+      const html = buildExportHtml();
+      const headings = extractHeadings();
+      await invoke("export_pdf", { html, outputPath, headings });
       toast.success("PDF exported successfully");
       onClose();
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
       toast.error(`PDF export failed: ${msg}`);
       setExporting(false);
+      setExportStage("");
     }
-  }, [buildHtml, options.title, onClose]);
+  }, [buildExportHtml, extractHeadings, options.title, onClose]);
 
   // Update a single option
-  const set = useCallback(
+  const setOption = useCallback(
     <K extends keyof PdfOptions>(key: K, value: PdfOptions[K]) => {
       setOptions((prev) => ({ ...prev, [key]: value }));
     },
@@ -278,105 +243,11 @@ export function PdfExportContent({
 
   return (
     <div className="pdf-export-body">
-      {/* Settings sidebar — full height */}
-      <div className="pdf-export-sidebar">
-        {/* Drag region — outside scroll area so Tauri can intercept drag */}
-        <div data-tauri-drag-region className="pdf-export-drag-region" />
-        {/* Scrollable settings */}
-        <div className="pdf-export-sidebar-content">
-        <PdfSettingsGroup icon={<FileText className="w-3.5 h-3.5" />} title="Page">
-          <SettingRow label="Size">
-            <Select
-              value={options.pageSize}
-              options={PAGE_SIZE_OPTIONS}
-              onChange={(v) => set("pageSize", v)}
-            />
-          </SettingRow>
-          <SettingRow label="Orientation">
-            <Select
-              value={options.orientation}
-              options={ORIENTATION_OPTIONS}
-              onChange={(v) => set("orientation", v)}
-            />
-          </SettingRow>
-          <SettingRow label="Margins">
-            <Select
-              value={options.margins}
-              options={MARGIN_OPTIONS}
-              onChange={(v) => set("margins", v)}
-            />
-          </SettingRow>
-        </PdfSettingsGroup>
-
-        <PdfSettingsGroup icon={<Type className="w-3.5 h-3.5" />} title="Typography">
-          <SettingRow label="Font Size">
-            <Select
-              value={String(options.fontSize)}
-              options={FONT_SIZE_OPTIONS}
-              onChange={(v) => set("fontSize", Number(v))}
-            />
-          </SettingRow>
-          <SettingRow label="Line Height">
-            <Select
-              value={String(options.lineHeight)}
-              options={LINE_HEIGHT_OPTIONS}
-              onChange={(v) => set("lineHeight", Number(v))}
-            />
-          </SettingRow>
-          <SettingRow label="CJK Spacing">
-            <Select
-              value={options.cjkLetterSpacing.replace("em", "")}
-              options={CJK_SPACING_OPTIONS}
-              onChange={(v) =>
-                set("cjkLetterSpacing", v === "0" ? "0" : `${v}em`)
-              }
-            />
-          </SettingRow>
-          <SettingRow label="Latin Font">
-            <Select
-              value={options.latinFont}
-              options={LATIN_FONT_OPTIONS}
-              onChange={(v) => set("latinFont", v)}
-            />
-          </SettingRow>
-          <SettingRow label="CJK Font">
-            <Select
-              value={options.cjkFont}
-              options={CJK_FONT_OPTIONS}
-              onChange={(v) => set("cjkFont", v)}
-            />
-          </SettingRow>
-        </PdfSettingsGroup>
-
-        <PdfSettingsGroup icon={<Layers className="w-3.5 h-3.5" />} title="Elements">
-          <SettingRow label="Page Numbers">
-            <Toggle
-              checked={options.showPageNumbers}
-              onChange={(v) => set("showPageNumbers", v)}
-            />
-          </SettingRow>
-          <SettingRow label="Header">
-            <Toggle
-              checked={options.showHeader}
-              onChange={(v) => set("showHeader", v)}
-            />
-          </SettingRow>
-          <SettingRow label="Date">
-            <Toggle
-              checked={options.showFooter}
-              onChange={(v) => set("showFooter", v)}
-            />
-          </SettingRow>
-        </PdfSettingsGroup>
-
-        </div>{/* end .pdf-export-sidebar-content */}
-      </div>
+      <PdfSettingsSidebar options={options} onOptionChange={setOption} />
 
       {/* Preview — full height */}
       <div className="pdf-export-preview-wrapper">
-        {/* Drag region — outside overflow area so Tauri can intercept drag */}
         <div data-tauri-drag-region className="pdf-export-drag-region" />
-        {/* Preview content */}
         <div className="pdf-export-preview" ref={previewContainerRef}>
         {loading && (
           <div className="pdf-export-preview-loading">
@@ -388,9 +259,6 @@ export function PdfExportContent({
             Preview failed to render. You can still export.
           </div>
         )}
-        {/* Scaled container — sized to the visual (scaled) dimensions
-             so the layout doesn't overflow. The inner frame stays at full
-             page resolution for crisp rendering. */}
         <div
           className="pdf-export-page-sizer"
           style={{
@@ -413,8 +281,7 @@ export function PdfExportContent({
             />
           </div>
         </div>
-        </div>{/* end .pdf-export-preview */}
-        {/* Export action */}
+        </div>
         <div className="pdf-export-action-bar">
           <Button
             variant="primary"
@@ -422,10 +289,10 @@ export function PdfExportContent({
             onClick={handleExport}
             disabled={exporting}
           >
-            {exporting ? "Exporting..." : "Export PDF"}
+            {exporting ? exportStage || "Exporting…" : "Export PDF"}
           </Button>
         </div>
-      </div>{/* end .pdf-export-preview-wrapper */}
+      </div>
     </div>
   );
 }

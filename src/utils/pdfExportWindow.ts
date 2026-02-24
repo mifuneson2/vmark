@@ -17,7 +17,7 @@
 
 import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWebviewWindow, WebviewWindow } from "@tauri-apps/api/webviewWindow";
-import { LogicalPosition } from "@tauri-apps/api/dpi";
+
 
 const PDF_EXPORT_WIDTH = 900;
 const PDF_EXPORT_HEIGHT = 700;
@@ -55,14 +55,10 @@ export async function openPdfExportWindow(data: {
 }): Promise<void> {
   const pos = await calculateCenteredPosition();
 
-  // If PDF Export window already exists, focus it
+  // If PDF Export window already exists, close it so we open fresh content
   const existing = await WebviewWindow.getByLabel("pdf-export");
   if (existing) {
-    if (pos) {
-      await existing.setPosition(new LogicalPosition(pos.x, pos.y));
-    }
-    await existing.setFocus();
-    return;
+    await existing.close();
   }
 
   // Write HTML to temp file so the new window can read it
