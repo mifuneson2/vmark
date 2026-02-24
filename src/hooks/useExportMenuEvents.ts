@@ -72,8 +72,27 @@ export function useExportMenuEvents(): void {
       if (cancelled) { unlistenExportHtml(); return; }
       unlistenRefs.current.push(unlistenExportHtml);
 
-      // Export PDF via Paged.js + WKWebView (macOS) or browser print (other)
-      const unlistenExportPdf = await currentWindow.listen<string>("menu:export-pdf", async (event) => {
+      // Print: browser-based print flow (Cmd+P)
+      const unlistenPrint = await currentWindow.listen<string>("menu:export-pdf", async (event) => {
+        if (event.payload !== windowLabel) return;
+        flushActiveWysiwygNow();
+
+        await withReentryGuard(windowLabel, "export", async () => {
+          const doc = getActiveDocument(windowLabel);
+          if (!doc) return;
+          try {
+            const { exportToPdf } = await import("@/export");
+            await exportToPdf({ markdown: doc.content });
+          } catch (error) {
+            console.error("[Menu] Failed to print:", error);
+          }
+        });
+      });
+      if (cancelled) { unlistenPrint(); return; }
+      unlistenRefs.current.push(unlistenPrint);
+
+      // Export PDF: native Paged.js + WKWebView dialog (macOS)
+      const unlistenExportPdfNative = await currentWindow.listen<string>("menu:export-pdf-native", async (event) => {
         if (event.payload !== windowLabel) return;
         flushActiveWysiwygNow();
 
@@ -82,8 +101,8 @@ export function useExportMenuEvents(): void {
           if (!doc) return;
           const defaultName = getExportFolderName(doc.content, doc.filePath);
           try {
-            const { exportToPdf } = await import("@/export");
-            await exportToPdf({
+            const { exportToPdfNative } = await import("@/export");
+            await exportToPdfNative({
               markdown: doc.content,
               defaultName,
               sourceFilePath: doc.filePath,
@@ -93,8 +112,8 @@ export function useExportMenuEvents(): void {
           }
         });
       });
-      if (cancelled) { unlistenExportPdf(); return; }
-      unlistenRefs.current.push(unlistenExportPdf);
+      if (cancelled) { unlistenExportPdfNative(); return; }
+      unlistenRefs.current.push(unlistenExportPdfNative);
 
       const unlistenCopyHtml = await currentWindow.listen<string>("menu:copy-html", async (event) => {
         if (event.payload !== windowLabel) return;

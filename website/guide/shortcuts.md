@@ -177,6 +177,7 @@ If you prefer keeping system functions on F-keys, you can customize VMark shortc
 | Close | `Mod + W` |
 | Export HTML | `Alt + Mod + E` |
 | Print | `Mod + P` |
+| Export PDF | — |
 | Settings | `Mod + ,` |
 
 ## Clipboard

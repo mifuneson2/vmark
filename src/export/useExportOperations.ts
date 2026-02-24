@@ -238,15 +238,26 @@ export interface ExportToPdfOptions {
 }
 
 /**
- * Export document to PDF.
- *
- * On macOS: opens a preview dialog with Paged.js pagination, then exports
- * via WKWebView's native createPDF API.
- *
- * On other platforms: falls back to opening in the system browser with
- * `window.print()`.
+ * Print: opens a self-contained HTML in the system browser for printing.
+ * Works on all platforms via `window.print()`.
  */
 export async function exportToPdf(options: ExportToPdfOptions): Promise<void> {
+  const { markdown } = options;
+
+  const trimmedContent = markdown.trim();
+  if (!trimmedContent) {
+    toast.error("No content to export!");
+    return;
+  }
+
+  await exportToPdfBrowser(markdown);
+}
+
+/**
+ * Export PDF: opens a preview dialog with Paged.js pagination, then exports
+ * via WKWebView's native createPDF API (macOS only).
+ */
+export async function exportToPdfNative(options: ExportToPdfOptions): Promise<void> {
   const { markdown, defaultName, sourceFilePath } = options;
 
   const trimmedContent = markdown.trim();
@@ -257,42 +268,43 @@ export async function exportToPdf(options: ExportToPdfOptions): Promise<void> {
 
   const isMacOS = navigator.platform.includes("Mac");
 
-  if (isMacOS) {
-    try {
-      // Render markdown to HTML (always light theme)
-      const renderedHtml = await renderMarkdownToHtml(markdown, true);
+  if (!isMacOS) {
+    toast.error("Native PDF export requires macOS. Use Print instead.");
+    return;
+  }
 
-      // Resolve images to data URIs for self-contained HTML
-      const { resolveResources, getDocumentBaseDir } = await import(
-        "./resourceResolver"
-      );
-      const baseDir = sourceFilePath
-        ? await getDocumentBaseDir(sourceFilePath)
-        : "/";
-      const { html: resolvedHtml } = await resolveResources(renderedHtml, {
-        baseDir,
-        mode: "single",
-      });
+  try {
+    // Render markdown to HTML (always light theme)
+    const renderedHtml = await renderMarkdownToHtml(markdown, true);
 
-      // Open PDF export dialog
-      const { showPdfExportDialog } = await import("./PdfExportDialog");
-      showPdfExportDialog({
-        markdown,
-        renderedHtml: resolvedHtml,
-        defaultName,
-        sourceFilePath,
-      });
-    } catch (error) {
-      console.error("[PDF] Failed to open PDF dialog:", error);
-      toast.error("Failed to prepare PDF export");
-    }
-  } else {
-    await exportToPdfBrowser(markdown);
+    // Resolve images to data URIs for self-contained HTML
+    const { resolveResources, getDocumentBaseDir } = await import(
+      "./resourceResolver"
+    );
+    const baseDir = sourceFilePath
+      ? await getDocumentBaseDir(sourceFilePath)
+      : "/";
+    const { html: resolvedHtml } = await resolveResources(renderedHtml, {
+      baseDir,
+      mode: "single",
+    });
+
+    // Open PDF export dialog
+    const { showPdfExportDialog } = await import("./PdfExportDialog");
+    showPdfExportDialog({
+      markdown,
+      renderedHtml: resolvedHtml,
+      defaultName,
+      sourceFilePath,
+    });
+  } catch (error) {
+    console.error("[PDF] Failed to open PDF dialog:", error);
+    toast.error("Failed to prepare PDF export");
   }
 }
 
 /**
- * Fallback: open in system browser for printing (non-macOS).
+ * Browser-based print flow: opens HTML in system browser.
  */
 async function exportToPdfBrowser(markdown: string): Promise<void> {
   try {
