@@ -15,6 +15,9 @@ import type { EditorView } from "@codemirror/view";
 // Mock table detection and actions
 vi.mock("@/plugins/sourceContextDetection/tableDetection", () => ({
   getSourceTableInfo: vi.fn(),
+}));
+
+vi.mock("@/plugins/sourceContextDetection/tableActions", () => ({
   insertRowAbove: vi.fn(),
   insertRowBelow: vi.fn(),
   insertColumnLeft: vi.fn(),
@@ -64,8 +67,8 @@ import {
   setColumnAlignment,
   setAllColumnsAlignment,
   formatTable,
-  type SourceTableInfo,
-} from "@/plugins/sourceContextDetection/tableDetection";
+} from "@/plugins/sourceContextDetection/tableActions";
+import type { SourceTableInfo } from "@/plugins/sourceContextDetection/tableTypes";
 
 // Helper to create test infrastructure
 function createEditorContainer() {

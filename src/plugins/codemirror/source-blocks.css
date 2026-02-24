@@ -11,37 +11,37 @@
 
 /* NOTE - Blue */
 .cm-alert-note {
-  --alert-border: var(--alert-note-border, #0969da);
-  --alert-bg: var(--alert-note-bg, rgba(9, 105, 218, 0.05));
-  --alert-icon: var(--alert-note-border, #0969da);
+  --alert-border: var(--alert-note);
+  --alert-bg: color-mix(in srgb, var(--alert-note) 5%, transparent);
+  --alert-icon: var(--alert-note);
 }
 
 /* TIP - Green */
 .cm-alert-tip {
-  --alert-border: var(--alert-tip-border, #1a7f37);
-  --alert-bg: var(--alert-tip-bg, rgba(26, 127, 55, 0.05));
-  --alert-icon: var(--alert-tip-border, #1a7f37);
+  --alert-border: var(--alert-tip);
+  --alert-bg: color-mix(in srgb, var(--alert-tip) 5%, transparent);
+  --alert-icon: var(--alert-tip);
 }
 
 /* IMPORTANT - Purple */
 .cm-alert-important {
-  --alert-border: var(--alert-important-border, #8250df);
-  --alert-bg: var(--alert-important-bg, rgba(130, 80, 223, 0.05));
-  --alert-icon: var(--alert-important-border, #8250df);
+  --alert-border: var(--alert-important);
+  --alert-bg: color-mix(in srgb, var(--alert-important) 5%, transparent);
+  --alert-icon: var(--alert-important);
 }
 
 /* WARNING - Yellow/Amber */
 .cm-alert-warning {
-  --alert-border: var(--alert-warning-border, #9a6700);
-  --alert-bg: var(--alert-warning-bg, rgba(154, 103, 0, 0.05));
-  --alert-icon: var(--alert-warning-border, #9a6700);
+  --alert-border: var(--alert-warning);
+  --alert-bg: color-mix(in srgb, var(--alert-warning) 5%, transparent);
+  --alert-icon: var(--alert-warning);
 }
 
 /* CAUTION - Red */
 .cm-alert-caution {
-  --alert-border: var(--alert-caution-border, #cf222e);
-  --alert-bg: var(--alert-caution-bg, rgba(207, 34, 46, 0.05));
-  --alert-icon: var(--alert-caution-border, #cf222e);
+  --alert-border: var(--alert-caution);
+  --alert-bg: color-mix(in srgb, var(--alert-caution) 5%, transparent);
+  --alert-icon: var(--alert-caution);
 }
 
 /* ===================

@@ -19,8 +19,9 @@ import { EditorView } from "@codemirror/view";
 import { toast } from "sonner";
 import { icons } from "@/utils/icons";
 import { getPopupHost, toHostCoords } from "@/plugins/sourcePopup";
+import { getSourceTableInfo } from "@/plugins/sourceContextDetection/tableDetection";
+import type { SourceTableInfo, TableAlignment } from "@/plugins/sourceContextDetection/tableTypes";
 import {
-  getSourceTableInfo,
   insertRowAbove,
   insertRowBelow,
   insertColumnLeft,
@@ -31,9 +32,7 @@ import {
   setColumnAlignment,
   setAllColumnsAlignment,
   formatTable,
-  type SourceTableInfo,
-  type TableAlignment,
-} from "@/plugins/sourceContextDetection/tableDetection";
+} from "@/plugins/sourceContextDetection/tableActions";
 
 interface MenuAction {
   label: string;

@@ -52,17 +52,17 @@ export function handleMultiCursorInput(
     tr = tr.insertText(text, from, to);
   }
 
-  // Remap selection through the changes
+  // Remap selection through the changes, merging any overlaps caused by edits
   const newRanges = selection.ranges.map((range) => {
     const newFrom = tr.mapping.map(range.$from.pos);
     const newTo = tr.mapping.map(range.$to.pos);
-    // After insertion, cursor should be after the inserted text
     const $from = tr.doc.resolve(newFrom);
     const $to = tr.doc.resolve(newTo);
     return new SelectionRange($from, $to);
   });
 
-  const newSel = new MultiSelection(newRanges, selection.primaryIndex);
+  const merged = normalizeRangesWithPrimary(newRanges, tr.doc, selection.primaryIndex, true);
+  const newSel = new MultiSelection(merged.ranges, merged.primaryIndex);
   tr = tr.setSelection(newSel);
   tr = tr.setMeta("addToHistory", true);
 
@@ -103,7 +103,7 @@ export function handleMultiCursorBackspace(
     // If at start, do nothing for this cursor
   }
 
-  // Remap selection through the changes
+  // Remap selection through the changes, merging any overlaps caused by edits
   const newRanges: SelectionRange[] = [];
   for (const range of selection.ranges) {
     const newPos = tr.mapping.map(range.$from.pos);
@@ -111,7 +111,8 @@ export function handleMultiCursorBackspace(
     newRanges.push(new SelectionRange($pos, $pos));
   }
 
-  const newSel = new MultiSelection(newRanges, selection.primaryIndex);
+  const merged = normalizeRangesWithPrimary(newRanges, tr.doc, selection.primaryIndex, true);
+  const newSel = new MultiSelection(merged.ranges, merged.primaryIndex);
   tr = tr.setSelection(newSel);
   tr = tr.setMeta("addToHistory", true);
 
@@ -153,7 +154,7 @@ export function handleMultiCursorDelete(
     // If at end, do nothing for this cursor
   }
 
-  // Remap selection through the changes
+  // Remap selection through the changes, merging any overlaps caused by edits
   const newRanges: SelectionRange[] = [];
   for (const range of selection.ranges) {
     const newPos = tr.mapping.map(range.$from.pos);
@@ -161,7 +162,8 @@ export function handleMultiCursorDelete(
     newRanges.push(new SelectionRange($pos, $pos));
   }
 
-  const newSel = new MultiSelection(newRanges, selection.primaryIndex);
+  const merged = normalizeRangesWithPrimary(newRanges, tr.doc, selection.primaryIndex, true);
+  const newSel = new MultiSelection(merged.ranges, merged.primaryIndex);
   tr = tr.setSelection(newSel);
   tr = tr.setMeta("addToHistory", true);
 

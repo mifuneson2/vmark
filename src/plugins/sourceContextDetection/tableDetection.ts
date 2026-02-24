@@ -7,29 +7,8 @@
 import type { EditorView } from "@codemirror/view";
 import { splitTableCells, parseTableRow } from "@/utils/tableParser";
 
-/**
- * Table information in source mode.
- */
-export interface SourceTableInfo {
-  /** Start position (character offset) of the table */
-  start: number;
-  /** End position (character offset) of the table */
-  end: number;
-  /** Line number where table starts (0-indexed) */
-  startLine: number;
-  /** Line number where table ends (0-indexed) */
-  endLine: number;
-  /** Current row index (0 = header, 1 = separator, 2+ = data) */
-  rowIndex: number;
-  /** Current column index (0-indexed) */
-  colIndex: number;
-  /** Total number of columns */
-  colCount: number;
-  /** All table lines */
-  lines: string[];
-}
-
-export type TableAlignment = "left" | "center" | "right";
+import type { SourceTableInfo } from "./tableTypes";
+export type { SourceTableInfo, TableAlignment } from "./tableTypes";
 
 /**
  * Check if a line is part of a markdown table.
@@ -194,17 +173,3 @@ export function isInEditableTableRow(info: SourceTableInfo): boolean {
   return info.rowIndex !== 1;
 }
 
-// Re-export actions for convenience
-export {
-  insertRowAbove,
-  insertRowBelow,
-  insertColumnLeft,
-  insertColumnRight,
-  deleteRow,
-  deleteColumn,
-  deleteTable,
-  getColumnAlignment,
-  setColumnAlignment,
-  setAllColumnsAlignment,
-  formatTable,
-} from "./tableActions";

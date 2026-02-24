@@ -7,8 +7,8 @@
 
 /* Base syntax marker style */
 .syntax-marker {
-  color: var(--md-char-color, #999);
-  font-family: var(--font-mono, monospace);
+  color: var(--md-char-color);
+  font-family: var(--font-mono);
   font-size: var(--editor-font-size-mono);
   opacity: 0;
   animation: syntax-fade-in 0.15s ease-out forwards;
@@ -37,29 +37,29 @@
 
 /* Link markers */
 .syntax-marker-link-open {
-  color: var(--primary-color, #4183c4);
+  color: var(--primary-color);
 }
 
 .syntax-marker-link-close {
-  color: var(--md-char-color, #999);
+  color: var(--md-char-color);
   font-size: calc(var(--editor-font-size-mono) * 0.85);
 }
 
 /* Math markers */
 .syntax-marker-math-open,
 .syntax-marker-math-close {
-  color: var(--primary-color, #4183c4);
+  color: var(--primary-color);
 }
 
 /* Dark mode */
 .dark-theme .syntax-marker {
-  color: var(--md-char-color, #6e7681);
+  color: var(--md-char-color);
 }
 
 /* Image markers */
 .syntax-marker-image-open,
 .syntax-marker-image-close {
-  color: var(--primary-color, #4183c4);
+  color: var(--primary-color);
   font-size: calc(var(--editor-font-size-mono) * 0.85);
 }
 
@@ -68,5 +68,5 @@
 .dark-theme .syntax-marker-math-close,
 .dark-theme .syntax-marker-image-open,
 .dark-theme .syntax-marker-image-close {
-  color: var(--primary-color, #58a6ff);
+  color: var(--primary-color);
 }

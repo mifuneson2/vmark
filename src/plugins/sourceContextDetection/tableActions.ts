@@ -7,7 +7,7 @@
 import type { EditorView } from "@codemirror/view";
 import { getDisplayWidth, padToWidth } from "@/utils/stringWidth";
 import { parseTableRow, splitTableCells } from "@/utils/tableParser";
-import type { SourceTableInfo, TableAlignment } from "./tableDetection";
+import type { SourceTableInfo, TableAlignment } from "./tableTypes";
 
 /**
  * Parse alignment from a separator cell.
