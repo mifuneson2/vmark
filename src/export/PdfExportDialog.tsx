@@ -32,6 +32,20 @@ import {
 
 import "./pdf-export-dialog.css";
 
+// --- Page dimensions (px at 96dpi) ---
+
+const PAGE_DIMS: Record<string, { w: number; h: number }> = {
+  a4: { w: 794, h: 1123 },       // 210mm × 297mm
+  letter: { w: 816, h: 1056 },   // 8.5in × 11in
+  a3: { w: 1123, h: 1587 },      // 297mm × 420mm
+  legal: { w: 816, h: 1344 },    // 8.5in × 14in
+};
+
+function getPageDims(size: string, orientation: string): { w: number; h: number } {
+  const dims = PAGE_DIMS[size] ?? PAGE_DIMS.a4;
+  return orientation === "landscape" ? { w: dims.h, h: dims.w } : dims;
+}
+
 // --- Option definitions ---
 
 const PAGE_SIZE_OPTIONS = [
@@ -130,7 +144,32 @@ function PdfExportDialog({
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const previewContainerRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const [previewScale, setPreviewScale] = useState(0.5);
+
+  // Compute scale to fit page into preview container
+  const pageDims = getPageDims(options.pageSize, options.orientation);
+
+  useEffect(() => {
+    const container = previewContainerRef.current;
+    if (!container) return;
+
+    const updateScale = () => {
+      const rect = container.getBoundingClientRect();
+      const padding = 32; // visual padding around the page
+      const availW = rect.width - padding;
+      const availH = rect.height - padding;
+      if (availW <= 0 || availH <= 0) return;
+      const scale = Math.min(availW / pageDims.w, availH / pageDims.h);
+      setPreviewScale(Math.min(scale, 1)); // never upscale
+    };
+
+    updateScale();
+    const observer = new ResizeObserver(updateScale);
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, [pageDims.w, pageDims.h]);
 
   // Capture theme CSS once (light theme values)
   const themeCSSRef = useRef(captureThemeCSS());
@@ -347,7 +386,7 @@ function PdfExportDialog({
           </div>
 
           {/* Preview */}
-          <div className="pdf-export-preview">
+          <div className="pdf-export-preview" ref={previewContainerRef}>
             {loading && (
               <div className="pdf-export-preview-loading">
                 Rendering preview...
@@ -358,11 +397,20 @@ function PdfExportDialog({
                 Preview failed to render. You can still export.
               </div>
             )}
-            <iframe
-              ref={iframeRef}
-              title="PDF Preview"
-              sandbox="allow-scripts"
-            />
+            <div
+              className="pdf-export-page-frame"
+              style={{
+                width: pageDims.w,
+                height: pageDims.h,
+                transform: `scale(${previewScale})`,
+              }}
+            >
+              <iframe
+                ref={iframeRef}
+                title="PDF Preview"
+                sandbox="allow-scripts"
+              />
+            </div>
             {pageCount > 0 && (
               <div className="pdf-export-page-nav">
                 <button

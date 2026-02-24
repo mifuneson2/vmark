@@ -63,16 +63,28 @@
   flex: 1;
   display: flex;
   flex-direction: column;
+  align-items: center;
   min-width: 0;
   background: var(--bg-secondary);
   position: relative;
+  overflow: hidden;
+  padding: 16px;
 }
 
-.pdf-export-preview iframe {
-  flex: 1;
+.pdf-export-page-frame {
+  transform-origin: top center;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.pdf-export-page-frame iframe {
   width: 100%;
+  height: 100%;
   border: none;
   background: white;
+  display: block;
 }
 
 .pdf-export-preview-loading {
