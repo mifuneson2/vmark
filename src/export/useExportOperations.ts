@@ -1,13 +1,12 @@
 /**
  * Export Operations
  *
- * Print: Opens a self-contained HTML file in the system browser for printing.
+ * Print: Renders content in a hidden iframe and invokes the OS print dialog.
  * HTML Export: Uses ExportSurface for visual-parity rendering.
  */
 
 import { save } from "@tauri-apps/plugin-dialog";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
-import { invoke } from "@tauri-apps/api/core";
 import { toast } from "sonner";
 import { createRoot } from "react-dom/client";
 import React from "react";
@@ -302,31 +301,32 @@ export async function exportToPdfNative(options: ExportToPdfOptions): Promise<vo
 }
 
 /**
- * Browser-based print flow: opens HTML in system browser.
+ * Print via hidden iframe: renders content, invokes OS print dialog directly.
+ *
+ * Uses a hidden iframe with srcdoc to avoid file:// URL issues and external
+ * browser dependencies. The iframe's contentWindow.print() triggers the native
+ * macOS/Windows print dialog within the Tauri webview.
  */
 async function exportToPdfBrowser(markdown: string): Promise<void> {
   try {
     const html = await renderMarkdownToHtml(markdown, true);
     const themeCSS = captureThemeCSS();
-    const { getEditorContentCSS } = await import("./htmlExport");
+    const { getEditorContentCSS } = await import("./htmlExportStyles");
     const contentCSS = getEditorContentCSS();
     const resolvedHtml = rewriteAssetUrls(html);
+
+    const { getKatexCSS } = await import("./pdfHtmlTemplate");
 
     const fullHtml = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Print</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" crossorigin="anonymous">
   <style>
-/* Theme Variables */
+${getKatexCSS()}
 ${themeCSS}
-
-/* Content Styles */
 ${contentCSS}
 
-/* Print-specific overrides */
 @media print {
   @page { margin: 1.5cm; }
   body { background: white; }
@@ -336,6 +336,7 @@ ${contentCSS}
   .export-surface-editor td, .export-surface-editor th { overflow-wrap: break-word; word-break: break-word; }
   .export-surface-editor td img { max-width: 100%; height: auto; }
 }
+body { background: white; color: #1a1a1a; margin: 0; padding: 2em; }
   </style>
 </head>
 <body>
@@ -344,20 +345,35 @@ ${contentCSS}
 ${resolvedHtml}
     </div>
   </div>
-  <script>
-    window.addEventListener('load', function() {
-      setTimeout(function() { window.print(); }, 300);
-    });
-  </script>
 </body>
 </html>`;
 
-    const filePath: string = await invoke("write_temp_html", {
-      html: fullHtml,
+    // Create hidden iframe, load content, invoke print dialog
+    const iframe = document.createElement("iframe");
+    iframe.style.cssText = "position: fixed; left: -9999px; top: -9999px; width: 0; height: 0;";
+    document.body.appendChild(iframe);
+
+    iframe.srcdoc = fullHtml;
+    await new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        reject(new Error("Print iframe load timeout"));
+      }, 10000);
+
+      iframe.onload = () => {
+        clearTimeout(timeout);
+        try {
+          iframe.contentWindow?.print();
+        } catch (e) {
+          reject(e instanceof Error ? e : new Error(String(e)));
+          return;
+        }
+        // Remove iframe after a short delay to let the print dialog finish
+        setTimeout(() => {
+          document.body.removeChild(iframe);
+        }, 1000);
+        resolve();
+      };
     });
-    const { openPath } = await import("@tauri-apps/plugin-opener");
-    await openPath(filePath);
-    toast.success("Opened in browser for printing");
   } catch (error) {
     console.error("[Print] Failed to print:", error);
     toast.error("Failed to open print dialog");

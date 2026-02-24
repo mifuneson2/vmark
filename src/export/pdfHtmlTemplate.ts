@@ -19,6 +19,11 @@ const katexCSS = _katexCSSRaw.replace(
   `url(${KATEX_FONT_BASE}fonts/`,
 );
 
+/** Get bundled KaTeX CSS with CDN font URLs (for use in print/export iframes). */
+export function getKatexCSS(): string {
+  return katexCSS;
+}
+
 export interface PdfOptions {
   pageSize: "a4" | "letter" | "a3" | "legal";
   orientation: "portrait" | "landscape";
