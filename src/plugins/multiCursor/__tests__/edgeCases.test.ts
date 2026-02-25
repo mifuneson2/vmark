@@ -13,7 +13,7 @@ import {
   handleMultiCursorBackspace,
   handleMultiCursorDelete,
 } from "../inputHandling";
-import { createMultiCursorState, createState } from "./testHelpers";
+import { createMultiCursorState } from "./testHelpers";
 
 describe("edgeCases", () => {
   describe("adjacent cursors merge after edit", () => {
