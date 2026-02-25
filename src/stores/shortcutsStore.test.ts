@@ -12,6 +12,7 @@ import {
   CATEGORY_LABELS,
   getShortcutsByCategory,
   formatKeyForDisplay,
+  prosemirrorToTauri,
 } from "./shortcutsStore";
 
 // Mock Tauri invoke
@@ -326,6 +327,23 @@ describe("shortcutsStore", () => {
       for (const category of CATEGORY_ORDER) {
         expect(CATEGORY_LABELS[category]).toBeDefined();
       }
+    });
+  });
+
+  describe("prosemirrorToTauri", () => {
+    it.each([
+      { input: "Mod-b", expected: "CmdOrCtrl+B" },
+      { input: "Mod-Shift-n", expected: "CmdOrCtrl+Shift+N" },
+      { input: "Alt-Mod-l", expected: "Alt+CmdOrCtrl+L" },
+      { input: "Mod-Shift-`", expected: "CmdOrCtrl+Shift+`" },
+      { input: "Mod--", expected: "CmdOrCtrl+-", description: "minus key (zoomOut)" },
+      { input: "Alt-Mod--", expected: "Alt+CmdOrCtrl+-", description: "minus key (horizontalLine)" },
+      { input: "", expected: "" },
+      { input: "F6", expected: "F6" },
+      { input: "Mod-1", expected: "CmdOrCtrl+1" },
+      { input: "Ctrl-Shift-u", expected: "Ctrl+Shift+U" },
+    ])("$input → $expected", ({ input, expected }) => {
+      expect(prosemirrorToTauri(input)).toBe(expected);
     });
   });
 

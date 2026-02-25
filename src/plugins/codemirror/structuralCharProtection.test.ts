@@ -8,7 +8,7 @@
  */
 
 import { describe, it, expect, afterEach } from "vitest";
-import { EditorState } from "@codemirror/state";
+import { EditorState, EditorSelection } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
 import {
   TABLE_ROW_PATTERN,
@@ -489,6 +489,53 @@ describe("Structural Character Protection", () => {
     it("returns false at document end", () => {
       const view = createView("text^");
       const handled = smartDelete(view);
+      expect(handled).toBe(false);
+    });
+
+    it("allows deleting escaped pipe (\\|) in a table cell", () => {
+      // Cursor is right before the | of \| — should NOT protect it
+      const view = createView("| cell \\^| with pipe | next |");
+      const handled = smartDelete(view);
+      expect(handled).toBe(false);
+    });
+
+    it("returns false with multiple cursors (multi-cursor bail-out)", () => {
+      const content = "| cell | next |";
+      const state = EditorState.create({
+        doc: content,
+        extensions: [EditorState.allowMultipleSelections.of(true)],
+        selection: EditorSelection.create([
+          EditorSelection.cursor(7),  // before second pipe
+          EditorSelection.cursor(14), // before last pipe
+        ], 0),
+      });
+      const container = document.createElement("div");
+      document.body.appendChild(container);
+      const view = new EditorView({ state, parent: container });
+      views.push(view);
+
+      const handled = smartDelete(view);
+      expect(handled).toBe(false);
+    });
+  });
+
+  describe("multi-cursor bail-out", () => {
+    it("smartBackspace returns false with multiple cursors", () => {
+      const content = "| cell | next |";
+      const state = EditorState.create({
+        doc: content,
+        extensions: [EditorState.allowMultipleSelections.of(true)],
+        selection: EditorSelection.create([
+          EditorSelection.cursor(2),
+          EditorSelection.cursor(9),
+        ], 0),
+      });
+      const container = document.createElement("div");
+      document.body.appendChild(container);
+      const view = new EditorView({ state, parent: container });
+      views.push(view);
+
+      const handled = smartBackspace(view);
       expect(handled).toBe(false);
     });
   });

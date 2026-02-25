@@ -409,14 +409,41 @@ async function syncMenuShortcuts(shortcuts: Record<string, string>) {
  * Mod-b -> CmdOrCtrl+B
  * Mod-Shift-` -> CmdOrCtrl+Shift+`
  */
-function prosemirrorToTauri(key: string): string {
-  return key
-    .replace(/Mod/g, "CmdOrCtrl")
-    .replace(/Ctrl/g, "Ctrl")
-    .replace(/Alt/g, "Alt")
-    .replace(/Shift/g, "Shift")
-    .replace(/-/g, "+")
-    .replace(/\+(\w)$/, (_, char) => `+${char.toUpperCase()}`);
+/** @internal Exported for testing */
+export function prosemirrorToTauri(key: string): string {
+  if (!key) return "";
+
+  // ProseMirror uses "-" as delimiter: "Mod-Shift-b", "Mod--" (minus key).
+  // Split carefully: a trailing "--" means the key itself is "-".
+  const modifierNames = new Set(["Mod", "Ctrl", "Alt", "Shift"]);
+  const modifierMap: Record<string, string> = { Mod: "CmdOrCtrl" };
+
+  const parts = key.split("-");
+  const result: string[] = [];
+
+  for (let i = 0; i < parts.length; i++) {
+    const part = parts[i];
+
+    if (part === "" && i === parts.length - 1) {
+      // Trailing empty from "Mod--" split → the key is "-"
+      result.push("-");
+    } else if (part === "") {
+      // Skip intermediate empties
+      continue;
+    } else if (modifierNames.has(part) && i < parts.length - 1) {
+      result.push(modifierMap[part] ?? part);
+    } else {
+      // Final key — uppercase single alpha chars
+      const mapped = modifierMap[part] ?? part;
+      if (mapped.length === 1 && /[a-z]/i.test(mapped)) {
+        result.push(mapped.toUpperCase());
+      } else {
+        result.push(mapped);
+      }
+    }
+  }
+
+  return result.join("+");
 }
 
 /**

@@ -392,11 +392,11 @@ pub fn create_menu(app: &tauri::AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
         "Info Box",
         true,
         &[
-            &MenuItem::with_id(app, "info-note", "Note", true, None::<&str>)?,
-            &MenuItem::with_id(app, "info-tip", "Tip", true, None::<&str>)?,
-            &MenuItem::with_id(app, "info-important", "Important", true, None::<&str>)?,
-            &MenuItem::with_id(app, "info-warning", "Warning", true, None::<&str>)?,
-            &MenuItem::with_id(app, "info-caution", "Caution", true, None::<&str>)?,
+            &MenuItem::with_id(app, "info-note", "Note", true, Some("Alt+CmdOrCtrl+N"))?,
+            &MenuItem::with_id(app, "info-tip", "Tip", true, Some("Alt+Shift+CmdOrCtrl+T"))?,
+            &MenuItem::with_id(app, "info-important", "Important", true, Some("Alt+Shift+CmdOrCtrl+I"))?,
+            &MenuItem::with_id(app, "info-warning", "Warning", true, Some("CmdOrCtrl+Shift+W"))?,
+            &MenuItem::with_id(app, "info-caution", "Caution", true, Some("CmdOrCtrl+Shift+U"))?,
         ],
     )?;
 

@@ -308,6 +308,29 @@
   app-region: no-drag;
 }
 
+/* Sidebar toggle button (shown when sidebar is hidden) */
+.status-sidebar-toggle {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+  flex-shrink: 0;
+}
+
+.status-sidebar-toggle:hover {
+  background-color: var(--hover-bg-strong);
+  color: var(--text-color);
+}
+
 /* New tab button */
 .status-new-tab {
   position: relative;
@@ -368,6 +391,7 @@
     border-radius: 14px;
   }
 
+  .status-sidebar-toggle,
   .status-new-tab {
     width: 28px;
     height: 28px;
@@ -496,6 +520,7 @@
 }
 
 /* Focus indicators for StatusBar buttons */
+.status-sidebar-toggle:focus-visible,
 .status-new-tab:focus-visible,
 .status-toggle:focus-visible,
 .status-mode:focus-visible,
@@ -504,6 +529,7 @@
   outline: none;
 }
 
+.status-sidebar-toggle:focus-visible::after,
 .status-new-tab:focus-visible::after,
 .status-toggle:focus-visible::after,
 .status-mode:focus-visible::after,

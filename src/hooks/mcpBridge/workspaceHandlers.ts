@@ -15,7 +15,6 @@ import { useDocumentStore } from "@/stores/documentStore";
 import { useTabStore } from "@/stores/tabStore";
 import { useRecentFilesStore } from "@/stores/recentFilesStore";
 import { useWorkspaceStore } from "@/stores/workspaceStore";
-import { serializeMarkdown } from "@/utils/markdownPipeline";
 import { getFileName } from "@/utils/paths";
 import { reloadTabFromDisk } from "@/utils/reloadFromDisk";
 import { respond, getEditor, resolveWindowId } from "./utils";
@@ -171,10 +170,10 @@ export async function handleWorkspaceSaveDocument(id: string): Promise<void> {
       throw new Error("Document has no file path (use save-as instead)");
     }
 
-    const editor = getEditor();
-    if (!editor) throw new Error("No active editor");
-
-    const content = serializeMarkdown(editor.state.schema, editor.state.doc);
+    // Use doc.content from the store — it stays in sync with both WYSIWYG
+    // and source mode edits. Serializing from Tiptap would produce stale
+    // content when the user is editing in source mode.
+    const content = doc.content;
     await writeTextFile(doc.filePath, content);
     docStore.markSaved(activeTabId, content);
 
@@ -236,10 +235,12 @@ export async function handleWorkspaceSaveDocumentAs(
       throw new Error("No active document");
     }
 
-    const editor = getEditor();
-    if (!editor) throw new Error("No active editor");
+    const doc = docStore.getDocument(activeTabId);
+    if (!doc) throw new Error("No active document");
 
-    const content = serializeMarkdown(editor.state.schema, editor.state.doc);
+    // Use doc.content from the store — stays in sync with both WYSIWYG
+    // and source mode edits, unlike Tiptap editor state.
+    const content = doc.content;
     await writeTextFile(path, content);
 
     // Update tab and document with new path

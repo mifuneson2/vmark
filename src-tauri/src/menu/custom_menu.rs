@@ -396,11 +396,11 @@ pub(crate) fn create_menu_with_shortcuts(
         "Info Box",
         true,
         &[
-            &MenuItem::with_id(app, "info-note", "Note", true, get_accel("info-note", ""))?,
-            &MenuItem::with_id(app, "info-tip", "Tip", true, get_accel("info-tip", ""))?,
-            &MenuItem::with_id(app, "info-important", "Important", true, get_accel("info-important", ""))?,
-            &MenuItem::with_id(app, "info-warning", "Warning", true, get_accel("info-warning", ""))?,
-            &MenuItem::with_id(app, "info-caution", "Caution", true, get_accel("info-caution", ""))?,
+            &MenuItem::with_id(app, "info-note", "Note", true, get_accel("info-note", "Alt+CmdOrCtrl+N"))?,
+            &MenuItem::with_id(app, "info-tip", "Tip", true, get_accel("info-tip", "Alt+Shift+CmdOrCtrl+T"))?,
+            &MenuItem::with_id(app, "info-important", "Important", true, get_accel("info-important", "Alt+Shift+CmdOrCtrl+I"))?,
+            &MenuItem::with_id(app, "info-warning", "Warning", true, get_accel("info-warning", "CmdOrCtrl+Shift+W"))?,
+            &MenuItem::with_id(app, "info-caution", "Caution", true, get_accel("info-caution", "CmdOrCtrl+Shift+U"))?,
         ],
     )?;
 

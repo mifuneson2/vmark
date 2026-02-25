@@ -28,7 +28,7 @@
  * @module components/StatusBar/StatusBar
  */
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent } from "react";
-import { Plus } from "lucide-react";
+import { PanelLeft, Plus } from "lucide-react";
 import { useEditorStore } from "@/stores/editorStore";
 import { useUIStore } from "@/stores/uiStore";
 import { useWindowLabel, useIsDocumentWindow } from "@/contexts/WindowContext";
@@ -94,6 +94,7 @@ export function StatusBar() {
   const autoSaveEnabled = useSettingsStore((state) => state.general.autoSaveEnabled);
   const sourceMode = useEditorStore((state) => state.sourceMode);
   const statusBarVisible = useUIStore((state) => state.statusBarVisible);
+  const sidebarVisible = useUIStore((state) => state.sidebarVisible);
   const terminalVisible = useUIStore((state) => state.terminalVisible);
   const sourceModeShortcut = useShortcutsStore((state) => state.getShortcut("sourceMode"));
   const terminalShortcut = useShortcutsStore((state) => state.getShortcut("toggleTerminal"));
@@ -209,6 +210,17 @@ export function StatusBar() {
       >
         <div className="status-bar">
           <div className="status-bar-left" ref={tabDragScopeRef}>
+            {!sidebarVisible && isDocumentWindow && (
+              <button
+                type="button"
+                className="status-sidebar-toggle"
+                onClick={() => useUIStore.getState().toggleSidebar()}
+                aria-label="Open Sidebar"
+                title="Open Sidebar"
+              >
+                <PanelLeft size={14} />
+              </button>
+            )}
             {showNewTabButton && (
               <button
                 type="button"

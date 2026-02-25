@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Capability for all windows. SECURITY NOTE: Filesystem permissions use '$HOME/**/*' plus platform-specific external volume paths because VMark is a document editor that must access user-chosen files anywhere in the home directory or on external volumes. This is intentional and required for: (1) Opening/saving markdown files from any location, (2) Managing ./assets/images/ folders relative to documents, (3) Version history storage in ~/.vmark/history/, (4) File explorer sidebar navigation, (5) Opening files from external drives/volumes. Path traversal attacks are mitigated at the application layer via validateImagePath() in src/plugins/imageView/security.ts. Cross-platform paths: macOS=/Volumes, Linux=/mnt+/media. Windows secondary drives (D:, E:, etc.) are not covered but the file dialog still grants access.",
+  "description": "Capability for all windows. SECURITY NOTE: Filesystem permissions use broad path patterns because VMark is a document editor that must access user-chosen files anywhere on disk. This is intentional and required for: (1) Opening/saving markdown files from any location, (2) Managing ./assets/images/ folders relative to documents, (3) Version history storage in ~/.vmark/history/, (4) File explorer sidebar navigation, (5) Opening files from external drives/volumes. Path traversal attacks are mitigated at the application layer via validateImagePath() in src/plugins/imageView/security.ts. Cross-platform paths: macOS=/Volumes, Linux=/mnt+/media, Windows=C:-Z: drives.",
   "windows": ["main", "settings", "pdf-export", "doc-*"],
   "permissions": [
     "core:default",
@@ -37,91 +37,131 @@
     {
       "identifier": "fs:allow-read-text-file",
       "allow": [
-        { "path": "$HOME/**/*" },
-        { "path": "/Volumes/**/*" },
-        { "path": "/mnt/**/*" },
-        { "path": "/media/**/*" }
+        { "path": "$HOME/**" },
+        { "path": "/Volumes/**" },
+        { "path": "/mnt/**" },
+        { "path": "/media/**" },
+        { "path": "C:\\**" },
+        { "path": "D:\\**" },
+        { "path": "E:\\**" },
+        { "path": "F:\\**" }
       ]
     },
     {
       "identifier": "fs:allow-write-text-file",
       "allow": [
-        { "path": "$HOME/**/*" },
-        { "path": "/Volumes/**/*" },
-        { "path": "/mnt/**/*" },
-        { "path": "/media/**/*" }
+        { "path": "$HOME/**" },
+        { "path": "/Volumes/**" },
+        { "path": "/mnt/**" },
+        { "path": "/media/**" },
+        { "path": "C:\\**" },
+        { "path": "D:\\**" },
+        { "path": "E:\\**" },
+        { "path": "F:\\**" }
       ]
     },
     {
       "identifier": "fs:allow-write-file",
       "allow": [
-        { "path": "$HOME/**/*" },
-        { "path": "/Volumes/**/*" },
-        { "path": "/mnt/**/*" },
-        { "path": "/media/**/*" }
+        { "path": "$HOME/**" },
+        { "path": "/Volumes/**" },
+        { "path": "/mnt/**" },
+        { "path": "/media/**" },
+        { "path": "C:\\**" },
+        { "path": "D:\\**" },
+        { "path": "E:\\**" },
+        { "path": "F:\\**" }
       ]
     },
     {
       "identifier": "fs:allow-exists",
       "allow": [
-        { "path": "$HOME/**/*" },
-        { "path": "/Volumes/**/*" },
-        { "path": "/mnt/**/*" },
-        { "path": "/media/**/*" }
+        { "path": "$HOME/**" },
+        { "path": "/Volumes/**" },
+        { "path": "/mnt/**" },
+        { "path": "/media/**" },
+        { "path": "C:\\**" },
+        { "path": "D:\\**" },
+        { "path": "E:\\**" },
+        { "path": "F:\\**" }
       ]
     },
     {
       "identifier": "fs:allow-mkdir",
       "allow": [
-        { "path": "$HOME/**/*" },
-        { "path": "/Volumes/**/*" },
-        { "path": "/mnt/**/*" },
-        { "path": "/media/**/*" }
+        { "path": "$HOME/**" },
+        { "path": "/Volumes/**" },
+        { "path": "/mnt/**" },
+        { "path": "/media/**" },
+        { "path": "C:\\**" },
+        { "path": "D:\\**" },
+        { "path": "E:\\**" },
+        { "path": "F:\\**" }
       ]
     },
     {
       "identifier": "fs:allow-read-dir",
       "allow": [
-        { "path": "$HOME/**/*" },
-        { "path": "/Volumes/**/*" },
-        { "path": "/mnt/**/*" },
-        { "path": "/media/**/*" }
+        { "path": "$HOME/**" },
+        { "path": "/Volumes/**" },
+        { "path": "/mnt/**" },
+        { "path": "/media/**" },
+        { "path": "C:\\**" },
+        { "path": "D:\\**" },
+        { "path": "E:\\**" },
+        { "path": "F:\\**" }
       ]
     },
     {
       "identifier": "fs:allow-copy-file",
       "allow": [
-        { "path": "$HOME/**/*" },
-        { "path": "/Volumes/**/*" },
-        { "path": "/mnt/**/*" },
-        { "path": "/media/**/*" }
+        { "path": "$HOME/**" },
+        { "path": "/Volumes/**" },
+        { "path": "/mnt/**" },
+        { "path": "/media/**" },
+        { "path": "C:\\**" },
+        { "path": "D:\\**" },
+        { "path": "E:\\**" },
+        { "path": "F:\\**" }
       ]
     },
     {
       "identifier": "fs:allow-read-file",
       "allow": [
-        { "path": "$HOME/**/*" },
-        { "path": "/Volumes/**/*" },
-        { "path": "/mnt/**/*" },
-        { "path": "/media/**/*" }
+        { "path": "$HOME/**" },
+        { "path": "/Volumes/**" },
+        { "path": "/mnt/**" },
+        { "path": "/media/**" },
+        { "path": "C:\\**" },
+        { "path": "D:\\**" },
+        { "path": "E:\\**" },
+        { "path": "F:\\**" }
       ]
     },
     {
       "identifier": "fs:allow-rename",
       "allow": [
-        { "path": "$HOME/**/*" },
-        { "path": "/Volumes/**/*" },
-        { "path": "/mnt/**/*" },
-        { "path": "/media/**/*" }
+        { "path": "$HOME/**" },
+        { "path": "/Volumes/**" },
+        { "path": "/mnt/**" },
+        { "path": "/media/**" },
+        { "path": "C:\\**" },
+        { "path": "D:\\**" },
+        { "path": "E:\\**" },
+        { "path": "F:\\**" }
       ]
     },
     {
       "identifier": "fs:allow-remove",
       "allow": [
-        { "path": "$HOME/**/*" },
-        { "path": "/Volumes/**/*" },
-        { "path": "/mnt/**/*" },
-        { "path": "/media/**/*" }
+        { "path": "$HOME/**" },
+        { "path": "/Volumes/**" },
+        { "path": "/mnt/**" },
+        { "path": "/media/**" },
+        { "path": "C:\\**" },
+        { "path": "D:\\**" },
+        { "path": "E:\\**" },
+        { "path": "F:\\**" }
       ]
     }
   ]

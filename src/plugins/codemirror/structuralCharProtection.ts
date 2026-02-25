@@ -183,6 +183,10 @@ function backspaceMarker(
  */
 export function smartBackspace(view: EditorView): boolean {
   const { state } = view;
+
+  // Bail out with multiple cursors — let CodeMirror handle default behavior
+  if (state.selection.ranges.length > 1) return false;
+
   const { head, empty } = state.selection.main;
 
   // Only handle when there's no selection
@@ -252,6 +256,10 @@ export function smartBackspace(view: EditorView): boolean {
  */
 export function smartDelete(view: EditorView): boolean {
   const { state } = view;
+
+  // Bail out with multiple cursors — let CodeMirror handle default behavior
+  if (state.selection.ranges.length > 1) return false;
+
   const { head, empty } = state.selection.main;
 
   // Only handle when there's no selection
@@ -266,6 +274,10 @@ export function smartDelete(view: EditorView): boolean {
   // Check if we're about to delete into a pipe
   const charAfter = line.text[offsetInLine];
   if (charAfter === "|" && TABLE_ROW_PATTERN.test(line.text)) {
+    // Don't protect escaped pipes (\|) — they are cell content, not delimiters
+    if (offsetInLine > 0 && line.text[offsetInLine - 1] === "\\") {
+      return false;
+    }
     // Skip over the pipe instead of deleting
     view.dispatch({
       selection: { anchor: head + 1 },

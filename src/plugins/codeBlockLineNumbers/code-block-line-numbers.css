@@ -79,6 +79,12 @@
   opacity: 1;
 }
 
+.tiptap-editor .code-lang-selector:focus-visible {
+  outline: none;
+  color: var(--text-color);
+  opacity: 1;
+}
+
 /* Language dropdown - appended to body, so no .tiptap-editor prefix */
 .code-lang-dropdown {
   width: 180px;

@@ -81,6 +81,11 @@
   opacity: 0.8;
 }
 
+.table-context-menu-item:focus-visible {
+  outline: none;
+  background: var(--accent-bg);
+}
+
 /* Danger items */
 .table-context-menu-item-danger {
   color: var(--text-color);
