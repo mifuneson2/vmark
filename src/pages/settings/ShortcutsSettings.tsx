@@ -22,6 +22,10 @@ export function ShortcutsSettings() {
   const [capturing, setCapturing] = useState<ShortcutDefinition | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Subscribe to customBindings so component re-renders when shortcuts change
+  useShortcutsStore((s) => s.customBindings);
+
+  // Access action methods via getState() — avoids subscribing to entire store
   const {
     getShortcut,
     setShortcut,
@@ -31,9 +35,10 @@ export function ShortcutsSettings() {
     exportConfig,
     importConfig,
     isCustomized,
-  } = useShortcutsStore();
+  } = useShortcutsStore.getState();
 
   // Only show shortcuts that have an effective key binding
+  // Re-evaluated when customBindings changes (the only relevant state)
   const visibleShortcuts = DEFAULT_SHORTCUTS.filter(
     (s) => getShortcut(s.id) !== ""
   );

@@ -204,7 +204,7 @@ pub async fn render_pdf(
         );
         // Clean up temp file
         let _ = std::fs::remove_file(&temp_html_str);
-        if let Some(sender) = tx_clone.lock().unwrap().take() {
+        if let Some(sender) = tx_clone.lock().unwrap_or_else(|p| p.into_inner()).take() {
             let _ = sender.send(result);
         }
     })
@@ -408,7 +408,7 @@ pub async fn print_document(app: AppHandle, html: String) -> Result<(), String> 
         let result =
             print_on_main_thread(&temp_html_str, &temp_dir_str);
         let _ = std::fs::remove_file(&temp_html_str);
-        if let Some(sender) = tx_clone.lock().unwrap().take() {
+        if let Some(sender) = tx_clone.lock().unwrap_or_else(|p| p.into_inner()).take() {
             let _ = sender.send(result);
         }
     })
