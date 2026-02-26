@@ -41,6 +41,7 @@ import {
   getByteSize,
   getDocumentName,
   hashPath,
+  parseHistoryIndex,
 } from "@/utils/historyTypes";
 
 // Re-export types for consumers
@@ -93,7 +94,12 @@ export async function getHistoryIndex(
     }
 
     const content = await readTextFile(indexPath);
-    return JSON.parse(content) as HistoryIndex;
+    const index = parseHistoryIndex(JSON.parse(content));
+    if (!index) {
+      console.error("[History] Invalid index file format");
+      return null;
+    }
+    return index;
   } catch (error) {
     console.error("[History] Failed to read index:", error);
     return null;

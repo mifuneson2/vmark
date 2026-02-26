@@ -59,6 +59,7 @@ describe("useAutoSave", () => {
 
     vi.mocked(useTabStore.getState).mockReturnValue({
       activeTabId: { main: "tab-1" },
+      tabs: { main: [{ id: "tab-1" }] },
     } as unknown as ReturnType<typeof useTabStore.getState>);
 
     vi.mocked(useDocumentStore.getState).mockReturnValue({
@@ -170,9 +171,10 @@ describe("useAutoSave", () => {
     expect(saveToPath).not.toHaveBeenCalled();
   });
 
-  it("skips when no active tab", async () => {
+  it("skips when no tabs exist", async () => {
     vi.mocked(useTabStore.getState).mockReturnValue({
       activeTabId: { main: null },
+      tabs: { main: [] },
     } as unknown as ReturnType<typeof useTabStore.getState>);
 
     renderHook(() => useAutoSave());

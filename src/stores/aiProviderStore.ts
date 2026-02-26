@@ -26,6 +26,7 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { invoke } from "@tauri-apps/api/core";
 import { aiProviderLog, aiProviderWarn } from "@/utils/debug";
+import { createSafeStorage } from "@/utils/safeStorage";
 import type {
   CliProviderInfo,
   RestProviderConfig,
@@ -227,13 +228,7 @@ export const useAiProviderStore = create<AiProviderState & AiProviderActions>()(
     {
       name: "vmark-ai-providers",
       version: 2,
-      storage: createJSONStorage(() =>
-        typeof window !== "undefined" ? localStorage : {
-          getItem: () => null,
-          setItem: () => {},
-          removeItem: () => {},
-        }
-      ),
+      storage: createJSONStorage(() => createSafeStorage()),
       partialize: (state) => ({
         activeProvider: state.activeProvider,
         restProviders: state.restProviders,

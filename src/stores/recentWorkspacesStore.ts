@@ -13,7 +13,8 @@
  */
 
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { persist, createJSONStorage } from "zustand/middleware";
+import { createSafeStorage } from "@/utils/safeStorage";
 import { invoke } from "@tauri-apps/api/core";
 import { getFileName } from "@/utils/pathUtils";
 import { recentWarn } from "@/utils/debug";
@@ -82,6 +83,7 @@ export const useRecentWorkspacesStore = create<RecentWorkspacesState>()(
     }),
     {
       name: "vmark-recent-workspaces",
+      storage: createJSONStorage(() => createSafeStorage()),
     }
   )
 );

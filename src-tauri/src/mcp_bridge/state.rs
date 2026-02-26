@@ -167,6 +167,9 @@ pub(crate) fn is_read_only_operation(request_type: &str) -> bool {
             | "structure.listBlocks"
             | "structure.resolveTargets"
             | "structure.getSection"
+            // Genie read operations
+            | "genies.list"
+            | "genies.read"
     )
 }
 
@@ -226,6 +229,12 @@ mod tests {
         assert!(is_read_only_operation("editor.getUndoState"));
         assert!(is_read_only_operation("suggestion.list"));
         assert!(is_read_only_operation("paragraph.read"));
+    }
+
+    #[test]
+    fn read_only_genie_operations() {
+        assert!(is_read_only_operation("genies.list"));
+        assert!(is_read_only_operation("genies.read"));
     }
 
     #[test]

@@ -158,7 +158,18 @@ export const windowScopedStorage: StateStorage = {
   },
   setItem: (_name: string, value: string): void => {
     const key = getWorkspaceStorageKey(currentWindowLabel);
-    localStorage.setItem(key, value);
+    try {
+      localStorage.setItem(key, value);
+    } catch (error) {
+      if (
+        error instanceof DOMException &&
+        error.name === "QuotaExceededError"
+      ) {
+        workspaceStorageWarn(`QuotaExceededError for key "${key}" — localStorage is full`);
+      } else {
+        throw error;
+      }
+    }
   },
   removeItem: (_name: string): void => {
     const key = getWorkspaceStorageKey(currentWindowLabel);

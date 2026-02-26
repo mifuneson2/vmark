@@ -13,6 +13,7 @@ import { useAiSuggestionStore } from "@/stores/aiSuggestionStore";
 import { validateBaseRevision, getCurrentRevision } from "./revisionTracker";
 import { createMarkdownPasteSlice } from "@/plugins/markdownPaste/tiptap";
 import { serializeMarkdown } from "@/utils/markdownPipeline";
+import { requireString, stringWithDefault } from "./validateArgs";
 
 // Types
 type OperationMode = "apply" | "suggest" | "dryRun";
@@ -123,10 +124,10 @@ export async function handleSectionUpdate(
   args: Record<string, unknown>
 ): Promise<void> {
   try {
-    const baseRevision = args.baseRevision as string;
+    const baseRevision = requireString(args, "baseRevision");
     const target = args.target as SectionTarget;
-    const newContent = args.newContent as string;
-    const mode = (args.mode as OperationMode) ?? "apply";
+    const newContent = requireString(args, "newContent");
+    const mode = stringWithDefault(args, "mode", "apply") as OperationMode;
 
     // Validate revision
     const revisionError = validateBaseRevision(baseRevision);
@@ -247,11 +248,11 @@ export async function handleSectionInsert(
   args: Record<string, unknown>
 ): Promise<void> {
   try {
-    const baseRevision = args.baseRevision as string;
+    const baseRevision = requireString(args, "baseRevision");
     const after = args.after as SectionTarget | undefined;
     const heading = args.heading as NewHeading;
-    const content = (args.content as string) ?? "";
-    const mode = (args.mode as OperationMode) ?? "apply";
+    const content = stringWithDefault(args, "content", "");
+    const mode = stringWithDefault(args, "mode", "apply") as OperationMode;
 
     // Validate revision
     const revisionError = validateBaseRevision(baseRevision);
@@ -388,10 +389,10 @@ export async function handleSectionMove(
   args: Record<string, unknown>
 ): Promise<void> {
   try {
-    const baseRevision = args.baseRevision as string;
+    const baseRevision = requireString(args, "baseRevision");
     const section = args.section as SectionTarget;
     const after = args.after as SectionTarget | undefined;
-    const mode = (args.mode as OperationMode) ?? "apply";
+    const mode = stringWithDefault(args, "mode", "apply") as OperationMode;
 
     // Validate revision
     const revisionError = validateBaseRevision(baseRevision);

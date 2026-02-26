@@ -55,6 +55,18 @@ export function emitHistoryCleared(): void {
   window.dispatchEvent(new CustomEvent(HISTORY_CLEARED_EVENT));
 }
 
+/**
+ * Validate that a parsed JSON object is a valid HistoryIndex.
+ * Returns null if invalid, the validated object if valid.
+ */
+export function parseHistoryIndex(raw: unknown): HistoryIndex | null {
+  if (typeof raw !== "object" || raw === null) return null;
+  const obj = raw as Record<string, unknown>;
+  if (typeof obj.pathHash !== "string") return null;
+  if (!Array.isArray(obj.snapshots)) return null;
+  return raw as HistoryIndex;
+}
+
 // Pure helper functions
 
 /**

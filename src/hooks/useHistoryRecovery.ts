@@ -27,11 +27,11 @@ import {
 import { join } from "@tauri-apps/api/path";
 import { historyLog } from "@/utils/debug";
 import {
-  type HistoryIndex,
   type DeletedDocument,
   INDEX_FILE,
   getDocumentName,
   hashPath,
+  parseHistoryIndex,
 } from "@/utils/historyTypes";
 import { normalizePath, isWithinRoot } from "@/utils/paths/paths";
 import { getHistoryBaseDir } from "@/hooks/useHistoryOperations";
@@ -58,7 +58,8 @@ export async function getDeletedDocuments(): Promise<DeletedDocument[]> {
         if (!(await exists(indexPath))) continue;
 
         const content = await readTextFile(indexPath);
-        const index = JSON.parse(content) as HistoryIndex;
+        const index = parseHistoryIndex(JSON.parse(content));
+        if (!index) continue;
 
         if (index.status === "deleted" && index.snapshots.length > 0) {
           const latestSnapshot = index.snapshots[index.snapshots.length - 1];
@@ -102,7 +103,11 @@ export async function restoreDeletedDocument(
     }
 
     const content = await readTextFile(indexPath);
-    const index = JSON.parse(content) as HistoryIndex;
+    const index = parseHistoryIndex(JSON.parse(content));
+    if (!index) {
+      console.error("[History] Invalid index file format for hash:", pathHash);
+      return null;
+    }
 
     if (index.snapshots.length === 0) {
       console.error("[History] No snapshots to restore");
@@ -201,7 +206,8 @@ export async function clearWorkspaceHistory(
         if (!(await exists(indexPath))) continue;
 
         const content = await readTextFile(indexPath);
-        const index = JSON.parse(content) as HistoryIndex;
+        const index = parseHistoryIndex(JSON.parse(content));
+        if (!index) continue;
 
         const docPath = normalizePath(index.documentPath);
         const rootPath = normalizePath(workspaceRootPath);

@@ -160,7 +160,7 @@ describe("smartInsertHandlers", () => {
     expect(mockRespond).toHaveBeenCalledWith({
       id: "req-3",
       success: false,
-      error: "content is required",
+      error: expect.stringContaining("'content'"),
     });
   });
 

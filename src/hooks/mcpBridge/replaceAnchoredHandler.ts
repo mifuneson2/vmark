@@ -17,6 +17,7 @@ import {
   findTextMatches,
   type TextMatch,
 } from "./utils";
+import { requireString, stringWithDefault } from "./validateArgs";
 import { useAiSuggestionStore } from "@/stores/aiSuggestionStore";
 import { validateBaseRevision, getCurrentRevision } from "./revisionTracker";
 import { createMarkdownPasteSlice } from "@/plugins/markdownPaste/tiptap";
@@ -60,10 +61,10 @@ export async function handleReplaceAnchored(
   args: Record<string, unknown>
 ): Promise<void> {
   try {
-    const baseRevision = args.baseRevision as string;
+    const baseRevision = requireString(args, "baseRevision");
     const anchor = args.anchor as TextAnchor;
-    const replacement = args.replacement as string;
-    const mode = (args.mode as OperationMode) ?? "apply";
+    const replacement = requireString(args, "replacement");
+    const mode = stringWithDefault(args, "mode", "apply") as OperationMode;
 
     // Validate revision
     const revisionError = validateBaseRevision(baseRevision);

@@ -116,7 +116,7 @@ describe("applyDiffHandler", () => {
     expect(mockRespond).toHaveBeenCalledWith({
       id: "req-3",
       success: false,
-      error: "original is required",
+      error: expect.stringContaining("'original'"),
     });
   });
 
@@ -132,7 +132,7 @@ describe("applyDiffHandler", () => {
     expect(mockRespond).toHaveBeenCalledWith({
       id: "req-4",
       success: false,
-      error: "replacement is required",
+      error: expect.stringContaining("'replacement'"),
     });
   });
 

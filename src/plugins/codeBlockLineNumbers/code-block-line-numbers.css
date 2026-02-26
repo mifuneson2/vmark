@@ -83,6 +83,18 @@
   outline: none;
   color: var(--text-color);
   opacity: 1;
+  position: relative;
+}
+
+.tiptap-editor .code-lang-selector:focus-visible::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 2px;
+  right: 2px;
+  height: 2px;
+  background: var(--primary-color);
+  border-radius: 1px;
 }
 
 /* Language dropdown - appended to body, so no .tiptap-editor prefix */

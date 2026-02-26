@@ -11,6 +11,7 @@
 
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import { respond, getEditor } from "./utils";
+import { optionalString, optionalNumber } from "./validateArgs";
 import { useRevisionStore } from "@/stores/revisionStore";
 import {
   type AstNode,
@@ -39,8 +40,8 @@ export async function handleListBlocks(
     }
 
     const query = args.query as BlockQuery | undefined;
-    const limit = (args.limit as number) ?? 50;
-    const afterCursor = args.afterCursor as string | undefined;
+    const limit = optionalNumber(args, "limit") ?? 50;
+    const afterCursor = optionalString(args, "afterCursor");
 
     resetNodeIdCounters();
 
@@ -122,7 +123,7 @@ export async function handleResolveTargets(
     }
 
     const query = args.query as BlockQuery;
-    const maxResults = (args.maxResults as number) ?? 10;
+    const maxResults = optionalNumber(args, "maxResults") ?? 10;
 
     if (!query) {
       throw new Error("query is required");

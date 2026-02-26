@@ -4,9 +4,10 @@
  * Purpose: Automatically saves dirty documents at configurable intervals —
  *   skips untitled (no filePath) documents and coordinates with manual save.
  *
- * Pipeline: Interval timer fires → check isDirty + hasFilePath → if dirty,
- *   call saveToPath() → markAutoSaved() clears dirty flag without touching
- *   savedContent (so external change detection still works)
+ * Pipeline: Interval timer fires → iterate all tabs for window → check
+ *   isDirty + hasFilePath → if dirty, call saveToPath() → markAutoSaved()
+ *   clears dirty flag without touching savedContent (so external change
+ *   detection still works)
  *
  * Key decisions:
  *   - Uses saveToPath() for consistent line ending normalization + history snapshots
@@ -47,27 +48,30 @@ export function useAutoSave() {
         return;
       }
 
-      const tabId = useTabStore.getState().activeTabId[windowLabel];
-      if (!tabId) return;
-
-      const doc = useDocumentStore.getState().getDocument(tabId);
-
-      // Skip if no document, not dirty, no file path (untitled), or file was deleted
-      if (!doc || !doc.isDirty || !doc.filePath || doc.isMissing) return;
-
       // Debounce: Prevent saves within 5 seconds of each other.
-      // This guards against rapid successive saves when the interval
-      // timer fires immediately after a manual save or content change.
       const DEBOUNCE_MS = 5000;
       const now = Date.now();
       if (now - lastSaveRef.current < DEBOUNCE_MS) return;
 
-      // Use saveToPath for consistent normalization, pending save handling, and history
-      const success = await saveToPath(tabId, doc.filePath, doc.content, "auto");
+      // Iterate ALL tabs for this window — not just the active one
+      const tabs = useTabStore.getState().tabs[windowLabel] ?? [];
+      const documentStore = useDocumentStore.getState();
+      let anySaved = false;
 
-      if (success) {
+      for (const tab of tabs) {
+        const doc = documentStore.getDocument(tab.id);
+        // Skip if no document, not dirty, no file path (untitled), or file was deleted
+        if (!doc || !doc.isDirty || !doc.filePath || doc.isMissing) continue;
+
+        const success = await saveToPath(tab.id, doc.filePath, doc.content, "auto");
+        if (success) {
+          anySaved = true;
+          autoSaveLog("Saved:", doc.filePath);
+        }
+      }
+
+      if (anySaved) {
         lastSaveRef.current = now;
-        autoSaveLog("Saved:", doc.filePath);
       }
     };
 

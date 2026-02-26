@@ -8,6 +8,7 @@
 
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import { respond, getEditor, isAutoApproveEnabled, getActiveTabId } from "./utils";
+import { requireString, stringWithDefault } from "./validateArgs";
 import { useAiSuggestionStore } from "@/stores/aiSuggestionStore";
 import { validateBaseRevision, getCurrentRevision } from "./revisionTracker";
 import { createMarkdownPasteSlice } from "@/plugins/markdownPaste/tiptap";
@@ -160,10 +161,10 @@ export async function handleSmartInsert(
   args: Record<string, unknown>
 ): Promise<void> {
   try {
-    const baseRevision = args.baseRevision as string;
+    const baseRevision = requireString(args, "baseRevision");
     const destination = args.destination as SmartInsertDestination;
-    const content = args.content as string;
-    const mode = (args.mode as OperationMode) ?? "suggest";
+    const content = requireString(args, "content");
+    const mode = stringWithDefault(args, "mode", "suggest") as OperationMode;
 
     // Validate revision
     const revisionError = validateBaseRevision(baseRevision);
@@ -180,10 +181,6 @@ export async function handleSmartInsert(
     const editor = getEditor();
     if (!editor) {
       throw new Error("No active editor");
-    }
-
-    if (!content) {
-      throw new Error("content is required");
     }
 
     if (!destination) {

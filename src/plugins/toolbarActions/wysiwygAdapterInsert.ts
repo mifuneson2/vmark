@@ -166,6 +166,8 @@ export function handleInsertImage(context: WysiwygToolbarContext): boolean {
     const handled = await trySmartImageInsertion(view);
     if (handled) return;
     await insertImageFromPicker(view);
+  }).catch((error) => {
+    wysiwygAdapterWarn("Image insertion failed:", error instanceof Error ? error.message : String(error));
   });
 
   return true;
@@ -385,6 +387,8 @@ export function handleInsertVideo(context: WysiwygToolbarContext): boolean {
   const windowLabel = getWindowLabel();
   void withReentryGuard(windowLabel, INSERT_VIDEO_GUARD, async () => {
     await insertVideoFromPicker(view);
+  }).catch((error) => {
+    wysiwygAdapterWarn("Video insertion failed:", error instanceof Error ? error.message : String(error));
   });
 
   return true;
@@ -423,6 +427,8 @@ export function handleInsertAudio(context: WysiwygToolbarContext): boolean {
   const windowLabel = getWindowLabel();
   void withReentryGuard(windowLabel, INSERT_AUDIO_GUARD, async () => {
     await insertAudioFromPicker(view);
+  }).catch((error) => {
+    wysiwygAdapterWarn("Audio insertion failed:", error instanceof Error ? error.message : String(error));
   });
 
   return true;

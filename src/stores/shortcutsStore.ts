@@ -28,6 +28,7 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { invoke } from "@tauri-apps/api/core";
 import { isMacPlatform } from "@/utils/shortcutMatch";
+import { createSafeStorage } from "@/utils/safeStorage";
 import { shortcutsWarn } from "@/utils/debug";
 
 // ============================================================================
@@ -355,13 +356,7 @@ export const useShortcutsStore = create<ShortcutsState & ShortcutsActions>()(
     }),
     {
       name: "vmark-shortcuts",
-      storage: createJSONStorage(() =>
-        typeof window !== "undefined" ? localStorage : {
-          getItem: () => null,
-          setItem: () => {},
-          removeItem: () => {},
-        }
-      ),
+      storage: createJSONStorage(() => createSafeStorage()),
     }
   )
 );

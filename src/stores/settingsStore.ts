@@ -34,6 +34,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { deepMerge } from "@/utils/deepMerge";
+import { createSafeStorage } from "@/utils/safeStorage";
 import type { ThemeId, ThemeColors, SettingsState, SettingsActions } from "./settingsTypes";
 
 // Re-export all types for backward compatibility — consumers can keep
@@ -271,13 +272,7 @@ export const useSettingsStore = create<SettingsState & SettingsActions>()(
     {
       name: "vmark-settings",
       // Guard localStorage access for SSR/non-browser environments
-      storage: createJSONStorage(() =>
-        typeof window !== "undefined" ? localStorage : {
-          getItem: () => null,
-          setItem: () => {},
-          removeItem: () => {},
-        }
-      ),
+      storage: createJSONStorage(() => createSafeStorage()),
       // Deep merge to preserve new default properties when loading old localStorage
       merge: (persistedState, currentState) => {
         const persisted = (persistedState ?? {}) as Record<string, unknown>;

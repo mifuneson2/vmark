@@ -15,7 +15,8 @@
  */
 
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { persist, createJSONStorage } from "zustand/middleware";
+import { createSafeStorage } from "@/utils/safeStorage";
 import { invoke } from "@tauri-apps/api/core";
 import { getFileName } from "@/utils/pathUtils";
 import { recentWarn } from "@/utils/debug";
@@ -94,6 +95,7 @@ export const useRecentFilesStore = create<RecentFilesState>()(
     }),
     {
       name: "vmark-recent-files",
+      storage: createJSONStorage(() => createSafeStorage()),
     }
   )
 );

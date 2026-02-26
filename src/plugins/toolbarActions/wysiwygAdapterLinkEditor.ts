@@ -185,6 +185,8 @@ export function openLinkEditor(context: WysiwygToolbarContext): boolean {
       console.error("[wysiwygAdapter] Failed to open link popup:", error);
       expandedToggleMarkTiptap(view, "link");
     }
+  }).catch((error) => {
+    wysiwygAdapterWarn("Link insertion failed:", error instanceof Error ? error.message : String(error));
   });
 
   return true;

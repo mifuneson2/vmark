@@ -11,6 +11,7 @@
 
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
+import { createSafeStorage } from "@/utils/safeStorage";
 
 const MAX_ENTRIES = 100;
 
@@ -55,13 +56,7 @@ export const usePromptHistoryStore = create<
     }),
     {
       name: "vmark-prompt-history",
-      storage: createJSONStorage(() =>
-        typeof window !== "undefined" ? localStorage : {
-          getItem: () => null,
-          setItem: () => {},
-          removeItem: () => {},
-        }
-      ),
+      storage: createJSONStorage(() => createSafeStorage()),
       partialize: (state) => ({
         entries: state.entries,
       }),

@@ -27,6 +27,7 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import { invoke } from "@tauri-apps/api/core";
 import type { GenieDefinition, GenieMetadata, GenieScope } from "@/types/aiGenies";
 import { geniesWarn, geniesLog } from "@/utils/debug";
+import { createSafeStorage } from "@/utils/safeStorage";
 
 // ============================================================================
 // Types
@@ -190,13 +191,7 @@ export const useGeniesStore = create<GeniesState & GeniesActions>()(
     }),
     {
       name: "vmark-genies",
-      storage: createJSONStorage(() =>
-        typeof window !== "undefined" ? localStorage : {
-          getItem: () => null,
-          setItem: () => {},
-          removeItem: () => {},
-        }
-      ),
+      storage: createJSONStorage(() => createSafeStorage()),
       partialize: (state) => ({
         recentGenieNames: state.recentGenieNames,
         favoriteGenieNames: state.favoriteGenieNames,

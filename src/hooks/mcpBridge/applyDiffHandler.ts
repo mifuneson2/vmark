@@ -20,6 +20,7 @@ import {
 import { useAiSuggestionStore } from "@/stores/aiSuggestionStore";
 import { validateBaseRevision, getCurrentRevision } from "./revisionTracker";
 import { createMarkdownPasteSlice } from "@/plugins/markdownPaste/tiptap";
+import { requireString, optionalNumber, stringWithDefault } from "./validateArgs";
 
 // Types
 type OperationMode = "apply" | "suggest" | "dryRun";
@@ -33,12 +34,12 @@ export async function handleApplyDiff(
   args: Record<string, unknown>
 ): Promise<void> {
   try {
-    const baseRevision = args.baseRevision as string;
-    const original = args.original as string;
-    const replacement = args.replacement as string;
-    const matchPolicy = args.matchPolicy as MatchPolicy;
-    const nth = args.nth as number | undefined;
-    const mode = (args.mode as OperationMode) ?? "apply";
+    const baseRevision = requireString(args, "baseRevision");
+    const original = requireString(args, "original");
+    const replacement = requireString(args, "replacement");
+    const matchPolicy = requireString(args, "matchPolicy") as MatchPolicy;
+    const nth = optionalNumber(args, "nth");
+    const mode = stringWithDefault(args, "mode", "apply") as OperationMode;
 
     // Validate revision
     const revisionError = validateBaseRevision(baseRevision);
@@ -58,14 +59,6 @@ export async function handleApplyDiff(
     const editor = getEditor();
     if (!editor) {
       throw new Error("No active editor");
-    }
-
-    if (!original) {
-      throw new Error("original is required");
-    }
-
-    if (replacement === undefined) {
-      throw new Error("replacement is required");
     }
 
     // Validate nth parameter for matchPolicy="nth"

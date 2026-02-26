@@ -16,6 +16,7 @@ import {
   resolveNodeId,
   getTextRange,
 } from "./utils";
+import { requireString, optionalString } from "./validateArgs";
 import { useAiSuggestionStore } from "@/stores/aiSuggestionStore";
 import { idempotencyCache } from "./idempotencyCache";
 import { validateBaseRevision, getCurrentRevision } from "./revisionTracker";
@@ -42,8 +43,8 @@ export async function handleBatchEdit(
   args: Record<string, unknown>
 ): Promise<void> {
   try {
-    const baseRevision = args.baseRevision as string;
-    const requestId = args.requestId as string | undefined;
+    const baseRevision = requireString(args, "baseRevision");
+    const requestId = optionalString(args, "requestId");
     const mode = (args.mode as OperationMode) ?? "apply";
     const operations = args.operations as BatchOperation[];
 

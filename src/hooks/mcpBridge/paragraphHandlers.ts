@@ -9,6 +9,7 @@
 
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import { respond, getEditor, isAutoApproveEnabled, getActiveTabId } from "./utils";
+import { requireString, optionalString, stringWithDefault } from "./validateArgs";
 import { useAiSuggestionStore } from "@/stores/aiSuggestionStore";
 import { validateBaseRevision, getCurrentRevision } from "./revisionTracker";
 import { createMarkdownPasteSlice } from "@/plugins/markdownPaste/tiptap";
@@ -198,11 +199,11 @@ export async function handleParagraphWrite(
   args: Record<string, unknown>
 ): Promise<void> {
   try {
-    const baseRevision = args.baseRevision as string;
+    const baseRevision = requireString(args, "baseRevision");
     const target = args.target as ParagraphTarget;
-    const operation = args.operation as ParagraphOperation;
-    const content = args.content as string | undefined;
-    const mode = (args.mode as OperationMode) ?? "suggest";
+    const operation = requireString(args, "operation") as ParagraphOperation;
+    const content = optionalString(args, "content");
+    const mode = stringWithDefault(args, "mode", "suggest") as OperationMode;
 
     // Validate revision
     const revisionError = validateBaseRevision(baseRevision);
