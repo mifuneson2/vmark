@@ -1,0 +1,16 @@
+/* Drop cursor shown during text drag */
+.text-drag-drop-cursor {
+  position: fixed;
+  width: 2px;
+  background: var(--primary-color);
+  pointer-events: none;
+  z-index: 100;
+  display: none;
+  border-radius: 1px;
+}
+
+/* Change cursor while dragging text — applied to editor container only */
+.text-drag-active {
+  cursor: grabbing !important;
+  user-select: none;
+}

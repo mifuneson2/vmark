@@ -89,6 +89,7 @@ import { sourcePeekInlineExtension } from "@/plugins/sourcePeekInline";
 import { smartSelectAllExtension } from "@/plugins/smartSelectAll/tiptap";
 import { inlineCodeBoundaryExtension } from "@/plugins/inlineCodeBoundary/tiptap";
 import { CJKBold, CJKItalic } from "@/plugins/markInputRules/tiptap";
+import { textDragDropExtension } from "@/plugins/textDragDrop/tiptap";
 
 /**
  * Creates the array of Tiptap extensions for the WYSIWYG editor.
@@ -203,5 +204,6 @@ export function createTiptapExtensions(): Extensions {
     sourcePeekInlineExtension,
     smartSelectAllExtension,
     inlineCodeBoundaryExtension,
+    textDragDropExtension,
   ];
 }
