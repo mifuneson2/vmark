@@ -44,11 +44,6 @@ import { useDocumentStore } from "@/stores/documentStore";
 import { useWindowLabel } from "@/contexts/WindowContext";
 import { resolveHardBreakStyle } from "@/utils/linebreaks";
 import { extractTiptapContext } from "@/plugins/formatToolbar/tiptapContext";
-import { useTiptapCJKFormatCommands } from "@/hooks/useTiptapCJKFormatCommands";
-import { useTiptapFormatCommands } from "@/hooks/useTiptapFormatCommands";
-import { useTiptapParagraphCommands } from "@/hooks/useTiptapParagraphCommands";
-import { useTiptapSelectionCommands } from "@/hooks/useTiptapSelectionCommands";
-import { useTiptapTableCommands } from "@/hooks/useTiptapTableCommands";
 import { useImageDragDrop } from "@/hooks/useImageDragDrop";
 import { handleTableScrollToSelection } from "@/plugins/tableScroll/scrollGuard";
 import { ImageContextMenu } from "./ImageContextMenu";
@@ -306,12 +301,6 @@ export function TiptapEditorInner({ hidden = false }: TiptapEditorInnerProps) {
   );
   const handleImageContextMenuAction = useImageContextMenu(getEditorView);
   useOutlineSync(getEditorView);
-
-  useTiptapParagraphCommands(editor);
-  useTiptapFormatCommands(editor);
-  useTiptapTableCommands(editor);
-  useTiptapSelectionCommands(editor);
-  useTiptapCJKFormatCommands(editor);
 
   // Handle image drag-drop from Finder/Explorer
   useImageDragDrop({

@@ -17,7 +17,10 @@ export class MultiSelection extends Selection {
   /** Index of the primary range (used for anchor/head compatibility) */
   readonly primaryIndex: number;
 
-  constructor(ranges: SelectionRange[], primaryIndex = 0) {
+  /** Per-range directionality: true if the user selected backwards (anchor > head) */
+  readonly backward: boolean[];
+
+  constructor(ranges: SelectionRange[], primaryIndex = 0, backward?: boolean[]) {
     // Validate inputs
     if (ranges.length === 0) {
       throw new Error("MultiSelection requires at least one range");
@@ -32,6 +35,7 @@ export class MultiSelection extends Selection {
     super(primary.$from, primary.$to, normalized.ranges);
 
     this.primaryIndex = normalized.primaryIndex;
+    this.backward = backward ?? new Array(normalized.ranges.length).fill(false);
   }
 
   /**
@@ -47,7 +51,7 @@ export class MultiSelection extends Selection {
       return new SelectionRange($from, $to);
     });
 
-    return new MultiSelection(mappedRanges, this.primaryIndex);
+    return new MultiSelection(mappedRanges, this.primaryIndex, this.backward);
   }
 
   /**
@@ -82,10 +86,13 @@ export class MultiSelection extends Selection {
   } {
     return {
       type: "multi",
-      ranges: this.ranges.map((r) => ({
-        anchor: r.$from.pos,
-        head: r.$to.pos,
-      })),
+      ranges: this.ranges.map((r, i) => {
+        const isBackward = this.backward[i];
+        return {
+          anchor: isBackward ? r.$to.pos : r.$from.pos,
+          head: isBackward ? r.$from.pos : r.$to.pos,
+        };
+      }),
       primaryIndex: this.primaryIndex,
     };
   }
@@ -97,12 +104,15 @@ export class MultiSelection extends Selection {
     doc: Node,
     json: { ranges: Array<{ anchor: number; head: number }>; primaryIndex: number }
   ): MultiSelection {
+    const backwardFlags: boolean[] = [];
     const ranges = json.ranges.map((r) => {
-      const $from = doc.resolve(r.anchor);
-      const $to = doc.resolve(r.head);
-      return new SelectionRange($from, $to);
+      const isBackward = r.anchor > r.head;
+      backwardFlags.push(isBackward);
+      const from = Math.min(r.anchor, r.head);
+      const to = Math.max(r.anchor, r.head);
+      return new SelectionRange(doc.resolve(from), doc.resolve(to));
     });
-    return new MultiSelection(ranges, json.primaryIndex);
+    return new MultiSelection(ranges, json.primaryIndex, backwardFlags);
   }
 
   /**

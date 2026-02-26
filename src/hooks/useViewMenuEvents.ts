@@ -18,7 +18,6 @@ import { useTabStore } from "@/stores/tabStore";
 import { requestToggleTerminal } from "@/components/Terminal/terminalGate";
 import { useDocumentStore } from "@/stores/documentStore";
 import { useSettingsStore } from "@/stores/settingsStore";
-import { FEATURE_FLAGS } from "@/stores/featureFlagsStore";
 import { normalizeLineEndings } from "@/utils/linebreaks";
 import { cleanupBeforeModeSwitch } from "@/utils/modeSwitchCleanup";
 import { toggleSourceModeWithCheckpoint } from "@/hooks/useUnifiedHistory";
@@ -140,7 +139,6 @@ export function useViewMenuEvents(): void {
 
       const unlistenLineEndingsLf = await currentWindow.listen<string>("menu:line-endings-lf", (event) => {
         if (event.payload !== windowLabel) return;
-        if (FEATURE_FLAGS.UNIFIED_MENU_DISPATCHER) return;
         convertLineEndings("lf");
       });
       if (cancelled) { unlistenLineEndingsLf(); return; }
@@ -148,7 +146,6 @@ export function useViewMenuEvents(): void {
 
       const unlistenLineEndingsCrlf = await currentWindow.listen<string>("menu:line-endings-crlf", (event) => {
         if (event.payload !== windowLabel) return;
-        if (FEATURE_FLAGS.UNIFIED_MENU_DISPATCHER) return;
         convertLineEndings("crlf");
       });
       if (cancelled) { unlistenLineEndingsCrlf(); return; }

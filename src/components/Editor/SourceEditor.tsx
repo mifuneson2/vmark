@@ -31,7 +31,6 @@ import {
   useDocumentCursorInfo,
   useDocumentActions,
 } from "@/hooks/useDocumentState";
-import { useSourceMenuCommands } from "@/hooks/useSourceMenuCommands";
 import { useSourceEditorSearch } from "@/hooks/useSourceEditorSearch";
 import { useSourceEditorSync } from "@/hooks/useSourceEditorSync";
 import {
@@ -62,7 +61,6 @@ export function SourceEditor({ hidden = false }: SourceEditorProps) {
   const hiddenRef = useRef(hidden);
   hiddenRef.current = hidden;
 
-  useSourceMenuCommands(viewRef);
   useSourceOutlineSync(viewRef, hidden);
 
   // Use document store for content (per-window state)

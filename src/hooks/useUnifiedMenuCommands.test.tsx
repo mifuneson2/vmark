@@ -19,10 +19,6 @@ vi.mock("@tauri-apps/api/webviewWindow", () => ({
   }),
 }));
 
-vi.mock("@/stores/featureFlagsStore", () => ({
-  FEATURE_FLAGS: { UNIFIED_MENU_DISPATCHER: true },
-}));
-
 let sourceMode = false;
 vi.mock("@/stores/editorStore", () => {
   const useEditorStore = (selector?: (state: { sourceMode: boolean }) => unknown) => {
