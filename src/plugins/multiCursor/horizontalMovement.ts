@@ -25,9 +25,17 @@ function moveRangeHorizontally(
   range: SelectionRange,
   dir: -1 | 1,
   extend: boolean,
-  unit: HorizontalUnit
+  unit: HorizontalUnit,
+  backward?: boolean
 ): SelectionRange {
-  const headPos = range.$to.pos;
+  // Non-empty selection without extend: collapse to start or end
+  if (!extend && range.$from.pos !== range.$to.pos) {
+    const collapsePos = dir < 0 ? range.$from.pos : range.$to.pos;
+    const $pos = doc.resolve(collapsePos);
+    return new SelectionRange($pos, $pos);
+  }
+
+  const headPos = backward ? range.$from.pos : range.$to.pos;
 
   if (unit === "char") {
     const startPos = Math.max(0, Math.min(doc.content.size, headPos + dir));
@@ -36,7 +44,7 @@ function moveRangeHorizontally(
     if (!found) return range;
     const targetPos = dir < 0 ? found.from : found.to;
     if (extend) {
-      const anchorPos = range.$from.pos;
+      const anchorPos = backward ? range.$to.pos : range.$from.pos;
       const from = Math.min(anchorPos, targetPos);
       const to = Math.max(anchorPos, targetPos);
       return new SelectionRange(doc.resolve(from), doc.resolve(to));
@@ -60,7 +68,7 @@ function moveRangeHorizontally(
   }
 
   if (extend) {
-    const anchorPos = range.$from.pos;
+    const anchorPos = backward ? range.$to.pos : range.$from.pos;
     const from = Math.min(anchorPos, targetPos);
     const to = Math.max(anchorPos, targetPos);
     return new SelectionRange(doc.resolve(from), doc.resolve(to));
@@ -82,8 +90,9 @@ export function handleMultiCursorHorizontal(
   }
 
   const dir = direction === "ArrowLeft" ? -1 : 1;
-  const nextRanges = selection.ranges.map((range) =>
-    moveRangeHorizontally(doc, range, dir, extend, unit)
+  const backwardFlags = selection.backward;
+  const nextRanges = selection.ranges.map((range, i) =>
+    moveRangeHorizontally(doc, range, dir, extend, unit, backwardFlags?.[i])
   );
 
   const normalized = normalizeRangesWithPrimary(

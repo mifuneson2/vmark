@@ -96,11 +96,12 @@ export function handleMultiCursorBackspace(
     if (from !== to) {
       // Selection - delete selected text
       tr = tr.delete(from, to);
-    } else if (from > 1) {
-      // Cursor - delete character before (pos > 1 to stay in document)
-      tr = tr.delete(from - 1, from);
+    } else {
+      const $pos = state.doc.resolve(from);
+      if ($pos.parentOffset > 0) {
+        tr = tr.delete(from - 1, from);
+      }
     }
-    // If at start, do nothing for this cursor
   }
 
   // Remap selection through the changes, merging any overlaps caused by edits
@@ -137,7 +138,6 @@ export function handleMultiCursorDelete(
 
   const sortedRanges = sortRangesDescending(selection.ranges);
   let tr = state.tr;
-  const docSize = state.doc.content.size;
 
   // Apply deletions from end to start
   for (const range of sortedRanges) {
@@ -147,11 +147,12 @@ export function handleMultiCursorDelete(
     if (from !== to) {
       // Selection - delete selected text
       tr = tr.delete(from, to);
-    } else if (to < docSize - 1) {
-      // Cursor - delete character after (if not at end)
-      tr = tr.delete(from, from + 1);
+    } else {
+      const $pos = state.doc.resolve(from);
+      if ($pos.parentOffset < $pos.parent.content.size) {
+        tr = tr.delete(from, from + 1);
+      }
     }
-    // If at end, do nothing for this cursor
   }
 
   // Remap selection through the changes, merging any overlaps caused by edits
@@ -193,8 +194,17 @@ export function handleMultiCursorArrow(
   const dir = direction === "ArrowLeft" || direction === "ArrowUp" ? -1 : 1;
   const isVertical = direction === "ArrowUp" || direction === "ArrowDown";
 
-  const nextRanges = selection.ranges.map((range) => {
-    const headPos = range.$to.pos;
+  const backwardFlags = selection.backward;
+  const nextRanges = selection.ranges.map((range, i) => {
+    // Non-empty selection without extend: collapse to start or end
+    if (!extend && range.$from.pos !== range.$to.pos) {
+      const collapsePos = dir < 0 ? range.$from.pos : range.$to.pos;
+      const $pos = doc.resolve(collapsePos);
+      return new SelectionRange($pos, $pos);
+    }
+
+    const isBackward = backwardFlags?.[i];
+    const headPos = isBackward ? range.$from.pos : range.$to.pos;
     const startPos = isVertical ? headPos : Math.max(0, Math.min(doc.content.size, headPos + dir));
     const $head = doc.resolve(startPos);
     const found = Selection.findFrom($head, dir, true);
@@ -205,7 +215,7 @@ export function handleMultiCursorArrow(
 
     const targetPos = dir < 0 ? found.from : found.to;
     if (extend) {
-      const anchorPos = range.$from.pos;
+      const anchorPos = isBackward ? range.$to.pos : range.$from.pos;
       const from = Math.min(anchorPos, targetPos);
       const to = Math.max(anchorPos, targetPos);
       return new SelectionRange(doc.resolve(from), doc.resolve(to));

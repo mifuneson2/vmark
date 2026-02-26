@@ -12,7 +12,6 @@
  *   - Must be mounted ONCE at EditorHost level, not per-editor
  *   - Uses actionRegistry to map menu IDs to canonical action IDs
  *   - Heading levels extracted from menu params (e.g., "heading-1" → level 1)
- *   - Feature-flagged: some actions gated behind FEATURE_FLAGS
  *
  * @coordinates-with actionRegistry.ts — maps menu event IDs to action IDs
  * @coordinates-with wysiwygAdapter.ts — executes actions in WYSIWYG mode
@@ -23,7 +22,6 @@
 import { useEffect, useRef } from "react";
 import type { UnlistenFn } from "@tauri-apps/api/event";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
-import { FEATURE_FLAGS } from "@/stores/featureFlagsStore";
 import { useEditorStore } from "@/stores/editorStore";
 import { useActiveEditorStore } from "@/stores/activeEditorStore";
 import { useSourceCursorContextStore } from "@/stores/sourceCursorContextStore";
@@ -281,11 +279,6 @@ export function useUnifiedMenuCommands(): void {
   const unlistenRefs = useRef<UnlistenFn[]>([]);
 
   useEffect(() => {
-    // Feature flag check - if disabled, do nothing (legacy hooks handle it)
-    if (!FEATURE_FLAGS.UNIFIED_MENU_DISPATCHER) {
-      return;
-    }
-
     let disposed = false;
 
     const setupListeners = async () => {
