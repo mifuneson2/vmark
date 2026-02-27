@@ -38,11 +38,11 @@ interface TabProps {
   isInvalidDrop?: boolean;
   isSnapback?: boolean;
   showDropIndicator?: boolean;
-  onActivate: () => void;
-  onClose: () => void;
-  onContextMenu: (e: MouseEvent) => void;
+  onActivate: (tabId: string) => void;
+  onClose: (tabId: string) => void;
+  onContextMenu: (e: MouseEvent, tab: TabType) => void;
   onPointerDown?: (e: PointerEvent) => void;
-  onKeyDown?: (e: KeyboardEvent) => void;
+  onKeyDown?: (tabId: string, e: KeyboardEvent) => void;
 }
 
 export const Tab = memo(function Tab({
@@ -77,22 +77,40 @@ export const Tab = memo(function Tab({
       ? "Local differs from disk"
       : undefined;
 
+  const handleActivate = useCallback(() => {
+    onActivate(tab.id);
+  }, [onActivate, tab.id]);
+
   const handleClose = useCallback(
     (e: MouseEvent) => {
       e.stopPropagation();
-      onClose();
+      onClose(tab.id);
     },
-    [onClose]
+    [onClose, tab.id]
   );
 
   const handleMiddleClick = useCallback(
     (e: MouseEvent) => {
       if (e.button === 1) {
         e.preventDefault();
-        onClose();
+        onClose(tab.id);
       }
     },
-    [onClose]
+    [onClose, tab.id]
+  );
+
+  const handleContextMenu = useCallback(
+    (e: MouseEvent) => {
+      onContextMenu(e, tab);
+    },
+    [onContextMenu, tab]
+  );
+
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      onKeyDown?.(tab.id, e);
+    },
+    [onKeyDown, tab.id]
   );
 
   return (
@@ -114,11 +132,11 @@ export const Tab = memo(function Tab({
           isSnapback && "tab--snapback"
         )}
         tabIndex={isActive ? 0 : -1}
-        onClick={onActivate}
-        onKeyDown={onKeyDown}
+        onClick={handleActivate}
+        onKeyDown={handleKeyDown}
         onMouseDown={handleMiddleClick}
         onPointerDown={onPointerDown}
-        onContextMenu={onContextMenu}
+        onContextMenu={handleContextMenu}
         title={tooltip}
       >
         {/* Pin indicator */}

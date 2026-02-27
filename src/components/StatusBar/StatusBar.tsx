@@ -250,10 +250,10 @@ export function StatusBar() {
                       isInvalidDrop={isDropInvalid && isBeingDragged}
                       isSnapback={snapbackTabId === tab.id}
                       showDropIndicator={showDropBefore}
-                      onActivate={() => handleActivateTab(tab.id)}
-                      onKeyDown={(event) => handleTabKeyDown(tab.id, event)}
-                      onClose={() => handleCloseTab(tab.id)}
-                      onContextMenu={(event) => handleContextMenu(event, tab)}
+                      onActivate={handleActivateTab}
+                      onKeyDown={handleTabKeyDown}
+                      onClose={handleCloseTab}
+                      onContextMenu={handleContextMenu}
                       onPointerDown={dragHandlers.onPointerDown}
                     />
                   );

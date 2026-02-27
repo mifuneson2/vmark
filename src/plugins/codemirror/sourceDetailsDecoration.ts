@@ -37,6 +37,9 @@ const DETAILS_DIRECTIVE_OPEN = /^:::details(?:\s|$)/i;
 /** Regex to match directive style closing: ::: */
 const DIRECTIVE_CLOSE = /^:::\s*$/;
 
+/** Maximum lines to scan forward for a closing tag (consistent with sourceMediaDecoration) */
+const MAX_LOOKAHEAD = 200;
+
 /**
  * Represents a details block found in the document.
  */
@@ -65,7 +68,7 @@ function findDetailsBlocks(doc: { lines: number; line: (n: number) => { text: st
       let summaryLine: number | undefined;
 
       // Find closing </details>
-      for (let j = i + 1; j <= doc.lines; j++) {
+      for (let j = i + 1; j <= doc.lines && j - i < MAX_LOOKAHEAD; j++) {
         const nextLine = doc.line(j);
         const nextText = nextLine.text.trimStart();
 
@@ -99,7 +102,7 @@ function findDetailsBlocks(doc: { lines: number; line: (n: number) => { text: st
       let endLine = i;
 
       // Find closing :::
-      for (let j = i + 1; j <= doc.lines; j++) {
+      for (let j = i + 1; j <= doc.lines && j - i < MAX_LOOKAHEAD; j++) {
         const nextLine = doc.line(j);
         const nextText = nextLine.text.trimStart();
 
