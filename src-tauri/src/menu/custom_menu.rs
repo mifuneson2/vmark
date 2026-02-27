@@ -290,9 +290,9 @@ pub(crate) fn create_menu_with_shortcuts(
         "Transform",
         true,
         &[
-            &MenuItem::with_id(app, "transform-uppercase", "UPPERCASE", true, get_accel("transform-uppercase", "Ctrl+Shift+U"))?,
-            &MenuItem::with_id(app, "transform-lowercase", "lowercase", true, get_accel("transform-lowercase", "Ctrl+Shift+L"))?,
-            &MenuItem::with_id(app, "transform-title-case", "Title Case", true, get_accel("transform-title-case", "Ctrl+Shift+T"))?,
+            &MenuItem::with_id(app, "transform-uppercase", "UPPERCASE", true, get_accel("transform-uppercase", if cfg!(target_os = "macos") { "Ctrl+Shift+U" } else { "Alt+Shift+U" }))?,
+            &MenuItem::with_id(app, "transform-lowercase", "lowercase", true, get_accel("transform-lowercase", if cfg!(target_os = "macos") { "Ctrl+Shift+L" } else { "Alt+Shift+L" }))?,
+            &MenuItem::with_id(app, "transform-title-case", "Title Case", true, get_accel("transform-title-case", if cfg!(target_os = "macos") { "Ctrl+Shift+T" } else { "Alt+Shift+T" }))?,
             &MenuItem::with_id(app, "transform-toggle-case", "Toggle Case", true, get_accel("transform-toggle-case", ""))?,
             &PredefinedMenuItem::separator(app)?,
             &MenuItem::with_id(app, "toggle-quote-style", "Toggle Quote Style", true, get_accel("toggle-quote-style", "CmdOrCtrl+Shift+'"))?,

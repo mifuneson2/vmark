@@ -144,9 +144,9 @@ export const DEFAULT_SHORTCUTS: ShortcutDefinition[] = [
   { id: "sortLinesDesc", label: "Sort Lines Descending", category: "editing", defaultKey: "Shift-F4", menuId: "sort-lines-desc" },
 
   // === Text Transformations ===
-  { id: "transformUppercase", label: "Transform to UPPERCASE", category: "editing", defaultKey: "Ctrl-Shift-u", menuId: "transform-uppercase" },
-  { id: "transformLowercase", label: "Transform to lowercase", category: "editing", defaultKey: "Ctrl-Shift-l", menuId: "transform-lowercase" },
-  { id: "transformTitleCase", label: "Transform to Title Case", category: "editing", defaultKey: "Ctrl-Shift-t", menuId: "transform-title-case" },
+  { id: "transformUppercase", label: "Transform to UPPERCASE", category: "editing", defaultKey: "Ctrl-Shift-u", defaultKeyOther: "Alt-Shift-u", menuId: "transform-uppercase" },
+  { id: "transformLowercase", label: "Transform to lowercase", category: "editing", defaultKey: "Ctrl-Shift-l", defaultKeyOther: "Alt-Shift-l", menuId: "transform-lowercase" },
+  { id: "transformTitleCase", label: "Transform to Title Case", category: "editing", defaultKey: "Ctrl-Shift-t", defaultKeyOther: "Alt-Shift-t", menuId: "transform-title-case" },
   { id: "transformToggleCase", label: "Toggle Case", category: "editing", defaultKey: "", menuId: "transform-toggle-case", description: "Toggle between UPPERCASE and lowercase" },
   { id: "removeBlankLines", label: "Remove Blank Lines", category: "editing", defaultKey: "", menuId: "remove-blank-lines", description: "Remove blank lines from selection" },
 

@@ -91,12 +91,12 @@ If you prefer keeping system functions on F-keys, you can customize VMark shortc
 
 ## Text Transformations
 
-| Action | Shortcut |
-|--------|----------|
-| UPPERCASE | `Ctrl + Shift + U` |
-| lowercase | `Ctrl + Shift + L` |
-| Title Case | `Ctrl + Shift + T` |
-| Toggle Quote Style | `Shift + Mod + '` |
+| Action | macOS | Windows/Linux |
+|--------|-------|---------------|
+| UPPERCASE | `Ctrl + Shift + U` | `Alt + Shift + U` |
+| lowercase | `Ctrl + Shift + L` | `Alt + Shift + L` |
+| Title Case | `Ctrl + Shift + T` | `Alt + Shift + T` |
+| Toggle Quote Style | `Shift + Mod + '` | `Shift + Mod + '` |
 
 ## Insert
 

@@ -286,9 +286,9 @@ pub fn create_menu(app: &tauri::AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
         "Transform",
         true,
         &[
-            &MenuItem::with_id(app, "transform-uppercase", "UPPERCASE", true, Some("Ctrl+Shift+U"))?,
-            &MenuItem::with_id(app, "transform-lowercase", "lowercase", true, Some("Ctrl+Shift+L"))?,
-            &MenuItem::with_id(app, "transform-title-case", "Title Case", true, Some("Ctrl+Shift+T"))?,
+            &MenuItem::with_id(app, "transform-uppercase", "UPPERCASE", true, Some(if cfg!(target_os = "macos") { "Ctrl+Shift+U" } else { "Alt+Shift+U" }))?,
+            &MenuItem::with_id(app, "transform-lowercase", "lowercase", true, Some(if cfg!(target_os = "macos") { "Ctrl+Shift+L" } else { "Alt+Shift+L" }))?,
+            &MenuItem::with_id(app, "transform-title-case", "Title Case", true, Some(if cfg!(target_os = "macos") { "Ctrl+Shift+T" } else { "Alt+Shift+T" }))?,
             &MenuItem::with_id(app, "transform-toggle-case", "Toggle Case", true, None::<&str>)?,
             &PredefinedMenuItem::separator(app)?,
             &MenuItem::with_id(app, "toggle-quote-style", "Toggle Quote Style", true, Some("CmdOrCtrl+Shift+'"))?,
