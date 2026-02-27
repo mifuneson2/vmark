@@ -15,19 +15,20 @@
  * Key decisions:
  *   - Tab drag/drop is implemented in useStatusBarTabDrag via pointer events,
  *     not HTML5 drag API, for finer control over reorder vs. detach threshold.
- *   - Word/char counts are memoized through stripMarkdown → countWords pipeline
- *     to avoid re-computing on every keystroke when content hasn't changed.
+ *   - Word/char counts are isolated in StatusBarCounts component to avoid
+ *     re-rendering the entire StatusBar on every keystroke.
  *   - Auto-save timestamp fades out after 5 seconds but continues updating
  *     in the background (10s interval) so re-showing is accurate.
  *   - An ARIA live region announces drag-and-drop outcomes for screen readers.
  *
  * @coordinates-with StatusBarRight.tsx — right section split out to reduce render scope
+ * @coordinates-with StatusBarCounts.tsx — word/char count isolated to prevent parent re-renders
  * @coordinates-with useStatusBarTabDrag.ts — all drag/drop logic including cross-window transfer
  * @coordinates-with Tabs/Tab.tsx — individual tab pill component
  * @coordinates-with Tabs/TabContextMenu.tsx — right-click menu for tabs
  * @module components/StatusBar/StatusBar
  */
-import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from "react";
 import { PanelLeft, Plus } from "lucide-react";
 import { useEditorStore } from "@/stores/editorStore";
 import { useUIStore } from "@/stores/uiStore";
@@ -36,7 +37,6 @@ import { useTabStore, type Tab as TabType } from "@/stores/tabStore";
 import { useDocumentStore } from "@/stores/documentStore";
 import { closeTabWithDirtyCheck } from "@/hooks/useTabOperations";
 import {
-  useDocumentContent,
   useDocumentLastAutoSave,
   useDocumentIsMissing,
   useDocumentIsDivergent,
@@ -50,7 +50,6 @@ import { useShortcutsStore } from "@/stores/shortcutsStore";
 import { useMcpServer } from "@/hooks/useMcpServer";
 import { useMcpClients } from "@/hooks/useMcpClients";
 import { openSettingsWindow } from "@/utils/settingsWindow";
-import { countCharsFromPlain, countWordsFromPlain, stripMarkdown } from "./statusTextMetrics";
 import { StatusBarRight } from "./StatusBarRight";
 import { useStatusBarTabDrag } from "./useStatusBarTabDrag";
 import { useQuitFeedback } from "./useQuitFeedback";
@@ -87,7 +86,6 @@ function preventSelectAllOnButtons(event: KeyboardEvent) {
 export function StatusBar() {
   const isDocumentWindow = useIsDocumentWindow();
   const windowLabel = useWindowLabel();
-  const content = useDocumentContent();
   const lastAutoSave = useDocumentLastAutoSave();
   const isMissing = useDocumentIsMissing();
   const isDivergent = useDocumentIsDivergent();
@@ -193,10 +191,6 @@ export function StatusBar() {
 
   const dragTab = dragTabId ? tabs.find((tab) => tab.id === dragTabId) ?? null : null;
 
-  const strippedContent = useMemo(() => stripMarkdown(content), [content]);
-  const wordCount = useMemo(() => countWordsFromPlain(strippedContent), [strippedContent]);
-  const charCount = useMemo(() => countCharsFromPlain(strippedContent), [strippedContent]);
-
   const showTabs = isDocumentWindow && tabs.length >= 1;
   const showNewTabButton = isDocumentWindow;
 
@@ -283,8 +277,6 @@ export function StatusBar() {
             showAutoSave={showAutoSave}
             lastAutoSave={lastAutoSave}
             autoSaveTime={autoSaveTime}
-            wordCount={wordCount}
-            charCount={charCount}
             terminalVisible={terminalVisible}
             terminalShortcut={terminalShortcut}
             sourceMode={sourceMode}

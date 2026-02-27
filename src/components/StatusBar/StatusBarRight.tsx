@@ -25,6 +25,7 @@ import { requestToggleTerminal } from "@/components/Terminal/terminalGate";
 import { formatExactTime } from "@/utils/dateUtils";
 import { formatKeyForDisplay } from "@/stores/shortcutsStore";
 import { UpdateIndicator } from "./UpdateIndicator";
+import { StatusBarCounts } from "./StatusBarCounts";
 import type { McpClient } from "@/hooks/useMcpClients";
 
 const UPPERCASE_WORDS = new Set(["cli", "ai", "mcp", "api", "ide"]);
@@ -72,8 +73,6 @@ interface StatusBarRightProps {
   showAutoSave: boolean;
   lastAutoSave: number | null;
   autoSaveTime: string;
-  wordCount: number;
-  charCount: number;
   terminalVisible: boolean;
   terminalShortcut: string;
   sourceMode: boolean;
@@ -93,8 +92,6 @@ export function StatusBarRight({
   showAutoSave,
   lastAutoSave,
   autoSaveTime,
-  wordCount,
-  charCount,
   terminalVisible,
   terminalShortcut,
   sourceMode,
@@ -103,8 +100,7 @@ export function StatusBarRight({
 }: StatusBarRightProps) {
   return (
     <div className="status-bar-right">
-      <span className="status-item">{wordCount} words</span>
-      <span className="status-item">{charCount} chars</span>
+      <StatusBarCounts />
 
       <UpdateIndicator />
 

@@ -115,7 +115,7 @@ export const searchExtension = Extension.create({
               state.wholeWord !== lastWholeWord ||
               state.useRegex !== lastUseRegex;
 
-            const needsRebuild = queryChanged || tr.docChanged;
+            const needsRebuild = (queryChanged || tr.docChanged) && (state.isOpen || state.query);
 
             if (needsRebuild) {
               lastQuery = state.query;

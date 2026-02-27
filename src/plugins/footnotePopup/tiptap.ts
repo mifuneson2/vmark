@@ -242,6 +242,17 @@ export const footnotePopupExtension = Extension.create({
           const docChanged = transactions.some((tr) => tr.docChanged);
           if (!docChanged) return null;
 
+          // Fast check: if old doc has no footnote refs AND no definitions, skip full scan
+          let hasFootnotes = false;
+          oldState.doc.descendants((node) => {
+            if (node.type.name === "footnote_reference" || node.type.name === "footnote_definition") {
+              hasFootnotes = true;
+              return false; // Stop traversal on first match
+            }
+            return true;
+          });
+          if (!hasFootnotes) return null;
+
           const oldRefLabels = getReferenceLabels(oldState.doc);
           const newRefLabels = getReferenceLabels(newState.doc);
 
