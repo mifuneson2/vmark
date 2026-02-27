@@ -9,12 +9,14 @@
  *   - Uses tabSize from settings for consistent indentation
  *   - Shift+Tab removes up to tabSize spaces from the line start
  *   - Lower priority than tabEscape and listSmartIndent in the keymap chain
+ *   - Handles all selection ranges for multi-cursor support
  *
  * @coordinates-with tabEscape.ts — higher-priority Tab handler for bracket/link escape
  * @coordinates-with listSmartIndent.ts — higher-priority Tab handler for list items
  * @module plugins/codemirror/tabIndent
  */
 
+import { type ChangeSpec, EditorSelection } from "@codemirror/state";
 import { KeyBinding } from "@codemirror/view";
 import { guardCodeMirrorKeyBinding } from "@/utils/imeGuard";
 import { useSettingsStore } from "@/stores/settingsStore";
@@ -29,18 +31,33 @@ function getTabSize(): number {
 /**
  * Tab key handler: insert spaces when Tab is not handled by other keymaps.
  * This is a fallback to prevent focus from leaving the editor.
+ * Handles all cursors for multi-cursor support.
  */
 export const tabIndentFallbackKeymap: KeyBinding = guardCodeMirrorKeyBinding({
   key: "Tab",
   run: (view) => {
     const { state } = view;
-    const { from, to } = state.selection.main;
     const spaces = " ".repeat(getTabSize());
 
-    // Insert spaces (replaces selection if any)
+    const changes: ChangeSpec[] = state.selection.ranges.map((range) => ({
+      from: range.from,
+      to: range.to,
+      insert: spaces,
+    }));
+
+    // Build new selection: each cursor moves to end of inserted spaces,
+    // adjusting for prior insertions shifting positions
+    let offset = 0;
+    const anchors: number[] = state.selection.ranges.map((range) => {
+      const newAnchor = range.from + offset + spaces.length;
+      // Each replacement changes length by (spaces.length - (to - from))
+      offset += spaces.length - (range.to - range.from);
+      return newAnchor;
+    });
+
     view.dispatch({
-      changes: { from, to, insert: spaces },
-      selection: { anchor: from + spaces.length },
+      changes,
+      selection: EditorSelection.create(anchors.map((a) => EditorSelection.cursor(a))),
       scrollIntoView: true,
     });
     return true;
@@ -50,28 +67,28 @@ export const tabIndentFallbackKeymap: KeyBinding = guardCodeMirrorKeyBinding({
 /**
  * Shift+Tab key handler: outdent (remove up to tabSize spaces before cursor).
  * This is a fallback to prevent focus from leaving the editor.
+ * Handles all cursors for multi-cursor support.
  */
 export const shiftTabIndentFallbackKeymap: KeyBinding = guardCodeMirrorKeyBinding({
   key: "Shift-Tab",
   run: (view) => {
     const { state } = view;
-    const { from } = state.selection.main;
+    const tabSize = getTabSize();
+    const changes: ChangeSpec[] = [];
 
-    // Find the start of the current line
-    const line = state.doc.lineAt(from);
-    const lineStart = line.from;
-    const textBefore = state.doc.sliceString(lineStart, from);
+    for (const range of state.selection.ranges) {
+      const line = state.doc.lineAt(range.from);
+      const textBefore = state.doc.sliceString(line.from, range.from);
+      const leadingSpaces = textBefore.match(/^[ ]*/)?.[0].length ?? 0;
+      if (leadingSpaces === 0) continue;
 
-    // Count leading spaces
-    const leadingSpaces = textBefore.match(/^[ ]*/)?.[0].length ?? 0;
-    if (leadingSpaces === 0) return true; // Nothing to outdent, but still handle the key
+      const spacesToRemove = Math.min(leadingSpaces, tabSize);
+      changes.push({ from: line.from, to: line.from + spacesToRemove, insert: "" });
+    }
 
-    // Remove up to tabSize spaces
-    const spacesToRemove = Math.min(leadingSpaces, getTabSize());
-    view.dispatch({
-      changes: { from: lineStart, to: lineStart + spacesToRemove, insert: "" },
-      scrollIntoView: true,
-    });
-    return true;
+    if (changes.length > 0) {
+      view.dispatch({ changes, scrollIntoView: true });
+    }
+    return true; // Always handle the key to prevent focus leaving
   },
 });
