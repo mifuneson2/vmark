@@ -16,10 +16,46 @@ use super::coordinator::{
     RestoreMultiWindowResult,
 };
 
-/// Capture session from all windows and persist to disk atomically
+/// Capture session from all windows and persist to disk atomically.
+///
+/// If the capture is partial (some windows timed out), merges with the
+/// previous session so that missing windows retain their last-known state
+/// instead of being silently dropped.
 #[tauri::command]
 pub async fn hot_exit_capture(app: AppHandle) -> Result<SessionData, String> {
-    let session = capture_session(&app).await?;
+    let mut session = capture_session(&app).await?;
+
+    // Merge partial captures: keep previous window states for missing windows
+    let captured_labels: std::collections::HashSet<String> = session
+        .windows
+        .iter()
+        .map(|w| w.window_label.clone())
+        .collect();
+
+    if let Ok(Some(prev_session)) = read_session(&app).await {
+        let mut merged = false;
+        for prev_window in prev_session.windows {
+            if !captured_labels.contains(&prev_window.window_label) {
+                eprintln!(
+                    "[HotExit] Merging previous state for missing window '{}'",
+                    prev_window.window_label
+                );
+                session.windows.push(prev_window);
+                merged = true;
+            }
+        }
+        if merged {
+            // Re-sort: main window first, then by label
+            session.windows.sort_by(|a, b| {
+                match (a.is_main_window, b.is_main_window) {
+                    (true, false) => std::cmp::Ordering::Less,
+                    (false, true) => std::cmp::Ordering::Greater,
+                    _ => a.window_label.cmp(&b.window_label),
+                }
+            });
+        }
+    }
+
     write_session_atomic(&app, &session).await?;
     Ok(session)
 }

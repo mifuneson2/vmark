@@ -74,6 +74,7 @@ export async function restoreMainWindowState(): Promise<void> {
       await emit(HOT_EXIT_EVENTS.RESTORE_COMPLETE, {});
     }
   } catch (error) {
+    mainWindowRestoreStarted = false; // Allow retry on failure
     hotExitWarn('Main window restore failed:', error);
     void emit(HOT_EXIT_EVENTS.RESTORE_FAILED, {
       error: error instanceof Error ? error.message : String(error),
