@@ -26,6 +26,7 @@
  * @coordinates-with useTheme.ts — reads appearance settings to compute CSS vars
  * @coordinates-with useAutoSave.ts — reads general.autoSaveEnabled/autoSaveInterval
  * @coordinates-with useTerminalPosition.ts — reads terminal.position for panel placement
+ * @coordinates-with spawnPty.ts — reads terminal.shell for configured shell preference
  * @coordinates-with settingsTypes.ts — all type/interface definitions live there
  * @coordinates-with src/utils/deepMerge.ts — deep-merge utility for persist migration
  * @module stores/settingsStore
@@ -212,6 +213,7 @@ const initialState: SettingsState = {
     cleanupOrphansOnClose: false, // Off by default - user must opt in
   },
   terminal: {
+    shell: "",
     fontSize: 13,
     lineHeight: 1.2,
     cursorStyle: "bar",

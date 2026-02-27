@@ -184,6 +184,7 @@ export type TerminalPosition = "auto" | "bottom" | "right";
 export type TerminalCursorStyle = "block" | "underline" | "bar";
 
 export interface TerminalSettings {
+  shell: string;       // Default: "" (empty = system default via getpwuid → $SHELL → /bin/sh)
   fontSize: number;    // Default: 13 (range: 10–24)
   lineHeight: number;  // Default: 1.4 (range: 1.0–2.0)
   cursorStyle: TerminalCursorStyle; // Default: "bar"

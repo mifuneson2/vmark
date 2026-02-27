@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   resolveTerminalCwd,
+  spawnPty,
   wirePtyFlowControl,
   CALLBACK_BYTE_LIMIT,
   HIGH_WATERMARK,
@@ -8,6 +9,13 @@ import {
   type FlowControlPty,
   type PtyPayload,
 } from "./spawnPty";
+
+vi.mock("@tauri-apps/api/core", () => ({
+  invoke: vi.fn((cmd: string) => {
+    if (cmd === "get_default_shell") return Promise.resolve("/bin/zsh");
+    return Promise.resolve(null);
+  }),
+}));
 
 // Mock stores
 vi.mock("@/stores/workspaceStore", () => ({
@@ -20,6 +28,10 @@ vi.mock("@/stores/tabStore", () => ({
 
 vi.mock("@/stores/documentStore", () => ({
   useDocumentStore: { getState: vi.fn(() => ({ getDocument: () => null })) },
+}));
+
+vi.mock("@/stores/settingsStore", () => ({
+  useSettingsStore: { getState: vi.fn(() => ({ terminal: { shell: "" } })) },
 }));
 
 vi.mock("@/utils/workspaceStorage", () => ({
@@ -39,6 +51,9 @@ vi.mock("tauri-pty", () => ({
 import { useWorkspaceStore } from "@/stores/workspaceStore";
 import { useTabStore } from "@/stores/tabStore";
 import { useDocumentStore } from "@/stores/documentStore";
+import { useSettingsStore } from "@/stores/settingsStore";
+import { invoke } from "@tauri-apps/api/core";
+import { spawn } from "tauri-pty";
 
 describe("resolveTerminalCwd", () => {
   beforeEach(() => {
@@ -285,5 +300,93 @@ describe("wirePtyFlowControl", () => {
     cb?.();
 
     expect(mockPty.resume).not.toHaveBeenCalled();
+  });
+});
+
+describe("spawnPty shell selection", () => {
+  const mockTerm = {
+    cols: 80,
+    rows: 24,
+    write: vi.fn(),
+  } as unknown as import("@xterm/xterm").Terminal;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(useWorkspaceStore.getState).mockReturnValue({
+      rootPath: null,
+    } as ReturnType<typeof useWorkspaceStore.getState>);
+  });
+
+  it("uses configured shell when set", async () => {
+    vi.mocked(useSettingsStore.getState).mockReturnValue({
+      terminal: { shell: "/bin/fish" },
+    } as ReturnType<typeof useSettingsStore.getState>);
+
+    await spawnPty({ term: mockTerm, onExit: vi.fn(), disposed: () => false });
+
+    expect(spawn).toHaveBeenCalledWith("/bin/fish", [], expect.any(Object));
+    expect(invoke).not.toHaveBeenCalledWith("get_default_shell");
+  });
+
+  it("falls back to get_default_shell when shell is empty", async () => {
+    vi.mocked(useSettingsStore.getState).mockReturnValue({
+      terminal: { shell: "" },
+    } as ReturnType<typeof useSettingsStore.getState>);
+
+    await spawnPty({ term: mockTerm, onExit: vi.fn(), disposed: () => false });
+
+    expect(invoke).toHaveBeenCalledWith("get_default_shell");
+    expect(spawn).toHaveBeenCalledWith("/bin/zsh", [], expect.any(Object));
+  });
+
+  it("falls back to get_default_shell when shell is whitespace-only", async () => {
+    vi.mocked(useSettingsStore.getState).mockReturnValue({
+      terminal: { shell: "  " },
+    } as ReturnType<typeof useSettingsStore.getState>);
+
+    await spawnPty({ term: mockTerm, onExit: vi.fn(), disposed: () => false });
+
+    expect(invoke).toHaveBeenCalledWith("get_default_shell");
+    expect(spawn).toHaveBeenCalledWith("/bin/zsh", [], expect.any(Object));
+  });
+
+  it("retries with default shell when configured shell fails to spawn", async () => {
+    vi.mocked(useSettingsStore.getState).mockReturnValue({
+      terminal: { shell: "/usr/bin/nonexistent" },
+    } as ReturnType<typeof useSettingsStore.getState>);
+
+    const spawnCalls: string[] = [];
+    vi.mocked(spawn).mockImplementation(((shellArg: string) => {
+      spawnCalls.push(shellArg);
+      if (shellArg === "/usr/bin/nonexistent") {
+        throw new Error("spawn failed");
+      }
+      return {
+        onData: vi.fn(),
+        onExit: vi.fn(),
+        write: vi.fn(),
+        resize: vi.fn(),
+        kill: vi.fn(),
+      };
+    }) as unknown as typeof spawn);
+
+    await spawnPty({ term: mockTerm, onExit: vi.fn(), disposed: () => false });
+
+    expect(invoke).toHaveBeenCalledWith("get_default_shell");
+    expect(spawnCalls).toEqual(["/usr/bin/nonexistent", "/bin/zsh"]);
+  });
+
+  it("throws if disposed during fallback await", async () => {
+    vi.mocked(useSettingsStore.getState).mockReturnValue({
+      terminal: { shell: "/usr/bin/nonexistent" },
+    } as ReturnType<typeof useSettingsStore.getState>);
+
+    vi.mocked(spawn).mockImplementation((() => {
+      throw new Error("spawn failed");
+    }) as unknown as typeof spawn);
+
+    await expect(
+      spawnPty({ term: mockTerm, onExit: vi.fn(), disposed: () => true }),
+    ).rejects.toThrow("disposed");
   });
 });

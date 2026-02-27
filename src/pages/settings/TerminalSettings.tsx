@@ -1,9 +1,12 @@
 /**
  * Terminal Settings Section
  *
- * Panel position, panel size, font size, line height, and other terminal options.
+ * Shell selection, panel position, panel size, font size, line height,
+ * and other terminal options.
  */
 
+import { useEffect, useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import { useSettingsStore, type TerminalPosition, type TerminalCursorStyle } from "@/stores/settingsStore";
 import { SettingRow, SettingsGroup, Select, Toggle } from "./components";
 
@@ -55,6 +58,12 @@ const lineHeightOptions = [
   { value: "2.0", label: "2.0 (Extra)" },
 ];
 
+/** Extract shell name from absolute path (e.g. "/bin/zsh" → "zsh", "C:\\Windows\\cmd.exe" → "cmd.exe"). */
+function shellLabel(path: string): string {
+  const name = path.split(/[/\\]/).pop() ?? path;
+  return name || path;
+}
+
 /** Snap a ratio to the nearest dropdown option value. */
 function snapToOption(ratio: number): string {
   const values = panelSizeOptions.map((o) => Number(o.value));
@@ -74,9 +83,41 @@ export function TerminalSettings() {
   const terminal = useSettingsStore((state) => state.terminal);
   const updateTerminalSetting = useSettingsStore((state) => state.updateTerminalSetting);
 
+  const [shells, setShells] = useState<string[]>([]);
+  const [defaultShell, setDefaultShell] = useState<string>("");
+
+  useEffect(() => {
+    invoke<string[]>("list_available_shells").then(setShells).catch((e) => {
+      console.warn("[TerminalSettings] Failed to list shells:", e);
+    });
+    invoke<string>("get_default_shell").then(setDefaultShell).catch((e) => {
+      console.warn("[TerminalSettings] Failed to get default shell:", e);
+    });
+  }, []);
+
+  const detectedOptions = shells.map((s) => ({ value: s, label: shellLabel(s) }));
+  // Case-insensitive match for Windows path compatibility
+  const shellInList = shells.some((s) => s.toLowerCase() === terminal.shell.toLowerCase());
+  const shellOptions = [
+    { value: "", label: defaultShell ? `System Default (${shellLabel(defaultShell)})` : "System Default" },
+    ...detectedOptions,
+    // If persisted shell is not in detected list, add a fallback entry
+    ...(terminal.shell && !shellInList
+      ? [{ value: terminal.shell, label: `${shellLabel(terminal.shell)} (unavailable)` }]
+      : []),
+  ];
+
   return (
     <div className="space-y-6">
       <SettingsGroup title="Terminal">
+        <SettingRow label="Shell" description="Which shell to use. Requires terminal restart.">
+          <Select
+            value={terminal.shell}
+            options={shellOptions}
+            onChange={(v) => updateTerminalSetting("shell", v)}
+          />
+        </SettingRow>
+
         <SettingRow label="Panel Position" description="Where to place the terminal panel. Auto switches based on window aspect ratio.">
           <Select
             value={terminal.position}

@@ -7,8 +7,10 @@
  *
  * Key decisions:
  *   - CWD priority: workspace root > active file's parent directory > shell default ($HOME).
- *   - Shell is determined by the Rust backend (get_default_shell), not hardcoded,
- *     to respect the user's configured shell on any platform.
+ *   - Shell priority: user-configured shell in settings > Rust backend default
+ *     (get_default_shell: getpwuid → $SHELL → /bin/sh). Only absolute paths
+ *     are accepted; relative paths are rejected to prevent PATH/CWD hijack.
+ *   - If the configured shell fails to spawn, retries with system default.
  *   - Sets TERM_PROGRAM=vmark and EDITOR=vmark so CLI tools can detect the host.
  *   - Sets LC_CTYPE=UTF-8 because macOS GUI apps have minimal env; without it
  *     the shell defaults to C locale and tools emit "?" for CJK characters.
@@ -32,6 +34,7 @@ import type { Terminal } from "@xterm/xterm";
 import { useWorkspaceStore } from "@/stores/workspaceStore";
 import { useTabStore } from "@/stores/tabStore";
 import { useDocumentStore } from "@/stores/documentStore";
+import { useSettingsStore } from "@/stores/settingsStore";
 import { getCurrentWindowLabel } from "@/utils/workspaceStorage";
 
 /**
@@ -128,7 +131,15 @@ export function wirePtyFlowControl(
 export async function spawnPty(options: SpawnOptions): Promise<IPty> {
   const { term, cwd, onExit, disposed } = options;
 
-  const shell = await invoke<string>("get_default_shell");
+  const configuredShell = useSettingsStore.getState().terminal.shell.trim();
+  // Reject relative paths (security: prevent CWD/PATH hijack on Windows).
+  // Only absolute paths are accepted: Unix (/) or Windows drive letter (C:\).
+  const isAbsolute = configuredShell.startsWith("/") || /^[a-zA-Z]:[/\\]/.test(configuredShell);
+  const safeShell = configuredShell && isAbsolute ? configuredShell : "";
+  const defaultShell = safeShell || await invoke<string>("get_default_shell");
+  // Defense-in-depth: verify the resolved shell is an absolute path
+  const shellIsAbsolute = defaultShell.startsWith("/") || /^[a-zA-Z]:[/\\]/.test(defaultShell);
+  const shell = shellIsAbsolute ? defaultShell : "/bin/sh";
   if (disposed()) throw new Error("disposed before spawn");
   const workspaceRoot = useWorkspaceStore.getState().rootPath;
 
@@ -146,12 +157,20 @@ export async function spawnPty(options: SpawnOptions): Promise<IPty> {
     env.VMARK_WORKSPACE = workspaceRoot;
   }
 
-  const pty = spawn(shell, [], {
-    cols: term.cols || 80,
-    rows: term.rows || 24,
-    cwd,
-    env,
-  });
+  const spawnOpts = { cols: term.cols || 80, rows: term.rows || 24, cwd, env };
+  let pty: IPty;
+  try {
+    pty = spawn(shell, [], spawnOpts);
+  } catch (err) {
+    // If configured shell fails, fall back to system default
+    if (safeShell) {
+      const fallback = await invoke<string>("get_default_shell");
+      if (disposed()) throw new Error("disposed before fallback spawn");
+      pty = spawn(fallback, [], spawnOpts);
+    } else {
+      throw err;
+    }
+  }
 
   // PTY → xterm with watermark-based flow control
   wirePtyFlowControl(pty, term, disposed);
