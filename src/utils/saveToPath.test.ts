@@ -249,7 +249,7 @@ describe("saveToPath", () => {
 
       // clearPendingSave is delayed via setTimeout to handle late watcher events
       expect(clearPendingSave).not.toHaveBeenCalled();
-      vi.advanceTimersByTime(500);
+      vi.advanceTimersByTime(1000);
       expect(clearPendingSave).toHaveBeenCalledWith("/tmp/doc.md");
     });
 

@@ -31,7 +31,7 @@ import { normalizePath } from "@/utils/paths";
 import { saveToPath } from "@/utils/saveToPath";
 import { detectLinebreaks } from "@/utils/linebreakDetection";
 import { reloadTabFromDisk } from "@/utils/reloadFromDisk";
-import { matchesPendingSave } from "@/utils/pendingSaves";
+import { matchesPendingSave, hasPendingSave } from "@/utils/pendingSaves";
 import { getFileName } from "@/utils/paths";
 
 /** Pending dirty file change awaiting user decision */
@@ -243,6 +243,48 @@ export function useExternalFileChanges(): void {
     [processBatchedChanges]
   );
 
+  // Handle a modify-like event by reading disk content and applying policy.
+  // Shared by the modify/create branch and the rename fallback (atomic writes).
+  const handleModifyEvent = useCallback(
+    async (tabId: string, changedPath: string, diskContent: string) => {
+      const doc = useDocumentStore.getState().getDocument(tabId);
+      if (!doc) return;
+
+      // File reappeared after deletion — always reload and clear missing
+      if (doc.isMissing) {
+        useDocumentStore.getState().loadContent(tabId, diskContent, changedPath, detectLinebreaks(diskContent));
+        useDocumentStore.getState().clearMissing(tabId);
+        toast.info(`Restored: ${getFileName(changedPath)}`);
+        return;
+      }
+
+      // Disk matches what we last wrote — no actual external change
+      if (diskContent === doc.lastDiskContent) {
+        return;
+      }
+
+      // Real external change — apply policy
+      const action = resolveExternalChangeAction({
+        isDirty: doc.isDirty,
+        hasFilePath: Boolean(doc.filePath),
+      });
+
+      switch (action) {
+        case "auto_reload":
+          useDocumentStore.getState().loadContent(tabId, diskContent, changedPath, detectLinebreaks(diskContent));
+          useDocumentStore.getState().clearMissing(tabId);
+          toast.info(`Reloaded: ${getFileName(changedPath)}`);
+          break;
+        case "prompt_user":
+          queueDirtyChange(tabId, changedPath);
+          break;
+        case "no_op":
+          break;
+      }
+    },
+    [queueDirtyChange]
+  );
+
   useEffect(() => {
     let cancelled = false;
 
@@ -276,7 +318,19 @@ export function useExternalFileChanges(): void {
             for (const changedPath of paths) {
               const normalizedPath = normalizePath(changedPath);
               const tabId = openPaths.get(normalizedPath);
-              if (tabId) {
+              if (!tabId) continue;
+
+              // Skip our own atomic writes (rename is part of temp→target)
+              if (hasPendingSave(normalizedPath)) continue;
+
+              // Verify file is actually gone before marking as deleted.
+              // Atomic writes trigger rename events but the target still exists.
+              try {
+                const diskContent = await readTextFile(changedPath);
+                // File still exists — treat as modify, run content checks
+                await handleModifyEvent(tabId, changedPath, diskContent);
+              } catch {
+                // File truly deleted
                 handleDeletion(tabId);
               }
             }
@@ -301,58 +355,20 @@ export function useExternalFileChanges(): void {
 
           // Handle file modification (create could be a recreation after delete)
           if (kind === "modify" || kind === "create") {
-            // Content-based verification: read file and compare
-            // This eliminates false positives from file touches, sync services, etc.
             let diskContent: string;
             try {
               diskContent = await readTextFile(changedPath);
             } catch {
-              // File unreadable (might be deleted or locked) - skip
+              // File unreadable (might be deleted or locked) — skip
               continue;
             }
 
-            // Check 1: Is this our own pending save?
-            // If disk content matches what we're writing, it's our save
+            // Filter out our own pending saves
             if (matchesPendingSave(changedPath, diskContent)) {
               continue;
             }
 
-            // Check 2: File reappeared after deletion — always reload and clear missing
-            // (e.g. Finder undo, git checkout, Trash restore)
-            if (doc.isMissing) {
-              useDocumentStore.getState().loadContent(tabId, diskContent, changedPath, detectLinebreaks(diskContent));
-              useDocumentStore.getState().clearMissing(tabId);
-              toast.info(`Restored: ${getFileName(changedPath)}`);
-              continue;
-            }
-
-            // Check 3: Does disk match what we last wrote?
-            // If so, no actual external change occurred (file was touched but not modified)
-            if (diskContent === doc.lastDiskContent) {
-              continue;
-            }
-
-            // Real external change detected - disk content differs from lastDiskContent
-            const action = resolveExternalChangeAction({
-              isDirty: doc.isDirty,
-              hasFilePath: Boolean(doc.filePath),
-            });
-
-            switch (action) {
-              case "auto_reload":
-                // Clean document - reload with brief notification
-                useDocumentStore.getState().loadContent(tabId, diskContent, changedPath, detectLinebreaks(diskContent));
-                useDocumentStore.getState().clearMissing(tabId);
-                toast.info(`Reloaded: ${getFileName(changedPath)}`);
-                break;
-              case "prompt_user":
-                // Queue for batched processing to avoid dialog storms
-                queueDirtyChange(tabId, changedPath);
-                break;
-              case "no_op":
-                // Should not happen for files with paths
-                break;
-            }
+            await handleModifyEvent(tabId, changedPath, diskContent);
           }
         }
       });
@@ -379,5 +395,5 @@ export function useExternalFileChanges(): void {
         batchTimeoutRef.current = null;
       }
     };
-  }, [windowLabel, getOpenFilePaths, handleReload, queueDirtyChange, handleDeletion]);
+  }, [windowLabel, getOpenFilePaths, handleReload, queueDirtyChange, handleDeletion, handleModifyEvent]);
 }

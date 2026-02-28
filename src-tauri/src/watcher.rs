@@ -86,10 +86,20 @@ const IGNORED_DIRS: &[&str] = &[
 
 /// Check whether a filesystem path should be ignored by the watcher.
 ///
-/// Returns true if any path component matches the explicit ignore list.
+/// Returns true if any path component matches the explicit ignore list,
+/// or if the filename matches temp file patterns from atomic writes.
 /// User-visible dot-directories (`.github`, `.vscode`, etc.) are allowed
 /// through so that external changes to those files are detected.
 fn should_ignore_path(path: &Path) -> bool {
+    // Filter temp files created by atomic writes to reduce event noise.
+    // NamedTempFile (lib.rs): names like ".tmpXXXXXX"
+    // app_paths.rs: names like ".{name}.tmp.{pid}"
+    if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
+        if name.starts_with(".tmp") || name.contains(".tmp.") {
+            return true;
+        }
+    }
+
     for component in path.components() {
         if let std::path::Component::Normal(name) = component {
             let name_str = name.to_string_lossy();
@@ -307,6 +317,28 @@ mod tests {
     #[test]
     fn test_ignore_pycache() {
         assert!(should_ignore_path(Path::new("/project/__pycache__/mod.pyc")));
+    }
+
+    #[test]
+    fn test_ignore_temp_files_from_named_temp_file() {
+        // NamedTempFile creates files like ".tmpXXXXXX"
+        assert!(should_ignore_path(Path::new("/workspace/.tmpabcdef")));
+        assert!(should_ignore_path(Path::new("/workspace/.tmp123456")));
+    }
+
+    #[test]
+    fn test_ignore_temp_files_from_app_paths() {
+        // app_paths.rs creates files like ".{name}.tmp.{pid}"
+        assert!(should_ignore_path(Path::new("/workspace/.test.md.tmp.12345")));
+        assert!(should_ignore_path(Path::new("/workspace/.notes.tmp.9999")));
+    }
+
+    #[test]
+    fn test_allow_normal_tmp_extension() {
+        // Files that happen to end in .tmp but aren't our temp files
+        // should still be allowed (no ".tmp." infix, no ".tmp" prefix)
+        assert!(!should_ignore_path(Path::new("/workspace/notes.md")));
+        assert!(!should_ignore_path(Path::new("/workspace/data.txt")));
     }
 
     #[test]

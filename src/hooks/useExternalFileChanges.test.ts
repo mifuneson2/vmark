@@ -15,6 +15,7 @@ const mocks = vi.hoisted(() => ({
   readTextFile: vi.fn(),
   toastInfo: vi.fn(),
   matchesPendingSave: vi.fn(() => false),
+  hasPendingSave: vi.fn(() => false),
 }));
 
 vi.mock("@tauri-apps/api/event", () => ({
@@ -44,6 +45,7 @@ vi.mock("@/contexts/WindowContext", () => ({
 
 vi.mock("@/utils/pendingSaves", () => ({
   matchesPendingSave: mocks.matchesPendingSave,
+  hasPendingSave: mocks.hasPendingSave,
 }));
 
 vi.mock("@/utils/saveToPath", () => ({
@@ -192,5 +194,161 @@ describe("useExternalFileChanges — file reappearance", () => {
 
     // Should hit the lastDiskContent check and skip — no toast
     expect(mocks.toastInfo).not.toHaveBeenCalled();
+  });
+});
+
+describe("useExternalFileChanges — rename events", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("skips rename fallback when path has a pending save (atomic write)", async () => {
+    seedStores();
+    mocks.hasPendingSave.mockReturnValue(true);
+
+    renderHook(() => useExternalFileChanges());
+    await vi.waitFor(() => expect(mocks.listen).toHaveBeenCalled());
+
+    const callback = captureListenCallback();
+
+    // Simulate atomic write rename: temp file → target (unmatched pair)
+    await callback({
+      payload: {
+        watchId: "main",
+        rootPath: "/workspace",
+        paths: ["/workspace/test.md"],
+        kind: "rename",
+      },
+    });
+
+    const doc = useDocumentStore.getState().documents["tab-1"];
+    expect(doc?.isMissing).toBe(false);
+    expect(mocks.readTextFile).not.toHaveBeenCalled();
+  });
+
+  it("treats rename fallback as modify when file still exists on disk", async () => {
+    seedStores({ lastDiskContent: "# old content" });
+    mocks.hasPendingSave.mockReturnValue(false);
+    mocks.readTextFile.mockResolvedValue("# new external content");
+
+    renderHook(() => useExternalFileChanges());
+    await vi.waitFor(() => expect(mocks.listen).toHaveBeenCalled());
+
+    const callback = captureListenCallback();
+
+    // Odd-length paths array — fallback branch processes each path
+    await callback({
+      payload: {
+        watchId: "main",
+        rootPath: "/workspace",
+        paths: ["/workspace/test.md"],
+        kind: "rename",
+      },
+    });
+
+    const doc = useDocumentStore.getState().documents["tab-1"];
+    // Clean doc should auto-reload with new content
+    expect(doc?.isMissing).toBe(false);
+    expect(doc?.lastDiskContent).toBe("# new external content");
+    expect(mocks.toastInfo).toHaveBeenCalledWith("Reloaded: test.md");
+  });
+
+  it("marks file as deleted when rename fallback cannot read the file", async () => {
+    seedStores();
+    mocks.hasPendingSave.mockReturnValue(false);
+    mocks.readTextFile.mockRejectedValue(new Error("file not found"));
+
+    renderHook(() => useExternalFileChanges());
+    await vi.waitFor(() => expect(mocks.listen).toHaveBeenCalled());
+
+    const callback = captureListenCallback();
+
+    await callback({
+      payload: {
+        watchId: "main",
+        rootPath: "/workspace",
+        paths: ["/workspace/test.md"],
+        kind: "rename",
+      },
+    });
+
+    const doc = useDocumentStore.getState().documents["tab-1"];
+    expect(doc?.isMissing).toBe(true);
+  });
+
+  it("handles paired rename (real file rename) by updating tab path", async () => {
+    seedStores();
+
+    renderHook(() => useExternalFileChanges());
+    await vi.waitFor(() => expect(mocks.listen).toHaveBeenCalled());
+
+    const callback = captureListenCallback();
+
+    // Paired rename: old path → new path
+    await callback({
+      payload: {
+        watchId: "main",
+        rootPath: "/workspace",
+        paths: ["/workspace/test.md", "/workspace/renamed.md"],
+        kind: "rename",
+      },
+    });
+
+    const doc = useDocumentStore.getState().documents["tab-1"];
+    expect(doc?.isMissing).toBe(false);
+    expect(doc?.filePath).toBe("/workspace/renamed.md");
+  });
+
+  it("rename fallback skips same-content file (no false reload)", async () => {
+    seedStores({ lastDiskContent: "# old content" });
+    mocks.hasPendingSave.mockReturnValue(false);
+    // Disk content matches lastDiskContent — no change
+    mocks.readTextFile.mockResolvedValue("# old content");
+
+    renderHook(() => useExternalFileChanges());
+    await vi.waitFor(() => expect(mocks.listen).toHaveBeenCalled());
+
+    const callback = captureListenCallback();
+
+    await callback({
+      payload: {
+        watchId: "main",
+        rootPath: "/workspace",
+        paths: ["/workspace/test.md"],
+        kind: "rename",
+      },
+    });
+
+    const doc = useDocumentStore.getState().documents["tab-1"];
+    expect(doc?.isMissing).toBe(false);
+    // No toast — content unchanged
+    expect(mocks.toastInfo).not.toHaveBeenCalled();
+  });
+});
+
+describe("useExternalFileChanges — remove events", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("marks file as missing on remove event", async () => {
+    seedStores();
+
+    renderHook(() => useExternalFileChanges());
+    await vi.waitFor(() => expect(mocks.listen).toHaveBeenCalled());
+
+    const callback = captureListenCallback();
+
+    await callback({
+      payload: {
+        watchId: "main",
+        rootPath: "/workspace",
+        paths: ["/workspace/test.md"],
+        kind: "remove",
+      },
+    });
+
+    const doc = useDocumentStore.getState().documents["tab-1"];
+    expect(doc?.isMissing).toBe(true);
   });
 });

@@ -80,8 +80,10 @@ export async function saveToPath(
   }
 
   // Delay clearing pending save to allow late-arriving watcher events
-  // to still match against our save (macOS FSEvents can batch/delay events)
-  setTimeout(() => clearPendingSave(path), 500);
+  // to still match against our save. The full pipeline (Rust debounce 200ms →
+  // emit → JS event loop → async readTextFile → comparison) can exceed 500ms
+  // under heavy I/O, so use 1000ms for safety.
+  setTimeout(() => clearPendingSave(path), 1000);
 
   // Update tab path for title sync
   useTabStore.getState().updateTabPath(tabId, path);

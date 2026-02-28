@@ -63,6 +63,10 @@ fn get_legacy_dir() -> Option<PathBuf> {
 
 /// Write a file atomically using temp file + sync + rename pattern.
 /// This prevents partial reads by other processes.
+///
+/// NOTE: A separate async variant exists in `lib.rs` as a Tauri command for
+/// frontend invocations. They are intentionally separate — this one is sync
+/// for internal Rust callers (workspace config, MCP port file).
 pub fn atomic_write_file(path: &Path, contents: &[u8]) -> Result<(), String> {
     let parent = path.parent().ok_or_else(|| {
         format!("Cannot determine parent directory of {:?}", path)

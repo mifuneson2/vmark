@@ -136,10 +136,14 @@ fn cleanup_stale_temp_files(dir: &std::path::Path) {
     }
 }
 
-/// Atomic file write using temp file + rename.
+/// Atomic file write using temp file + rename (async Tauri command variant).
 ///
 /// Prevents data loss on crash by writing to a temporary file in the same
 /// directory, flushing to disk, then atomically renaming over the target.
+///
+/// NOTE: A separate sync variant exists in `app_paths::atomic_write_file` for
+/// internal use (workspace config, MCP port file). They are intentionally
+/// separate — this one is async for the frontend invoke path.
 #[tauri::command]
 async fn atomic_write_file(path: String, content: String) -> Result<(), String> {
     tokio::task::spawn_blocking(move || {
