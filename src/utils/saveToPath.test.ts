@@ -38,8 +38,9 @@ vi.mock("@/stores/settingsStore", () => ({
   },
 }));
 
+let nextMockToken = 1;
 vi.mock("@/utils/pendingSaves", () => ({
-  registerPendingSave: vi.fn(),
+  registerPendingSave: vi.fn(() => nextMockToken++),
   clearPendingSave: vi.fn(),
 }));
 
@@ -50,6 +51,28 @@ import { useTabStore } from "@/stores/tabStore";
 import { useRecentFilesStore } from "@/stores/recentFilesStore";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { registerPendingSave, clearPendingSave } from "@/utils/pendingSaves";
+
+/** Factory for settings store mock with overrides */
+function makeSettings(overrides?: {
+  general?: Partial<Record<string, unknown>>;
+  markdown?: Partial<Record<string, unknown>>;
+}) {
+  return {
+    general: {
+      historyEnabled: true,
+      historyMaxSnapshots: 5,
+      historyMaxAgeDays: 30,
+      historyMergeWindow: 30,
+      historyMaxFileSize: 512,
+      lineEndingsOnSave: "preserve",
+      ...overrides?.general,
+    },
+    markdown: {
+      hardBreakStyleOnSave: "preserve",
+      ...overrides?.markdown,
+    },
+  } as unknown as ReturnType<typeof useSettingsStore.getState>;
+}
 
 describe("saveToPath", () => {
   const mockSetFilePath = vi.fn();
@@ -63,6 +86,7 @@ describe("saveToPath", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.clearAllMocks();
+    nextMockToken = 1;
     vi.mocked(useDocumentStore.getState).mockReturnValue({
       setFilePath: mockSetFilePath,
       markSaved: mockMarkSaved,
@@ -76,19 +100,7 @@ describe("saveToPath", () => {
     vi.mocked(useRecentFilesStore.getState).mockReturnValue({
       addFile: mockAddFile,
     } as unknown as ReturnType<typeof useRecentFilesStore.getState>);
-    vi.mocked(useSettingsStore.getState).mockReturnValue({
-      general: {
-        historyEnabled: true,
-        historyMaxSnapshots: 5,
-        historyMaxAgeDays: 30,
-        historyMergeWindow: 30,
-        historyMaxFileSize: 512,
-        lineEndingsOnSave: "preserve",
-      },
-      markdown: {
-        hardBreakStyleOnSave: "preserve",
-      },
-    } as unknown as ReturnType<typeof useSettingsStore.getState>);
+    vi.mocked(useSettingsStore.getState).mockReturnValue(makeSettings());
     mockGetDocument.mockReturnValue({ lineEnding: "unknown" });
   });
 
@@ -132,19 +144,9 @@ describe("saveToPath", () => {
   it("normalizes hard breaks based on settings", async () => {
     vi.mocked(invoke).mockResolvedValue(undefined);
     mockGetDocument.mockReturnValue({ lineEnding: "lf", hardBreakStyle: "backslash" });
-    vi.mocked(useSettingsStore.getState).mockReturnValue({
-      general: {
-        historyEnabled: true,
-        historyMaxSnapshots: 5,
-        historyMaxAgeDays: 30,
-        historyMergeWindow: 30,
-        historyMaxFileSize: 512,
-        lineEndingsOnSave: "preserve",
-      },
-      markdown: {
-        hardBreakStyleOnSave: "twoSpaces",
-      },
-    } as unknown as ReturnType<typeof useSettingsStore.getState>);
+    vi.mocked(useSettingsStore.getState).mockReturnValue(
+      makeSettings({ markdown: { hardBreakStyleOnSave: "twoSpaces" } })
+    );
 
     const result = await saveToPath("tab-1", "/tmp/doc.md", "a\\\nb\n", "manual");
 
@@ -158,19 +160,9 @@ describe("saveToPath", () => {
 
   it("skips history snapshot when disabled", async () => {
     vi.mocked(invoke).mockResolvedValue(undefined);
-    vi.mocked(useSettingsStore.getState).mockReturnValue({
-      general: {
-        historyEnabled: false,
-        historyMaxSnapshots: 5,
-        historyMaxAgeDays: 30,
-        historyMergeWindow: 30,
-        historyMaxFileSize: 512,
-        lineEndingsOnSave: "preserve",
-      },
-      markdown: {
-        hardBreakStyleOnSave: "preserve",
-      },
-    } as unknown as ReturnType<typeof useSettingsStore.getState>);
+    vi.mocked(useSettingsStore.getState).mockReturnValue(
+      makeSettings({ general: { historyEnabled: false } })
+    );
 
     const result = await saveToPath("tab-2", "/tmp/disabled.md", "No history", "manual");
 
@@ -242,7 +234,7 @@ describe("saveToPath", () => {
       expect(registerCall).toBeLessThan(writeCall);
     });
 
-    it("clears pending save after successful write (delayed)", async () => {
+    it("clears pending save after successful write (delayed, with token)", async () => {
       vi.mocked(invoke).mockResolvedValue(undefined);
 
       await saveToPath("tab-1", "/tmp/doc.md", "content", "manual");
@@ -250,17 +242,35 @@ describe("saveToPath", () => {
       // clearPendingSave is delayed via setTimeout to handle late watcher events
       expect(clearPendingSave).not.toHaveBeenCalled();
       vi.advanceTimersByTime(1000);
-      expect(clearPendingSave).toHaveBeenCalledWith("/tmp/doc.md");
+      expect(clearPendingSave).toHaveBeenCalledWith("/tmp/doc.md", expect.any(Number));
     });
 
-    it("clears pending save on write failure", async () => {
+    it("clears pending save on write failure with token", async () => {
       vi.mocked(invoke).mockRejectedValue(new Error("disk error"));
       const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
 
       await saveToPath("tab-1", "/tmp/doc.md", "content", "manual");
 
-      expect(clearPendingSave).toHaveBeenCalledWith("/tmp/doc.md");
+      // clearPendingSave should be called with path and a token (number)
+      expect(clearPendingSave).toHaveBeenCalledWith("/tmp/doc.md", expect.any(Number));
       consoleError.mockRestore();
+    });
+
+    it("uses unique tokens for overlapping saves to the same path", async () => {
+      vi.mocked(invoke).mockResolvedValue(undefined);
+
+      // Start two saves to the same path
+      const save1 = saveToPath("tab-1", "/tmp/doc.md", "content1", "manual");
+      const save2 = saveToPath("tab-1", "/tmp/doc.md", "content2", "auto");
+
+      await save1;
+      await save2;
+
+      // Both should register with different tokens
+      const registerCalls = vi.mocked(registerPendingSave).mock.calls;
+      expect(registerCalls).toHaveLength(2);
+      expect(registerCalls[0][0]).toBe("/tmp/doc.md");
+      expect(registerCalls[1][0]).toBe("/tmp/doc.md");
     });
   });
 });

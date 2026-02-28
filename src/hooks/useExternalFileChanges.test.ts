@@ -16,6 +16,10 @@ const mocks = vi.hoisted(() => ({
   toastInfo: vi.fn(),
   matchesPendingSave: vi.fn(() => false),
   hasPendingSave: vi.fn(() => false),
+  dialogMessage: vi.fn(),
+  dialogSave: vi.fn(),
+  saveToPath: vi.fn(),
+  reloadTabFromDisk: vi.fn(),
 }));
 
 vi.mock("@tauri-apps/api/event", () => ({
@@ -27,8 +31,8 @@ vi.mock("@tauri-apps/plugin-fs", () => ({
 }));
 
 vi.mock("@tauri-apps/plugin-dialog", () => ({
-  message: vi.fn(),
-  save: vi.fn(),
+  message: mocks.dialogMessage,
+  save: mocks.dialogSave,
 }));
 
 vi.mock("sonner", () => ({
@@ -49,7 +53,11 @@ vi.mock("@/utils/pendingSaves", () => ({
 }));
 
 vi.mock("@/utils/saveToPath", () => ({
-  saveToPath: vi.fn(),
+  saveToPath: mocks.saveToPath,
+}));
+
+vi.mock("@/utils/reloadFromDisk", () => ({
+  reloadTabFromDisk: mocks.reloadTabFromDisk,
 }));
 
 import { useDocumentStore } from "@/stores/documentStore";
@@ -96,6 +104,13 @@ function captureListenCallback(): ListenCallback {
   return call[1] as ListenCallback;
 }
 
+/** Render hook, wait for listener, and return the captured callback */
+async function setupHookAndCallback(): Promise<ListenCallback> {
+  renderHook(() => useExternalFileChanges());
+  await vi.waitFor(() => expect(mocks.listen).toHaveBeenCalled());
+  return captureListenCallback();
+}
+
 describe("useExternalFileChanges — file reappearance", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -105,11 +120,7 @@ describe("useExternalFileChanges — file reappearance", () => {
     seedStores({ isMissing: true, lastDiskContent: "# old content" });
     mocks.readTextFile.mockResolvedValue("# old content");
 
-    renderHook(() => useExternalFileChanges());
-    // Wait for async listen setup
-    await vi.waitFor(() => expect(mocks.listen).toHaveBeenCalled());
-
-    const callback = captureListenCallback();
+    const callback = await setupHookAndCallback();
 
     await callback({
       payload: {
@@ -129,10 +140,7 @@ describe("useExternalFileChanges — file reappearance", () => {
     seedStores({ isMissing: true, lastDiskContent: "# old content" });
     mocks.readTextFile.mockResolvedValue("# new content from git");
 
-    renderHook(() => useExternalFileChanges());
-    await vi.waitFor(() => expect(mocks.listen).toHaveBeenCalled());
-
-    const callback = captureListenCallback();
+    const callback = await setupHookAndCallback();
 
     await callback({
       payload: {
@@ -154,10 +162,7 @@ describe("useExternalFileChanges — file reappearance", () => {
     mocks.readTextFile.mockResolvedValue("# old content");
     mocks.matchesPendingSave.mockReturnValue(true);
 
-    renderHook(() => useExternalFileChanges());
-    await vi.waitFor(() => expect(mocks.listen).toHaveBeenCalled());
-
-    const callback = captureListenCallback();
+    const callback = await setupHookAndCallback();
 
     await callback({
       payload: {
@@ -178,10 +183,7 @@ describe("useExternalFileChanges — file reappearance", () => {
     seedStores({ isMissing: false, lastDiskContent: "# old content" });
     mocks.readTextFile.mockResolvedValue("# old content");
 
-    renderHook(() => useExternalFileChanges());
-    await vi.waitFor(() => expect(mocks.listen).toHaveBeenCalled());
-
-    const callback = captureListenCallback();
+    const callback = await setupHookAndCallback();
 
     await callback({
       payload: {
@@ -206,10 +208,7 @@ describe("useExternalFileChanges — rename events", () => {
     seedStores();
     mocks.hasPendingSave.mockReturnValue(true);
 
-    renderHook(() => useExternalFileChanges());
-    await vi.waitFor(() => expect(mocks.listen).toHaveBeenCalled());
-
-    const callback = captureListenCallback();
+    const callback = await setupHookAndCallback();
 
     // Simulate atomic write rename: temp file → target (unmatched pair)
     await callback({
@@ -231,10 +230,7 @@ describe("useExternalFileChanges — rename events", () => {
     mocks.hasPendingSave.mockReturnValue(false);
     mocks.readTextFile.mockResolvedValue("# new external content");
 
-    renderHook(() => useExternalFileChanges());
-    await vi.waitFor(() => expect(mocks.listen).toHaveBeenCalled());
-
-    const callback = captureListenCallback();
+    const callback = await setupHookAndCallback();
 
     // Odd-length paths array — fallback branch processes each path
     await callback({
@@ -258,10 +254,7 @@ describe("useExternalFileChanges — rename events", () => {
     mocks.hasPendingSave.mockReturnValue(false);
     mocks.readTextFile.mockRejectedValue(new Error("file not found"));
 
-    renderHook(() => useExternalFileChanges());
-    await vi.waitFor(() => expect(mocks.listen).toHaveBeenCalled());
-
-    const callback = captureListenCallback();
+    const callback = await setupHookAndCallback();
 
     await callback({
       payload: {
@@ -279,10 +272,7 @@ describe("useExternalFileChanges — rename events", () => {
   it("handles paired rename (real file rename) by updating tab path", async () => {
     seedStores();
 
-    renderHook(() => useExternalFileChanges());
-    await vi.waitFor(() => expect(mocks.listen).toHaveBeenCalled());
-
-    const callback = captureListenCallback();
+    const callback = await setupHookAndCallback();
 
     // Paired rename: old path → new path
     await callback({
@@ -305,10 +295,7 @@ describe("useExternalFileChanges — rename events", () => {
     // Disk content matches lastDiskContent — no change
     mocks.readTextFile.mockResolvedValue("# old content");
 
-    renderHook(() => useExternalFileChanges());
-    await vi.waitFor(() => expect(mocks.listen).toHaveBeenCalled());
-
-    const callback = captureListenCallback();
+    const callback = await setupHookAndCallback();
 
     await callback({
       payload: {
@@ -334,10 +321,7 @@ describe("useExternalFileChanges — remove events", () => {
   it("marks file as missing on remove event", async () => {
     seedStores();
 
-    renderHook(() => useExternalFileChanges());
-    await vi.waitFor(() => expect(mocks.listen).toHaveBeenCalled());
-
-    const callback = captureListenCallback();
+    const callback = await setupHookAndCallback();
 
     await callback({
       payload: {
@@ -350,5 +334,91 @@ describe("useExternalFileChanges — remove events", () => {
 
     const doc = useDocumentStore.getState().documents["tab-1"];
     expect(doc?.isMissing).toBe(true);
+  });
+});
+
+describe("useExternalFileChanges — dirty file prompt", () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+    // Restore default mock implementations after resetAllMocks clears them
+    mocks.listen.mockImplementation(() => Promise.resolve(() => {}));
+    mocks.matchesPendingSave.mockReturnValue(false);
+    mocks.hasPendingSave.mockReturnValue(false);
+  });
+
+  function seedDirtyStores() {
+    useTabStore.setState({
+      tabs: {
+        main: [{ id: "tab-1", title: "test.md", filePath: "/workspace/test.md", isPinned: false }],
+      },
+      activeTabId: { main: "tab-1" },
+      untitledCounter: 0,
+      closedTabs: {},
+    });
+
+    useDocumentStore.setState({
+      documents: {
+        "tab-1": {
+          content: "# user edits",
+          savedContent: "# old content",
+          lastDiskContent: "# old content",
+          filePath: "/workspace/test.md",
+          isDirty: true,
+          documentId: 0,
+          cursorInfo: null,
+          lastAutoSave: null,
+          isMissing: false,
+          isDivergent: false,
+          lineEnding: "unknown",
+          hardBreakStyle: "unknown",
+        },
+      },
+    });
+  }
+
+  it("marks as divergent when user chooses Keep (cancel)", async () => {
+    seedDirtyStores();
+    mocks.readTextFile.mockResolvedValue("# external change");
+    mocks.dialogMessage.mockResolvedValue("Cancel");
+
+    const callback = await setupHookAndCallback();
+
+    await callback({
+      payload: {
+        watchId: "main",
+        rootPath: "/workspace",
+        paths: ["/workspace/test.md"],
+        kind: "modify",
+      },
+    });
+
+    // Wait for batch debounce (300ms) + async processBatchedChanges
+    await vi.waitFor(() => expect(mocks.dialogMessage).toHaveBeenCalled(), { timeout: 1000 });
+
+    const doc = useDocumentStore.getState().documents["tab-1"];
+    expect(doc?.isDivergent).toBe(true);
+  });
+
+  it("reloads from disk when user chooses Reload", async () => {
+    seedDirtyStores();
+    mocks.readTextFile.mockResolvedValue("# external change");
+    mocks.dialogMessage.mockResolvedValue("Reload");
+    mocks.reloadTabFromDisk.mockResolvedValue(undefined);
+
+    const callback = await setupHookAndCallback();
+
+    await callback({
+      payload: {
+        watchId: "main",
+        rootPath: "/workspace",
+        paths: ["/workspace/test.md"],
+        kind: "modify",
+      },
+    });
+
+    // Wait for batch debounce (300ms) + async processBatchedChanges
+    await vi.waitFor(() => expect(mocks.dialogMessage).toHaveBeenCalled(), { timeout: 1000 });
+
+    expect(mocks.reloadTabFromDisk).toHaveBeenCalledWith("tab-1", "/workspace/test.md");
   });
 });

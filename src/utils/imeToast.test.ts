@@ -32,10 +32,20 @@ function fireCompositionEnd() {
   document.dispatchEvent(new Event("compositionend"));
 }
 
+/** Set WYSIWYG editor composing state */
+function setComposing(composing: boolean) {
+  vi.mocked(useActiveEditorStore.getState).mockReturnValue({
+    activeWysiwygEditor: composing ? { view: { composing: true } } : null,
+    activeSourceView: null,
+  } as never);
+}
+
 describe("imeToast", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useFakeTimers();
+    // Default: not composing
+    setComposing(false);
   });
 
   afterEach(() => {
@@ -53,15 +63,13 @@ describe("imeToast", () => {
   });
 
   it("defers info toast until compositionend when WYSIWYG editor is composing", () => {
-    vi.mocked(useActiveEditorStore.getState).mockReturnValue({
-      activeWysiwygEditor: { view: { composing: true } },
-      activeSourceView: null,
-    } as never);
+    setComposing(true);
 
     imeToast.info("deferred");
     expect(mocks.toastInfo).not.toHaveBeenCalled();
 
-    // Fire compositionend then advance past the post-composition delay
+    // Composition ends — editor stops composing, compositionend fires
+    setComposing(false);
     fireCompositionEnd();
     vi.advanceTimersByTime(60);
     expect(mocks.toastInfo).toHaveBeenCalledWith("deferred");
@@ -76,22 +84,24 @@ describe("imeToast", () => {
     imeToast.success("deferred");
     expect(mocks.toastSuccess).not.toHaveBeenCalled();
 
+    vi.mocked(useActiveEditorStore.getState).mockReturnValue({
+      activeWysiwygEditor: null,
+      activeSourceView: { composing: false },
+    } as never);
     fireCompositionEnd();
     vi.advanceTimersByTime(60);
     expect(mocks.toastSuccess).toHaveBeenCalledWith("deferred");
   });
 
   it("flushes multiple queued toasts on compositionend", () => {
-    vi.mocked(useActiveEditorStore.getState).mockReturnValue({
-      activeWysiwygEditor: { view: { composing: true } },
-      activeSourceView: null,
-    } as never);
+    setComposing(true);
 
     imeToast.info("first");
     imeToast.success("second");
     expect(mocks.toastInfo).not.toHaveBeenCalled();
     expect(mocks.toastSuccess).not.toHaveBeenCalled();
 
+    setComposing(false);
     fireCompositionEnd();
     vi.advanceTimersByTime(60);
     expect(mocks.toastInfo).toHaveBeenCalledWith("first");
@@ -99,12 +109,10 @@ describe("imeToast", () => {
   });
 
   it("does not flush before post-composition delay elapses", () => {
-    vi.mocked(useActiveEditorStore.getState).mockReturnValue({
-      activeWysiwygEditor: { view: { composing: true } },
-      activeSourceView: null,
-    } as never);
+    setComposing(true);
 
     imeToast.info("deferred");
+    setComposing(false);
     fireCompositionEnd();
     // Only 30ms — should not flush yet
     vi.advanceTimersByTime(30);
@@ -116,22 +124,47 @@ describe("imeToast", () => {
   });
 
   it("never defers error toast (urgent)", () => {
-    vi.mocked(useActiveEditorStore.getState).mockReturnValue({
-      activeWysiwygEditor: { view: { composing: true } },
-      activeSourceView: null,
-    } as never);
+    setComposing(true);
 
     imeToast.error("fail");
     expect(mocks.toastError).toHaveBeenCalledWith("fail");
   });
 
   it("never defers warning toast (urgent)", () => {
-    vi.mocked(useActiveEditorStore.getState).mockReturnValue({
-      activeWysiwygEditor: { view: { composing: true } },
-      activeSourceView: null,
-    } as never);
+    setComposing(true);
 
     imeToast.warning("warn");
     expect(mocks.toastWarning).toHaveBeenCalledWith("warn");
+  });
+
+  it("re-defers if composition restarts before flush", () => {
+    setComposing(true);
+
+    imeToast.info("deferred");
+    expect(mocks.toastInfo).not.toHaveBeenCalled();
+
+    // compositionend fires but editor immediately starts composing again
+    fireCompositionEnd();
+    // Still composing when flush runs after 60ms (re-check sees composing=true)
+    vi.advanceTimersByTime(60);
+    // Should NOT have flushed — still composing
+    expect(mocks.toastInfo).not.toHaveBeenCalled();
+
+    // Now composition truly ends
+    setComposing(false);
+    fireCompositionEnd();
+    vi.advanceTimersByTime(60);
+    expect(mocks.toastInfo).toHaveBeenCalledWith("deferred");
+  });
+
+  it("force-flushes after fallback timeout if compositionend never fires", () => {
+    setComposing(true);
+
+    imeToast.info("stuck");
+    expect(mocks.toastInfo).not.toHaveBeenCalled();
+
+    // Advance past fallback timeout (5000ms) — flushes regardless
+    vi.advanceTimersByTime(5000);
+    expect(mocks.toastInfo).toHaveBeenCalledWith("stuck");
   });
 });

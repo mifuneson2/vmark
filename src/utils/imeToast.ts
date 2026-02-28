@@ -12,6 +12,10 @@
  *     `compositionend` event (event-driven, not fixed delay)
  *   - Falls through to immediate toast when no editor is composing
  *   - Only wraps info/success — error/warning are never deferred (urgent)
+ *   - Re-checks composition state before flushing — if a new composition
+ *     started quickly, re-defers instead of interrupting
+ *   - Fallback timeout (5s) prevents indefinite queuing if compositionend
+ *     never fires (e.g. editor unmounted during composition)
  *
  * @coordinates-with utils/imeGuard.ts — shares the composition detection approach
  * @coordinates-with stores/activeEditorStore.ts — reads active editor instances
@@ -24,6 +28,10 @@ import { useActiveEditorStore } from "@/stores/activeEditorStore";
 /** Small delay after compositionend before flushing (ms).
  * Matches IME_GRACE_PERIOD_MS — lets the browser finish processing. */
 const POST_COMPOSITION_DELAY_MS = 60;
+
+/** Maximum time to keep toasts queued before force-flushing (ms).
+ * Prevents indefinite queuing if compositionend never fires. */
+const FALLBACK_FLUSH_TIMEOUT_MS = 5000;
 
 function isEditorComposing(): boolean {
   const { activeWysiwygEditor, activeSourceView } = useActiveEditorStore.getState();
@@ -39,9 +47,28 @@ type ToastArgs = Parameters<typeof toast.info>;
 /** Pending toasts queued during composition */
 const pendingToasts: Array<{ fn: (...args: ToastArgs) => void; args: ToastArgs }> = [];
 let compositionEndListenerAttached = false;
+let fallbackTimerId: ReturnType<typeof setTimeout> | null = null;
+
+function clearFallbackTimer(): void {
+  if (fallbackTimerId !== null) {
+    clearTimeout(fallbackTimerId);
+    fallbackTimerId = null;
+  }
+}
 
 function flushPendingToasts(): void {
+  // Re-check: if a new composition started quickly, re-defer
+  if (isEditorComposing()) {
+    // Re-attach listener for the new composition session
+    if (!compositionEndListenerAttached) {
+      compositionEndListenerAttached = true;
+      document.addEventListener("compositionend", onCompositionEnd, { once: true });
+    }
+    return;
+  }
+
   compositionEndListenerAttached = false;
+  clearFallbackTimer();
   const toasts = pendingToasts.splice(0);
   for (const { fn, args } of toasts) {
     fn(...args);
@@ -50,6 +77,8 @@ function flushPendingToasts(): void {
 
 function onCompositionEnd(): void {
   document.removeEventListener("compositionend", onCompositionEnd);
+  // Mark listener as consumed so re-defer can re-attach if needed
+  compositionEndListenerAttached = false;
   // Small delay to let the browser finish IME processing before inserting toast DOM
   setTimeout(flushPendingToasts, POST_COMPOSITION_DELAY_MS);
 }
@@ -65,6 +94,19 @@ function deferIfComposing(fn: (...args: ToastArgs) => void, args: ToastArgs): vo
   if (!compositionEndListenerAttached) {
     compositionEndListenerAttached = true;
     document.addEventListener("compositionend", onCompositionEnd, { once: true });
+  }
+
+  // Fallback: force flush after timeout if compositionend never fires
+  if (fallbackTimerId === null) {
+    fallbackTimerId = setTimeout(() => {
+      fallbackTimerId = null;
+      compositionEndListenerAttached = false;
+      document.removeEventListener("compositionend", onCompositionEnd);
+      const toasts = pendingToasts.splice(0);
+      for (const { fn, args } of toasts) {
+        fn(...args);
+      }
+    }, FALLBACK_FLUSH_TIMEOUT_MS);
   }
 }
 

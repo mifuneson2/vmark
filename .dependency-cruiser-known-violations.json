@@ -1,5 +1,23 @@
 [
   {
+    "type": "dependency",
+    "from": "src/utils/imeToast.ts",
+    "to": "src/stores/activeEditorStore.ts",
+    "rule": {
+      "severity": "error",
+      "name": "leaf-modules-stay-pure"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/utils/imeToast.test.ts",
+    "to": "src/stores/activeEditorStore.ts",
+    "rule": {
+      "severity": "error",
+      "name": "leaf-modules-stay-pure"
+    }
+  },
+  {
     "type": "cycle",
     "from": "src/plugins/sourceContextDetection/tableActions.ts",
     "to": "src/plugins/sourceContextDetection/tableDetection.ts",

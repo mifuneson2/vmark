@@ -75,6 +75,7 @@ interface StatusBarRightProps {
   autoSaveTime: string;
   terminalVisible: boolean;
   terminalShortcut: string;
+  saveShortcut: string;
   sourceMode: boolean;
   sourceModeShortcut: string;
   onToggleSourceMode: () => void;
@@ -94,6 +95,7 @@ export function StatusBarRight({
   autoSaveTime,
   terminalVisible,
   terminalShortcut,
+  saveShortcut,
   sourceMode,
   sourceModeShortcut,
   onToggleSourceMode,
@@ -103,7 +105,7 @@ export function StatusBarRight({
       {showAutoSavePaused && (
         <span
           className="status-autosave-paused"
-          title="Auto-save paused: file was deleted from disk. Save manually with Cmd+S."
+          title={`Auto-save paused: file was deleted from disk. Save manually with ${formatKeyForDisplay(saveShortcut)}.`}
         >
           <AlertTriangle size={12} />
           Auto-save paused
@@ -113,7 +115,7 @@ export function StatusBarRight({
       {isDivergent && !showAutoSavePaused && (
         <span
           className="status-divergent"
-          title="Local differs from disk. Save (Cmd+S) to sync, or use File > Revert to discard local changes."
+          title={`Local differs from disk. Save (${formatKeyForDisplay(saveShortcut)}) to sync, or use File > Revert to discard local changes.`}
         >
           <GitFork size={12} />
           Divergent

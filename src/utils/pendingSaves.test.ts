@@ -70,7 +70,15 @@ describe("pendingSaves (content-based)", () => {
   });
 
   describe("clearPendingSave", () => {
-    it("removes a registered path", () => {
+    it("removes a registered path with matching token", () => {
+      const token = registerPendingSave("/path/to/file.md", "content");
+      expect(hasPendingSave("/path/to/file.md")).toBe(true);
+
+      clearPendingSave("/path/to/file.md", token);
+      expect(hasPendingSave("/path/to/file.md")).toBe(false);
+    });
+
+    it("clears unconditionally when no token is provided", () => {
       registerPendingSave("/path/to/file.md", "content");
       expect(hasPendingSave("/path/to/file.md")).toBe(true);
 
@@ -78,11 +86,30 @@ describe("pendingSaves (content-based)", () => {
       expect(hasPendingSave("/path/to/file.md")).toBe(false);
     });
 
+    it("does not clear when token does not match (overlapping save)", () => {
+      const token1 = registerPendingSave("/path/to/file.md", "content1");
+      // Second save overwrites with new token
+      registerPendingSave("/path/to/file.md", "content2");
+
+      // Stale token from first save should NOT clear the entry
+      clearPendingSave("/path/to/file.md", token1);
+      expect(hasPendingSave("/path/to/file.md")).toBe(true);
+      expect(matchesPendingSave("/path/to/file.md", "content2")).toBe(true);
+    });
+
+    it("clears when token matches the current registration", () => {
+      registerPendingSave("/path/to/file.md", "content1");
+      const token2 = registerPendingSave("/path/to/file.md", "content2");
+
+      clearPendingSave("/path/to/file.md", token2);
+      expect(hasPendingSave("/path/to/file.md")).toBe(false);
+    });
+
     it("does not affect other paths", () => {
-      registerPendingSave("/path/to/file1.md", "content1");
+      const token1 = registerPendingSave("/path/to/file1.md", "content1");
       registerPendingSave("/path/to/file2.md", "content2");
 
-      clearPendingSave("/path/to/file1.md");
+      clearPendingSave("/path/to/file1.md", token1);
 
       expect(hasPendingSave("/path/to/file1.md")).toBe(false);
       expect(hasPendingSave("/path/to/file2.md")).toBe(true);

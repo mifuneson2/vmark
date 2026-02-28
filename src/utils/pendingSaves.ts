@@ -11,13 +11,18 @@
  *
  * Usage:
  * 1. Call registerPendingSave(path, content) BEFORE writeTextFile()
- * 2. Call clearPendingSave(path) AFTER markSaved()
+ *    — returns a token for safe clearing
+ * 2. Call clearPendingSave(path, token) AFTER markSaved()
+ *    — only clears if the token matches (prevents overlapping saves
+ *      from clearing each other's registrations)
  * 3. Use matchesPendingSave(path, diskContent) to check if disk matches what we wrote
  *
  * Key decisions:
  *   - Content comparison (not timestamp-based) because filesystem timestamps
  *     have platform-dependent resolution and can race with watcher events
  *   - Map keyed by normalized path for cross-platform consistency
+ *   - Token-based clearing prevents overlapping saves to the same path
+ *     from prematurely clearing a newer registration
  *
  * @coordinates-with saveToPath.ts — registers pending save before write
  * @coordinates-with reloadFromDisk.ts — checks matchesPendingSave to skip self-triggered reloads
@@ -27,8 +32,16 @@
 
 import { normalizePath } from "@/utils/paths";
 
-/** Map of normalized path -> content we're writing */
-const pendingSaves = new Map<string, string>();
+interface PendingEntry {
+  content: string;
+  token: number;
+}
+
+/** Map of normalized path -> pending save entry */
+const pendingSaves = new Map<string, PendingEntry>();
+
+/** Monotonically increasing token counter */
+let nextToken = 1;
 
 /**
  * Register that we're about to save specific content to a file.
@@ -36,18 +49,29 @@ const pendingSaves = new Map<string, string>();
  *
  * @param path - File path being saved to
  * @param content - The exact content being written
+ * @returns A token to pass to clearPendingSave for safe clearing
  */
-export function registerPendingSave(path: string, content: string): void {
+export function registerPendingSave(path: string, content: string): number {
   const normalized = normalizePath(path);
-  pendingSaves.set(normalized, content);
+  const token = nextToken++;
+  pendingSaves.set(normalized, { content, token });
+  return token;
 }
 
 /**
- * Clear a pending save.
+ * Clear a pending save, but only if the token matches the current registration.
+ * This prevents overlapping saves from clearing each other's entries.
  * Call this AFTER markSaved() completes.
+ *
+ * @param path - File path to clear
+ * @param token - Token returned by registerPendingSave. If omitted, clears unconditionally.
  */
-export function clearPendingSave(path: string): void {
+export function clearPendingSave(path: string, token?: number): void {
   const normalized = normalizePath(path);
+  if (token !== undefined) {
+    const entry = pendingSaves.get(normalized);
+    if (entry && entry.token !== token) return; // Newer save registered — don't clear
+  }
   pendingSaves.delete(normalized);
 }
 
@@ -62,13 +86,13 @@ export function clearPendingSave(path: string): void {
  */
 export function matchesPendingSave(path: string, diskContent: string): boolean {
   const normalized = normalizePath(path);
-  const pendingContent = pendingSaves.get(normalized);
+  const entry = pendingSaves.get(normalized);
 
-  if (pendingContent === undefined) {
+  if (!entry) {
     return false;
   }
 
-  return diskContent === pendingContent;
+  return diskContent === entry.content;
 }
 
 /**

@@ -96,6 +96,7 @@ export function StatusBar() {
   const terminalVisible = useUIStore((state) => state.terminalVisible);
   const sourceModeShortcut = useShortcutsStore((state) => state.getShortcut("sourceMode"));
   const terminalShortcut = useShortcutsStore((state) => state.getShortcut("toggleTerminal"));
+  const saveShortcut = useShortcutsStore((state) => state.getShortcut("save"));
   const aiRunning = useAiInvocationStore((state) => state.isRunning);
   const { running: mcpRunning, loading: mcpLoading, error: mcpError } = useMcpServer();
   const mcpClients = useMcpClients(mcpRunning);
@@ -279,6 +280,7 @@ export function StatusBar() {
             autoSaveTime={autoSaveTime}
             terminalVisible={terminalVisible}
             terminalShortcut={terminalShortcut}
+            saveShortcut={saveShortcut}
             sourceMode={sourceMode}
             sourceModeShortcut={sourceModeShortcut}
             onToggleSourceMode={() => useEditorStore.getState().toggleSourceMode()}

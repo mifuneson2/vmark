@@ -28,6 +28,10 @@ use tauri::{AppHandle, Emitter};
 /// Minimum interval between emitting events for the same path (debounce).
 const DEBOUNCE_INTERVAL: Duration = Duration::from_millis(200);
 
+/// Maximum age of debounce entries before pruning (10 minutes).
+/// Prevents unbounded growth of LAST_EMITTED in long sessions.
+const DEBOUNCE_MAX_AGE: Duration = Duration::from_secs(600);
+
 /// Watchers keyed by watch_id (typically window label or unique identifier)
 static WATCHERS: Mutex<Option<HashMap<String, WatcherEntry>>> = Mutex::new(None);
 
@@ -92,10 +96,11 @@ const IGNORED_DIRS: &[&str] = &[
 /// through so that external changes to those files are detected.
 fn should_ignore_path(path: &Path) -> bool {
     // Filter temp files created by atomic writes to reduce event noise.
-    // NamedTempFile (lib.rs): names like ".tmpXXXXXX"
-    // app_paths.rs: names like ".{name}.tmp.{pid}"
+    // NamedTempFile (lib.rs): dot-prefixed names like ".tmpXXXXXX" (6+ random chars)
+    // app_paths.rs: names like ".{name}.tmp.{pid}" (contains ".tmp." infix)
+    // We require the name to start with a dot to avoid filtering user files.
     if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
-        if name.starts_with(".tmp") || name.contains(".tmp.") {
+        if name.starts_with('.') && (name.starts_with(".tmp") || name.contains(".tmp.")) {
             return true;
         }
     }
@@ -127,6 +132,11 @@ fn handle_event(app: &AppHandle, watch_id: &str, root_path: &str, event: Event) 
     // Collect paths, filtering ignored dirs and those within the debounce window
     let mut guard = LAST_EMITTED.lock().unwrap_or_else(|p| p.into_inner());
     let map = guard.get_or_insert_with(HashMap::new);
+
+    // Periodically prune stale entries to prevent unbounded growth
+    if map.len() > 100 {
+        map.retain(|_, last| now.duration_since(*last) < DEBOUNCE_MAX_AGE);
+    }
 
     let paths: Vec<String> = event
         .paths
@@ -224,6 +234,10 @@ pub fn stop_watching(watch_id: String) -> Result<(), String> {
 pub fn stop_all_watchers() -> Result<(), String> {
     let mut guard = WATCHERS.lock().map_err(|e| format!("Lock error: {e}"))?;
     *guard = None;
+    // Clear debounce state to free memory
+    if let Ok(mut debounce_guard) = LAST_EMITTED.lock() {
+        *debounce_guard = None;
+    }
     Ok(())
 }
 

@@ -55,14 +55,16 @@ export async function saveToPath(
   const hardBreakNormalized = normalizeHardBreaks(content, targetHardBreakStyle);
   const output = normalizeLineEndings(hardBreakNormalized, targetLineEnding);
 
-  // Register pending save with content for content-based verification
-  registerPendingSave(path, output);
+  // Register pending save with content for content-based verification.
+  // Token prevents overlapping saves from clearing each other's entries.
+  const saveToken = registerPendingSave(path, output);
 
   try {
     await invoke("atomic_write_file", { path, content: output });
   } catch (error) {
-    // CRITICAL: Always clear pending save on failure to prevent stale entries
-    clearPendingSave(path);
+    // CRITICAL: Always clear pending save on failure to prevent stale entries.
+    // Token ensures we only clear our own registration, not a newer save's.
+    clearPendingSave(path, saveToken);
     console.error("Failed to save file:", error);
     const message = error instanceof Error ? error.message : String(error);
     toast.error(`Failed to save: ${message}`);
@@ -84,7 +86,7 @@ export async function saveToPath(
   // to still match against our save. The full pipeline (Rust debounce 200ms →
   // emit → JS event loop → async readTextFile → comparison) can exceed 500ms
   // under heavy I/O, so use 1000ms for safety.
-  setTimeout(() => clearPendingSave(path), 1000);
+  setTimeout(() => clearPendingSave(path, saveToken), 1000);
 
   // Update tab path for title sync
   useTabStore.getState().updateTabPath(tabId, path);

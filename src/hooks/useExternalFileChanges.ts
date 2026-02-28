@@ -85,17 +85,6 @@ export function useExternalFileChanges(): void {
     return pathToTabId;
   }, [windowLabel]);
 
-  // Handle reload for a specific tab
-  const handleReload = useCallback(async (tabId: string, filePath: string) => {
-    try {
-      await reloadTabFromDisk(tabId, filePath);
-    } catch (error) {
-      console.error("[ExternalChange] Failed to reload file:", filePath, error);
-      // File might have been deleted - mark as missing
-      useDocumentStore.getState().markMissing(tabId);
-    }
-  }, []);
-
   // Handle dirty file change with single 3-option dialog
   // Options: Save As (save to new location), Reload (discard changes), Keep (preserve)
   // Cancel/dismiss preserves user's changes (safe default)
@@ -200,7 +189,9 @@ export function useExternalFileChanges(): void {
           }
         );
 
-        if (result === "Yes") {
+        const batchButtons = { reloadAll: "Reload All", keepAll: "Keep All", reviewEach: "Review Each" } as const;
+
+        if (result === "Yes" || result === batchButtons.reloadAll) {
           // Reload all files from disk
           for (const { tabId, filePath } of pending) {
             try {
@@ -210,7 +201,7 @@ export function useExternalFileChanges(): void {
               useDocumentStore.getState().markMissing(tabId);
             }
           }
-        } else if (result === "No") {
+        } else if (result === "No" || result === batchButtons.keepAll) {
           // Keep all local versions - mark as divergent
           for (const { tabId } of pending) {
             useDocumentStore.getState().markDivergent(tabId);
@@ -224,6 +215,13 @@ export function useExternalFileChanges(): void {
       }
     } finally {
       isProcessingBatchRef.current = false;
+      // If new items were queued during processing, schedule another round
+      if (pendingDirtyChangesRef.current.length > 0) {
+        batchTimeoutRef.current = setTimeout(() => {
+          batchTimeoutRef.current = null;
+          processBatchedChanges();
+        }, BATCH_DEBOUNCE_MS);
+      }
     }
   }, [handleDirtyChange]);
 
@@ -398,5 +396,5 @@ export function useExternalFileChanges(): void {
         batchTimeoutRef.current = null;
       }
     };
-  }, [windowLabel, getOpenFilePaths, handleReload, queueDirtyChange, handleDeletion, handleModifyEvent]);
+  }, [windowLabel, getOpenFilePaths, queueDirtyChange, handleDeletion, handleModifyEvent]);
 }
