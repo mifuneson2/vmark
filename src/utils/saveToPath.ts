@@ -6,8 +6,9 @@
  * pending save tracking for file watcher coordination.
  *
  * Key decisions:
- *   - Pending save is registered BEFORE write and cleared AFTER with 500ms delay
- *     to handle late-arriving macOS FSEvents watcher events
+ *   - Pending save is registered BEFORE write and cleared AFTER with 1000ms delay
+ *     to handle late-arriving macOS FSEvents watcher events (full pipeline can
+ *     exceed 500ms under heavy I/O: Rust debounce + emit + JS event loop + readFile)
  *   - Line ending and hard break normalization applied on save (not in-memory)
  *     to preserve the original editing experience while writing clean files
  *   - History snapshots are fire-and-forget — failures don't block save success

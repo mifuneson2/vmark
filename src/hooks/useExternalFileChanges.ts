@@ -12,6 +12,9 @@
  *   - Clean documents auto-reload silently (brief toast notification)
  *   - Dirty documents batch into a single dialog to avoid prompt storms
  *   - matchesPendingSave() filters out our own saves echoing back
+ *   - Rename fallback verifies file existence before marking as deleted —
+ *     prevents false-positive "file deleted" on atomic write renames
+ *   - handleModifyEvent() is shared by modify/create and rename-fallback
  *   - Deleted files get isMissing flag (no auto-close — user may want to save)
  *
  * @coordinates-with useWindowFileWatcher.ts — starts/stops the Rust watcher
