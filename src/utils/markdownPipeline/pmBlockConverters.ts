@@ -165,9 +165,12 @@ export function convertList(context: PmToMdastContext, node: PMNode, ordered: bo
     }
   });
 
+  // Derive list spread from children: loose only if any child item is spread
+  const spread = children.some((item) => item.spread === true);
   const list: List = {
     type: "list",
     ordered,
+    spread,
     children,
   };
 
@@ -191,7 +194,19 @@ export function convertListItem(context: PmToMdastContext, node: PMNode): ListIt
     }
   });
 
-  const listItem: ListItem = { type: "listItem", children };
+  // Guard: remark-stringify corrupts output (e.g., produces "##") when a
+  // listItem has zero children. Fall back to an empty paragraph.
+  const safeChildren: BlockContent[] =
+    children.length > 0 ? children : [{ type: "paragraph", children: [] }];
+
+  // Spread: true only if the item has multiple non-list block children
+  // (e.g., multi-paragraph items). Single paragraph + nested list = tight.
+  const nonListChildren = safeChildren.filter((c) => c.type !== "list");
+  const listItem: ListItem = {
+    type: "listItem",
+    spread: nonListChildren.length > 1,
+    children: safeChildren,
+  };
   const checked = node.attrs.checked;
   if (checked === true || checked === false) {
     listItem.checked = checked;

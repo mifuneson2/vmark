@@ -197,7 +197,17 @@ export function convertListItem(
   const sourceLine = getSourceLine(node);
   const attrs = checked !== null && checked !== undefined ? { checked, sourceLine } : { sourceLine };
 
-  const children = context.convertChildren(node.children, marks, "block");
+  let children = context.convertChildren(node.children, marks, "block");
+
+  // Guard: a listItem with 0 children is structurally invalid (schema: "block+")
+  // and causes DOM/serialization bugs. Insert an empty paragraph as fallback.
+  if (children.length === 0) {
+    const paragraphType = context.schema.nodes.paragraph;
+    if (paragraphType) {
+      children = [paragraphType.create()];
+    }
+  }
+
   return type.create(attrs, children);
 }
 

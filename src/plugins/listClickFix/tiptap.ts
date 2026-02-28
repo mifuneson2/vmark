@@ -47,6 +47,42 @@ export function isInsideEmptyListItem(
   return false;
 }
 
+/**
+ * Set selection inside an empty list item, inserting a paragraph first
+ * if the listItem has no children (can happen with certain markdown parsers).
+ * Returns true if selection was set, false if it couldn't be handled.
+ */
+export function setSelectionInEmptyListItem(
+  view: EditorView,
+  $pos: ResolvedPos,
+  listItemType: NodeType
+): boolean {
+  for (let d = $pos.depth; d > 0; d--) {
+    const node = $pos.node(d);
+    if (node.type !== listItemType) continue;
+
+    if (node.childCount > 0) {
+      // listItem has children — TextSelection.near can find a valid position
+      const selection = TextSelection.near($pos);
+      const tr = view.state.tr.setSelection(selection);
+      view.dispatch(tr);
+      return true;
+    }
+
+    // listItem has 0 children — insert an empty paragraph first
+    const paragraphType = view.state.schema.nodes.paragraph;
+    if (!paragraphType) return false;
+
+    const insertPos = $pos.start(d);
+    const tr = view.state.tr.insert(insertPos, paragraphType.create());
+    // Cursor inside the new paragraph: insertPos + 1 (after paragraph open tag)
+    tr.setSelection(TextSelection.create(tr.doc, insertPos + 1));
+    view.dispatch(tr);
+    return true;
+  }
+  return false;
+}
+
 /** Exported for testing. */
 export function handleClick(
   view: EditorView,
@@ -59,7 +95,7 @@ export function handleClick(
   }
 
   const target = event.target;
-  if (!(target instanceof HTMLElement)) return false;
+  if (!(target instanceof Element)) return false;
 
   // Check if the DOM click target is inside an <li>
   const liElement = target.closest("li");
@@ -70,32 +106,24 @@ export function handleClick(
 
   const $pos = view.state.doc.resolve(pos);
 
-  // Scenario 1: pos is already inside a listItem — check if it's empty.
+  // Scenario 1: pos is inside an empty listItem — force-set selection.
   // For empty list items, PM's default behavior will read the browser's
-  // native selection which resolves to the wrong place. Force-set selection.
-  if (isPositionInsideListItem($pos, listItemType)) {
-    if (!isInsideEmptyListItem($pos, listItemType)) return false;
-
-    // Force-set selection to prevent PM from overriding with native selection
-    const selection = TextSelection.near($pos);
-    const tr = view.state.tr.setSelection(selection);
-    view.dispatch(tr);
-    return true;
+  // native selection which resolves to the wrong place.
+  if (isPositionInsideListItem($pos, listItemType) && isInsideEmptyListItem($pos, listItemType)) {
+    return setSelectionInEmptyListItem(view, $pos, listItemType);
   }
 
-  // Scenario 2: pos is outside listItem but DOM target is inside <li>.
-  // Use posAtDOM to find the correct position inside the list item.
+  // Scenario 2: pos may be in a parent non-empty listItem (for nested empty items),
+  // or outside list entirely. Check the DOM target's <li> for the correct position.
   try {
     const targetPos = view.posAtDOM(liElement, 0);
     const $targetPos = view.state.doc.resolve(targetPos);
 
-    // Verify corrected position is actually inside a list item
+    // Verify corrected position is actually inside an empty list item
     if (!isPositionInsideListItem($targetPos, listItemType)) return false;
+    if (!isInsideEmptyListItem($targetPos, listItemType)) return false;
 
-    const selection = TextSelection.near($targetPos);
-    const tr = view.state.tr.setSelection(selection);
-    view.dispatch(tr);
-    return true;
+    return setSelectionInEmptyListItem(view, $targetPos, listItemType);
   } catch (error) {
     listClickFixLog("posAtDOM failed for list click fix:", error);
     return false;

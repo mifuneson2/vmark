@@ -3,6 +3,7 @@
  */
 
 import { describe, it, expect } from "vitest";
+import { Schema } from "@tiptap/pm/model";
 import { proseMirrorToMdast } from "./proseMirrorToMdast";
 import { serializeMdastToMarkdown } from "./serializer";
 import { testSchema } from "./testSchema";
@@ -155,5 +156,36 @@ describe("proseMirrorToMdast blocks", () => {
 
     expect(md).toContain("[^1]:");
     expect(md).toContain("Footnote content");
+  });
+
+  it("serializes a listItem with no children as empty bullet (not ## heading)", () => {
+    // A listItem with 0 children is structurally invalid but can occur
+    // from certain markdown parsers. The serializer must not produce garbage.
+    const looseSchema = new Schema({
+      nodes: {
+        doc: { content: "block+" },
+        paragraph: { content: "inline*", group: "block" },
+        text: { inline: true, group: "inline" },
+        bulletList: { content: "listItem+", group: "block" },
+        listItem: { content: "block*" }, // allows 0 children for this test
+      },
+    });
+    const doc = looseSchema.node("doc", null, [
+      looseSchema.node("bulletList", null, [
+        looseSchema.node("listItem", null, [
+          looseSchema.node("paragraph", null, [looseSchema.text("has text")]),
+        ]),
+        looseSchema.node("listItem", null, []), // 0 children
+      ]),
+    ]);
+
+    const mdast = proseMirrorToMdast(looseSchema, doc);
+    const md = serializeMdastToMarkdown(mdast);
+
+    expect(md).toContain("has text");
+    expect(md).not.toContain("##");
+    // Should produce two list items (two dashes at line start)
+    const dashes = md.match(/^-/gm);
+    expect(dashes).toHaveLength(2);
   });
 });

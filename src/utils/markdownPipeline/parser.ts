@@ -27,7 +27,7 @@ import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import remarkFrontmatter from "remark-frontmatter";
 import remarkBreaks from "remark-breaks";
-import type { Root, Parent, Text } from "mdast";
+import type { Root, Parent, Text, List, ListItem, Paragraph } from "mdast";
 import type { InlineMath } from "mdast-util-math";
 import { remarkCustomInline, remarkDetailsBlock, remarkResolveReferences, remarkWikiLinks } from "./plugins";
 import type { MarkdownPipelineOptions } from "./types";
@@ -284,11 +284,34 @@ function analyzeContent(markdown: string): ContentAnalysis {
  * Custom inline syntax (==highlight==, ~sub~, ^sup^, ++underline++)
  * is handled via remarkCustomInline plugin (always loaded, lightweight).
  */
+/**
+ * Disable setext heading parsing (underline-style headings with `---` or `===`).
+ *
+ * VMark always serializes headings as ATX (`#`), never setext. Disabling setext
+ * parsing prevents a common misparse: an empty nested list item (`  -`) being
+ * interpreted as a setext heading underline for the preceding paragraph.
+ *
+ * This is an intentional compatibility trade-off for VMark:
+ * - VMark's serializer never produces setext headings (always ATX `#`)
+ * - Setext input (`Heading\n---`) is rare in practice and can always be
+ *   written as `## Heading` instead
+ * - The misparse of `  -` as heading underline causes data corruption
+ */
+const remarkDisableSetextHeadings: Plugin<[], Root> = function () {
+  const data = this.data();
+  const micromarkExtensions =
+    (data.micromarkExtensions as unknown[]) || ((data as Record<string, unknown>).micromarkExtensions = []);
+  micromarkExtensions.push({
+    disable: { null: ["setextUnderline"] },
+  });
+};
+
 function createProcessor(markdown: string, options: MarkdownPipelineOptions = {}) {
   const analysis = analyzeContent(markdown);
 
   const processor = unified()
     .use(remarkParse)
+    .use(remarkDisableSetextHeadings)
     .use(remarkGfm, {
       // Disable single tilde strikethrough to avoid conflict with subscript
       // GFM strikethrough uses ~~double tilde~~
@@ -341,12 +364,145 @@ function createProcessor(markdown: string, options: MarkdownPipelineOptions = {}
  * // mdast.children[0].type === "heading"
  * // mdast.children[1].type === "paragraph"
  */
+/**
+ * Normalize bare list markers that lack a trailing space.
+ *
+ * CommonMark requires `- ` (dash + space) for a list item. A bare `  -` at end
+ * of line is NOT a valid list marker — it becomes paragraph text. Users commonly
+ * type `  -` expecting an empty nested list item, so we add the trailing space.
+ *
+ * Only matches indented markers (1–4 spaces) to avoid touching top-level text.
+ * Skips fenced code blocks to avoid corrupting code content.
+ */
+/** @internal Exported for testing */
+export function normalizeBareListMarkers(markdown: string): { text: string; modified: boolean } {
+  const lines = markdown.split("\n");
+  let inFencedBlock = false;
+  let fenceChar = "";
+  let fenceLen = 0;
+  let modified = false;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const trimmed = line.replace(/\r$/, "");
+
+    // Track fenced code blocks
+    if (!inFencedBlock) {
+      const openMatch = trimmed.match(/^ {0,3}(`{3,}|~{3,})/);
+      if (openMatch) {
+        inFencedBlock = true;
+        fenceChar = openMatch[1][0];
+        fenceLen = openMatch[1].length;
+        continue;
+      }
+    } else {
+      const closeRe = new RegExp(`^ {0,3}\\${fenceChar}{${fenceLen},}\\s*$`);
+      if (closeRe.test(trimmed)) {
+        inFencedBlock = false;
+        fenceChar = "";
+        fenceLen = 0;
+      }
+      continue;
+    }
+
+    // Match: bare indented list markers (no content after marker, or only whitespace).
+    // In CommonMark, an empty list item cannot interrupt a paragraph.
+    // Insert a blank line before it so the paragraph ends first,
+    // and ensure a trailing space so the marker is valid.
+    // Only match markers that need fixing: no trailing space, or missing blank line.
+    if (/^ {1,4}[-+*][ \t]*$/.test(trimmed)) {
+      let changed = false;
+      // Add blank line before if previous line is non-blank (paragraph interruption fix)
+      if (i > 0 && lines[i - 1].trim() !== "") {
+        lines.splice(i, 0, "");
+        i++; // skip the blank line we just inserted
+        changed = true;
+      }
+      // Ensure at least one space after the marker
+      const fixed = trimmed.replace(/^( {1,4}[-+*])[ \t]*$/, "$1 ");
+      if (fixed !== lines[i]) {
+        lines[i] = fixed;
+        changed = true;
+      }
+      if (changed) modified = true;
+    }
+  }
+
+  return { text: lines.join("\n"), modified };
+}
+
+/**
+ * Fix spread artifacts from normalizeBareListMarkers.
+ *
+ * The normalizer inserts blank lines before bare markers so CommonMark parses
+ * them correctly, but this makes the containing listItem "loose" (spread: true).
+ * remark-stringify then emits blank lines between the item's children on
+ * round-trip, which the user didn't write. Reset spread on listItems that
+ * became loose solely because they contain a nested list with empty items.
+ */
+function fixNormalizationSpread(node: Root | Parent): void {
+  if (!("children" in node) || !Array.isArray(node.children)) return;
+
+  for (const child of node.children) {
+    if ("children" in child && Array.isArray((child as Parent).children)) {
+      fixNormalizationSpread(child as Parent);
+    }
+
+    // Fix listItem spread when it contains a nested list with empty items
+    if (child.type === "listItem") {
+      const li = child as ListItem;
+      if (li.spread && hasNestedEmptyListItem(li)) {
+        li.spread = false;
+      }
+    }
+
+    // Fix list spread: if no children are spread, the list shouldn't be either
+    if (child.type === "list") {
+      const list = child as List;
+      if (list.spread) {
+        const anyChildSpread = list.children.some((item) => item.spread);
+        if (!anyChildSpread) {
+          list.spread = false;
+        }
+      }
+    }
+  }
+}
+
+function hasNestedEmptyListItem(li: ListItem): boolean {
+  for (const child of li.children) {
+    if (child.type === "list") {
+      const list = child as List;
+      for (const item of list.children) {
+        if (isEmptyListItem(item)) return true;
+      }
+    }
+  }
+  return false;
+}
+
+function isEmptyListItem(li: ListItem): boolean {
+  if (li.children.length === 0) return true;
+  if (li.children.length === 1 && li.children[0].type === "paragraph") {
+    const para = li.children[0] as Paragraph;
+    return (
+      para.children.length === 0 ||
+      (para.children.length === 1 &&
+        para.children[0].type === "text" &&
+        !(para.children[0] as Text).value.trim())
+    );
+  }
+  return false;
+}
+
 export function parseMarkdownToMdast(
   markdown: string,
   options: MarkdownPipelineOptions = {}
 ): Root {
+  // Normalize bare list markers (e.g., "  -\n") to ensure trailing space
+  const { text: normalized, modified: wasNormalized } = normalizeBareListMarkers(markdown);
   // Pre-process escaped custom markers before remark parsing
-  const preprocessed = preprocessEscapedMarkers(markdown);
+  const preprocessed = preprocessEscapedMarkers(normalized);
 
   perfStart("createProcessor");
   const processor = createProcessor(preprocessed, options);
@@ -363,6 +519,11 @@ export function parseMarkdownToMdast(
 
   // Restore escaped markers back to literal characters
   restoreEscapedMarkers(transformed as Root);
+
+  // Fix spread artifacts only when normalization inserted blank lines
+  if (wasNormalized) {
+    fixNormalizationSpread(transformed as Root);
+  }
 
   return transformed as Root;
 }
