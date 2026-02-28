@@ -100,10 +100,6 @@ export function StatusBarRight({
 }: StatusBarRightProps) {
   return (
     <div className="status-bar-right">
-      <StatusBarCounts />
-
-      <UpdateIndicator />
-
       {showAutoSavePaused && (
         <span
           className="status-autosave-paused"
@@ -130,6 +126,10 @@ export function StatusBarRight({
           {autoSaveTime}
         </span>
       )}
+
+      <StatusBarCounts />
+
+      <UpdateIndicator />
 
       {aiRunning && (
         <span className="status-ai-running" title="AI genie is working...">
