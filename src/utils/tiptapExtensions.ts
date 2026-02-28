@@ -59,6 +59,7 @@ import { codePreviewExtension } from "@/plugins/codePreview/tiptap";
 import { blockMathKeymapExtension } from "@/plugins/codePreview/blockMathKeymap";
 import { listContinuationExtension } from "@/plugins/listContinuation/tiptap";
 import { listBackspaceExtension } from "@/plugins/listBackspace/tiptap";
+import { listClickFixExtension } from "@/plugins/listClickFix/tiptap";
 import { tableUIExtension } from "@/plugins/tableUI/tiptap";
 import { blockEscapeExtension } from "@/plugins/blockEscape";
 import { editorKeymapExtension } from "@/plugins/editorPlugins.tiptap";
@@ -195,6 +196,7 @@ export function createTiptapExtensions(): Extensions {
     blockMathKeymapExtension,
     listContinuationExtension,
     listBackspaceExtension,
+    listClickFixExtension,
     // Note: ListKeymap (backspace, arrow keys in list items) is included via StarterKit
     editorKeymapExtension,
     tabIndentExtension,

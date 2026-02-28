@@ -7,6 +7,8 @@
  *
  * Runs at priority 1000 (before ListKeymap at priority 0) so it intercepts
  * Backspace before the default joinItemBackward behavior fires.
+ *
+ * @coordinates-with shared/listHelpers.ts — shared list item lookup and ancestor walk
  */
 
 import { Extension, isAtStartOfNode } from "@tiptap/core";
@@ -15,6 +17,7 @@ import { liftListItem } from "@tiptap/pm/schema-list";
 import type { EditorState, Transaction } from "@tiptap/pm/state";
 import type { EditorView } from "@tiptap/pm/view";
 import { guardProseMirrorCommand } from "@/utils/imeGuard";
+import { findListItemType, isPositionInsideListItem } from "@/plugins/shared/listHelpers";
 
 function handleListBackspace(
   state: EditorState,
@@ -24,20 +27,12 @@ function handleListBackspace(
   // Only handle empty (collapsed) selections
   if (!state.selection.empty) return false;
 
-  const listItemType =
-    state.schema.nodes["listItem"] ?? state.schema.nodes["list_item"];
+  const listItemType = findListItemType(state.schema);
   if (!listItemType) return false;
 
-  // Check if cursor is inside a list item by walking up the resolved position
+  // Check if cursor is inside a list item
   const { $from } = state.selection;
-  let inListItem = false;
-  for (let d = $from.depth; d > 0; d--) {
-    if ($from.node(d).type === listItemType) {
-      inListItem = true;
-      break;
-    }
-  }
-  if (!inListItem) return false;
+  if (!isPositionInsideListItem($from, listItemType)) return false;
 
   // Must be at start of node content (no chars before cursor in this textblock)
   if (!isAtStartOfNode(state)) return false;

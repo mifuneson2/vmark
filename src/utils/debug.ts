@@ -326,3 +326,7 @@ export const renderWarn = isDev
 export const cleanupWarn = isDev
   ? (...args: unknown[]) => console.warn("[Cleanup]", ...args)
   : () => {};
+
+export const listClickFixLog = isDev
+  ? (...args: unknown[]) => console.warn("[ListClickFix]", ...args)
+  : () => {};
