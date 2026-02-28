@@ -159,7 +159,7 @@ pub async fn read_session(
     }
 }
 
-/// Delete session file after successful restore
+/// Delete session file (and backup) after successful restore
 pub async fn delete_session(app: &tauri::AppHandle) -> Result<(), String> {
     let session_path = get_session_path(app)?;
 
@@ -167,6 +167,12 @@ pub async fn delete_session(app: &tauri::AppHandle) -> Result<(), String> {
         tokio::fs::remove_file(&session_path)
             .await
             .map_err(|e| format!("Failed to delete session: {}", e))?;
+    }
+
+    // Also clean up backup file
+    let backup_path = get_backup_session_path(app)?;
+    if backup_path.exists() {
+        let _ = tokio::fs::remove_file(&backup_path).await;
     }
 
     Ok(())

@@ -13,6 +13,7 @@ use super::coordinator::{
     get_window_restore_state,
     mark_window_restore_complete,
     clear_pending_restore,
+    CaptureResult,
     RestoreMultiWindowResult,
 };
 
@@ -23,9 +24,11 @@ use super::coordinator::{
 /// instead of being silently dropped.
 #[tauri::command]
 pub async fn hot_exit_capture(app: AppHandle) -> Result<SessionData, String> {
-    let mut session = capture_session(&app).await?;
+    let CaptureResult { mut session, expected_labels } = capture_session(&app).await?;
 
-    // Merge partial captures: keep previous window states for missing windows
+    // Merge partial captures: only resurrect windows that were expected (alive
+    // at capture time) but failed to respond (timed out). Windows that were
+    // intentionally closed are NOT in expected_labels and won't be merged.
     let captured_labels: std::collections::HashSet<String> = session
         .windows
         .iter()
@@ -35,9 +38,11 @@ pub async fn hot_exit_capture(app: AppHandle) -> Result<SessionData, String> {
     if let Ok(Some(prev_session)) = read_session(&app).await {
         let mut merged = false;
         for prev_window in prev_session.windows {
-            if !captured_labels.contains(&prev_window.window_label) {
+            if expected_labels.contains(&prev_window.window_label)
+                && !captured_labels.contains(&prev_window.window_label)
+            {
                 eprintln!(
-                    "[HotExit] Merging previous state for missing window '{}'",
+                    "[HotExit] Merging previous state for timed-out window '{}'",
                     prev_window.window_label
                 );
                 session.windows.push(prev_window);

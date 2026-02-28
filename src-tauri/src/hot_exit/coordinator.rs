@@ -103,8 +103,15 @@ fn normalize_window_label(state: &mut WindowState, expected_label: &str) {
     }
 }
 
+/// Result of capture_session, including the set of expected window labels
+/// so callers can distinguish "closed window" from "timed-out window".
+pub struct CaptureResult {
+    pub session: SessionData,
+    pub expected_labels: HashSet<String>,
+}
+
 /// Capture session from all windows
-pub async fn capture_session(app: &AppHandle) -> Result<SessionData, String> {
+pub async fn capture_session(app: &AppHandle) -> Result<CaptureResult, String> {
     // Get all document windows (main + doc-*)
     let windows: Vec<String> = app
         .webview_windows()
@@ -251,6 +258,8 @@ pub async fn capture_session(app: &AppHandle) -> Result<SessionData, String> {
         }
     });
 
+    let expected_labels = final_state.expected_windows.clone();
+
     let session = SessionData {
         version: SCHEMA_VERSION,
         timestamp: chrono::Utc::now().timestamp(),
@@ -259,7 +268,7 @@ pub async fn capture_session(app: &AppHandle) -> Result<SessionData, String> {
         workspace: None, // Workspace capture not yet implemented
     };
 
-    Ok(session)
+    Ok(CaptureResult { session, expected_labels })
 }
 
 async fn wait_for_all_responses(state: Arc<Mutex<CaptureState>>, expected: usize) {

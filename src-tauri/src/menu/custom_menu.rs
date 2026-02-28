@@ -150,6 +150,7 @@ pub(crate) fn create_menu_with_shortcuts(
             &MenuItem::with_id(app, "move-to", "Move to...", true, get_accel("move-to", ""))?,
             &PredefinedMenuItem::separator(app)?,
             &export_submenu,
+            &MenuItem::with_id(app, "export-pdf", "Print...", true, get_accel("export-pdf", "CmdOrCtrl+P"))?,
             &PredefinedMenuItem::separator(app)?,
             &history_submenu,
             &PredefinedMenuItem::separator(app)?,

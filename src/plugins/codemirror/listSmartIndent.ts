@@ -38,6 +38,10 @@ function isListLine(text: string): boolean {
  */
 export function listSmartIndent(view: EditorView): boolean {
   const { state } = view;
+
+  // Bail out for multi-cursor — only operate on single selection
+  if (state.selection.ranges.length > 1) return false;
+
   const tabSize = getTabSize();
   const spaces = " ".repeat(tabSize);
   const { from, to } = state.selection.main;
@@ -70,6 +74,10 @@ export function listSmartIndent(view: EditorView): boolean {
  */
 export function listSmartOutdent(view: EditorView): boolean {
   const { state } = view;
+
+  // Bail out for multi-cursor — only operate on single selection
+  if (state.selection.ranges.length > 1) return false;
+
   const tabSize = getTabSize();
   const { from, to } = state.selection.main;
 

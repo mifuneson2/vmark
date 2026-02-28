@@ -15,13 +15,14 @@
  * @module components/StatusBar/StatusBarCounts
  */
 
-import { memo, useMemo } from "react";
+import { memo, useDeferredValue, useMemo } from "react";
 import { useDocumentContent } from "@/hooks/useDocumentState";
 import { countCharsFromPlain, countWordsFromPlain, stripMarkdown } from "./statusTextMetrics";
 
 export const StatusBarCounts = memo(function StatusBarCounts() {
   const content = useDocumentContent();
-  const strippedContent = useMemo(() => stripMarkdown(content), [content]);
+  const deferredContent = useDeferredValue(content);
+  const strippedContent = useMemo(() => stripMarkdown(deferredContent), [deferredContent]);
   const wordCount = useMemo(() => countWordsFromPlain(strippedContent), [strippedContent]);
   const charCount = useMemo(() => countCharsFromPlain(strippedContent), [strippedContent]);
 

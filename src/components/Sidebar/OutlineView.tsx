@@ -4,7 +4,7 @@
  * Displays document heading structure as a tree.
  */
 
-import { useState, useMemo, useRef } from "react";
+import { useState, useDeferredValue, useMemo, useRef } from "react";
 import { ChevronRight, ChevronDown } from "lucide-react";
 import { emit } from "@tauri-apps/api/event";
 import { useUIStore } from "@/stores/uiStore";
@@ -93,16 +93,17 @@ const MAX_OUTLINE_ITEMS = 100; // Limit total visible items
 
 export function OutlineView() {
   const content = useDocumentContent();
+  const deferredContent = useDeferredValue(content);
   const activeHeadingIndex = useUIStore((state) => state.activeHeadingLine);
 
   // Check if document is too large (used after hooks)
-  const isTooLarge = content.length > MAX_CONTENT_FOR_OUTLINE;
+  const isTooLarge = deferredContent.length > MAX_CONTENT_FOR_OUTLINE;
 
   // Create a stable key based only on heading lines.
   // This prevents re-extraction when typing in non-heading content.
   const headingLinesKey = useMemo(
-    () => (isTooLarge ? "" : getHeadingLinesKey(content)),
-    [content, isTooLarge]
+    () => (isTooLarge ? "" : getHeadingLinesKey(deferredContent)),
+    [deferredContent, isTooLarge]
   );
 
   // Cache previous headings to maintain referential stability
@@ -116,12 +117,12 @@ export function OutlineView() {
       return prevHeadingsRef.current;
     }
     perfStart("OutlineView:extractHeadings");
-    const newHeadings = extractHeadings(content);
+    const newHeadings = extractHeadings(deferredContent);
     perfEnd("OutlineView:extractHeadings", { count: newHeadings.length });
     prevHeadingsRef.current = newHeadings;
     prevKeyRef.current = headingLinesKey;
     return newHeadings;
-  }, [headingLinesKey, content, isTooLarge]);
+  }, [headingLinesKey, deferredContent, isTooLarge]);
 
   const tree = useMemo(() => {
     if (isTooLarge) return [];

@@ -101,9 +101,13 @@ export const listContinuationKeymap: KeyBinding = guardCodeMirrorKeyBinding({
   key: "Enter",
   run: (view) => {
     const { state } = view;
+
+    // Bail out for multi-cursor — only operate on single selection
+    if (state.selection.ranges.length > 1) return false;
+
     const { from, to } = state.selection.main;
 
-    // Only handle single cursor (not multi-select)
+    // Only handle single cursor (not range selection)
     if (from !== to) return false;
 
     const line = state.doc.lineAt(from);

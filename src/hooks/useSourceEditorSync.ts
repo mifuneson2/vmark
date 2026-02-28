@@ -87,7 +87,7 @@ export function useSourceEditorContentSync(
       view.dispatch({
         changes: {
           from: 0,
-          to: currentContent.length,
+          to: view.state.doc.length,  // fresh value — avoids stale closure during IME
           insert: targetContent,
         },
       });
@@ -120,7 +120,7 @@ export function useSourceEditorContentSync(
           view.dispatch({
             changes: {
               from: 0,
-              to: currentContent.length,
+              to: view.state.doc.length,  // fresh value — avoids stale closure during IME
               insert: targetContent,
             },
           });

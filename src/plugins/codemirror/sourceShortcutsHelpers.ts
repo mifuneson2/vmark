@@ -200,10 +200,9 @@ export function formatCJKFile(view: EditorView): boolean {
   const formatted = formatMarkdown(content, config, { preserveTwoSpaceHardBreaks });
 
   if (formatted !== content) {
-    const active = getActiveDocument();
-    if (active) {
-      useDocumentStore.getState().setContent(active.tabId, formatted);
-    }
+    view.dispatch({
+      changes: { from: 0, to: content.length, insert: formatted },
+    });
   }
   return true;
 }
