@@ -179,6 +179,14 @@ describe("serializeMarkdown", () => {
       expect(result).toContain("Item 3");
     });
 
+    it("serializes tight lists without blank lines between items", () => {
+      const original = "- Item 1\n- Item 2\n- Item 3";
+      const doc = parseMarkdown(schema, original);
+      const result = serializeMarkdown(schema, doc);
+      // Items should be on consecutive lines, no blank lines between them
+      expect(result).toMatch(/- Item 1\n- Item 2\n- Item 3/);
+    });
+
     it("preserves code blocks through round-trip", () => {
       const original = "```javascript\nconst x = 1;\n```";
       const doc = parseMarkdown(schema, original);
@@ -222,6 +230,22 @@ describe("serializeMarkdown", () => {
       const result = serializeMarkdown(schema, doc);
       expect(result).toContain("[link]");
       expect(result).toContain("https://example.com");
+    });
+
+    it("round-trips nested empty list item without corruption", () => {
+      const original = "- Parent text\n  -\n";
+      const doc = parseMarkdown(schema, original);
+      const result = serializeMarkdown(schema, doc);
+
+      // Must not produce heading markers — the `  -` is a nested list item,
+      // not a setext heading underline
+      expect(result).not.toContain("##");
+      expect(result).toContain("Parent text");
+      // Should still be a list
+      expect(result).toMatch(/^- /m);
+      // Should NOT have a blank line between parent text and nested item
+      // (normalizeBareListMarkers inserts one for parsing, but spread fix removes it)
+      expect(result).not.toMatch(/Parent text\n\n/);
     });
   });
 });

@@ -11,6 +11,7 @@
 import { describe, it, expect } from "vitest";
 import { Schema } from "@tiptap/pm/model";
 import { EditorState } from "@tiptap/pm/state";
+import type { EditorView } from "@tiptap/pm/view";
 import { Editor } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import {
@@ -19,6 +20,7 @@ import {
   findListItemType,
   listClickFixExtension,
   handleClick,
+  setSelectionInEmptyListItem,
 } from "../tiptap";
 
 // --- Schemas ---
@@ -91,6 +93,31 @@ function createListDoc() {
         schema.node("paragraph", null, [schema.text("Item text")]),
       ]),
       schema.node("listItem", null, [schema.node("paragraph", null, [])]),
+    ]),
+    schema.node("paragraph", null, [schema.text("After list")]),
+  ]);
+}
+
+function createNestedListDoc() {
+  // <doc>
+  //   <bulletList>
+  //     <listItem>
+  //       <paragraph>"Parent text"</paragraph>
+  //       <bulletList>
+  //         <listItem><paragraph></paragraph></listItem>   ← nested empty item
+  //       </bulletList>
+  //     </listItem>
+  //   </bulletList>
+  //   <paragraph>"After list"</paragraph>
+  // </doc>
+  return schema.node("doc", null, [
+    schema.node("bulletList", null, [
+      schema.node("listItem", null, [
+        schema.node("paragraph", null, [schema.text("Parent text")]),
+        schema.node("bulletList", null, [
+          schema.node("listItem", null, [schema.node("paragraph", null, [])]),
+        ]),
+      ]),
     ]),
     schema.node("paragraph", null, [schema.text("After list")]),
   ]);
@@ -198,6 +225,26 @@ describe("isInsideEmptyListItem", () => {
     expect(isInsideEmptyListItem($pos, listItemType)).toBe(false);
   });
 
+  it("returns false when pos is in parent non-empty listItem (nested empty child)", () => {
+    const doc = createNestedListDoc();
+    const state = EditorState.create({ doc, schema });
+    // Resolve pos inside the parent listItem's text — "Parent text"
+    const $pos = state.doc.resolve(findTextPos(doc, "Parent text"));
+    const listItemType = findListItemType(schema)!;
+    // The nearest listItem ancestor has text, so should be false
+    expect(isInsideEmptyListItem($pos, listItemType)).toBe(false);
+  });
+
+  it("returns true when pos is inside the nested empty listItem", () => {
+    const doc = createNestedListDoc();
+    const state = EditorState.create({ doc, schema });
+    // The nested empty listItem is the 2nd listItem in document order
+    const innerPos = findNthListItemInnerPos(doc, 2);
+    const $pos = state.doc.resolve(innerPos);
+    const listItemType = findListItemType(schema)!;
+    expect(isInsideEmptyListItem($pos, listItemType)).toBe(true);
+  });
+
   it("returns true for whitespace-only listItem", () => {
     const doc = schema.node("doc", null, [
       schema.node("bulletList", null, [
@@ -210,6 +257,80 @@ describe("isInsideEmptyListItem", () => {
     const $pos = state.doc.resolve(3);
     const listItemType = findListItemType(schema)!;
     expect(isInsideEmptyListItem($pos, listItemType)).toBe(true);
+  });
+});
+
+describe("setSelectionInEmptyListItem", () => {
+  it("inserts paragraph into childless listItem and sets cursor inside", () => {
+    // Create a doc with a listItem that has 0 children (no paragraph).
+    // This can happen from certain markdown parsers.
+    const childlessSchema = new Schema({
+      nodes: {
+        doc: { content: "block+" },
+        paragraph: { content: "inline*", group: "block" },
+        text: { inline: true, group: "inline" },
+        bulletList: { content: "listItem+", group: "block" },
+        listItem: { content: "block*" }, // allow 0 children for this test
+      },
+    });
+    const doc = childlessSchema.node("doc", null, [
+      childlessSchema.node("bulletList", null, [
+        childlessSchema.node("listItem", null, []), // 0 children
+      ]),
+    ]);
+    const state = EditorState.create({ doc, schema: childlessSchema });
+    const listItemType = childlessSchema.nodes.listItem;
+
+    // Resolve inside the empty listItem (pos 2 = after bulletList open + listItem open)
+    const $pos = state.doc.resolve(2);
+    expect($pos.parent.type.name).toBe("listItem");
+    expect($pos.parent.childCount).toBe(0);
+
+    // Create a minimal mock view that captures dispatch
+    let dispatched = false;
+    const mockView = {
+      state,
+      dispatch: (tr: ReturnType<typeof state.tr.setSelection>) => {
+        dispatched = true;
+        // Verify the resulting selection is inside a paragraph inside the listItem
+        const sel = tr.selection;
+        const $from = tr.doc.resolve(sel.from);
+        expect($from.parent.type.name).toBe("paragraph");
+        // Walk up to find listItem ancestor
+        let foundListItem = false;
+        for (let d = $from.depth; d > 0; d--) {
+          if ($from.node(d).type === listItemType) {
+            foundListItem = true;
+            expect($from.node(d).childCount).toBe(1); // now has a paragraph
+            break;
+          }
+        }
+        expect(foundListItem).toBe(true);
+      },
+    } as unknown as EditorView;
+
+    const result = setSelectionInEmptyListItem(mockView, $pos, listItemType);
+    expect(result).toBe(true);
+    expect(dispatched).toBe(true);
+  });
+
+  it("handles normal empty listItem with paragraph child", () => {
+    const doc = createListDoc();
+    const state = EditorState.create({ doc, schema });
+    const listItemType = findListItemType(schema)!;
+    // Position inside the empty listItem (2nd item, has an empty paragraph)
+    const emptyItemPos = findNthListItemInnerPos(doc, 2);
+    const $pos = state.doc.resolve(emptyItemPos);
+
+    let dispatched = false;
+    const mockView = {
+      state,
+      dispatch: () => { dispatched = true; },
+    } as unknown as EditorView;
+
+    const result = setSelectionInEmptyListItem(mockView, $pos, listItemType);
+    expect(result).toBe(true);
+    expect(dispatched).toBe(true);
   });
 });
 
@@ -320,6 +441,39 @@ describe("handleClick direct tests", () => {
     Object.defineProperty(event, "target", { value: liElement });
     const result = handleClick(view, pos, event);
     expect(result).toBe(false);
+
+    editor.destroy();
+  });
+
+  it("falls through to scenario 2 for nested empty list item", () => {
+    // Create editor with nested list: parent has text, child is empty
+    const editor = createEditor(
+      "<ul><li>Parent text<ul><li></li></ul></li></ul><p>After</p>"
+    );
+    const view = editor.view;
+
+    // Find the nested empty <li> in the DOM
+    const lis = view.dom.querySelectorAll("li");
+    // lis[0] is parent, lis[1] is nested empty
+    const nestedEmptyLi = lis[1];
+    expect(nestedEmptyLi).toBeDefined();
+    expect(nestedEmptyLi.textContent).toBe("");
+
+    // pos resolves to parent non-empty listItem (simulating PM's behavior)
+    const parentPos = findTextPos(editor.state.doc, "Parent text");
+
+    const event = new MouseEvent("click");
+    Object.defineProperty(event, "target", { value: nestedEmptyLi });
+    const result = handleClick(view, parentPos, event);
+
+    // Should return true — scenario 2 handles it via posAtDOM
+    expect(result).toBe(true);
+
+    // Cursor should be inside a list item (the nested empty one)
+    const { $from } = editor.state.selection;
+    const listItemType = findListItemType(editor.state.schema)!;
+    expect(isPositionInsideListItem($from, listItemType)).toBe(true);
+    expect(isInsideEmptyListItem($from, listItemType)).toBe(true);
 
     editor.destroy();
   });

@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { parseMarkdownToMdast } from "./parser";
+import { parseMarkdownToMdast, normalizeBareListMarkers } from "./parser";
 import type { Paragraph, Text, Heading, Code, Link, Image } from "mdast";
 
 describe("parseMarkdownToMdast", () => {
@@ -276,6 +276,57 @@ Content`;
       expect(img.url).toBe("https://example.com/pic.png");
       expect(img.title).toBeNull();
       expect(img.alt).toBe("Alt");
+    });
+  });
+
+  describe("setext heading disabled and bare list markers", () => {
+    it("normalizeBareListMarkers adds blank line and trailing space", () => {
+      // Adds blank line before + trailing space
+      expect(normalizeBareListMarkers("- text\n  -\n")).toBe("- text\n\n  - \n");
+      // Already has blank line — only adds trailing space
+      expect(normalizeBareListMarkers("- text\n\n  -\n")).toBe("- text\n\n  - \n");
+      // Various markers
+      expect(normalizeBareListMarkers("  *\n")).toBe("  * \n");
+      expect(normalizeBareListMarkers("   +\n")).toBe("   + \n");
+      // Should NOT touch non-indented markers
+      expect(normalizeBareListMarkers("-\n")).toBe("-\n");
+      // Should NOT touch markers with existing space
+      expect(normalizeBareListMarkers("  - \n")).toBe("  - \n");
+    });
+
+    it("parses trailing dash as nested list item, not heading or text", () => {
+      const input = "- Parent text\n  -\n";
+      const result = parseMarkdownToMdast(input);
+
+      // Root should contain a list
+      expect(result.children[0].type).toBe("list");
+
+      const topList = result.children[0] as any;
+      const listItem = topList.children[0];
+
+      // The listItem should have a paragraph AND a nested list
+      const childTypes = listItem.children.map((c: any) => c.type);
+      expect(childTypes).toContain("paragraph");
+      expect(childTypes).toContain("list");
+    });
+
+    it("does not set spread on listItem containing empty nested list", () => {
+      const result = parseMarkdownToMdast("- Parent text\n  -\n");
+      const topList = result.children[0] as any;
+      const listItem = topList.children[0];
+
+      // The listItem should NOT be spread (no blank line in original)
+      expect(listItem.spread).toBe(false);
+      // The nested list should also not be spread
+      const nestedList = listItem.children.find((c: any) => c.type === "list");
+      expect(nestedList.spread).toBe(false);
+    });
+
+    it("does not modify bare markers inside fenced code blocks", () => {
+      const result = parseMarkdownToMdast("```\n  -\n```\n");
+      expect(result.children[0].type).toBe("code");
+      const code = result.children[0] as any;
+      expect(code.value).toBe("  -");
     });
   });
 });
