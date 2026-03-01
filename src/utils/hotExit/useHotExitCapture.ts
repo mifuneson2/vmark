@@ -135,9 +135,10 @@ function captureDocumentState(
   const doc = documentStore.getDocument(tabId);
   const docHistory = historyStore.documents[tabId];
 
-  // Capture undo/redo history (always try to preserve)
-  const undoHistory = docHistory?.undoStack.map(toHotExitCheckpoint) || [];
-  const redoHistory = docHistory?.redoStack.map(toHotExitCheckpoint) || [];
+  // Capture undo/redo history (cap to prevent excessive IPC/serialization size)
+  const MAX_HISTORY_CHECKPOINTS = 20;
+  const undoHistory = (docHistory?.undoStack ?? []).slice(-MAX_HISTORY_CHECKPOINTS).map(toHotExitCheckpoint);
+  const redoHistory = (docHistory?.redoStack ?? []).slice(-MAX_HISTORY_CHECKPOINTS).map(toHotExitCheckpoint);
 
   // Compute untitled state once
   const isUntitled = !filePath;

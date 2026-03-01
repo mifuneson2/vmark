@@ -392,7 +392,11 @@ async function syncMenuShortcuts(shortcuts: Record<string, string>) {
     await invoke("rebuild_menu", { shortcuts: menuShortcuts });
 
     // rebuild_menu resets the Genies submenu to a placeholder — re-populate it
-    await invoke("refresh_genies_menu");
+    // Pass only the search-genies accelerator to avoid unnecessary IPC overhead
+    const geniesShortcuts = menuShortcuts["search-genies"]
+      ? { "search-genies": menuShortcuts["search-genies"] }
+      : null;
+    await invoke("refresh_genies_menu", { shortcuts: geniesShortcuts });
   } catch (e) {
     // Menu rebuild may fail if command not yet implemented
     shortcutsWarn("Failed to sync menu shortcuts:", e);

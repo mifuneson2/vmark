@@ -509,7 +509,11 @@ pub fn mark_window_restore_complete(window_label: &str) -> bool {
         );
     }
 
-    state.all_complete()
+    let all_done = state.all_complete();
+    if all_done {
+        state.clear();
+    }
+    all_done
 }
 
 #[cfg(test)]

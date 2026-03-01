@@ -172,8 +172,12 @@ fn find_genies_submenu(parent: &Submenu<tauri::Wry>) -> Option<Submenu<tauri::Wr
 /// Refresh the Genies submenu by scanning global and workspace genie directories.
 /// Called by frontend on mount and when workspace changes.
 /// Creates the submenu dynamically inside Edit if it doesn't already exist.
+/// Accepts optional shortcuts map to resolve custom accelerators (e.g., "search-genies").
 #[tauri::command]
-pub fn refresh_genies_menu(app: AppHandle) -> Result<(), String> {
+pub fn refresh_genies_menu(
+    app: AppHandle,
+    shortcuts: Option<HashMap<String, String>>,
+) -> Result<(), String> {
     use crate::genies;
 
     let global_dir = genies::global_genies_dir(&app)?;
@@ -208,9 +212,19 @@ pub fn refresh_genies_menu(app: AppHandle) -> Result<(), String> {
         new_sub
     };
 
-    // "Search Genies..." at top -- opens the picker (Cmd+Y)
+    // "Search Genies..." at top -- opens the picker
+    // When shortcuts map is provided, use its value (empty = unbound).
+    // When no shortcuts map is provided, fall back to default.
+    let accel: Option<String> = match &shortcuts {
+        Some(s) => match s.get("search-genies") {
+            Some(v) if v.is_empty() => None, // explicitly unbound
+            Some(v) => Some(v.clone()),
+            None => Some("CmdOrCtrl+Y".to_string()), // key absent from map
+        },
+        None => Some("CmdOrCtrl+Y".to_string()), // no map at all
+    };
     let search_item =
-        MenuItem::with_id(&app, "search-genies", "Search Genies\u{2026}", true, Some("CmdOrCtrl+Y"))
+        MenuItem::with_id(&app, "search-genies", "Search Genies\u{2026}", true, accel.as_deref())
             .map_err(|e| e.to_string())?;
     submenu
         .append(&search_item)

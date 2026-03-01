@@ -173,7 +173,7 @@ async fn handle_connection(stream: TcpStream, addr: SocketAddr, app: AppHandle) 
     // Spawn task to forward messages from channel to WebSocket
     let send_task = tauri::async_runtime::spawn(async move {
         while let Some(msg) = rx.recv().await {
-            if ws_sender.send(Message::Text(msg)).await.is_err() {
+            if ws_sender.send(Message::Text(msg.into())).await.is_err() {
                 break;
             }
         }

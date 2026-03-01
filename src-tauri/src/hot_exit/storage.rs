@@ -103,18 +103,15 @@ pub async fn write_session_atomic(
 async fn try_read_session_file(
     path: &std::path::Path,
 ) -> Result<Option<SessionData>, String> {
-    if !path.exists() {
-        return Ok(None);
+    match tokio::fs::read_to_string(path).await {
+        Ok(contents) => {
+            let session: SessionData = serde_json::from_str(&contents)
+                .map_err(|e| format!("Failed to parse {}: {}", path.display(), e))?;
+            Ok(Some(session))
+        }
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),
+        Err(e) => Err(format!("Failed to read {}: {}", path.display(), e)),
     }
-
-    let contents = tokio::fs::read_to_string(path)
-        .await
-        .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
-
-    let session: SessionData = serde_json::from_str(&contents)
-        .map_err(|e| format!("Failed to parse {}: {}", path.display(), e))?;
-
-    Ok(Some(session))
 }
 
 /// Read session from disk, falling back to backup if main file is corrupt.
@@ -163,16 +160,16 @@ pub async fn read_session(
 pub async fn delete_session(app: &tauri::AppHandle) -> Result<(), String> {
     let session_path = get_session_path(app)?;
 
-    if session_path.exists() {
-        tokio::fs::remove_file(&session_path)
-            .await
-            .map_err(|e| format!("Failed to delete session: {}", e))?;
+    match tokio::fs::remove_file(&session_path).await {
+        Ok(()) => {}
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+        Err(e) => return Err(format!("Failed to delete session: {}", e)),
     }
 
     // Also clean up backup file
     let backup_path = get_backup_session_path(app)?;
-    if backup_path.exists() {
-        let _ = tokio::fs::remove_file(&backup_path).await;
+    match tokio::fs::remove_file(&backup_path).await {
+        Ok(()) | Err(_) => {} // Best effort
     }
 
     Ok(())

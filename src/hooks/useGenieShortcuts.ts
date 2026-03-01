@@ -14,7 +14,7 @@ import { useEffect } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
 import { safeUnlistenAsync } from "@/utils/safeUnlisten";
-import { useShortcutsStore } from "@/stores/shortcutsStore";
+import { useShortcutsStore, prosemirrorToTauri } from "@/stores/shortcutsStore";
 import { useGeniePickerStore } from "@/stores/geniePickerStore";
 import { useGeniesStore } from "@/stores/geniesStore";
 import { useTabStore } from "@/stores/tabStore";
@@ -27,10 +27,24 @@ import { isImeKeyEvent } from "@/utils/imeGuard";
 import type { GenieDefinition, GenieMetadata, GenieScope } from "@/types/aiGenies";
 import { genieWarn } from "@/utils/debug";
 
+/** Build menu-id → accelerator map for the genies menu. */
+function getMenuShortcuts(): Record<string, string> | null {
+  try {
+    const all = useShortcutsStore.getState().getAllShortcuts();
+    const key = all["aiPrompts"];
+    // null/undefined = not in store, use backend default; empty = explicitly unbound
+    if (key == null) return null;
+    return { "search-genies": prosemirrorToTauri(key) };
+  } catch {
+    return null;
+  }
+}
+
 /** Load genies from disk and refresh the native Genies menu. */
 async function loadAndSyncMenu(): Promise<void> {
   await useGeniesStore.getState().loadGenies();
-  await invoke("refresh_genies_menu");
+  const shortcuts = getMenuShortcuts();
+  await invoke("refresh_genies_menu", { shortcuts });
 }
 
 /** Detect scope from current editor selection state. */

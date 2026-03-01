@@ -37,16 +37,33 @@ pub async fn hot_exit_capture(app: AppHandle) -> Result<SessionData, String> {
 
     if let Ok(Some(prev_session)) = read_session(&app).await {
         let mut merged = false;
-        for prev_window in prev_session.windows {
-            if expected_labels.contains(&prev_window.window_label)
-                && !captured_labels.contains(&prev_window.window_label)
-            {
-                eprintln!(
-                    "[HotExit] Merging previous state for timed-out window '{}'",
-                    prev_window.window_label
-                );
-                session.windows.push(prev_window);
-                merged = true;
+        let now = chrono::Utc::now().timestamp();
+        let prev_age_secs = now.checked_sub(prev_session.timestamp);
+
+        // Refuse to merge if previous session is older than 1 hour,
+        // has a future timestamp, or the age overflows
+        let max_merge_age_secs: i64 = 3600;
+        let is_stale = match prev_age_secs {
+            Some(age) if age >= 0 && age <= max_merge_age_secs => false,
+            _ => true, // overflow, negative (future), or too old
+        };
+        if is_stale {
+            eprintln!(
+                "[HotExit] Skipping stale merge: previous session age {:?}s (max {}s)",
+                prev_age_secs, max_merge_age_secs
+            );
+        } else {
+            for prev_window in prev_session.windows {
+                if expected_labels.contains(&prev_window.window_label)
+                    && !captured_labels.contains(&prev_window.window_label)
+                {
+                    eprintln!(
+                        "[HotExit] Merging previous state for timed-out window '{}' ({:?}s old)",
+                        prev_window.window_label, prev_age_secs
+                    );
+                    session.windows.push(prev_window);
+                    merged = true;
+                }
             }
         }
         if merged {
