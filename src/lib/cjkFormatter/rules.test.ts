@@ -1474,4 +1474,10 @@ describe("applyRules", () => {
     // No CJK chars, so CJK rules are skipped — comma stays ASCII
     expect(result).toBe("Hello, World!");
   });
+
+  it("applies fullwidth punctuation normalization with CJK text", () => {
+    // CJK text with ASCII comma — fullwidthPunctuation converts it to fullwidth
+    const result = applyRules("中文,世界", makeConfig({ fullwidthPunctuation: true }));
+    expect(result).toBe("中文，世界");
+  });
 });

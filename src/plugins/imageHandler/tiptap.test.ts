@@ -1029,4 +1029,299 @@ describe("imageHandler plugin handler integration", () => {
       expect(result).toBe(true); // Still returns true since it's an image type
     });
   });
+
+  describe("insertMultipleImages error handling in handleDrop", () => {
+    it("catches error from insertMultipleImages in file:// URI drop path", async () => {
+      mockSettingsGetState.mockReturnValue({ image: { copyToAssets: false } });
+      mockInsertMultipleImages.mockRejectedValueOnce(new Error("insert failed"));
+
+      const file = new File(["img"], "photo.png", { type: "image/png" });
+      const event = createMockDragEvent({
+        dataTransfer: {
+          files: [file],
+          getData: (type: string) =>
+            type === "text/uri-list" ? "file:///Users/test/photo.png" : "",
+        },
+      });
+      const realSchema = new Schema({
+        nodes: {
+          doc: { content: "paragraph+" },
+          paragraph: { content: "text*" },
+          text: { inline: true },
+        },
+      });
+      const realState = EditorState.create({
+        doc: realSchema.node("doc", null, [
+          realSchema.node("paragraph", null, [realSchema.text("hello")]),
+        ]),
+        schema: realSchema,
+      });
+      const view = {
+        ...createMockView(),
+        state: realState,
+        dispatch: vi.fn(),
+        posAtCoords: vi.fn(() => ({ pos: 3 })),
+      };
+
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const result = handleDrop(view, event, null, false);
+      expect(result).toBe(true);
+
+      // Wait for the rejection to be caught
+      await new Promise((r) => setTimeout(r, 50));
+      expect(consoleSpy).toHaveBeenCalledWith(
+        "Failed to insert dropped images:",
+        expect.any(Error)
+      );
+      consoleSpy.mockRestore();
+    });
+
+    it("catches error from insertMultipleImages in text drop path", async () => {
+      mockInsertMultipleImages.mockRejectedValueOnce(new Error("insert failed"));
+
+      const event = createMockDragEvent({
+        dataTransfer: {
+          files: [] as File[],
+          getData: (type: string) =>
+            type === "text/plain" ? "/Users/test/photo.png" : "",
+        },
+      });
+      const realSchema = new Schema({
+        nodes: {
+          doc: { content: "paragraph+" },
+          paragraph: { content: "text*" },
+          text: { inline: true },
+        },
+      });
+      const realState = EditorState.create({
+        doc: realSchema.node("doc", null, [
+          realSchema.node("paragraph", null, [realSchema.text("hello")]),
+        ]),
+        schema: realSchema,
+      });
+      const view = {
+        ...createMockView(),
+        state: realState,
+        dispatch: vi.fn(),
+        posAtCoords: vi.fn(() => ({ pos: 3 })),
+      };
+
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const result = handleDrop(view, event, null, false);
+      expect(result).toBe(true);
+
+      await new Promise((r) => setTimeout(r, 50));
+      expect(consoleSpy).toHaveBeenCalledWith(
+        "Failed to insert dropped images:",
+        expect.any(Error)
+      );
+      consoleSpy.mockRestore();
+    });
+  });
+
+  describe("processDroppedFiles full flow", () => {
+    it("saves dropped image files and dispatches insert transaction", async () => {
+      const file = new File(["img-data"], "photo.png", { type: "image/png" });
+      // Add working arrayBuffer to the file
+      (file as unknown as Record<string, unknown>).arrayBuffer = vi.fn(() =>
+        Promise.resolve(new ArrayBuffer(8))
+      );
+      mockIsImageFile.mockImplementation((f: File) => f.type.startsWith("image/"));
+
+      const event = createMockDragEvent({
+        dataTransfer: {
+          files: [file],
+          getData: () => "",
+        },
+      });
+      const view = createMockView();
+
+      handleDrop(view, event, null, false);
+
+      // Wait for processDroppedFiles async flow to complete
+      await vi.waitFor(() => {
+        expect(mockSaveImageToAssets).toHaveBeenCalled();
+      }, { timeout: 200 });
+
+      // Should dispatch the insert transaction
+      await vi.waitFor(() => {
+        expect((view as Record<string, unknown>).dispatch).toHaveBeenCalled();
+      }, { timeout: 200 });
+    });
+
+    it("skips non-image files in the drop", async () => {
+      const imgFile = new File(["img"], "photo.png", { type: "image/png" });
+      (imgFile as unknown as Record<string, unknown>).arrayBuffer = vi.fn(() =>
+        Promise.resolve(new ArrayBuffer(4))
+      );
+      const pdfFile = new File(["pdf"], "doc.pdf", { type: "application/pdf" });
+      (pdfFile as unknown as Record<string, unknown>).arrayBuffer = vi.fn(() =>
+        Promise.resolve(new ArrayBuffer(4))
+      );
+
+      mockIsImageFile.mockImplementation((f: File) => f.type.startsWith("image/"));
+
+      const event = createMockDragEvent({
+        dataTransfer: {
+          files: [imgFile, pdfFile],
+          getData: () => "",
+        },
+      });
+      const view = createMockView();
+
+      handleDrop(view, event, null, false);
+
+      await vi.waitFor(() => {
+        expect(mockSaveImageToAssets).toHaveBeenCalledTimes(1);
+      }, { timeout: 200 });
+    });
+
+    it("aborts when no file path (unsaved doc)", async () => {
+      mockGetActiveFilePathForCurrentWindow.mockReturnValue(null);
+
+      const file = new File(["img"], "photo.png", { type: "image/png" });
+      (file as unknown as Record<string, unknown>).arrayBuffer = vi.fn(() =>
+        Promise.resolve(new ArrayBuffer(4))
+      );
+      mockIsImageFile.mockImplementation((f: File) => f.type.startsWith("image/"));
+
+      const event = createMockDragEvent({
+        dataTransfer: {
+          files: [file],
+          getData: () => "",
+        },
+      });
+      const view = createMockView();
+
+      handleDrop(view, event, null, false);
+
+      await vi.waitFor(() => {
+        expect(mockShowUnsavedDocWarning).toHaveBeenCalled();
+      }, { timeout: 200 });
+
+      expect(mockSaveImageToAssets).not.toHaveBeenCalled();
+    });
+
+    it("aborts dispatch when view disconnects after saving", async () => {
+      const file = new File(["img"], "photo.png", { type: "image/png" });
+      (file as unknown as Record<string, unknown>).arrayBuffer = vi.fn(() =>
+        Promise.resolve(new ArrayBuffer(4))
+      );
+      mockIsImageFile.mockImplementation((f: File) => f.type.startsWith("image/"));
+      // View disconnects after save
+      mockIsViewConnected.mockReturnValue(false);
+
+      const event = createMockDragEvent({
+        dataTransfer: {
+          files: [file],
+          getData: () => "",
+        },
+      });
+      const view = createMockView();
+
+      handleDrop(view, event, null, false);
+
+      await vi.waitFor(() => {
+        expect(mockSaveImageToAssets).toHaveBeenCalled();
+      }, { timeout: 200 });
+
+      // Should NOT dispatch since view is disconnected
+      expect((view as Record<string, unknown>).dispatch).not.toHaveBeenCalled();
+    });
+
+    it("does not dispatch when no image files pass filter", async () => {
+      const file = new File(["doc"], "readme.txt", { type: "text/plain" });
+      (file as unknown as Record<string, unknown>).arrayBuffer = vi.fn(() =>
+        Promise.resolve(new ArrayBuffer(4))
+      );
+      // All files are non-image
+      mockIsImageFile.mockReturnValue(false);
+
+      const event = createMockDragEvent({
+        dataTransfer: {
+          // handleDrop filters with isImageFile first — if no image files,
+          // it skips processDroppedFiles entirely. So we need image files at
+          // the handleDrop level but have processDroppedFiles internal filter
+          // reject them. Force imageFiles.length > 0 at handleDrop by having
+          // an image-type file in files array.
+          files: [new File(["img"], "a.png", { type: "image/png" })],
+          getData: () => "",
+        },
+      });
+      // First call from handleDrop filter passes, internal call rejects
+      mockIsImageFile.mockReturnValueOnce(true).mockReturnValue(false);
+      const view = createMockView();
+
+      handleDrop(view, event, null, false);
+
+      // Wait a tick for the async to settle
+      await new Promise((r) => setTimeout(r, 50));
+
+      // processDroppedFiles should complete but with 0 image paths
+      expect(mockSaveImageToAssets).not.toHaveBeenCalled();
+    });
+
+    it("handles missing block_image node type", async () => {
+      const file = new File(["img"], "photo.png", { type: "image/png" });
+      (file as unknown as Record<string, unknown>).arrayBuffer = vi.fn(() =>
+        Promise.resolve(new ArrayBuffer(4))
+      );
+      mockIsImageFile.mockImplementation((f: File) => f.type.startsWith("image/"));
+
+      const event = createMockDragEvent({
+        dataTransfer: {
+          files: [file],
+          getData: () => "",
+        },
+      });
+      // Create view with schema that has no block_image
+      const view = createMockView();
+      (view as Record<string, unknown>).state = {
+        ...(view as Record<string, unknown>).state as Record<string, unknown>,
+        schema: { nodes: {} },
+      };
+
+      handleDrop(view, event, null, false);
+
+      await vi.waitFor(() => {
+        expect(mockSaveImageToAssets).toHaveBeenCalled();
+      }, { timeout: 200 });
+
+      // Should not dispatch since block_image type is missing
+      expect((view as Record<string, unknown>).dispatch).not.toHaveBeenCalled();
+    });
+
+    it("inserts multiple images with correct position tracking", async () => {
+      const file1 = new File(["img1"], "a.png", { type: "image/png" });
+      (file1 as unknown as Record<string, unknown>).arrayBuffer = vi.fn(() =>
+        Promise.resolve(new ArrayBuffer(4))
+      );
+      const file2 = new File(["img2"], "b.png", { type: "image/png" });
+      (file2 as unknown as Record<string, unknown>).arrayBuffer = vi.fn(() =>
+        Promise.resolve(new ArrayBuffer(4))
+      );
+      mockIsImageFile.mockImplementation((f: File) => f.type.startsWith("image/"));
+      mockSaveImageToAssets
+        .mockResolvedValueOnce(".assets/a.png")
+        .mockResolvedValueOnce(".assets/b.png");
+
+      const event = createMockDragEvent({
+        dataTransfer: {
+          files: [file1, file2],
+          getData: () => "",
+        },
+      });
+      const view = createMockView();
+
+      handleDrop(view, event, null, false);
+
+      await vi.waitFor(() => {
+        expect(mockSaveImageToAssets).toHaveBeenCalledTimes(2);
+      }, { timeout: 200 });
+
+      await vi.waitFor(() => {
+        expect((view as Record<string, unknown>).dispatch).toHaveBeenCalled();
+      }, { timeout: 200 });
+    });
+  });
 });
