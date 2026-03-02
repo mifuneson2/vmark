@@ -5,10 +5,10 @@
   "coverageSummaryPath": "coverage/coverage-summary.json",
   "mutationCommand": "",
   "thresholds": {
-    "lines": 44,
-    "functions": 50,
-    "branches": 37,
-    "statements": 43
+    "lines": 100,
+    "functions": 100,
+    "branches": 100,
+    "statements": 100
   },
   "enforceRedGreenRefactor": true,
   "blockCommitOnFailure": true,
