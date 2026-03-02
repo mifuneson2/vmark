@@ -127,6 +127,31 @@ describe("windowScopedStorage", () => {
   it("returns null for non-existent key", () => {
     expect(windowScopedStorage.getItem("ignored")).toBeNull();
   });
+
+  it("swallows QuotaExceededError on setItem", () => {
+    // Simulate QuotaExceededError
+    const originalSetItem = Storage.prototype.setItem;
+    Storage.prototype.setItem = () => {
+      const error = new DOMException("quota exceeded", "QuotaExceededError");
+      throw error;
+    };
+
+    // Should not throw
+    expect(() => windowScopedStorage.setItem("ignored", "data")).not.toThrow();
+
+    Storage.prototype.setItem = originalSetItem;
+  });
+
+  it("rethrows non-quota errors on setItem", () => {
+    const originalSetItem = Storage.prototype.setItem;
+    Storage.prototype.setItem = () => {
+      throw new Error("some other error");
+    };
+
+    expect(() => windowScopedStorage.setItem("ignored", "data")).toThrow("some other error");
+
+    Storage.prototype.setItem = originalSetItem;
+  });
 });
 
 describe("findActiveWorkspaceLabel", () => {

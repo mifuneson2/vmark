@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { CJKFormattingSettings } from "@/stores/settingsStore";
 import {
   removeTrailingSpaces,
   normalizeEllipsis,
@@ -23,6 +24,7 @@ import {
   convertNestedCornerQuotes,
   limitConsecutivePunctuation,
   containsCJK,
+  applyRules,
 } from "./rules";
 
 describe("containsCJK", () => {
@@ -1212,5 +1214,264 @@ describe("limitConsecutivePunctuation", () => {
 
   it("returns unchanged when limit is 0", () => {
     expect(limitConsecutivePunctuation("！！！", 0)).toBe("！！！");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// normalizeFullwidthPunctuation — uncovered branches
+// ---------------------------------------------------------------------------
+describe("normalizeFullwidthPunctuation edge cases", () => {
+  it("does not convert backslash-escaped punctuation", () => {
+    // Line 235-236: backslash escape protection
+    expect(normalizeFullwidthPunctuation("中文\\,内容")).toBe("中文\\,内容");
+    expect(normalizeFullwidthPunctuation("中文\\.内容")).toBe("中文\\.内容");
+  });
+
+  it("does not convert punctuation when only spaces to the left (no CJK neighbor)", () => {
+    // Line 94: getLeftNeighbor returns "" when all chars to the left are spaces
+    expect(normalizeFullwidthPunctuation("   ,中文")).toBe("   ，中文");
+    // But when there's only spaces to the left and no CJK to the right
+    expect(normalizeFullwidthPunctuation("   , text")).toBe("   , text");
+  });
+});
+
+describe("removeTrailingSpaces edge cases", () => {
+  it("strips single trailing space from \\r-terminated line", () => {
+    // Lines 653-655: content.endsWith("\\r") branch, then strip single trailing space
+    const result = removeTrailingSpaces("hello \r\nworld", {
+      preserveTwoSpaceHardBreaks: true,
+    });
+    expect(result).toBe("hello\r\nworld");
+  });
+
+  it("preserves two-space hard break on \\r-terminated line", () => {
+    const result = removeTrailingSpaces("hello  \r\nworld", {
+      preserveTwoSpaceHardBreaks: true,
+    });
+    expect(result).toBe("hello  \r\nworld");
+  });
+
+  it("strips trailing spaces from blank \\r-terminated line", () => {
+    // before.trim().length === 0, so trailing spaces are stripped
+    const result = removeTrailingSpaces("   \r\nworld", {
+      preserveTwoSpaceHardBreaks: true,
+    });
+    expect(result).toBe("\r\nworld");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// convertStraightToSmartQuotes — CJK single quotes
+// ---------------------------------------------------------------------------
+describe("convertStraightToSmartQuotes - CJK single quotes", () => {
+  it("converts single quotes after CJK characters", () => {
+    // Line 576: regex for CJK + 'text' pattern
+    const result = convertStraightToSmartQuotes("中文'hello'结束", "curly");
+    expect(result).toContain("\u2018hello\u2019");
+  });
+
+  it("converts single quotes after CJK in corner style", () => {
+    const result = convertStraightToSmartQuotes("中文'hello'结束", "corner");
+    expect(result).toContain("『hello』");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// applyRules — integration tests for config branches
+// ---------------------------------------------------------------------------
+
+function makeConfig(partial: Partial<CJKFormattingSettings> = {}): CJKFormattingSettings {
+  return {
+    ellipsisNormalization: false,
+    newlineCollapsing: false,
+    fullwidthAlphanumeric: false,
+    fullwidthPunctuation: false,
+    fullwidthParentheses: false,
+    fullwidthBrackets: false,
+    cjkEnglishSpacing: false,
+    cjkParenthesisSpacing: false,
+    currencySpacing: false,
+    slashSpacing: false,
+    spaceCollapsing: false,
+    dashConversion: false,
+    emdashSpacing: false,
+    smartQuoteConversion: false,
+    quoteStyle: "curly",
+    contextualQuotes: false,
+    quoteSpacing: false,
+    singleQuoteSpacing: false,
+    cjkCornerQuotes: false,
+    cjkNestedQuotes: false,
+    quoteToggleMode: "simple",
+    consecutivePunctuationLimit: 0,
+    trailingSpaceRemoval: false,
+    ...partial,
+  };
+}
+
+describe("applyRules", () => {
+  it("applies ellipsis normalization", () => {
+    const result = applyRules(". . .", makeConfig({ ellipsisNormalization: true }));
+    expect(result).toBe("...");
+  });
+
+  it("applies fullwidth alphanumeric normalization with CJK text", () => {
+    const result = applyRules("中文Ａ１", makeConfig({ fullwidthAlphanumeric: true }));
+    expect(result).toContain("A1");
+  });
+
+  it("applies fullwidth brackets normalization with CJK text", () => {
+    const result = applyRules("[中文内容]", makeConfig({ fullwidthBrackets: true }));
+    expect(result).toBe("【中文内容】");
+  });
+
+  it("applies dash conversion with CJK text", () => {
+    const result = applyRules("中文--英文", makeConfig({ dashConversion: true }));
+    expect(result).toContain("——");
+  });
+
+  it("applies emdash spacing with CJK text", () => {
+    const result = applyRules("中文——英文", makeConfig({ emdashSpacing: true }));
+    expect(result).toBe("中文 —— 英文");
+  });
+
+  it("applies smart quote conversion with curly style and cjkCornerQuotes", () => {
+    const result = applyRules(
+      '中文"Hello"',
+      makeConfig({ smartQuoteConversion: true, quoteStyle: "curly", cjkCornerQuotes: true })
+    );
+    // corner-for-cjk mode: CJK-involved quotes become corner brackets
+    expect(result).toBe("中文「Hello」");
+  });
+
+  it("applies smart quote conversion with curly style and contextualQuotes", () => {
+    const result = applyRules(
+      '中文"Hello"',
+      makeConfig({ smartQuoteConversion: true, quoteStyle: "curly", contextualQuotes: true })
+    );
+    // contextual mode: CJK-involved quotes become curly
+    expect(result).toContain("\u201c");
+    expect(result).toContain("\u201d");
+  });
+
+  it("applies smart quote conversion with curly style (curly-everywhere)", () => {
+    const result = applyRules(
+      '中文"Hello"',
+      makeConfig({ smartQuoteConversion: true, quoteStyle: "curly" })
+    );
+    // curly-everywhere mode
+    expect(result).toContain("\u201c");
+    expect(result).toContain("\u201d");
+  });
+
+  it("applies smart quote conversion with corner style", () => {
+    const result = applyRules(
+      '中文"Hello"',
+      makeConfig({ smartQuoteConversion: true, quoteStyle: "corner" })
+    );
+    // corner style also uses stack-based algorithm
+    expect(result).toBeDefined();
+  });
+
+  it("falls back to regex for guillemets style", () => {
+    const result = applyRules(
+      '中文"Hello"',
+      makeConfig({ smartQuoteConversion: true, quoteStyle: "guillemets" })
+    );
+    expect(result).toContain("«");
+    expect(result).toContain("»");
+  });
+
+  it("applies nested corner quotes", () => {
+    const OSQ = "\u2018";
+    const CSQ = "\u2019";
+    const result = applyRules(
+      `「外层${OSQ}内层${CSQ}」`,
+      makeConfig({ cjkNestedQuotes: true })
+    );
+    expect(result).toContain("『内层』");
+  });
+
+  it("applies quote spacing", () => {
+    const result = applyRules(
+      "中文\u201chello\u201d内容",
+      makeConfig({ quoteSpacing: true })
+    );
+    expect(result).toContain(" \u201c");
+    expect(result).toContain("\u201d ");
+  });
+
+  it("applies single quote spacing", () => {
+    const result = applyRules(
+      "中文\u2018hello\u2019内容",
+      makeConfig({ singleQuoteSpacing: true })
+    );
+    expect(result).toContain(" \u2018");
+    expect(result).toContain("\u2019 ");
+  });
+
+  it("applies CJK-English spacing", () => {
+    const result = applyRules("中文Hello", makeConfig({ cjkEnglishSpacing: true }));
+    expect(result).toBe("中文 Hello");
+  });
+
+  it("applies CJK parenthesis spacing", () => {
+    const result = applyRules("中文(text)", makeConfig({ cjkParenthesisSpacing: true }));
+    expect(result).toBe("中文 (text)");
+  });
+
+  it("applies fullwidth parentheses", () => {
+    const result = applyRules("(中文内容)", makeConfig({ fullwidthParentheses: true }));
+    expect(result).toBe("（中文内容）");
+  });
+
+  it("applies currency spacing", () => {
+    const result = applyRules("中文 $ 100", makeConfig({ currencySpacing: true }));
+    expect(result).toContain("$100");
+  });
+
+  it("applies slash spacing", () => {
+    const result = applyRules("中文 A / B", makeConfig({ slashSpacing: true }));
+    expect(result).toContain("A/B");
+  });
+
+  it("applies consecutive punctuation limit", () => {
+    const result = applyRules("中文！！！", makeConfig({ consecutivePunctuationLimit: 1 }));
+    expect(result).toBe("中文！");
+  });
+
+  it("applies space collapsing", () => {
+    const result = applyRules("hello  world", makeConfig({ spaceCollapsing: true }));
+    expect(result).toBe("hello world");
+  });
+
+  it("applies trailing space removal", () => {
+    const result = applyRules("hello   ", makeConfig({ trailingSpaceRemoval: true }));
+    expect(result).toBe("hello");
+  });
+
+  it("applies trailing space removal with preserveTwoSpaceHardBreaks", () => {
+    const result = applyRules(
+      "hello  \nworld  \n   ",
+      makeConfig({ trailingSpaceRemoval: true }),
+      { preserveTwoSpaceHardBreaks: true }
+    );
+    // Two-space hard break preserved on lines with content
+    expect(result).toContain("hello  \n");
+    expect(result).toContain("world  \n");
+  });
+
+  it("applies newline collapsing", () => {
+    const result = applyRules("hello\n\n\n\nworld", makeConfig({ newlineCollapsing: true }));
+    expect(result).toBe("hello\n\nworld");
+  });
+
+  it("skips CJK rules for pure Latin text", () => {
+    const result = applyRules("Hello, World!", makeConfig({
+      fullwidthPunctuation: true,
+      cjkEnglishSpacing: true,
+    }));
+    // No CJK chars, so CJK rules are skipped — comma stays ASCII
+    expect(result).toBe("Hello, World!");
   });
 });

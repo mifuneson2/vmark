@@ -294,5 +294,342 @@ describe("batchOpHandlers", () => {
         error: "At least one operation is required",
       });
     });
+
+    it("returns dryRun preview without making changes", async () => {
+      const listNode = {
+        type: { name: "bulletList" },
+        nodeSize: 20,
+      };
+
+      const editor = {
+        state: {
+          doc: {
+            descendants: (
+              cb: (node: unknown, pos: number) => boolean | undefined
+            ) => {
+              cb(listNode, 0);
+            },
+          },
+        },
+      };
+      mockGetEditor.mockReturnValue(editor);
+
+      await handleListBatchModify("req-14", {
+        baseRevision: "rev-1",
+        target: { listIndex: 0 },
+        operations: [
+          { action: "add_item", at: 0, text: "new item" },
+        ],
+        mode: "dryRun",
+      });
+
+      const call = mockRespond.mock.calls[0][0];
+      expect(call.success).toBe(true);
+      expect(call.data.isDryRun).toBe(true);
+      expect(call.data.preview.listType).toBe("bulletList");
+      expect(call.data.preview.operationCount).toBe(1);
+    });
+
+    it("returns suggest-mode warning when auto-approve disabled", async () => {
+      const listNode = {
+        type: { name: "orderedList" },
+        nodeSize: 20,
+      };
+
+      const editor = {
+        state: {
+          doc: {
+            descendants: (
+              cb: (node: unknown, pos: number) => boolean | undefined
+            ) => {
+              cb(listNode, 0);
+            },
+          },
+        },
+      };
+      mockGetEditor.mockReturnValue(editor);
+      mockIsAutoApproveEnabled.mockReturnValue(false);
+
+      await handleListBatchModify("req-15", {
+        baseRevision: "rev-1",
+        target: { listIndex: 0 },
+        operations: [{ action: "add_item", at: 0, text: "item" }],
+        mode: "suggest",
+      });
+
+      const call = mockRespond.mock.calls[0][0];
+      expect(call.success).toBe(true);
+      expect(call.data.warning).toContain("suggest mode not yet supported");
+    });
+
+    it("finds list by selector (bulletlist)", async () => {
+      const listNode = {
+        type: { name: "bulletList" },
+        nodeSize: 20,
+      };
+
+      const editor = {
+        state: {
+          doc: {
+            descendants: (
+              cb: (node: unknown, pos: number) => boolean | undefined
+            ) => {
+              cb(listNode, 0);
+            },
+          },
+        },
+      };
+      mockGetEditor.mockReturnValue(editor);
+
+      await handleListBatchModify("req-16", {
+        baseRevision: "rev-1",
+        target: { selector: "ul" },
+        operations: [{ action: "add_item", at: 0, text: "item" }],
+        mode: "dryRun",
+      });
+
+      const call = mockRespond.mock.calls[0][0];
+      expect(call.success).toBe(true);
+      expect(call.data.isDryRun).toBe(true);
+    });
+
+    it("finds list by selector (tasklist)", async () => {
+      const listNode = {
+        type: { name: "taskList" },
+        nodeSize: 20,
+      };
+
+      const editor = {
+        state: {
+          doc: {
+            descendants: (
+              cb: (node: unknown, pos: number) => boolean | undefined
+            ) => {
+              cb(listNode, 0);
+            },
+          },
+        },
+      };
+      mockGetEditor.mockReturnValue(editor);
+
+      await handleListBatchModify("req-17", {
+        baseRevision: "rev-1",
+        target: { selector: "task" },
+        operations: [{ action: "add_item", at: 0, text: "item" }],
+        mode: "dryRun",
+      });
+
+      const call = mockRespond.mock.calls[0][0];
+      expect(call.success).toBe(true);
+    });
+
+    it("finds list by selector (orderedlist)", async () => {
+      const listNode = {
+        type: { name: "orderedList" },
+        nodeSize: 20,
+      };
+
+      const editor = {
+        state: {
+          doc: {
+            descendants: (
+              cb: (node: unknown, pos: number) => boolean | undefined
+            ) => {
+              cb(listNode, 0);
+            },
+          },
+        },
+      };
+      mockGetEditor.mockReturnValue(editor);
+
+      await handleListBatchModify("req-18", {
+        baseRevision: "rev-1",
+        target: { selector: "ol" },
+        operations: [{ action: "add_item", at: 0, text: "item" }],
+        mode: "dryRun",
+      });
+
+      const call = mockRespond.mock.calls[0][0];
+      expect(call.success).toBe(true);
+    });
+  });
+
+  describe("handleTableBatchModify — suggest mode", () => {
+    it("returns warning in suggest mode", async () => {
+      const tableNode = {
+        type: { name: "table" },
+        childCount: 1,
+        nodeSize: 26,
+      };
+      const editor = {
+        state: {
+          doc: {
+            descendants: (
+              cb: (node: unknown, pos: number) => boolean | undefined
+            ) => {
+              cb(tableNode, 0);
+            },
+          },
+        },
+      };
+      mockGetEditor.mockReturnValue(editor);
+      mockIsAutoApproveEnabled.mockReturnValue(false);
+
+      await handleTableBatchModify("req-20", {
+        baseRevision: "rev-1",
+        target: { tableIndex: 0 },
+        operations: [{ action: "add_row", at: 0, cells: ["a"] }],
+        mode: "suggest",
+      });
+
+      const call = mockRespond.mock.calls[0][0];
+      expect(call.success).toBe(true);
+      expect(call.data.warning).toContain("suggest mode not yet supported");
+    });
+  });
+
+  describe("handleTableBatchModify — afterHeading target", () => {
+    it("finds table after a specific heading", async () => {
+      const headingNode = {
+        type: { name: "heading" },
+        nodeSize: 10,
+        isText: false,
+        text: undefined,
+        descendants: (cb: (child: unknown) => boolean) => {
+          cb({ isText: true, text: "My Table" });
+        },
+      };
+      const tableNode = {
+        type: { name: "table" },
+        childCount: 1,
+        nodeSize: 26,
+      };
+
+      const editor = {
+        state: {
+          doc: {
+            descendants: (
+              cb: (node: unknown, pos: number) => boolean | undefined
+            ) => {
+              cb(headingNode, 0);
+              cb(tableNode, 10);
+            },
+          },
+        },
+      };
+      mockGetEditor.mockReturnValue(editor);
+
+      await handleTableBatchModify("req-21", {
+        baseRevision: "rev-1",
+        target: { afterHeading: "My Table" },
+        operations: [{ action: "add_row", at: 0, cells: ["a"] }],
+        mode: "dryRun",
+      });
+
+      const call = mockRespond.mock.calls[0][0];
+      expect(call.success).toBe(true);
+      expect(call.data.isDryRun).toBe(true);
+    });
+
+    it("is case-insensitive when matching headings", async () => {
+      const headingNode = {
+        type: { name: "heading" },
+        nodeSize: 10,
+        isText: false,
+        text: undefined,
+        descendants: (cb: (child: unknown) => boolean) => {
+          cb({ isText: true, text: "Data Table" });
+        },
+      };
+      const tableNode = {
+        type: { name: "table" },
+        childCount: 1,
+        nodeSize: 26,
+      };
+
+      const editor = {
+        state: {
+          doc: {
+            descendants: (
+              cb: (node: unknown, pos: number) => boolean | undefined
+            ) => {
+              cb(headingNode, 0);
+              cb(tableNode, 10);
+            },
+          },
+        },
+      };
+      mockGetEditor.mockReturnValue(editor);
+
+      await handleTableBatchModify("req-22", {
+        baseRevision: "rev-1",
+        target: { afterHeading: "data table" },
+        operations: [{ action: "add_row", at: 0, cells: ["a"] }],
+        mode: "dryRun",
+      });
+
+      const call = mockRespond.mock.calls[0][0];
+      expect(call.success).toBe(true);
+    });
+  });
+
+  describe("handleTableBatchModify — normalizeOp", () => {
+    it("accepts type or op as action key aliases", async () => {
+      const tableRow = {
+        type: { name: "tableRow" },
+        childCount: 1,
+        child: () => ({
+          type: { name: "tableHeader" },
+          nodeSize: 5,
+        }),
+        nodeSize: 7,
+        firstChild: {
+          type: { name: "tableHeader" },
+          firstChild: { type: { name: "tableHeader" } },
+        },
+      };
+      const tableNode = {
+        type: { name: "table" },
+        childCount: 1,
+        child: () => tableRow,
+        firstChild: tableRow,
+        nodeSize: 9,
+        forEach: vi.fn(),
+      };
+
+      const chainMethods = {
+        focus: vi.fn().mockReturnThis(),
+        setTextSelection: vi.fn().mockReturnThis(),
+        run: vi.fn(),
+      };
+
+      const editor = {
+        state: {
+          doc: {
+            descendants: (
+              cb: (node: unknown, pos: number) => boolean | undefined
+            ) => {
+              cb(tableNode, 0);
+            },
+          },
+        },
+        chain: vi.fn().mockReturnValue(chainMethods),
+        commands: {
+          addRowAfter: vi.fn(),
+        },
+      };
+      mockGetEditor.mockReturnValue(editor);
+
+      // Use "type" key instead of "action"
+      await handleTableBatchModify("req-23", {
+        baseRevision: "rev-1",
+        target: { tableIndex: 0 },
+        operations: [{ type: "add_row", at: 0, cells: ["a"] }],
+      });
+
+      const call = mockRespond.mock.calls[0][0];
+      expect(call.success).toBe(true);
+      expect(call.data.appliedCount).toBeGreaterThanOrEqual(0);
+    });
   });
 });

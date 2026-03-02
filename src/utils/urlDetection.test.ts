@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { detectAndNormalizeUrl, looksLikeUrl } from "./urlDetection";
+import { detectAndNormalizeUrl, looksLikeUrl, truncateUrl } from "./urlDetection";
 
 describe("detectAndNormalizeUrl", () => {
   describe("standard protocols", () => {
@@ -228,6 +228,54 @@ describe("detectAndNormalizeUrl", () => {
       const result = detectAndNormalizeUrl(original);
       expect(result.originalText).toBe(original);
     });
+  });
+});
+
+describe("truncateUrl", () => {
+  it("returns short URL unchanged", () => {
+    expect(truncateUrl("https://example.com")).toBe("https://example.com");
+  });
+
+  it("truncates long URL with ellipsis", () => {
+    const longUrl = "https://example.com/very/long/path/to/some/deeply/nested/resource/page.html?query=value&other=param";
+    const result = truncateUrl(longUrl);
+    expect(result.length).toBeLessThan(longUrl.length);
+    expect(result).toContain("...");
+    // Keeps first 30 and last 25 chars
+    expect(result).toBe(longUrl.slice(0, 30) + "..." + longUrl.slice(-25));
+  });
+
+  it("respects custom maxLength", () => {
+    const url = "https://example.com/path/to/resource";
+    expect(truncateUrl(url, 100)).toBe(url); // Under limit
+    expect(truncateUrl(url, 20)).toContain("..."); // Over limit
+  });
+
+  it("handles exactly maxLength URL", () => {
+    const url = "a".repeat(60);
+    expect(truncateUrl(url, 60)).toBe(url);
+  });
+});
+
+describe("detectAndNormalizeUrl - additional edge cases", () => {
+  it("handles multi-line text and uses first non-empty line", () => {
+    // trim() removes leading newlines, split("\n")[0] gets first line
+    const result = detectAndNormalizeUrl("\n\nhttps://example.com");
+    // After trim: "https://example.com", first line is valid URL
+    expect(result.isUrl).toBe(true);
+    expect(result.normalizedUrl).toBe("https://example.com");
+  });
+
+  it("handles .io domain without path", () => {
+    const result = detectAndNormalizeUrl("myapp.io");
+    expect(result.isUrl).toBe(true);
+    expect(result.normalizedUrl).toBe("https://myapp.io");
+  });
+
+  it("handles IP with path", () => {
+    const result = detectAndNormalizeUrl("10.0.0.1/api/v1");
+    expect(result.isUrl).toBe(true);
+    expect(result.normalizedUrl).toBe("http://10.0.0.1/api/v1");
   });
 });
 

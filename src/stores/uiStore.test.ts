@@ -231,4 +231,164 @@ describe("uiStore", () => {
       expect(state.toolbarDropdownOpen).toBe(false);
     });
   });
+
+  describe("openSettings / closeSettings", () => {
+    it("opens settings", () => {
+      useUIStore.getState().openSettings();
+      expect(useUIStore.getState().settingsOpen).toBe(true);
+    });
+
+    it("closes settings", () => {
+      useUIStore.getState().openSettings();
+      useUIStore.getState().closeSettings();
+      expect(useUIStore.getState().settingsOpen).toBe(false);
+    });
+  });
+
+  describe("toggleSidebar", () => {
+    it("toggles sidebar visibility", () => {
+      expect(useUIStore.getState().sidebarVisible).toBe(false);
+
+      useUIStore.getState().toggleSidebar();
+      expect(useUIStore.getState().sidebarVisible).toBe(true);
+
+      useUIStore.getState().toggleSidebar();
+      expect(useUIStore.getState().sidebarVisible).toBe(false);
+    });
+  });
+
+  describe("setSidebarViewMode", () => {
+    it("sets sidebar view mode directly", () => {
+      useUIStore.getState().setSidebarViewMode("files");
+      expect(useUIStore.getState().sidebarViewMode).toBe("files");
+
+      useUIStore.getState().setSidebarViewMode("history");
+      expect(useUIStore.getState().sidebarViewMode).toBe("history");
+    });
+  });
+
+  describe("showSidebarWithView", () => {
+    it("opens sidebar and sets view mode", () => {
+      useUIStore.getState().showSidebarWithView("files");
+
+      const state = useUIStore.getState();
+      expect(state.sidebarVisible).toBe(true);
+      expect(state.sidebarViewMode).toBe("files");
+    });
+
+    it("changes view mode when sidebar already visible", () => {
+      useUIStore.setState({ sidebarVisible: true, sidebarViewMode: "outline" });
+
+      useUIStore.getState().showSidebarWithView("history");
+
+      const state = useUIStore.getState();
+      expect(state.sidebarVisible).toBe(true);
+      expect(state.sidebarViewMode).toBe("history");
+    });
+  });
+
+  describe("setActiveHeadingLine", () => {
+    it("sets active heading line", () => {
+      useUIStore.getState().setActiveHeadingLine(42);
+      expect(useUIStore.getState().activeHeadingLine).toBe(42);
+    });
+
+    it("clears active heading line with null", () => {
+      useUIStore.getState().setActiveHeadingLine(10);
+      useUIStore.getState().setActiveHeadingLine(null);
+      expect(useUIStore.getState().activeHeadingLine).toBeNull();
+    });
+  });
+
+  describe("setSidebarWidth", () => {
+    it("clamps to minimum width", () => {
+      useUIStore.getState().setSidebarWidth(50);
+      expect(useUIStore.getState().sidebarWidth).toBe(180);
+    });
+
+    it("clamps to maximum width", () => {
+      useUIStore.getState().setSidebarWidth(1000);
+      expect(useUIStore.getState().sidebarWidth).toBe(480);
+    });
+
+    it("accepts values within range", () => {
+      useUIStore.getState().setSidebarWidth(300);
+      expect(useUIStore.getState().sidebarWidth).toBe(300);
+    });
+  });
+
+  describe("setStatusBarVisible", () => {
+    it("sets status bar visibility", () => {
+      useUIStore.getState().setStatusBarVisible(false);
+      expect(useUIStore.getState().statusBarVisible).toBe(false);
+
+      useUIStore.getState().setStatusBarVisible(true);
+      expect(useUIStore.getState().statusBarVisible).toBe(true);
+    });
+  });
+
+  describe("setUniversalToolbarHasFocus", () => {
+    it("sets toolbar focus directly", () => {
+      useUIStore.getState().setUniversalToolbarHasFocus(true);
+      expect(useUIStore.getState().universalToolbarHasFocus).toBe(true);
+
+      useUIStore.getState().setUniversalToolbarHasFocus(false);
+      expect(useUIStore.getState().universalToolbarHasFocus).toBe(false);
+    });
+  });
+
+  describe("setDraggingFiles", () => {
+    it("sets file dragging state", () => {
+      useUIStore.getState().setDraggingFiles(true);
+      expect(useUIStore.getState().isDraggingFiles).toBe(true);
+
+      useUIStore.getState().setDraggingFiles(false);
+      expect(useUIStore.getState().isDraggingFiles).toBe(false);
+    });
+  });
+
+  describe("toggleTerminal", () => {
+    it("toggles terminal visibility", () => {
+      expect(useUIStore.getState().terminalVisible).toBe(false);
+
+      useUIStore.getState().toggleTerminal();
+      expect(useUIStore.getState().terminalVisible).toBe(true);
+
+      useUIStore.getState().toggleTerminal();
+      expect(useUIStore.getState().terminalVisible).toBe(false);
+    });
+  });
+
+  describe("setTerminalHeight", () => {
+    it("clamps to minimum height", () => {
+      useUIStore.getState().setTerminalHeight(50);
+      expect(useUIStore.getState().terminalHeight).toBe(100);
+    });
+
+    it("clamps to maximum height", () => {
+      useUIStore.getState().setTerminalHeight(1000);
+      expect(useUIStore.getState().terminalHeight).toBe(600);
+    });
+
+    it("accepts values within range", () => {
+      useUIStore.getState().setTerminalHeight(300);
+      expect(useUIStore.getState().terminalHeight).toBe(300);
+    });
+  });
+
+  describe("setUniversalToolbarVisible", () => {
+    it("preserves focus when keeping toolbar visible", () => {
+      useUIStore.setState({
+        universalToolbarVisible: true,
+        universalToolbarHasFocus: true,
+        toolbarSessionFocusIndex: 3,
+      });
+
+      useUIStore.getState().setUniversalToolbarVisible(true);
+
+      const state = useUIStore.getState();
+      expect(state.universalToolbarHasFocus).toBe(true);
+      expect(state.toolbarSessionFocusIndex).toBe(3);
+    });
+  });
 });

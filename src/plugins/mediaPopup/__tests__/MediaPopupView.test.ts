@@ -776,6 +776,205 @@ describe("MediaPopupView", () => {
     });
   });
 
+  describe("Live input updates", () => {
+    beforeEach(async () => {
+      emitStateChange({
+        isOpen: true,
+        mediaSrc: "/test.mp4",
+        mediaTitle: "Title",
+        mediaPoster: "poster.jpg",
+        mediaAlt: "Alt",
+        mediaNodePos: 10,
+        mediaNodeType: "block_video",
+        anchorRect,
+      });
+      await new Promise((r) => requestAnimationFrame(r));
+      await new Promise((r) => requestAnimationFrame(r));
+    });
+
+    it("src input change updates store and node", () => {
+      const srcInput = dom.container.querySelector(".media-popup-src") as HTMLInputElement;
+      srcInput.value = "/new-path.mp4";
+      srcInput.dispatchEvent(new Event("input", { bubbles: true }));
+
+      expect(mockSetSrc).toHaveBeenCalledWith("/new-path.mp4");
+    });
+
+    it("alt input change updates store", async () => {
+      // Switch to image type for alt row
+      emitStateChange({
+        isOpen: true,
+        mediaSrc: "/image.png",
+        mediaAlt: "old alt",
+        mediaNodeType: "image",
+        mediaNodePos: 5,
+        anchorRect,
+      });
+      await new Promise((r) => requestAnimationFrame(r));
+
+      // Need a fresh view for image type
+      view = createMockView(dom.editorDom, "image");
+
+      const altInput = dom.container.querySelector(".media-popup-alt") as HTMLInputElement;
+      altInput.value = "new alt text";
+      altInput.dispatchEvent(new Event("input", { bubbles: true }));
+
+      expect(mockSetAlt).toHaveBeenCalledWith("new alt text");
+    });
+
+    it("title input change updates store", () => {
+      const titleInput = dom.container.querySelector(".media-popup-title") as HTMLInputElement;
+      titleInput.value = "New Title";
+      titleInput.dispatchEvent(new Event("input", { bubbles: true }));
+
+      expect(mockSetTitle).toHaveBeenCalledWith("New Title");
+    });
+
+    it("poster input change updates store", () => {
+      const posterInput = dom.container.querySelector(".media-popup-poster") as HTMLInputElement;
+      posterInput.value = "/new-poster.jpg";
+      posterInput.dispatchEvent(new Event("input", { bubbles: true }));
+
+      expect(mockSetPoster).toHaveBeenCalledWith("/new-poster.jpg");
+    });
+  });
+
+  describe("Save behavior", () => {
+    beforeEach(async () => {
+      emitStateChange({
+        isOpen: true,
+        mediaSrc: "/test.mp4",
+        mediaTitle: "Title",
+        mediaNodePos: 10,
+        mediaNodeType: "block_video",
+        anchorRect,
+      });
+      await new Promise((r) => requestAnimationFrame(r));
+      await new Promise((r) => requestAnimationFrame(r));
+    });
+
+    it("saves with video attrs (src + title + poster)", () => {
+      const srcInput = dom.container.querySelector(".media-popup-src") as HTMLInputElement;
+      srcInput.value = "/new-video.mp4";
+
+      const titleInput = dom.container.querySelector(".media-popup-title") as HTMLInputElement;
+      titleInput.value = "New Title";
+
+      const posterInput = dom.container.querySelector(".media-popup-poster") as HTMLInputElement;
+      posterInput.value = "poster.jpg";
+
+      // Trigger save via Enter
+      const event = new KeyboardEvent("keydown", { key: "Enter", bubbles: true });
+      srcInput.dispatchEvent(event);
+
+      expect(view.dispatch).toHaveBeenCalled();
+      expect(mockClosePopup).toHaveBeenCalled();
+    });
+
+    it("removes media when src is empty on save", () => {
+      const srcInput = dom.container.querySelector(".media-popup-src") as HTMLInputElement;
+      srcInput.value = "";
+
+      const event = new KeyboardEvent("keydown", { key: "Enter", bubbles: true });
+      srcInput.dispatchEvent(event);
+
+      // Should call handleRemove which deletes the node
+      expect(mockClosePopup).toHaveBeenCalled();
+    });
+
+    it("saves with image attrs (src + alt)", async () => {
+      const imgView = createMockView(dom.editorDom, "image");
+      popup.destroy();
+      resetState();
+      subscribers.length = 0;
+      popup = new MediaPopupView(imgView as unknown as ConstructorParameters<typeof MediaPopupView>[0]);
+
+      emitStateChange({
+        isOpen: true,
+        mediaSrc: "/image.png",
+        mediaAlt: "Alt text",
+        mediaNodeType: "image",
+        mediaNodePos: 5,
+        anchorRect,
+      });
+      await new Promise((r) => requestAnimationFrame(r));
+      await new Promise((r) => requestAnimationFrame(r));
+
+      const srcInput = dom.container.querySelector(".media-popup-src") as HTMLInputElement;
+      srcInput.value = "/new-image.png";
+
+      const event = new KeyboardEvent("keydown", { key: "Enter", bubbles: true });
+      srcInput.dispatchEvent(event);
+
+      expect(imgView.dispatch).toHaveBeenCalled();
+      expect(mockClosePopup).toHaveBeenCalled();
+    });
+  });
+
+  describe("Toggle behavior", () => {
+    it("toggles image to block_image", async () => {
+      const imgView = createMockView(dom.editorDom, "image");
+      popup.destroy();
+      resetState();
+      subscribers.length = 0;
+      popup = new MediaPopupView(imgView as unknown as ConstructorParameters<typeof MediaPopupView>[0]);
+
+      emitStateChange({
+        isOpen: true,
+        mediaSrc: "/image.png",
+        mediaNodeType: "image",
+        mediaNodePos: 5,
+        anchorRect,
+      });
+      await new Promise((r) => requestAnimationFrame(r));
+      await new Promise((r) => requestAnimationFrame(r));
+
+      const toggleBtn = dom.container.querySelector(".media-popup-btn-toggle") as HTMLElement;
+      toggleBtn.click();
+
+      expect(imgView.dispatch).toHaveBeenCalled();
+      expect(mockClosePopup).toHaveBeenCalled();
+    });
+
+    it("does nothing for non-image types", async () => {
+      emitStateChange({
+        isOpen: true,
+        mediaSrc: "/video.mp4",
+        mediaNodeType: "block_video",
+        mediaNodePos: 10,
+        anchorRect,
+      });
+      await new Promise((r) => requestAnimationFrame(r));
+      await new Promise((r) => requestAnimationFrame(r));
+
+      const toggleBtn = dom.container.querySelector(".media-popup-btn-toggle") as HTMLElement;
+      toggleBtn.click();
+
+      expect(view.dispatch).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("Remove behavior", () => {
+    it("deletes the media node", async () => {
+      emitStateChange({
+        isOpen: true,
+        mediaSrc: "/video.mp4",
+        mediaNodeType: "block_video",
+        mediaNodePos: 10,
+        anchorRect,
+      });
+      await new Promise((r) => requestAnimationFrame(r));
+      await new Promise((r) => requestAnimationFrame(r));
+
+      const deleteBtn = dom.container.querySelector('button[title="Remove media"]') as HTMLElement;
+      deleteBtn.click();
+
+      expect(view.dispatch).toHaveBeenCalled();
+      expect(mockClosePopup).toHaveBeenCalled();
+      expect(view.focus).toHaveBeenCalled();
+    });
+  });
+
   describe("Pending close rAF cancelled on reopen", () => {
     it("cancels pending close when popup is reopened", async () => {
       emitStateChange({

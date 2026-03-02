@@ -511,6 +511,26 @@ describe("commands", () => {
       const state = createState("hello world", { anchor: 1, head: 1 });
       expect(softUndoCursor(state)).toBeNull();
     });
+
+    it("restores single-range snapshot as TextSelection", () => {
+      // Build from explicit selection: "hello" selected (1-6) -> Cmd+D adds second
+      const state0 = createState("hello hello", { anchor: 1, head: 6 });
+      const tr1 = selectNextOccurrence(state0);
+      expect(tr1).not.toBeNull();
+      const state1 = state0.apply(tr1!);
+      const multi1 = state1.selection as MultiSelection;
+      expect(multi1.ranges).toHaveLength(2);
+
+      // state1 has 2 ranges. Soft undo should restore to 1 range
+      const trUndo = softUndoCursor(state1);
+      expect(trUndo).not.toBeNull();
+      if (trUndo) {
+        const stateUndo = state1.apply(trUndo);
+        // Should restore to the original single selection
+        expect(stateUndo.selection.from).toBe(1);
+        expect(stateUndo.selection.to).toBe(6);
+      }
+    });
   });
 
   describe("getCodeBlockBounds", () => {

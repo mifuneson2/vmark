@@ -1,10 +1,10 @@
 import { describe, it, expect } from "vitest";
 import { Schema } from "@tiptap/pm/model";
-import { EditorState, SelectionRange } from "@tiptap/pm/state";
+import { EditorState, SelectionRange, TextSelection } from "@tiptap/pm/state";
 import { DecorationSet } from "@tiptap/pm/view";
 import { multiCursorPlugin } from "../multiCursorPlugin";
 import { MultiSelection } from "../MultiSelection";
-import { createMultiCursorDecorations } from "../decorations";
+import { createMultiCursorDecorations, mapDecorations } from "../decorations";
 
 // Simple schema for testing
 const schema = new Schema({
@@ -155,6 +155,71 @@ describe("decorations", () => {
       expect(found.length).toBeGreaterThanOrEqual(2);
       const selectionDeco = found.find((d) => d.from === 7 && d.to === 12);
       expect(selectionDeco).toBeDefined();
+    });
+
+    it("creates no selection decoration for primary non-empty range", () => {
+      const state = createState("hello world");
+      const doc = state.doc;
+      // Single non-empty range as primary
+      const $from = doc.resolve(1);
+      const $to = doc.resolve(6);
+      const $from2 = doc.resolve(7);
+      const $to2 = doc.resolve(12);
+
+      const ranges = [
+        new SelectionRange($from, $to),   // primary: "hello" (non-empty)
+        new SelectionRange($from2, $to2),  // secondary: "world" (non-empty)
+      ];
+      const multiSel = new MultiSelection(ranges, 0);
+      const tr = state.tr.setSelection(multiSel);
+      const newState = state.apply(tr);
+
+      const decorations = createMultiCursorDecorations(newState);
+      const found = decorations.find();
+
+      // Primary non-empty range gets no decoration, secondary gets highlight
+      // So there should be exactly 1 decoration (the secondary selection)
+      expect(found).toHaveLength(1);
+      expect(found[0].from).toBe(7);
+      expect(found[0].to).toBe(12);
+    });
+  });
+
+  describe("mapDecorations", () => {
+    it("recreates decorations for MultiSelection", () => {
+      const state = createState("hello world");
+      const doc = state.doc;
+      const $pos1 = doc.resolve(1);
+      const $pos2 = doc.resolve(7);
+
+      const ranges = [
+        new SelectionRange($pos1, $pos1),
+        new SelectionRange($pos2, $pos2),
+      ];
+      const multiSel = new MultiSelection(ranges, 0);
+      const tr = state.tr.setSelection(multiSel);
+      const newState = state.apply(tr);
+
+      const result = mapDecorations(
+        DecorationSet.empty,
+        { mapping: { map: (pos: number) => pos } },
+        newState
+      );
+
+      const found = result.find();
+      expect(found).toHaveLength(2);
+    });
+
+    it("returns empty for non-MultiSelection", () => {
+      const state = createState("hello world");
+
+      const result = mapDecorations(
+        DecorationSet.empty,
+        { mapping: { map: (pos: number) => pos } },
+        state
+      );
+
+      expect(result).toBe(DecorationSet.empty);
     });
   });
 });

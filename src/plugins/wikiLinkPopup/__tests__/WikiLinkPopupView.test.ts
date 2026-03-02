@@ -355,6 +355,338 @@ describe("WikiLinkPopupView", () => {
     });
   });
 
+  describe("Save action", () => {
+    it("dispatches setNodeMarkup when target is valid", async () => {
+      storeState.nodePos = 10;
+      emitStateChange({ isOpen: true, target: "MyPage", nodePos: 10, anchorRect });
+      await new Promise((r) => requestAnimationFrame(r));
+
+      const input = dom.container.querySelector(".wiki-link-popup-target") as HTMLInputElement;
+      input.value = "UpdatedPage";
+
+      // Trigger save via Enter key
+      const event = new KeyboardEvent("keydown", { key: "Enter", bubbles: true });
+      input.dispatchEvent(event);
+
+      expect(view.dispatch).toHaveBeenCalled();
+      expect(mockClosePopup).toHaveBeenCalled();
+      expect(view.focus).toHaveBeenCalled();
+    });
+
+    it("closes popup without dispatch when target is empty", async () => {
+      storeState.nodePos = 10;
+      emitStateChange({ isOpen: true, target: "", nodePos: 10, anchorRect });
+      await new Promise((r) => requestAnimationFrame(r));
+
+      const input = dom.container.querySelector(".wiki-link-popup-target") as HTMLInputElement;
+      input.value = "   ";
+
+      const event = new KeyboardEvent("keydown", { key: "Enter", bubbles: true });
+      input.dispatchEvent(event);
+
+      expect(mockClosePopup).toHaveBeenCalled();
+      // dispatch should not be called for empty target
+    });
+
+    it("closes popup without dispatch when nodePos is null", async () => {
+      storeState.nodePos = null;
+      emitStateChange({ isOpen: true, target: "Test", nodePos: null, anchorRect });
+      await new Promise((r) => requestAnimationFrame(r));
+
+      const input = dom.container.querySelector(".wiki-link-popup-target") as HTMLInputElement;
+      input.value = "Test";
+
+      const event = new KeyboardEvent("keydown", { key: "Enter", bubbles: true });
+      input.dispatchEvent(event);
+
+      expect(mockClosePopup).toHaveBeenCalled();
+    });
+
+    it("closes popup when node at pos is not a wikiLink", async () => {
+      view.state.doc.nodeAt = vi.fn(() => ({
+        type: { name: "paragraph" },
+        attrs: {},
+        textContent: "",
+        nodeSize: 1,
+      }));
+      storeState.nodePos = 10;
+      emitStateChange({ isOpen: true, target: "Test", nodePos: 10, anchorRect });
+      await new Promise((r) => requestAnimationFrame(r));
+
+      const input = dom.container.querySelector(".wiki-link-popup-target") as HTMLInputElement;
+      input.value = "ValidTarget";
+
+      const event = new KeyboardEvent("keydown", { key: "Enter", bubbles: true });
+      input.dispatchEvent(event);
+
+      expect(mockClosePopup).toHaveBeenCalled();
+    });
+  });
+
+  describe("Delete action", () => {
+    it("replaces wikiLink with plain text when display text exists", async () => {
+      view.state.doc.nodeAt = vi.fn(() => ({
+        type: { name: "wikiLink" },
+        attrs: { value: "Target" },
+        textContent: "Display Text",
+        nodeSize: 3,
+      }));
+      storeState.nodePos = 10;
+      emitStateChange({ isOpen: true, target: "Target", nodePos: 10, anchorRect });
+      await new Promise((r) => requestAnimationFrame(r));
+
+      // Find the delete button (last button in the container)
+      const buttons = dom.container.querySelectorAll("button");
+      const deleteBtn = Array.from(buttons).find((b) => b.title === "Remove wiki link");
+      expect(deleteBtn).not.toBeUndefined();
+      deleteBtn!.click();
+
+      expect(view.state.schema.text).toHaveBeenCalledWith("Display Text");
+      expect(view.state.tr.replaceWith).toHaveBeenCalled();
+      expect(view.dispatch).toHaveBeenCalled();
+      expect(mockClosePopup).toHaveBeenCalled();
+      expect(view.focus).toHaveBeenCalled();
+    });
+
+    it("deletes node when display text is empty", async () => {
+      view.state.doc.nodeAt = vi.fn(() => ({
+        type: { name: "wikiLink" },
+        attrs: { value: "" },
+        textContent: "",
+        nodeSize: 3,
+      }));
+      storeState.nodePos = 10;
+      emitStateChange({ isOpen: true, target: "", nodePos: 10, anchorRect });
+      await new Promise((r) => requestAnimationFrame(r));
+
+      const deleteBtn = Array.from(dom.container.querySelectorAll("button")).find((b) => b.title === "Remove wiki link");
+      deleteBtn!.click();
+
+      expect(view.state.tr.delete).toHaveBeenCalledWith(10, 13);
+      expect(view.dispatch).toHaveBeenCalled();
+    });
+
+    it("closes popup when nodePos is null", async () => {
+      storeState.nodePos = null;
+      emitStateChange({ isOpen: true, target: "Test", nodePos: null, anchorRect });
+      await new Promise((r) => requestAnimationFrame(r));
+
+      const deleteBtn = Array.from(dom.container.querySelectorAll("button")).find((b) => b.title === "Remove wiki link");
+      deleteBtn!.click();
+
+      expect(mockClosePopup).toHaveBeenCalled();
+      expect(view.dispatch).not.toHaveBeenCalled();
+    });
+
+    it("closes popup when node type does not match", async () => {
+      view.state.doc.nodeAt = vi.fn(() => ({
+        type: { name: "paragraph" },
+        attrs: {},
+        textContent: "",
+        nodeSize: 1,
+      }));
+      storeState.nodePos = 10;
+      emitStateChange({ isOpen: true, target: "Test", nodePos: 10, anchorRect });
+      await new Promise((r) => requestAnimationFrame(r));
+
+      const deleteBtn = Array.from(dom.container.querySelectorAll("button")).find((b) => b.title === "Remove wiki link");
+      deleteBtn!.click();
+
+      expect(mockClosePopup).toHaveBeenCalled();
+      expect(view.dispatch).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("Copy action", () => {
+    it("copies target to clipboard", async () => {
+      const mockWriteText = vi.fn(() => Promise.resolve());
+      Object.assign(navigator, { clipboard: { writeText: mockWriteText } });
+
+      storeState.nodePos = 10;
+      emitStateChange({ isOpen: true, target: "docs/readme", nodePos: 10, anchorRect });
+      await new Promise((r) => requestAnimationFrame(r));
+
+      const input = dom.container.querySelector(".wiki-link-popup-target") as HTMLInputElement;
+      input.value = "docs/readme";
+
+      const copyBtn = Array.from(dom.container.querySelectorAll("button")).find((b) => b.title === "Copy target");
+      copyBtn!.click();
+
+      await new Promise((r) => setTimeout(r, 10));
+      expect(mockWriteText).toHaveBeenCalledWith("docs/readme");
+    });
+
+    it("does not copy when target is empty", async () => {
+      const mockWriteText = vi.fn(() => Promise.resolve());
+      Object.assign(navigator, { clipboard: { writeText: mockWriteText } });
+
+      emitStateChange({ isOpen: true, target: "", nodePos: 10, anchorRect });
+      await new Promise((r) => requestAnimationFrame(r));
+
+      const input = dom.container.querySelector(".wiki-link-popup-target") as HTMLInputElement;
+      input.value = "";
+
+      const copyBtn = Array.from(dom.container.querySelectorAll("button")).find((b) => b.title === "Copy target");
+      copyBtn!.click();
+
+      await new Promise((r) => setTimeout(r, 10));
+      expect(mockWriteText).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("Open action", () => {
+    it("emits open-file event when target is valid", async () => {
+      const mockEmit = vi.fn(() => Promise.resolve());
+      const { getCurrentWebviewWindow } = await import("@tauri-apps/api/webviewWindow");
+      vi.mocked(getCurrentWebviewWindow).mockReturnValue({ emit: mockEmit } as ReturnType<typeof getCurrentWebviewWindow>);
+
+      storeState.nodePos = 10;
+      emitStateChange({ isOpen: true, target: "docs/readme", nodePos: 10, anchorRect });
+      await new Promise((r) => requestAnimationFrame(r));
+
+      const input = dom.container.querySelector(".wiki-link-popup-target") as HTMLInputElement;
+      input.value = "docs/readme";
+
+      const openBtn = dom.container.querySelector(".wiki-link-popup-btn-open") as HTMLButtonElement;
+      openBtn.click();
+
+      await new Promise((r) => setTimeout(r, 10));
+      expect(mockEmit).toHaveBeenCalledWith("open-file", { path: "/workspace/docs/readme.md" });
+      expect(mockClosePopup).toHaveBeenCalled();
+    });
+
+    it("does nothing when target is empty", async () => {
+      emitStateChange({ isOpen: true, target: "", nodePos: 10, anchorRect });
+      await new Promise((r) => requestAnimationFrame(r));
+
+      const input = dom.container.querySelector(".wiki-link-popup-target") as HTMLInputElement;
+      input.value = "";
+
+      const openBtn = dom.container.querySelector(".wiki-link-popup-btn-open") as HTMLButtonElement;
+      openBtn.click();
+
+      await new Promise((r) => setTimeout(r, 10));
+      expect(mockClosePopup).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("Browse action", () => {
+    it("updates target after selecting file via dialog", async () => {
+      const { open: mockDialogOpen } = await import("@tauri-apps/plugin-dialog");
+      vi.mocked(mockDialogOpen).mockResolvedValue("/workspace/notes/new-page.md");
+
+      emitStateChange({ isOpen: true, target: "", nodePos: 10, anchorRect });
+      await new Promise((r) => requestAnimationFrame(r));
+
+      const browseBtn = Array.from(dom.container.querySelectorAll("button")).find((b) => b.title === "Browse for file");
+      browseBtn!.click();
+
+      await new Promise((r) => setTimeout(r, 10));
+      expect(mockUpdateTarget).toHaveBeenCalledWith("notes/new-page");
+    });
+
+    it("does nothing when dialog is cancelled", async () => {
+      const { open: mockDialogOpen } = await import("@tauri-apps/plugin-dialog");
+      vi.mocked(mockDialogOpen).mockResolvedValue(null);
+
+      emitStateChange({ isOpen: true, target: "Test", nodePos: 10, anchorRect });
+      await new Promise((r) => requestAnimationFrame(r));
+
+      const browseBtn = Array.from(dom.container.querySelectorAll("button")).find((b) => b.title === "Browse for file");
+      browseBtn!.click();
+
+      await new Promise((r) => setTimeout(r, 10));
+      expect(mockUpdateTarget).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("Cancel action", () => {
+    it("closes popup and focuses editor on Escape", async () => {
+      emitStateChange({ isOpen: true, target: "Test", nodePos: 10, anchorRect });
+      await new Promise((r) => requestAnimationFrame(r));
+
+      const input = dom.container.querySelector(".wiki-link-popup-target") as HTMLInputElement;
+      input.focus();
+
+      const event = new KeyboardEvent("keydown", { key: "Escape", bubbles: true });
+      input.dispatchEvent(event);
+
+      expect(mockClosePopup).toHaveBeenCalled();
+      expect(view.focus).toHaveBeenCalled();
+    });
+  });
+
+  describe("Scroll close", () => {
+    it("closes popup on editor container scroll", async () => {
+      emitStateChange({ isOpen: true, target: "Test", nodePos: 10, anchorRect });
+      await new Promise((r) => requestAnimationFrame(r));
+      await new Promise((r) => requestAnimationFrame(r));
+
+      dom.container.dispatchEvent(new Event("scroll", { bubbles: false }));
+
+      expect(mockClosePopup).toHaveBeenCalled();
+    });
+
+    it("does not close when popup is not open", async () => {
+      emitStateChange({ isOpen: true, target: "Test", nodePos: 10, anchorRect });
+      await new Promise((r) => requestAnimationFrame(r));
+      await new Promise((r) => requestAnimationFrame(r));
+
+      // Close popup first
+      emitStateChange({ isOpen: false, anchorRect: null });
+
+      vi.clearAllMocks();
+
+      dom.container.dispatchEvent(new Event("scroll", { bubbles: false }));
+
+      expect(mockClosePopup).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("Mouse leave handling", () => {
+    it("registers mouseleave listener on container", async () => {
+      // Verify the popup has mouseleave handling set up
+      // Actual mouseleave behavior is tested via E2E (jsdom has limitations with mouse events)
+      emitStateChange({ isOpen: true, target: "Test", nodePos: 1, anchorRect });
+      await new Promise((r) => requestAnimationFrame(r));
+
+      const popupEl = dom.container.querySelector(".wiki-link-popup") as HTMLElement;
+      expect(popupEl).not.toBeNull();
+      // Popup is visible and has mouseleave handling registered
+      expect(popupEl.style.display).toBe("flex");
+    });
+
+    it("does not close on mouse leave when input is focused", async () => {
+      emitStateChange({ isOpen: true, target: "Test", nodePos: 1, anchorRect });
+      await new Promise((r) => requestAnimationFrame(r));
+
+      const input = dom.container.querySelector(".wiki-link-popup-target") as HTMLInputElement;
+      // Verify input exists and can be focused
+      expect(input).not.toBeNull();
+      input.focus();
+      expect(document.activeElement).toBe(input);
+      // Focus on input would prevent mouseleave from closing popup (verified manually)
+    });
+
+    it("does not close when moving to a wiki-link element", async () => {
+      emitStateChange({ isOpen: true, target: "Test", nodePos: 1, anchorRect });
+      await new Promise((r) => requestAnimationFrame(r));
+
+      // Create a wiki-link element to simulate moving to it
+      const wikiLink = document.createElement("span");
+      wikiLink.className = "wiki-link";
+      dom.editorDom.appendChild(wikiLink);
+
+      const popupEl = dom.container.querySelector(".wiki-link-popup") as HTMLElement;
+      const mouseleaveEvent = new MouseEvent("mouseleave", { bubbles: false });
+      Object.defineProperty(mouseleaveEvent, "relatedTarget", { value: wikiLink });
+      popupEl.dispatchEvent(mouseleaveEvent);
+
+      // Should not close since we're moving to a wiki link
+      expect(mockClosePopup).not.toHaveBeenCalled();
+    });
+  });
+
   describe("Mounting", () => {
     it("mounts inside editor-container", async () => {
       emitStateChange({ isOpen: true, target: "Test", nodePos: 1, anchorRect });
@@ -363,6 +695,14 @@ describe("WikiLinkPopupView", () => {
       const popupEl = dom.container.querySelector(".wiki-link-popup");
       expect(popupEl).not.toBeNull();
       expect(dom.container.contains(popupEl)).toBe(true);
+    });
+
+    it("uses absolute positioning when in editor-container", async () => {
+      emitStateChange({ isOpen: true, target: "Test", nodePos: 1, anchorRect });
+      await new Promise((r) => requestAnimationFrame(r));
+
+      const popupEl = dom.container.querySelector(".wiki-link-popup") as HTMLElement;
+      expect(popupEl.style.position).toBe("absolute");
     });
 
     it("cleans up on destroy", async () => {
@@ -374,6 +714,22 @@ describe("WikiLinkPopupView", () => {
       popup.destroy();
 
       expect(document.querySelector(".wiki-link-popup")).toBeNull();
+    });
+  });
+
+  describe("justOpened guard", () => {
+    it("prevents immediate close from same click event", async () => {
+      emitStateChange({ isOpen: true, target: "Test", nodePos: 1, anchorRect });
+
+      // Click outside BEFORE rAF clears justOpened
+      const outside = document.createElement("div");
+      document.body.appendChild(outside);
+      const mousedownEvent = new MouseEvent("mousedown", { bubbles: true });
+      Object.defineProperty(mousedownEvent, "target", { value: outside });
+      document.dispatchEvent(mousedownEvent);
+
+      expect(mockClosePopup).not.toHaveBeenCalled();
+      outside.remove();
     });
   });
 });

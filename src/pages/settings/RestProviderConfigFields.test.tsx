@@ -334,4 +334,175 @@ describe("RestProviderConfigFields", () => {
       expect(mockToastError).toHaveBeenCalledWith("Model not found");
     });
   });
+
+  // --- Reveal / Hide API key ---
+
+  it("renders API key as password by default", () => {
+    render(
+      <RestProviderConfigFields
+        type="openai"
+        endpoint=""
+        apiKey="sk-secret"
+        model="gpt-4o"
+      />,
+    );
+
+    const input = screen.getByPlaceholderText("API Key");
+    expect(input).toHaveAttribute("type", "password");
+  });
+
+  it("toggles API key visibility on eye button click", () => {
+    render(
+      <RestProviderConfigFields
+        type="openai"
+        endpoint=""
+        apiKey="sk-secret"
+        model="gpt-4o"
+      />,
+    );
+
+    const toggleBtn = screen.getByTitle("Show API key");
+    fireEvent.click(toggleBtn);
+
+    const input = screen.getByPlaceholderText("API Key");
+    expect(input).toHaveAttribute("type", "text");
+    expect(screen.getByTitle("Hide API key")).toBeInTheDocument();
+  });
+
+  it("hides API key again on second eye button click", () => {
+    render(
+      <RestProviderConfigFields
+        type="openai"
+        endpoint=""
+        apiKey="sk-secret"
+        model="gpt-4o"
+      />,
+    );
+
+    // Reveal
+    fireEvent.click(screen.getByTitle("Show API key"));
+    // Hide
+    fireEvent.click(screen.getByTitle("Hide API key"));
+
+    expect(screen.getByPlaceholderText("API Key")).toHaveAttribute("type", "password");
+  });
+
+  // --- Copy API key ---
+
+  it("copies API key to clipboard", async () => {
+    const writeText = vi.fn(() => Promise.resolve());
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText },
+      writable: true,
+      configurable: true,
+    });
+
+    render(
+      <RestProviderConfigFields
+        type="openai"
+        endpoint=""
+        apiKey="sk-copy-me"
+        model="gpt-4o"
+      />,
+    );
+
+    fireEvent.click(screen.getByTitle("Copy API key"));
+
+    expect(writeText).toHaveBeenCalledWith("sk-copy-me");
+  });
+
+  it("disables copy button when API key is empty", () => {
+    render(
+      <RestProviderConfigFields
+        type="openai"
+        endpoint=""
+        apiKey=""
+        model="gpt-4o"
+      />,
+    );
+
+    expect(screen.getByTitle("Copy API key")).toBeDisabled();
+  });
+
+  it("does not copy when API key is empty", () => {
+    const writeText = vi.fn(() => Promise.resolve());
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText },
+      writable: true,
+      configurable: true,
+    });
+
+    render(
+      <RestProviderConfigFields
+        type="openai"
+        endpoint=""
+        apiKey=""
+        model="gpt-4o"
+      />,
+    );
+
+    // Even if button is disabled, verify clipboard is not called
+    fireEvent.click(screen.getByTitle("Copy API key"));
+    expect(writeText).not.toHaveBeenCalled();
+  });
+
+  // --- Double-click prevention for test ---
+
+  it("does not invoke test_api_key while already testing", async () => {
+    let resolveTest: (v: string) => void;
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === "test_api_key") return new Promise<string>((r) => { resolveTest = r; });
+      return Promise.resolve([]);
+    });
+
+    render(
+      <RestProviderConfigFields
+        type="openai"
+        endpoint=""
+        apiKey="sk-test"
+        model="gpt-4o"
+      />,
+    );
+
+    const testBtn = screen.getByTitle("Test API key");
+    fireEvent.click(testBtn);
+    fireEvent.click(testBtn); // Second click while testing
+
+    // Should only have been called once
+    const testCalls = mockInvoke.mock.calls.filter((c) => c[0] === "test_api_key");
+    expect(testCalls).toHaveLength(1);
+
+    // Resolve to avoid hanging
+    resolveTest!("OK");
+    await waitFor(() => expect(mockToastSuccess).toHaveBeenCalled());
+  });
+
+  // --- Double-click prevention for model test ---
+
+  it("does not invoke validate_model while already testing", async () => {
+    let resolveModelTest: (v: string) => void;
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === "validate_model") return new Promise<string>((r) => { resolveModelTest = r; });
+      return Promise.resolve([]);
+    });
+
+    render(
+      <RestProviderConfigFields
+        type="openai"
+        endpoint=""
+        apiKey="sk-test"
+        model="gpt-4o"
+      />,
+    );
+
+    const testBtn = screen.getByTitle("Test model");
+    fireEvent.click(testBtn);
+    fireEvent.click(testBtn);
+
+    const modelTestCalls = mockInvoke.mock.calls.filter((c) => c[0] === "validate_model");
+    expect(modelTestCalls).toHaveLength(1);
+
+    resolveModelTest!("OK");
+    await waitFor(() => expect(mockToastSuccess).toHaveBeenCalled());
+  });
 });

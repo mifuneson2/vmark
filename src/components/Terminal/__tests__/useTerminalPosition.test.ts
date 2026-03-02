@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { computeTerminalPosition, pixelsToRatio } from "../useTerminalPosition";
+import { computeTerminalPosition, pixelsToRatio, getAvailableDimension } from "../useTerminalPosition";
 import type { EffectiveTerminalPosition } from "@/stores/uiStore";
 
 describe("computeTerminalPosition", () => {
@@ -74,5 +74,42 @@ describe("pixelsToRatio", () => {
   it("returns 0.4 when available dimension is 0", () => {
     expect(pixelsToRatio(400, 0)).toBe(0.4);
     expect(pixelsToRatio(400, -100)).toBe(0.4);
+  });
+});
+
+describe("getAvailableDimension", () => {
+  // Layout constants from the source: TITLEBAR_HEIGHT = 40, STATUSBAR_HEIGHT = 40
+  const TITLEBAR_HEIGHT = 40;
+  const STATUSBAR_HEIGHT = 40;
+
+  it("returns windowHeight minus titlebar and statusbar for bottom position", () => {
+    const result = getAvailableDimension("bottom", 1920, 1080, false, 260);
+    expect(result).toBe(1080 - TITLEBAR_HEIGHT - STATUSBAR_HEIGHT);
+  });
+
+  it("bottom position ignores sidebar settings", () => {
+    const withSidebar = getAvailableDimension("bottom", 1920, 1080, true, 260);
+    const withoutSidebar = getAvailableDimension("bottom", 1920, 1080, false, 260);
+    expect(withSidebar).toBe(withoutSidebar);
+  });
+
+  it("returns windowWidth minus sidebar for right position when sidebar visible", () => {
+    const result = getAvailableDimension("right", 1920, 1080, true, 260);
+    expect(result).toBe(1920 - 260);
+  });
+
+  it("returns full windowWidth for right position when sidebar hidden", () => {
+    const result = getAvailableDimension("right", 1920, 1080, false, 260);
+    expect(result).toBe(1920);
+  });
+
+  it("handles zero sidebar width when visible", () => {
+    const result = getAvailableDimension("right", 1920, 1080, true, 0);
+    expect(result).toBe(1920);
+  });
+
+  it("handles small window dimensions", () => {
+    const result = getAvailableDimension("bottom", 800, 200, false, 0);
+    expect(result).toBe(200 - TITLEBAR_HEIGHT - STATUSBAR_HEIGHT);
   });
 });

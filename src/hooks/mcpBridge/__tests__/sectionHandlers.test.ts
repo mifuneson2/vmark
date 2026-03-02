@@ -420,5 +420,255 @@ describe("sectionHandlers", () => {
       expect(call.success).toBe(false);
       expect(call.data.code).toBe("conflict");
     });
+
+    it("returns not_found when target (after) section not found", async () => {
+      mockGetEditor.mockReturnValue(
+        createMockEditor([
+          { type: "heading", level: 2, text: "A", nodeSize: 4 },
+          { type: "paragraph", text: "a content", nodeSize: 12 },
+        ])
+      );
+
+      await handleSectionMove("req-15", {
+        baseRevision: "rev-1",
+        section: { heading: "A" },
+        after: { heading: "Nonexistent" },
+      });
+
+      const call = mockRespond.mock.calls[0][0];
+      expect(call.success).toBe(false);
+      expect(call.error).toContain("Target section not found");
+    });
+
+    it("no-op when moving section to itself", async () => {
+      mockGetEditor.mockReturnValue(
+        createMockEditor([
+          { type: "heading", level: 2, text: "A", nodeSize: 4 },
+          { type: "paragraph", text: "a content", nodeSize: 12 },
+        ])
+      );
+
+      await handleSectionMove("req-16", {
+        baseRevision: "rev-1",
+        section: { heading: "A" },
+        after: { heading: "A" },
+      });
+
+      const call = mockRespond.mock.calls[0][0];
+      expect(call.success).toBe(true);
+      expect(call.data.warning).toContain("no move needed");
+    });
+
+    it("creates suggestions in suggest mode", async () => {
+      mockGetEditor.mockReturnValue(
+        createMockEditor([
+          { type: "heading", level: 2, text: "A", nodeSize: 4 },
+          { type: "paragraph", text: "a content", nodeSize: 12 },
+          { type: "heading", level: 2, text: "B", nodeSize: 4 },
+          { type: "paragraph", text: "b content", nodeSize: 12 },
+        ])
+      );
+      mockIsAutoApproveEnabled.mockReturnValue(false);
+
+      await handleSectionMove("req-17", {
+        baseRevision: "rev-1",
+        section: { heading: "A" },
+        after: { heading: "B" },
+        mode: "suggest",
+      });
+
+      const call = mockRespond.mock.calls[0][0];
+      expect(call.success).toBe(true);
+      expect(call.data.suggestionIds).toHaveLength(2);
+      expect(call.data.warning).toContain("delete+insert");
+    });
+
+    it("moves to start of document when after is omitted", async () => {
+      const editor = createMockEditor([
+        { type: "heading", level: 2, text: "A", nodeSize: 4 },
+        { type: "paragraph", text: "a content", nodeSize: 12 },
+      ]);
+      // Add replace/delete methods to tr
+      editor.state.tr.replace = vi.fn().mockReturnValue(editor.state.tr);
+      mockGetEditor.mockReturnValue(editor);
+
+      await handleSectionMove("req-18", {
+        baseRevision: "rev-1",
+        section: { heading: "A" },
+      });
+
+      expect(editor.view.dispatch).toHaveBeenCalled();
+      const call = mockRespond.mock.calls[0][0];
+      expect(call.success).toBe(true);
+      expect(call.data.movedSection).toBe("A");
+    });
+
+    it("applies move forward (section before target) in apply mode", async () => {
+      const editor = createMockEditor([
+        { type: "heading", level: 2, text: "A", nodeSize: 4 },
+        { type: "paragraph", text: "a content", nodeSize: 12 },
+        { type: "heading", level: 2, text: "B", nodeSize: 4 },
+        { type: "paragraph", text: "b content", nodeSize: 12 },
+      ]);
+      // Add replace/delete methods to tr
+      editor.state.tr.replace = vi.fn().mockReturnValue(editor.state.tr);
+      mockGetEditor.mockReturnValue(editor);
+
+      await handleSectionMove("req-19", {
+        baseRevision: "rev-1",
+        section: { heading: "A" },
+        after: { heading: "B" },
+        mode: "apply",
+      });
+
+      expect(editor.view.dispatch).toHaveBeenCalled();
+      const call = mockRespond.mock.calls[0][0];
+      expect(call.success).toBe(true);
+      expect(call.data.newRevision).toBe("rev-new");
+    });
+  });
+
+  describe("handleSectionUpdate — apply mode", () => {
+    it("applies section update directly", async () => {
+      const editor = createMockEditor([
+        { type: "heading", level: 2, text: "Intro", nodeSize: 8 },
+        { type: "paragraph", text: "Old content", nodeSize: 14 },
+      ]);
+      mockGetEditor.mockReturnValue(editor);
+
+      await handleSectionUpdate("req-20", {
+        baseRevision: "rev-1",
+        target: { heading: "Intro" },
+        newContent: "Updated content",
+        mode: "apply",
+      });
+
+      expect(editor.view.dispatch).toHaveBeenCalled();
+      const call = mockRespond.mock.calls[0][0];
+      expect(call.success).toBe(true);
+      expect(call.data.newRevision).toBe("rev-new");
+      expect(call.data.sectionHeading).toBe("Intro");
+    });
+
+    it("creates suggestion in suggest mode", async () => {
+      const editor = createMockEditor([
+        { type: "heading", level: 2, text: "Intro", nodeSize: 8 },
+        { type: "paragraph", text: "Content", nodeSize: 10 },
+      ]);
+      mockGetEditor.mockReturnValue(editor);
+      mockIsAutoApproveEnabled.mockReturnValue(false);
+
+      await handleSectionUpdate("req-21", {
+        baseRevision: "rev-1",
+        target: { heading: "Intro" },
+        newContent: "New content",
+        mode: "suggest",
+      });
+
+      const call = mockRespond.mock.calls[0][0];
+      expect(call.success).toBe(true);
+      expect(call.data.suggestionIds).toBeDefined();
+    });
+  });
+
+  describe("handleSectionInsert — apply mode", () => {
+    it("inserts section at end when no 'after' specified", async () => {
+      const editor = createMockEditor([
+        { type: "heading", level: 1, text: "Title", nodeSize: 8 },
+        { type: "paragraph", text: "Content", nodeSize: 10 },
+      ]);
+      mockGetEditor.mockReturnValue(editor);
+
+      await handleSectionInsert("req-25", {
+        baseRevision: "rev-1",
+        heading: { level: 2, text: "New Section" },
+        content: "section content",
+        mode: "apply",
+      });
+
+      const call = mockRespond.mock.calls[0][0];
+      expect(call.success).toBe(true);
+      expect(call.data.headingText).toBe("New Section");
+    });
+
+    it("returns dryRun preview for insert", async () => {
+      const editor = createMockEditor([
+        { type: "heading", level: 1, text: "Title", nodeSize: 8 },
+      ]);
+      mockGetEditor.mockReturnValue(editor);
+
+      await handleSectionInsert("req-26", {
+        baseRevision: "rev-1",
+        after: { heading: "Title" },
+        heading: { level: 2, text: "New" },
+        content: "content",
+        mode: "dryRun",
+      });
+
+      const call = mockRespond.mock.calls[0][0];
+      expect(call.success).toBe(true);
+      expect(call.data.isDryRun).toBe(true);
+      expect(call.data.preview.headingText).toBe("New");
+    });
+
+    it("creates suggestion in suggest mode", async () => {
+      const editor = createMockEditor([
+        { type: "heading", level: 1, text: "Title", nodeSize: 8 },
+      ]);
+      mockGetEditor.mockReturnValue(editor);
+      mockIsAutoApproveEnabled.mockReturnValue(false);
+
+      await handleSectionInsert("req-27", {
+        baseRevision: "rev-1",
+        heading: { level: 2, text: "New" },
+        content: "content",
+        mode: "suggest",
+      });
+
+      const call = mockRespond.mock.calls[0][0];
+      expect(call.success).toBe(true);
+      expect(call.data.suggestionIds).toBeDefined();
+    });
+
+    it("inserts section without content (heading only)", async () => {
+      const editor = createMockEditor([
+        { type: "heading", level: 1, text: "Title", nodeSize: 8 },
+      ]);
+      mockGetEditor.mockReturnValue(editor);
+
+      await handleSectionInsert("req-28", {
+        baseRevision: "rev-1",
+        heading: { level: 2, text: "Empty Section" },
+        mode: "apply",
+      });
+
+      const chain = editor._chainMethods;
+      expect(chain.insertContent).toHaveBeenCalled();
+      const call = mockRespond.mock.calls[0][0];
+      expect(call.success).toBe(true);
+    });
+  });
+
+  describe("handleSectionUpdate — find section by byIndex", () => {
+    it("finds section by level and index", async () => {
+      const editor = createMockEditor([
+        { type: "heading", level: 2, text: "First H2", nodeSize: 10 },
+        { type: "paragraph", text: "Content 1", nodeSize: 12 },
+        { type: "heading", level: 2, text: "Second H2", nodeSize: 12 },
+        { type: "paragraph", text: "Content 2", nodeSize: 12 },
+      ]);
+      mockGetEditor.mockReturnValue(editor);
+
+      await handleSectionUpdate("req-30", {
+        baseRevision: "rev-1",
+        target: { byIndex: { level: 2, index: 1 } },
+        newContent: "Updated",
+        mode: "dryRun",
+      });
+
+      const call = mockRespond.mock.calls[0][0];
+      expect(call.success).toBe(true);
+      expect(call.data.preview.sectionHeading).toBe("Second H2");
+    });
   });
 });

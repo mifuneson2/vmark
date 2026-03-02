@@ -457,4 +457,370 @@ describe("TabContextMenu", () => {
       expect(onClose).toHaveBeenCalled();
     });
   });
+
+  describe("findNextFocusable (keyboard navigation)", () => {
+    it("navigates down through focusable items", async () => {
+      const onClose = vi.fn();
+      render(
+        <TabContextMenu
+          tab={useTabStore.getState().tabs.main[0]}
+          position={{ x: 100, y: 100 }}
+          windowLabel="main"
+          onClose={onClose}
+        />
+      );
+
+      const menu = screen.getByRole("menu", { name: "Tab actions" });
+
+      // Wait for initial focus
+      await waitFor(() => {
+        expect(document.activeElement?.textContent).toContain("Move to New Window");
+      });
+
+      // Navigate down multiple times
+      fireEvent.keyDown(menu, { key: "ArrowDown" });
+      await waitFor(() => {
+        expect(document.activeElement?.textContent).toContain("Pin");
+      });
+
+      fireEvent.keyDown(menu, { key: "ArrowDown" });
+      await waitFor(() => {
+        expect(document.activeElement?.textContent).toContain("Copy Path");
+      });
+    });
+
+    it("navigates up from first item wraps to last", async () => {
+      const onClose = vi.fn();
+      render(
+        <TabContextMenu
+          tab={useTabStore.getState().tabs.main[0]}
+          position={{ x: 100, y: 100 }}
+          windowLabel="main"
+          onClose={onClose}
+        />
+      );
+
+      const menu = screen.getByRole("menu", { name: "Tab actions" });
+
+      await waitFor(() => {
+        expect(document.activeElement?.textContent).toContain("Move to New Window");
+      });
+
+      fireEvent.keyDown(menu, { key: "ArrowUp" });
+      await waitFor(() => {
+        expect(document.activeElement?.textContent).toContain("Close All");
+      });
+    });
+
+    it("Home key moves focus to first focusable item", async () => {
+      render(
+        <TabContextMenu
+          tab={useTabStore.getState().tabs.main[0]}
+          position={{ x: 100, y: 100 }}
+          windowLabel="main"
+          onClose={vi.fn()}
+        />
+      );
+
+      const menu = screen.getByRole("menu", { name: "Tab actions" });
+
+      // Navigate down first
+      fireEvent.keyDown(menu, { key: "ArrowDown" });
+      fireEvent.keyDown(menu, { key: "ArrowDown" });
+
+      // Home should go back to first
+      fireEvent.keyDown(menu, { key: "Home" });
+      await waitFor(() => {
+        expect(document.activeElement?.textContent).toContain("Move to New Window");
+      });
+    });
+
+    it("End key moves focus to last focusable item", async () => {
+      render(
+        <TabContextMenu
+          tab={useTabStore.getState().tabs.main[0]}
+          position={{ x: 100, y: 100 }}
+          windowLabel="main"
+          onClose={vi.fn()}
+        />
+      );
+
+      const menu = screen.getByRole("menu", { name: "Tab actions" });
+
+      fireEvent.keyDown(menu, { key: "End" });
+      await waitFor(() => {
+        expect(document.activeElement?.textContent).toContain("Close All");
+      });
+    });
+
+    it("Space key activates a menu item", async () => {
+      const onClose = vi.fn();
+      render(
+        <TabContextMenu
+          tab={useTabStore.getState().tabs.main[0]}
+          position={{ x: 100, y: 100 }}
+          windowLabel="main"
+          onClose={onClose}
+        />
+      );
+
+      const menu = screen.getByRole("menu", { name: "Tab actions" });
+
+      // Wait for initial focus on first item
+      await waitFor(() => {
+        expect(document.activeElement?.textContent).toContain("Move to New Window");
+      });
+
+      // Move to Pin (second focusable)
+      fireEvent.keyDown(menu, { key: "ArrowDown" });
+      fireEvent.keyDown(menu, { key: " " });
+
+      expect(useTabStore.getState().tabs.main[0]?.isPinned).toBe(true);
+      expect(onClose).toHaveBeenCalled();
+    });
+  });
+
+  describe("close on click outside", () => {
+    it("closes menu when clicking outside", () => {
+      const onClose = vi.fn();
+      render(
+        <div>
+          <div data-testid="outside">outside</div>
+          <TabContextMenu
+            tab={useTabStore.getState().tabs.main[0]}
+            position={{ x: 100, y: 100 }}
+            windowLabel="main"
+            onClose={onClose}
+          />
+        </div>
+      );
+
+      fireEvent.mouseDown(screen.getByTestId("outside"));
+      expect(onClose).toHaveBeenCalled();
+    });
+
+    it("does not close when clicking inside the menu", () => {
+      const onClose = vi.fn();
+      render(
+        <TabContextMenu
+          tab={useTabStore.getState().tabs.main[0]}
+          position={{ x: 100, y: 100 }}
+          windowLabel="main"
+          onClose={onClose}
+        />
+      );
+
+      const menu = screen.getByRole("menu", { name: "Tab actions" });
+      fireEvent.mouseDown(menu);
+      expect(onClose).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("close on Escape", () => {
+    it("closes menu on Escape keydown", () => {
+      const onClose = vi.fn();
+      render(
+        <TabContextMenu
+          tab={useTabStore.getState().tabs.main[0]}
+          position={{ x: 100, y: 100 }}
+          windowLabel="main"
+          onClose={onClose}
+        />
+      );
+
+      fireEvent.keyDown(document, { key: "Escape" });
+      expect(onClose).toHaveBeenCalled();
+    });
+  });
+
+  describe("mouse hover", () => {
+    it("focuses item on mouse enter", async () => {
+      render(
+        <TabContextMenu
+          tab={useTabStore.getState().tabs.main[0]}
+          position={{ x: 100, y: 100 }}
+          windowLabel="main"
+          onClose={vi.fn()}
+        />
+      );
+
+      const pinItem = screen.getByRole("menuitem", { name: "Pin" });
+      fireEvent.mouseEnter(pinItem);
+
+      await waitFor(() => {
+        expect(document.activeElement).toBe(pinItem);
+      });
+    });
+  });
+
+  describe("Restore to Disk", () => {
+    it("appears when doc is missing and has file path", () => {
+      useDocumentStore.setState({
+        documents: {
+          ...useDocumentStore.getState().documents,
+          "tab-1": {
+            ...buildDocument("/workspace/project/one.md"),
+            isMissing: true,
+          },
+        },
+      });
+
+      render(
+        <TabContextMenu
+          tab={useTabStore.getState().tabs.main[0]}
+          position={{ x: 100, y: 100 }}
+          windowLabel="main"
+          onClose={vi.fn()}
+        />
+      );
+
+      expect(screen.getByRole("menuitem", { name: "Restore to Disk" })).toBeInTheDocument();
+    });
+
+    it("saves file on click and shows success toast", async () => {
+      const onClose = vi.fn();
+      mocks.saveToPath.mockResolvedValue(true);
+
+      useDocumentStore.setState({
+        documents: {
+          ...useDocumentStore.getState().documents,
+          "tab-1": {
+            ...buildDocument("/workspace/project/one.md"),
+            isMissing: true,
+          },
+        },
+      });
+
+      render(
+        <TabContextMenu
+          tab={useTabStore.getState().tabs.main[0]}
+          position={{ x: 100, y: 100 }}
+          windowLabel="main"
+          onClose={onClose}
+        />
+      );
+
+      fireEvent.click(screen.getByRole("menuitem", { name: "Restore to Disk" }));
+
+      await waitFor(() => {
+        expect(mocks.saveToPath).toHaveBeenCalled();
+      });
+      expect(mocks.toast.success).toHaveBeenCalledWith("File restored to disk.");
+      expect(onClose).toHaveBeenCalled();
+    });
+  });
+
+  describe("Close Others and Close to Right", () => {
+    it("calls closeTabsWithDirtyCheck for close others", async () => {
+      const onClose = vi.fn();
+      render(
+        <TabContextMenu
+          tab={useTabStore.getState().tabs.main[0]}
+          position={{ x: 100, y: 100 }}
+          windowLabel="main"
+          onClose={onClose}
+        />
+      );
+
+      fireEvent.click(screen.getByRole("menuitem", { name: "Close Others" }));
+
+      await waitFor(() => {
+        expect(mocks.closeTabsWithDirtyCheck).toHaveBeenCalledWith("main", ["tab-2"]);
+      });
+      expect(onClose).toHaveBeenCalled();
+    });
+
+    it("calls closeTabsWithDirtyCheck for close to right", async () => {
+      const onClose = vi.fn();
+      render(
+        <TabContextMenu
+          tab={useTabStore.getState().tabs.main[0]}
+          position={{ x: 100, y: 100 }}
+          windowLabel="main"
+          onClose={onClose}
+        />
+      );
+
+      fireEvent.click(screen.getByRole("menuitem", { name: "Close Tabs to the Right" }));
+
+      await waitFor(() => {
+        expect(mocks.closeTabsWithDirtyCheck).toHaveBeenCalledWith("main", ["tab-2"]);
+      });
+    });
+
+    it("calls closeTabsWithDirtyCheck for close all unpinned", async () => {
+      const onClose = vi.fn();
+      render(
+        <TabContextMenu
+          tab={useTabStore.getState().tabs.main[0]}
+          position={{ x: 100, y: 100 }}
+          windowLabel="main"
+          onClose={onClose}
+        />
+      );
+
+      fireEvent.click(screen.getByRole("menuitem", { name: "Close All Unpinned Tabs" }));
+
+      await waitFor(() => {
+        expect(mocks.closeTabsWithDirtyCheck).toHaveBeenCalledWith("main", ["tab-1", "tab-2"]);
+      });
+    });
+  });
+
+  describe("Move to New Window", () => {
+    it("invokes detach_tab_to_new_window on click", async () => {
+      const onClose = vi.fn();
+      render(
+        <TabContextMenu
+          tab={useTabStore.getState().tabs.main[0]}
+          position={{ x: 100, y: 100 }}
+          windowLabel="main"
+          onClose={onClose}
+        />
+      );
+
+      fireEvent.click(screen.getByRole("menuitem", { name: "Move to New Window" }));
+
+      await waitFor(() => {
+        expect(mocks.invoke).toHaveBeenCalledWith("detach_tab_to_new_window", expect.any(Object));
+      });
+      expect(onClose).toHaveBeenCalled();
+    });
+  });
+
+  describe("Pin/Unpin", () => {
+    it("toggles pin state via store on click", () => {
+      const onClose = vi.fn();
+      render(
+        <TabContextMenu
+          tab={useTabStore.getState().tabs.main[0]}
+          position={{ x: 100, y: 100 }}
+          windowLabel="main"
+          onClose={onClose}
+        />
+      );
+
+      const pinItem = screen.getByRole("menuitem", { name: /^(Pin|Unpin)$/ });
+      fireEvent.click(pinItem);
+
+      expect(onClose).toHaveBeenCalled();
+    });
+  });
+
+  describe("position adjustment", () => {
+    it("renders at the given position", () => {
+      render(
+        <TabContextMenu
+          tab={useTabStore.getState().tabs.main[0]}
+          position={{ x: 200, y: 300 }}
+          windowLabel="main"
+          onClose={vi.fn()}
+        />
+      );
+
+      const menu = screen.getByRole("menu", { name: "Tab actions" });
+      expect(menu.style.left).toBe("200px");
+      expect(menu.style.top).toBe("300px");
+    });
+  });
 });

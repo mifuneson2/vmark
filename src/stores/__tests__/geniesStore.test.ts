@@ -1,4 +1,5 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
+import { invoke } from "@tauri-apps/api/core";
 import { useGeniesStore } from "../geniesStore";
 import type { GenieDefinition } from "@/types/aiGenies";
 
@@ -202,6 +203,208 @@ describe("geniesStore", () => {
     it("returns empty when no recents", () => {
       useGeniesStore.setState({ genies: [makeGenie({ name: "A" })] });
       expect(useGeniesStore.getState().getRecent()).toEqual([]);
+    });
+  });
+
+  // ── loadGenies ─────────────────────────────────────────────────────
+
+  describe("loadGenies", () => {
+    it("loads genies from Rust backend", async () => {
+      vi.mocked(invoke).mockImplementation(async (cmd: string, args?: Record<string, unknown>) => {
+        if (cmd === "list_genies") {
+          return [
+            { name: "Translate", path: "/genies/Translate.md", source: "global", category: "Language" },
+            { name: "Summarize", path: "/genies/Summarize.md", source: "global", category: null },
+          ];
+        }
+        if (cmd === "read_genie") {
+          const path = args?.path as string;
+          if (path.includes("Translate")) {
+            return {
+              metadata: { name: "Translate", description: "Translate text", scope: "selection", category: "Language" },
+              template: "Translate {{text}}",
+            };
+          }
+          if (path.includes("Summarize")) {
+            return {
+              metadata: { name: "Summarize", description: "Summarize text", scope: "document" },
+              template: "Summarize {{text}}",
+            };
+          }
+        }
+        return undefined;
+      });
+
+      await useGeniesStore.getState().loadGenies();
+
+      const { genies, loading } = useGeniesStore.getState();
+      expect(loading).toBe(false);
+      expect(genies).toHaveLength(2);
+      expect(genies[0].metadata.name).toBe("Translate");
+      expect(genies[0].metadata.category).toBe("Language");
+      expect(genies[0].template).toBe("Translate {{text}}");
+      expect(genies[0].filePath).toBe("/genies/Translate.md");
+      expect(genies[0].source).toBe("global");
+    });
+
+    it("prunes stale recents after loading", async () => {
+      useGeniesStore.setState({
+        recentGenieNames: ["Translate", "Deleted"],
+        favoriteGenieNames: ["Translate", "AlsoDeleted"],
+      });
+
+      vi.mocked(invoke).mockImplementation(async (cmd: string) => {
+        if (cmd === "list_genies") {
+          return [{ name: "Translate", path: "/genies/Translate.md", source: "global", category: null }];
+        }
+        if (cmd === "read_genie") {
+          return {
+            metadata: { name: "Translate", description: "d", scope: "selection" },
+            template: "t",
+          };
+        }
+        return undefined;
+      });
+
+      await useGeniesStore.getState().loadGenies();
+
+      const { recentGenieNames, favoriteGenieNames } = useGeniesStore.getState();
+      expect(recentGenieNames).toEqual(["Translate"]);
+      expect(favoriteGenieNames).toEqual(["Translate"]);
+    });
+
+    it("handles list_genies error gracefully", async () => {
+      vi.mocked(invoke).mockImplementation(async (cmd: string) => {
+        if (cmd === "list_genies") throw new Error("list failed");
+        return undefined;
+      });
+
+      await useGeniesStore.getState().loadGenies();
+      expect(useGeniesStore.getState().loading).toBe(false);
+    });
+
+    it("skips individual genie read failures", async () => {
+      vi.mocked(invoke).mockImplementation(async (cmd: string, args?: Record<string, unknown>) => {
+        if (cmd === "list_genies") {
+          return [
+            { name: "Good", path: "/genies/Good.md", source: "global", category: null },
+            { name: "Bad", path: "/genies/Bad.md", source: "global", category: null },
+          ];
+        }
+        if (cmd === "read_genie") {
+          const path = args?.path as string;
+          if (path.includes("Bad")) throw new Error("corrupt file");
+          return {
+            metadata: { name: "Good", description: "d", scope: "selection" },
+            template: "t",
+          };
+        }
+        return undefined;
+      });
+
+      await useGeniesStore.getState().loadGenies();
+      expect(useGeniesStore.getState().genies).toHaveLength(1);
+      expect(useGeniesStore.getState().genies[0].metadata.name).toBe("Good");
+    });
+
+    it("falls back to entry category when metadata has none", async () => {
+      vi.mocked(invoke).mockImplementation(async (cmd: string) => {
+        if (cmd === "list_genies") {
+          return [{ name: "X", path: "/genies/X.md", source: "global", category: "FolderCat" }];
+        }
+        if (cmd === "read_genie") {
+          return {
+            metadata: { name: "X", description: "d", scope: "selection" },
+            template: "t",
+          };
+        }
+        return undefined;
+      });
+
+      await useGeniesStore.getState().loadGenies();
+      expect(useGeniesStore.getState().genies[0].metadata.category).toBe("FolderCat");
+    });
+
+    it("handles empty genie list", async () => {
+      vi.mocked(invoke).mockImplementation(async (cmd: string) => {
+        if (cmd === "list_genies") return [];
+        return undefined;
+      });
+
+      await useGeniesStore.getState().loadGenies();
+      expect(useGeniesStore.getState().genies).toEqual([]);
+      expect(useGeniesStore.getState().loading).toBe(false);
+    });
+  });
+
+  // ── addRecent edge cases ──────────────────────────────────────────
+
+  describe("addRecent edge cases", () => {
+    it("handles adding empty string as recent", () => {
+      useGeniesStore.getState().addRecent("");
+      expect(useGeniesStore.getState().recentGenieNames).toEqual([""]);
+    });
+
+    it("handles adding same name repeatedly", () => {
+      const { addRecent } = useGeniesStore.getState();
+      addRecent("X");
+      addRecent("X");
+      addRecent("X");
+      expect(useGeniesStore.getState().recentGenieNames).toEqual(["X"]);
+    });
+  });
+
+  // ── toggleFavorite edge cases ─────────────────────────────────────
+
+  describe("toggleFavorite edge cases", () => {
+    it("handles multiple favorites", () => {
+      const { toggleFavorite } = useGeniesStore.getState();
+      toggleFavorite("A");
+      toggleFavorite("B");
+      toggleFavorite("C");
+      expect(useGeniesStore.getState().favoriteGenieNames).toEqual(["A", "B", "C"]);
+    });
+
+    it("removes from middle of favorites list", () => {
+      useGeniesStore.setState({ favoriteGenieNames: ["A", "B", "C"] });
+      useGeniesStore.getState().toggleFavorite("B");
+      expect(useGeniesStore.getState().favoriteGenieNames).toEqual(["A", "C"]);
+    });
+  });
+
+  // ── searchGenies edge cases ───────────────────────────────────────
+
+  describe("searchGenies edge cases", () => {
+    it("returns all genies when query is empty and scope is null", () => {
+      useGeniesStore.setState({
+        genies: [makeGenie({ name: "A" }), makeGenie({ name: "B" })],
+      });
+      const result = useGeniesStore.getState().searchGenies("", null);
+      expect(result).toHaveLength(2);
+    });
+
+    it("searches case-insensitively in description", () => {
+      useGeniesStore.setState({
+        genies: [
+          makeGenie({
+            name: "X",
+            metadata: { name: "X", description: "Fix UPPERCASE Issues", scope: "selection" },
+          }),
+        ],
+      });
+      const result = useGeniesStore.getState().searchGenies("uppercase");
+      expect(result).toHaveLength(1);
+    });
+
+    it("handles genies with undefined category in search", () => {
+      useGeniesStore.setState({
+        genies: [
+          makeGenie({ name: "NoCat", metadata: { name: "NoCat", description: "d", scope: "selection" } }),
+        ],
+      });
+      // Should not throw when searching for text that would match category
+      const result = useGeniesStore.getState().searchGenies("somecat");
+      expect(result).toEqual([]);
     });
   });
 

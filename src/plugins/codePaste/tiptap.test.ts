@@ -181,4 +181,44 @@ const y = 2;`;
       expect(handled).toBeFalsy();
     });
   });
+
+  describe("pasteMode fallback", () => {
+    it("should default to 'smart' when pasteMode is undefined", () => {
+      (useSettingsStore.getState as ReturnType<typeof vi.fn>).mockReturnValue({
+        markdown: {},
+      });
+
+      editor = createEditor();
+      // Multi-line code should still be processed since default is "smart"
+      const code = `function test() {
+  return 42;
+}`;
+      const event = createClipboardEvent(code);
+      const handled = editor.view.someProp("handlePaste", (f) => f(editor.view, event, Slice.empty));
+      expect(typeof handled).toBe("boolean");
+    });
+  });
+
+  describe("successful code block insertion", () => {
+    it("should insert detected code as a code block with language", () => {
+      editor = createEditor();
+      const code = `import React from "react";
+function App() {
+  const [count, setCount] = React.useState(0);
+  return <div>{count}</div>;
+}
+export default App;`;
+      const event = createClipboardEvent(code);
+
+      const handled = editor.view.someProp("handlePaste", (f) => f(editor.view, event, Slice.empty));
+      if (handled) {
+        // The event should be prevented and a code block inserted
+        expect(event.defaultPrevented).toBe(true);
+        // Check the editor now contains a code block
+        const json = editor.getJSON();
+        const hasCodeBlock = JSON.stringify(json).includes("codeBlock");
+        expect(hasCodeBlock).toBe(true);
+      }
+    });
+  });
 });

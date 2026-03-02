@@ -443,5 +443,103 @@ describe("TiptapTableContextMenu", () => {
 
       expect(removeEventListenerSpy).toHaveBeenCalledWith("mousedown", expect.any(Function));
     });
+
+    it("removes keydown event listener on destroy", () => {
+      const removeEventListenerSpy = vi.spyOn(document, "removeEventListener");
+
+      menu.destroy();
+
+      expect(removeEventListenerSpy).toHaveBeenCalledWith("keydown", expect.any(Function));
+    });
+  });
+
+  describe("Global setting: tableFitToWidth", () => {
+    it("hides Fit to Width item when global tableFitToWidth is ON", async () => {
+      // Re-mock settings to enable global fit
+      const { useSettingsStore } = await import("@/stores/settingsStore");
+      const originalGetState = useSettingsStore.getState;
+      (useSettingsStore as { getState: () => unknown }).getState = () => ({
+        markdown: { tableFitToWidth: true },
+      });
+
+      menu.show(100, 200);
+      await new Promise((r) => requestAnimationFrame(r));
+
+      const items = document.querySelectorAll(".table-context-menu-item");
+      // Should be 14 items (no Fit to Width)
+      expect(items.length).toBe(14);
+
+      // Restore
+      (useSettingsStore as { getState: typeof originalGetState }).getState = originalGetState;
+    });
+  });
+
+  describe("Menu rebuilds on each show()", () => {
+    it("rebuilds menu items fresh on each show", async () => {
+      menu.show(50, 50);
+      await new Promise((r) => requestAnimationFrame(r));
+
+      const firstItems = document.querySelectorAll(".table-context-menu-item").length;
+
+      menu.hide();
+      menu.show(200, 200);
+      await new Promise((r) => requestAnimationFrame(r));
+
+      const secondItems = document.querySelectorAll(".table-context-menu-item").length;
+      expect(firstItems).toBe(secondItems);
+    });
+  });
+
+  describe("Positioning without editor container", () => {
+    it("falls back to document.body when no editor-container", async () => {
+      // Create view with dom not inside editor-container
+      const standaloneEditorDom = document.createElement("div");
+      document.body.appendChild(standaloneEditorDom);
+      const standaloneView = createMockView(standaloneEditorDom);
+      const standaloneMenu = new TiptapTableContextMenu(
+        standaloneView as unknown as ConstructorParameters<typeof TiptapTableContextMenu>[0]
+      );
+
+      standaloneMenu.show(100, 200);
+      await new Promise((r) => requestAnimationFrame(r));
+
+      const container = document.querySelector(".table-context-menu") as HTMLElement;
+      expect(container).not.toBeNull();
+      // Should use fixed positioning when mounted to body
+      expect(container.style.position).toBe("fixed");
+
+      standaloneMenu.destroy();
+      standaloneEditorDom.remove();
+    });
+  });
+
+  describe("Mousedown prevention on menu items", () => {
+    it("prevents default on mousedown to avoid editor blur", async () => {
+      menu.show(100, 200);
+      await new Promise((r) => requestAnimationFrame(r));
+
+      const items = document.querySelectorAll(".table-context-menu-item");
+      const event = new MouseEvent("mousedown", { bubbles: true, cancelable: true });
+      const preventSpy = vi.spyOn(event, "preventDefault");
+
+      items[0].dispatchEvent(event);
+
+      expect(preventSpy).toHaveBeenCalled();
+    });
+  });
+
+  describe("Escape when editor is disconnected", () => {
+    it("does not focus editor when dom is disconnected", async () => {
+      menu.show(100, 200);
+      await new Promise((r) => requestAnimationFrame(r));
+
+      // Simulate disconnected dom
+      Object.defineProperty(view.dom, "isConnected", { value: false, configurable: true });
+
+      const escapeEvent = new KeyboardEvent("keydown", { key: "Escape", bubbles: true });
+      document.dispatchEvent(escapeEvent);
+
+      expect(view.focus).not.toHaveBeenCalled();
+    });
   });
 });

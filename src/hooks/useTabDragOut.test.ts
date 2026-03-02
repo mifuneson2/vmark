@@ -610,4 +610,179 @@ describe("useTabDragOut", () => {
 
     expect(tablist.scrollLeft).toBeGreaterThan(0);
   });
+
+  it("ignores pinned tabs", () => {
+    const bar = createTabBar({
+      barTop: 0,
+      barHeight: 40,
+      tabRects: [{ left: 0, width: 120 }],
+    });
+    const tabBarRef = createRef<HTMLElement>();
+    tabBarRef.current = bar;
+
+    const onDragOut = vi.fn();
+    const onReorder = vi.fn();
+    const { result } = renderHook(() =>
+      useTabDragOut({ tabBarRef, onDragOut, onReorder })
+    );
+
+    act(() => {
+      result.current.getTabDragHandlers("tab-1", true).onPointerDown(
+        createPointerDownEvent({ clientX: 30, clientY: 20 })
+      );
+      dispatchPointer("pointermove", 30, 100);
+      dispatchPointer("pointerup", 30, 100);
+    });
+
+    expect(onDragOut).not.toHaveBeenCalled();
+    expect(onReorder).not.toHaveBeenCalled();
+    expect(result.current.dragMode).toBe("idle");
+  });
+
+  it("cleans up on pointercancel", () => {
+    const bar = createTabBar({
+      barTop: 0,
+      barHeight: 40,
+      tabRects: [{ left: 0, width: 120 }],
+    });
+    const tabBarRef = createRef<HTMLElement>();
+    tabBarRef.current = bar;
+
+    const onDragOut = vi.fn();
+    const onReorder = vi.fn();
+    const { result } = renderHook(() =>
+      useTabDragOut({ tabBarRef, onDragOut, onReorder })
+    );
+
+    act(() => {
+      result.current.getTabDragHandlers("tab-1", false).onPointerDown(
+        createPointerDownEvent({ clientX: 30, clientY: 20 })
+      );
+      dispatchPointer("pointermove", 30, 100);
+      document.dispatchEvent(new Event("pointercancel", { bubbles: true }));
+    });
+
+    expect(result.current.dragMode).toBe("idle");
+    expect(result.current.dragTabId).toBeNull();
+    expect(onDragOut).not.toHaveBeenCalled();
+    expect(onReorder).not.toHaveBeenCalled();
+  });
+
+  it("cancels touch hold when pointer moves too far during hold phase", () => {
+    vi.useFakeTimers();
+    const bar = createTabBar({
+      barTop: 0,
+      barHeight: 40,
+      tabRects: [{ left: 0, width: 120 }],
+    });
+    const tabBarRef = createRef<HTMLElement>();
+    tabBarRef.current = bar;
+
+    const onDragOut = vi.fn();
+    const onReorder = vi.fn();
+    const { result } = renderHook(() =>
+      useTabDragOut({ tabBarRef, onDragOut, onReorder })
+    );
+
+    act(() => {
+      result.current.getTabDragHandlers("tab-1", false).onPointerDown(
+        createPointerDownEvent({ clientX: 30, clientY: 20, pointerType: "touch" })
+      );
+      // Move more than TOUCH_HOLD_CANCEL_PX (8px) horizontally during hold
+      dispatchPointer("pointermove", 50, 20);
+    });
+
+    // Should have cancelled the hold — mode should be idle
+    expect(result.current.dragMode).toBe("idle");
+    expect(onDragOut).not.toHaveBeenCalled();
+  });
+
+  it("handles pointer up during pending mode (no-op, no crash)", () => {
+    const bar = createTabBar({
+      barTop: 0,
+      barHeight: 40,
+      tabRects: [{ left: 0, width: 120 }],
+    });
+    const tabBarRef = createRef<HTMLElement>();
+    tabBarRef.current = bar;
+
+    const onDragOut = vi.fn();
+    const onReorder = vi.fn();
+    const { result } = renderHook(() =>
+      useTabDragOut({ tabBarRef, onDragOut, onReorder })
+    );
+
+    act(() => {
+      result.current.getTabDragHandlers("tab-1", false).onPointerDown(
+        createPointerDownEvent({ clientX: 30, clientY: 20 })
+      );
+      // Release immediately without moving past any threshold
+      dispatchPointer("pointerup", 31, 20);
+    });
+
+    expect(onDragOut).not.toHaveBeenCalled();
+    expect(onReorder).not.toHaveBeenCalled();
+    expect(result.current.dragMode).toBe("idle");
+  });
+
+  it("handles bar ref being null during move", () => {
+    const bar = createTabBar({
+      barTop: 0,
+      barHeight: 40,
+      tabRects: [{ left: 0, width: 120 }],
+    });
+    const tabBarRef = createRef<HTMLElement>();
+    tabBarRef.current = bar;
+
+    const onDragOut = vi.fn();
+    const onReorder = vi.fn();
+    const { result } = renderHook(() =>
+      useTabDragOut({ tabBarRef, onDragOut, onReorder })
+    );
+
+    act(() => {
+      result.current.getTabDragHandlers("tab-1", false).onPointerDown(
+        createPointerDownEvent({ clientX: 30, clientY: 20 })
+      );
+      // Null out the bar ref before move
+      tabBarRef.current = null;
+      dispatchPointer("pointermove", 130, 20);
+      dispatchPointer("pointerup", 130, 20);
+    });
+
+    expect(onDragOut).not.toHaveBeenCalled();
+    expect(onReorder).not.toHaveBeenCalled();
+  });
+
+  it("emits drag move payload in reorder mode", () => {
+    const bar = createTabBar({
+      barTop: 0,
+      barHeight: 40,
+      tabRects: [
+        { left: 0, width: 100 },
+        { left: 100, width: 100 },
+      ],
+    });
+    const tabBarRef = createRef<HTMLElement>();
+    tabBarRef.current = bar;
+
+    const onDragOut = vi.fn();
+    const onReorder = vi.fn();
+    const onDragMove = vi.fn();
+    const { result } = renderHook(() =>
+      useTabDragOut({ tabBarRef, onDragOut, onReorder, onDragMove })
+    );
+
+    act(() => {
+      result.current.getTabDragHandlers("tab-1", false).onPointerDown(
+        createPointerDownEvent({ clientX: 10, clientY: 20 })
+      );
+      dispatchPointer("pointermove", 160, 20); // enter reorder
+    });
+
+    const reorderCalls = onDragMove.mock.calls.filter(
+      (c: unknown[]) => (c[0] as { mode: string }).mode === "reorder"
+    );
+    expect(reorderCalls.length).toBeGreaterThan(0);
+  });
 });

@@ -1,10 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { createFileLinkProvider } from "./fileLinkProvider";
-import type { Terminal, IBufferLine } from "@xterm/xterm";
+
+const { mockGetState } = vi.hoisted(() => ({
+  mockGetState: vi.fn(() => ({ rootPath: "/workspace" })),
+}));
 
 vi.mock("@/stores/workspaceStore", () => ({
-  useWorkspaceStore: { getState: vi.fn(() => ({ rootPath: "/workspace" })) },
+  useWorkspaceStore: { getState: mockGetState },
 }));
+
+import { createFileLinkProvider } from "./fileLinkProvider";
+import type { Terminal, IBufferLine } from "@xterm/xterm";
 
 function makeTerm(lineText: string): Terminal {
   const line: Partial<IBufferLine> = {
@@ -73,6 +78,161 @@ describe("createFileLinkProvider", () => {
     return new Promise<void>((resolve) => {
       provider.provideLinks(1, (links) => {
         expect(links).toBeUndefined();
+        resolve();
+      });
+    });
+  });
+
+  it("returns undefined for null buffer line", () => {
+    const term = {
+      buffer: {
+        active: {
+          getLine: vi.fn(() => null),
+        },
+      },
+    } as unknown as Terminal;
+    const provider = createFileLinkProvider(term, onActivate);
+
+    return new Promise<void>((resolve) => {
+      provider.provideLinks(99, (links) => {
+        expect(links).toBeUndefined();
+        resolve();
+      });
+    });
+  });
+
+  it("fires onActivate callback when link is activated", () => {
+    const term = makeTerm("error in /Users/foo/bar.ts");
+    const provider = createFileLinkProvider(term, onActivate);
+
+    return new Promise<void>((resolve) => {
+      provider.provideLinks(1, (links) => {
+        expect(links).toHaveLength(1);
+        links![0].activate(new MouseEvent("click"), "");
+        expect(onActivate).toHaveBeenCalledWith("/Users/foo/bar.ts");
+        resolve();
+      });
+    });
+  });
+
+  it("filters out paths without file extension", () => {
+    const term = makeTerm("cd /usr/local/bin");
+    const provider = createFileLinkProvider(term, onActivate);
+
+    return new Promise<void>((resolve) => {
+      provider.provideLinks(1, (links) => {
+        expect(links).toBeUndefined();
+        resolve();
+      });
+    });
+  });
+
+  it("filters out paths without a slash", () => {
+    const term = makeTerm("filename.ts is missing");
+    const provider = createFileLinkProvider(term, onActivate);
+
+    return new Promise<void>((resolve) => {
+      provider.provideLinks(1, (links) => {
+        expect(links).toBeUndefined();
+        resolve();
+      });
+    });
+  });
+
+  it("handles relative path with ../ prefix", () => {
+    const term = makeTerm("found ../src/components/App.tsx");
+    const provider = createFileLinkProvider(term, onActivate);
+
+    return new Promise<void>((resolve) => {
+      provider.provideLinks(1, (links) => {
+        expect(links).toHaveLength(1);
+        expect(links![0].text).toBe("/workspace/../src/components/App.tsx");
+        resolve();
+      });
+    });
+  });
+
+  it("resolves relative path by stripping ./ prefix", () => {
+    const term = makeTerm("found ./src/main.ts");
+    const provider = createFileLinkProvider(term, onActivate);
+
+    return new Promise<void>((resolve) => {
+      provider.provideLinks(1, (links) => {
+        expect(links).toHaveLength(1);
+        expect(links![0].text).toBe("/workspace/src/main.ts");
+        resolve();
+      });
+    });
+  });
+
+  it("detects multiple file paths on the same line", () => {
+    const term = makeTerm("diff /Users/a/foo.ts /Users/b/bar.ts");
+    const provider = createFileLinkProvider(term, onActivate);
+
+    return new Promise<void>((resolve) => {
+      provider.provideLinks(1, (links) => {
+        expect(links).toHaveLength(2);
+        expect(links![0].text).toBe("/Users/a/foo.ts");
+        expect(links![1].text).toBe("/Users/b/bar.ts");
+        resolve();
+      });
+    });
+  });
+
+  it("returns undefined for empty line", () => {
+    const term = makeTerm("");
+    const provider = createFileLinkProvider(term, onActivate);
+
+    return new Promise<void>((resolve) => {
+      provider.provideLinks(1, (links) => {
+        expect(links).toBeUndefined();
+        resolve();
+      });
+    });
+  });
+
+  it("handles path with only :line suffix (no :col)", () => {
+    const term = makeTerm(" /Users/foo/bar.ts:42");
+    const provider = createFileLinkProvider(term, onActivate);
+
+    return new Promise<void>((resolve) => {
+      provider.provideLinks(1, (links) => {
+        expect(links).toHaveLength(1);
+        expect(links![0].text).toBe("/Users/foo/bar.ts");
+        resolve();
+      });
+    });
+  });
+
+  it("returns relative path as-is when no workspace root", () => {
+    mockGetState.mockReturnValueOnce({ rootPath: null });
+
+    const term = makeTerm("found ./src/main.ts");
+    const provider = createFileLinkProvider(term, onActivate);
+
+    return new Promise<void>((resolve) => {
+      provider.provideLinks(1, (links) => {
+        expect(links).toHaveLength(1);
+        expect(links![0].text).toBe("src/main.ts");
+        resolve();
+      });
+    });
+  });
+
+  it("link range has correct start and end positions", () => {
+    const term = makeTerm("error in /Users/foo/bar.ts");
+    const provider = createFileLinkProvider(term, onActivate);
+
+    return new Promise<void>((resolve) => {
+      provider.provideLinks(1, (links) => {
+        expect(links).toHaveLength(1);
+        const range = links![0].range;
+        // bufferLineNumber passed as 1, so y should be 1
+        expect(range.start.y).toBe(1);
+        expect(range.end.y).toBe(1);
+        // x positions should be positive (1-indexed)
+        expect(range.start.x).toBeGreaterThan(0);
+        expect(range.end.x).toBeGreaterThan(range.start.x);
         resolve();
       });
     });

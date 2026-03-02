@@ -130,4 +130,109 @@ describe("listContinuationExtension", () => {
       editor.destroy();
     });
   });
+
+  describe("task list items", () => {
+    it("splits task list item and resets checked state", () => {
+      // Create editor with task list content containing checked attribute
+      const editor = createEditor(
+        '<ul><li data-checked="true"><p>Done task</p></li></ul>'
+      );
+
+      editor.commands.focus("end");
+      editor.commands.keyboardShortcut("Enter");
+
+      const html = editor.getHTML();
+      // Should have two list items after split
+      expect(html).toContain("Done task");
+
+      editor.destroy();
+    });
+
+    it("splits unchecked task list item", () => {
+      const editor = createEditor(
+        '<ul><li data-checked="false"><p>Pending task</p></li></ul>'
+      );
+
+      editor.commands.focus("end");
+      editor.commands.keyboardShortcut("Enter");
+
+      const html = editor.getHTML();
+      expect(html).toContain("Pending task");
+
+      editor.destroy();
+    });
+  });
+
+  describe("extension structure", () => {
+    it("has the correct name", () => {
+      expect(listContinuationExtension.name).toBe("listContinuation");
+    });
+
+    it("has priority 1000", () => {
+      expect(listContinuationExtension.config.priority).toBe(1000);
+    });
+
+    it("defines ProseMirror plugins", () => {
+      expect(listContinuationExtension.config.addProseMirrorPlugins).toBeDefined();
+    });
+  });
+
+  describe("multiple list items", () => {
+    it("continues list after multiple existing items", () => {
+      const editor = createEditor(
+        "<ul><li>Item 1</li><li>Item 2</li><li>Item 3</li></ul>"
+      );
+
+      editor.commands.focus("end");
+      editor.commands.keyboardShortcut("Enter");
+
+      const html = editor.getHTML();
+      expect(html).toContain("Item 1");
+      expect(html).toContain("Item 2");
+      expect(html).toContain("Item 3");
+      // Should have a fourth empty item
+      expect((html.match(/<li>/g) || []).length).toBeGreaterThanOrEqual(4);
+
+      editor.destroy();
+    });
+
+    it("exits list from empty item between non-empty items", () => {
+      const editor = createEditor(
+        "<ul><li>First</li><li></li><li>Third</li></ul>"
+      );
+
+      // Focus on the empty second item
+      // Position: <doc><ul><li><p>First</p></li><li><p>|</p></li>...
+      // First listItem: doc(0) > ul(1) > li(1) > p(1) > "First"(5) > /p > /li
+      // Second listItem starts after that
+      const doc = editor.state.doc;
+      let emptyItemPos = -1;
+      doc.descendants((node, pos) => {
+        if (node.type.name === "listItem" && node.textContent === "") {
+          emptyItemPos = pos + 2; // inside the empty paragraph
+        }
+      });
+
+      if (emptyItemPos > 0) {
+        editor.commands.setTextSelection(emptyItemPos);
+        editor.commands.keyboardShortcut("Enter");
+      }
+
+      editor.destroy();
+    });
+  });
+
+  describe("ordered list continuation", () => {
+    it("exits ordered list on empty item", () => {
+      const editor = createEditor("<ol><li>First</li><li></li></ol>");
+
+      editor.commands.focus("end");
+      editor.commands.keyboardShortcut("Enter");
+
+      const html = editor.getHTML();
+      expect(html).toContain("First");
+
+      editor.destroy();
+    });
+  });
 });

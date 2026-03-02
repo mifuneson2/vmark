@@ -129,4 +129,72 @@ describe("findHeadingIndexAtLine", () => {
     const doc = textFrom("");
     expect(findHeadingIndexAtLine(doc, 1)).toBe(-1);
   });
+
+  it("returns correct index for consecutive headings without gaps", () => {
+    const doc = textFrom("# H1\n## H2\n### H3");
+    expect(findHeadingIndexAtLine(doc, 1)).toBe(0);
+    expect(findHeadingIndexAtLine(doc, 2)).toBe(1);
+    expect(findHeadingIndexAtLine(doc, 3)).toBe(2);
+  });
+
+  it("ignores non-heading lines with hash characters", () => {
+    const doc = textFrom("#NoSpace\n###### H6\nSome #text");
+    expect(findHeadingIndexAtLine(doc, 1)).toBe(-1); // #NoSpace is not a heading
+    expect(findHeadingIndexAtLine(doc, 2)).toBe(0); // ###### H6 is heading 0
+    expect(findHeadingIndexAtLine(doc, 3)).toBe(0); // still after heading 0
+  });
+
+  it("handles cursor on the last line of a document with trailing newline", () => {
+    const doc = textFrom("# First\n\nText\n\n## Second\n");
+    // Line 6 is the empty line at the end
+    expect(findHeadingIndexAtLine(doc, 6)).toBe(1);
+  });
+
+  it("handles tilde code fences correctly", () => {
+    const doc = textFrom("# Real\n\n~~~\n# Fake Inside Tilde\n~~~\n\n## After");
+    expect(findHeadingIndexAtLine(doc, 4)).toBe(0); // Inside tilde fence
+    expect(findHeadingIndexAtLine(doc, 7)).toBe(1); // After fence closes
+  });
+
+  it("handles nested-looking fences (4-backtick inside 3-backtick)", () => {
+    const doc = textFrom("# A\n````\n# B\n```\n# C\n````\n## D");
+    // 4-backtick fence opened, 3-backtick does NOT close it
+    // # B and # C are inside the fence
+    expect(findHeadingIndexAtLine(doc, 3)).toBe(0); // # B inside
+    expect(findHeadingIndexAtLine(doc, 5)).toBe(0); // # C inside
+    expect(findHeadingIndexAtLine(doc, 7)).toBe(1); // ## D outside
+  });
+});
+
+describe("findNthHeadingPos — edge cases", () => {
+  it("handles document with only blank lines", () => {
+    const doc = textFrom("\n\n\n\n");
+    expect(findNthHeadingPos(doc, 0)).toBe(-1);
+  });
+
+  it("handles document with only code fences (no headings)", () => {
+    const doc = textFrom("```\ncode\n```");
+    expect(findNthHeadingPos(doc, 0)).toBe(-1);
+  });
+
+  it("handles heading with trailing whitespace", () => {
+    const s = "# Hello   \n## World";
+    const doc = textFrom(s);
+    expect(findNthHeadingPos(doc, 0)).toBe(posOf(s, "# Hello"));
+    expect(findNthHeadingPos(doc, 1)).toBe(posOf(s, "## World"));
+  });
+
+  it("handles ####### (7 hashes) as non-heading", () => {
+    const s = "####### Not a heading\n# Real heading";
+    const doc = textFrom(s);
+    expect(findNthHeadingPos(doc, 0)).toBe(posOf(s, "# Real heading"));
+    expect(findNthHeadingPos(doc, 1)).toBe(-1);
+  });
+
+  it("handles unclosed code fence (all remaining content is fenced)", () => {
+    const s = "# Before\n```\n# Inside unclosed";
+    const doc = textFrom(s);
+    expect(findNthHeadingPos(doc, 0)).toBe(posOf(s, "# Before"));
+    expect(findNthHeadingPos(doc, 1)).toBe(-1); // Inside unclosed fence
+  });
 });

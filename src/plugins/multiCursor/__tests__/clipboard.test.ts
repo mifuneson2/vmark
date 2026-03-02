@@ -145,3 +145,45 @@ describe("handleMultiCursorCut", () => {
     expect(tr).toBeNull();
   });
 });
+
+describe("getMultiCursorClipboardText edge cases", () => {
+  it("returns empty string for non-MultiSelection", () => {
+    const state = EditorState.create({
+      doc: createDoc("hello"),
+      schema,
+      plugins: [multiCursorPlugin()],
+    });
+
+    const text = getMultiCursorClipboardText(state);
+    expect(text).toBe("");
+  });
+});
+
+describe("handleMultiCursorPaste edge cases", () => {
+  it("returns null for non-MultiSelection", () => {
+    const state = EditorState.create({
+      doc: createDoc("hello"),
+      schema,
+      plugins: [multiCursorPlugin()],
+    });
+
+    const tr = handleMultiCursorPaste(state, "text");
+    expect(tr).toBeNull();
+  });
+
+  it("handles paste with replacement of selected text", () => {
+    // Create state with selections covering text
+    const state = createState("hello world", [
+      { from: 1, to: 6 },  // "hello"
+      { from: 7, to: 12 }, // "world"
+    ]);
+
+    const tr = handleMultiCursorPaste(state, "A\nB");
+    expect(tr).not.toBeNull();
+
+    if (tr) {
+      const newState = state.apply(tr);
+      expect(newState.doc.textContent).toBe("A B");
+    }
+  });
+});

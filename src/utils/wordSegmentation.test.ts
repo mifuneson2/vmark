@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { findWordBoundaries, findWordEdge, _resetSegmenterCache } from "./wordSegmentation";
+import { findWordBoundaries, findWordEdge, getWordSegments, _resetSegmenterCache } from "./wordSegmentation";
 
 describe("wordSegmentation", () => {
   beforeEach(() => {
@@ -237,6 +237,118 @@ describe("wordSegmentation", () => {
       const result = findWordBoundaries(text, 2);
 
       expect(result).toEqual({ start: 0, end: 4 });
+    });
+
+    it("returns null at position 0 in fallback (boundary)", () => {
+      delete (Intl as Record<string, unknown>).Segmenter;
+      _resetSegmenterCache();
+
+      const result = findWordBoundaries("hello", 0);
+      expect(result).toBeNull();
+    });
+
+    it("returns null at end of text in fallback (boundary)", () => {
+      delete (Intl as Record<string, unknown>).Segmenter;
+      _resetSegmenterCache();
+
+      const result = findWordBoundaries("hello", 5);
+      expect(result).toBeNull();
+    });
+
+    it("returns null for non-word chars at position in fallback", () => {
+      delete (Intl as Record<string, unknown>).Segmenter;
+      _resetSegmenterCache();
+
+      const result = findWordBoundaries("   ", 1);
+      expect(result).toBeNull();
+    });
+
+    it("returns null when cursor is at word boundary (start == posInText) in fallback", () => {
+      delete (Intl as Record<string, unknown>).Segmenter;
+      _resetSegmenterCache();
+
+      // "a b" — pos=2 is at start of "b", but single char word: start=2, end=3, posInText=2 == start
+      const result = findWordBoundaries("a b", 2);
+      expect(result).toBeNull();
+    });
+  });
+
+  describe("getWordSegments", () => {
+    it("returns empty array for empty text", () => {
+      expect(getWordSegments("")).toEqual([]);
+    });
+
+    it("returns word segments for simple text", () => {
+      const segments = getWordSegments("hello world");
+      expect(segments.length).toBeGreaterThanOrEqual(2);
+      expect(segments[0]).toEqual({ start: 0, end: 5 });
+    });
+
+    it("returns word segments using regex fallback", () => {
+      const originalSegmenter = (Intl as Record<string, unknown>).Segmenter;
+      delete (Intl as Record<string, unknown>).Segmenter;
+      _resetSegmenterCache();
+
+      const segments = getWordSegments("hello world test");
+      expect(segments).toEqual([
+        { start: 0, end: 5 },
+        { start: 6, end: 11 },
+        { start: 12, end: 16 },
+      ]);
+
+      (Intl as Record<string, unknown>).Segmenter = originalSegmenter;
+      _resetSegmenterCache();
+    });
+
+    it("regex fallback handles text with only non-word chars", () => {
+      const originalSegmenter = (Intl as Record<string, unknown>).Segmenter;
+      delete (Intl as Record<string, unknown>).Segmenter;
+      _resetSegmenterCache();
+
+      const segments = getWordSegments("... --- !!!");
+      expect(segments).toEqual([]);
+
+      (Intl as Record<string, unknown>).Segmenter = originalSegmenter;
+      _resetSegmenterCache();
+    });
+  });
+
+  describe("findWordEdge - additional cases", () => {
+    it("returns null for empty text", () => {
+      expect(findWordEdge("", 0, 1)).toBeNull();
+      expect(findWordEdge("", 0, -1)).toBeNull();
+    });
+
+    it("returns null for text with no word segments", () => {
+      expect(findWordEdge("   ", 1, 1)).toBeNull();
+      expect(findWordEdge("   ", 1, -1)).toBeNull();
+    });
+
+    it("returns last segment end when moving right past all segments", () => {
+      const text = "hello world";
+      // Position past end of last word
+      const result = findWordEdge(text, 11, 1);
+      expect(result).toBe(11);
+    });
+
+    it("returns first segment start when moving left past all segments", () => {
+      const text = "hello world";
+      const result = findWordEdge(text, 0, -1);
+      expect(result).toBe(0);
+    });
+
+    it("clamps out-of-bounds position", () => {
+      const text = "hello";
+      // Position beyond text length
+      const result = findWordEdge(text, 100, -1);
+      expect(result).toBe(0);
+    });
+
+    it("moves left to previous word start when between words", () => {
+      const text = "hello world test";
+      // Position between "world" and "test" (at space)
+      const result = findWordEdge(text, 12, -1);
+      expect(result).toBe(6);
     });
   });
 });

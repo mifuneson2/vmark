@@ -74,6 +74,75 @@ describe("matchesShortcutEvent", () => {
     });
   });
 
+  it("returns false for empty shortcut string", () => {
+    const event = makeEvent({ key: "a" });
+    expect(matchesShortcutEvent(event, "", "mac")).toBe(false);
+  });
+
+  it("returns false for shortcut with only separators", () => {
+    const event = makeEvent({ key: "a" });
+    expect(matchesShortcutEvent(event, "---", "mac")).toBe(false);
+  });
+
+  it("ignores metaKey on non-mac (Windows key is not checked)", () => {
+    // On non-mac, metaKey (Windows key) is not checked by the matcher
+    const event = makeEvent({ key: "a", metaKey: true });
+    expect(matchesShortcutEvent(event, "a", "other")).toBe(true);
+  });
+
+  it("rejects when Mod not pressed on mac", () => {
+    const event = makeEvent({ key: "a" });
+    expect(matchesShortcutEvent(event, "Mod-a", "mac")).toBe(false);
+  });
+
+  it("rejects metaKey on mac when shortcut has no Mod", () => {
+    const event = makeEvent({ key: "a", metaKey: true });
+    expect(matchesShortcutEvent(event, "a", "mac")).toBe(false);
+  });
+
+  it("matches Ctrl modifier on mac separately from Mod", () => {
+    const event = makeEvent({ key: "a", ctrlKey: true });
+    expect(matchesShortcutEvent(event, "Ctrl-a", "mac")).toBe(true);
+  });
+
+  it("rejects Ctrl mismatch on mac", () => {
+    const event = makeEvent({ key: "a", metaKey: true });
+    expect(matchesShortcutEvent(event, "Ctrl-Mod-a", "mac")).toBe(false);
+  });
+
+  it("matches shifted = to +", () => {
+    const event = makeEvent({ key: "+", shiftKey: true, metaKey: true });
+    expect(matchesShortcutEvent(event, "Mod-Shift-=", "mac")).toBe(true);
+  });
+
+  it("matches Ctrl on non-mac (both Ctrl and Mod map to ctrlKey)", () => {
+    const event = makeEvent({ key: "a", ctrlKey: true });
+    expect(matchesShortcutEvent(event, "Ctrl-a", "other")).toBe(true);
+  });
+
+  it("does not match shifted symbol when shiftKey is false", () => {
+    const event = makeEvent({ key: "/", metaKey: true });
+    // Shift not pressed, so shifted symbol matching should not activate
+    expect(matchesShortcutEvent(event, "Mod-/", "mac")).toBe(true);
+  });
+
+  it("matches escape key alias", () => {
+    const event = makeEvent({ key: "Escape" });
+    expect(matchesShortcutEvent(event, "Esc", "mac")).toBe(true);
+  });
+
+  it("matches return key alias", () => {
+    const event = makeEvent({ key: "Enter" });
+    expect(matchesShortcutEvent(event, "Return", "other")).toBe(true);
+  });
+
+  it("uses default platform detection when platform not specified", () => {
+    const event = makeEvent({ key: "a", ctrlKey: true });
+    // Should not throw — uses isMacPlatform() internally
+    const result = matchesShortcutEvent(event, "Mod-a");
+    expect(typeof result).toBe("boolean");
+  });
+
   describe("CJK IME remapping", () => {
     it.each([
       { name: "Ctrl-` with backtick remapped to middle dot", key: "\u00B7", code: "Backquote", init: { ctrlKey: true }, shortcut: "Ctrl-`", platform: "mac" as const },

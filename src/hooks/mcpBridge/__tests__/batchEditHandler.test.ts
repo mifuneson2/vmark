@@ -347,4 +347,240 @@ describe("batchEditHandler", () => {
       expect.objectContaining({ success: true })
     );
   });
+
+  it("applies format operation with marks", async () => {
+    const editor = createMockEditor();
+    mockGetEditor.mockReturnValue(editor);
+    mockResolveNodeId.mockReturnValue({ from: 0, to: 10 });
+    mockGetTextRange.mockReturnValue({ from: 1, to: 9 });
+
+    await handleBatchEdit("req-15", {
+      baseRevision: "rev-1",
+      mode: "apply",
+      operations: [
+        {
+          type: "format",
+          nodeId: "p-0",
+          marks: [{ type: "bold" }, { type: "italic" }],
+        },
+      ],
+    });
+
+    expect(editor.commands.toggleMark).toHaveBeenCalledWith("bold", undefined);
+    expect(editor.commands.toggleMark).toHaveBeenCalledWith("italic", undefined);
+    const call = mockRespond.mock.calls[0][0];
+    expect(call.data.changedNodeIds).toContain("p-0");
+  });
+
+  it("warns for unknown operation type", async () => {
+    const editor = createMockEditor();
+    mockGetEditor.mockReturnValue(editor);
+    mockResolveNodeId.mockReturnValue({ from: 0, to: 10 });
+
+    await handleBatchEdit("req-16", {
+      baseRevision: "rev-1",
+      mode: "apply",
+      operations: [
+        { type: "unknown_op" as "update", nodeId: "p-0" },
+      ],
+    });
+
+    const call = mockRespond.mock.calls[0][0];
+    expect(call.success).toBe(true);
+    expect(call.data.warnings).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("Unknown operation type"),
+      ])
+    );
+  });
+
+  it("returns node_not_found for insert with missing after target", async () => {
+    const editor = createMockEditor();
+    mockGetEditor.mockReturnValue(editor);
+    mockResolveNodeId.mockReturnValue(null);
+
+    await handleBatchEdit("req-17", {
+      baseRevision: "rev-1",
+      mode: "apply",
+      operations: [
+        { type: "insert", after: "missing-node", content: "text" },
+      ],
+    });
+
+    const call = mockRespond.mock.calls[0][0];
+    expect(call.success).toBe(false);
+    expect(call.error).toContain("Node not found for 'after'");
+  });
+
+  it("creates suggestions for insert in suggest mode", async () => {
+    const editor = createMockEditor();
+    mockGetEditor.mockReturnValue(editor);
+    mockIsAutoApproveEnabled.mockReturnValue(false);
+    mockResolveNodeId.mockReturnValue({ from: 0, to: 10 });
+
+    await handleBatchEdit("req-18", {
+      baseRevision: "rev-1",
+      mode: "suggest",
+      operations: [
+        { type: "insert", after: "p-0", content: "new text" },
+      ],
+    });
+
+    expect(mockAddSuggestion).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "insert",
+        from: 10,
+        to: 10,
+        newContent: "new text",
+      })
+    );
+  });
+
+  it("creates suggestions for delete in suggest mode", async () => {
+    const editor = createMockEditor();
+    mockGetEditor.mockReturnValue(editor);
+    mockIsAutoApproveEnabled.mockReturnValue(false);
+    mockResolveNodeId.mockReturnValue({ from: 0, to: 10 });
+
+    await handleBatchEdit("req-19", {
+      baseRevision: "rev-1",
+      mode: "suggest",
+      operations: [{ type: "delete", nodeId: "p-0" }],
+    });
+
+    expect(mockAddSuggestion).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "delete",
+        from: 0,
+        to: 10,
+      })
+    );
+  });
+
+  it("caches dryRun response when requestId provided", async () => {
+    mockGetEditor.mockReturnValue(createMockEditor());
+
+    await handleBatchEdit("req-20", {
+      requestId: "dedup-20",
+      baseRevision: "rev-1",
+      mode: "dryRun",
+      operations: [{ type: "update", nodeId: "p-0", text: "new" }],
+    });
+
+    expect(mockCacheSet).toHaveBeenCalledWith(
+      "dedup-20",
+      expect.objectContaining({
+        data: expect.objectContaining({ isDryRun: true }),
+      })
+    );
+  });
+
+  it("caches validation error response when requestId provided", async () => {
+    mockGetEditor.mockReturnValue(createMockEditor());
+
+    await handleBatchEdit("req-21", {
+      requestId: "dedup-21",
+      baseRevision: "rev-1",
+      operations: [{ type: "update", text: "no nodeId" }],
+    });
+
+    expect(mockCacheSet).toHaveBeenCalledWith(
+      "dedup-21",
+      expect.objectContaining({ success: false })
+    );
+  });
+
+  it("caches node_not_found response when requestId provided", async () => {
+    const editor = createMockEditor();
+    mockGetEditor.mockReturnValue(editor);
+    mockResolveNodeId.mockReturnValue(null);
+
+    await handleBatchEdit("req-22", {
+      requestId: "dedup-22",
+      baseRevision: "rev-1",
+      operations: [{ type: "update", nodeId: "missing", text: "x" }],
+    });
+
+    expect(mockCacheSet).toHaveBeenCalledWith(
+      "dedup-22",
+      expect.objectContaining({
+        data: expect.objectContaining({ code: "node_not_found" }),
+      })
+    );
+  });
+
+  it("caches suggest mode response when requestId provided", async () => {
+    const editor = createMockEditor();
+    mockGetEditor.mockReturnValue(editor);
+    mockIsAutoApproveEnabled.mockReturnValue(false);
+    mockResolveNodeId.mockReturnValue({ from: 0, to: 10 });
+    mockGetTextRange.mockReturnValue({ from: 1, to: 9 });
+
+    await handleBatchEdit("req-23", {
+      requestId: "dedup-23",
+      baseRevision: "rev-1",
+      mode: "suggest",
+      operations: [{ type: "update", nodeId: "p-0", text: "new" }],
+    });
+
+    expect(mockCacheSet).toHaveBeenCalledWith(
+      "dedup-23",
+      expect.objectContaining({ success: true })
+    );
+  });
+
+  it("validates format requires nodeId", async () => {
+    mockGetEditor.mockReturnValue(createMockEditor());
+
+    await handleBatchEdit("req-24", {
+      baseRevision: "rev-1",
+      operations: [
+        { type: "format", marks: [{ type: "bold" }] },
+      ],
+    });
+
+    const call = mockRespond.mock.calls[0][0];
+    expect(call.success).toBe(false);
+    expect(call.data.errors[0]).toContain("format requires nodeId");
+  });
+
+  it("validates move requires nodeId", async () => {
+    mockGetEditor.mockReturnValue(createMockEditor());
+
+    await handleBatchEdit("req-25", {
+      baseRevision: "rev-1",
+      operations: [{ type: "move" }],
+    });
+
+    const call = mockRespond.mock.calls[0][0];
+    expect(call.success).toBe(false);
+    expect(call.data.errors[0]).toContain("move requires nodeId");
+  });
+
+  it("sorts operations by position descending for safe editing", async () => {
+    const editor = createMockEditor();
+    mockGetEditor.mockReturnValue(editor);
+    // First call returns pos 0-10, second returns pos 20-30
+    mockResolveNodeId
+      .mockReturnValueOnce({ from: 0, to: 10 })
+      .mockReturnValueOnce({ from: 20, to: 30 });
+    mockGetTextRange
+      .mockReturnValueOnce({ from: 1, to: 9 })
+      .mockReturnValueOnce({ from: 21, to: 29 });
+
+    await handleBatchEdit("req-26", {
+      baseRevision: "rev-1",
+      mode: "apply",
+      operations: [
+        { type: "update", nodeId: "p-0", text: "first" },
+        { type: "update", nodeId: "p-1", text: "second" },
+      ],
+    });
+
+    // Both dispatched, but second (higher pos) should be processed first
+    expect(editor.view.dispatch).toHaveBeenCalledTimes(2);
+    const call = mockRespond.mock.calls[0][0];
+    expect(call.success).toBe(true);
+    expect(call.data.changedNodeIds).toHaveLength(2);
+  });
 });

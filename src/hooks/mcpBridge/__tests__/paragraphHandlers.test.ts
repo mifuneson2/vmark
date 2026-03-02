@@ -247,5 +247,274 @@ describe("paragraphHandlers", () => {
         error: "No active editor",
       });
     });
+
+    it("returns error when target is missing", async () => {
+      mockGetEditor.mockReturnValue(createMockEditor(["text"]));
+
+      await handleParagraphWrite("req-11", {
+        baseRevision: "rev-1",
+        operation: "replace",
+        content: "new",
+      });
+
+      expect(mockRespond).toHaveBeenCalledWith({
+        id: "req-11",
+        success: false,
+        error: "target must specify index or containing",
+      });
+    });
+
+    it("returns error when target has no index or containing", async () => {
+      mockGetEditor.mockReturnValue(createMockEditor(["text"]));
+
+      await handleParagraphWrite("req-12", {
+        baseRevision: "rev-1",
+        target: {},
+        operation: "replace",
+        content: "new",
+      });
+
+      expect(mockRespond).toHaveBeenCalledWith({
+        id: "req-12",
+        success: false,
+        error: "target must specify index or containing",
+      });
+    });
+
+    it("allows delete operation without content", async () => {
+      const editor = createMockEditor(["text to delete"]);
+      mockGetEditor.mockReturnValue(editor);
+      mockIsAutoApproveEnabled.mockReturnValue(true);
+
+      await handleParagraphWrite("req-13", {
+        baseRevision: "rev-1",
+        target: { index: 0 },
+        operation: "delete",
+        mode: "apply",
+      });
+
+      const call = mockRespond.mock.calls[0][0];
+      expect(call.success).toBe(true);
+      expect(call.data.message).toContain("deleted");
+    });
+
+    it("creates suggestion in suggest mode for replace", async () => {
+      const editor = createMockEditor(["original text"]);
+      mockGetEditor.mockReturnValue(editor);
+      mockIsAutoApproveEnabled.mockReturnValue(false);
+
+      await handleParagraphWrite("req-14", {
+        baseRevision: "rev-1",
+        target: { index: 0 },
+        operation: "replace",
+        content: "new text",
+        mode: "suggest",
+      });
+
+      const call = mockRespond.mock.calls[0][0];
+      expect(call.success).toBe(true);
+      expect(call.data.applied).toBe(false);
+      expect(call.data.suggestionId).toBeDefined();
+    });
+
+    it("creates suggestion for append operation", async () => {
+      const editor = createMockEditor(["hello"]);
+      mockGetEditor.mockReturnValue(editor);
+      mockIsAutoApproveEnabled.mockReturnValue(false);
+
+      await handleParagraphWrite("req-15", {
+        baseRevision: "rev-1",
+        target: { index: 0 },
+        operation: "append",
+        content: " world",
+        mode: "suggest",
+      });
+
+      const call = mockRespond.mock.calls[0][0];
+      expect(call.success).toBe(true);
+      expect(call.data.message).toContain("append");
+    });
+
+    it("creates suggestion for prepend operation", async () => {
+      const editor = createMockEditor(["world"]);
+      mockGetEditor.mockReturnValue(editor);
+      mockIsAutoApproveEnabled.mockReturnValue(false);
+
+      await handleParagraphWrite("req-16", {
+        baseRevision: "rev-1",
+        target: { index: 0 },
+        operation: "prepend",
+        content: "hello ",
+        mode: "suggest",
+      });
+
+      const call = mockRespond.mock.calls[0][0];
+      expect(call.success).toBe(true);
+      expect(call.data.message).toContain("prepend");
+    });
+
+    it("creates suggestion for delete operation", async () => {
+      const editor = createMockEditor(["to delete"]);
+      mockGetEditor.mockReturnValue(editor);
+      mockIsAutoApproveEnabled.mockReturnValue(false);
+
+      await handleParagraphWrite("req-17", {
+        baseRevision: "rev-1",
+        target: { index: 0 },
+        operation: "delete",
+        mode: "suggest",
+      });
+
+      const call = mockRespond.mock.calls[0][0];
+      expect(call.success).toBe(true);
+      expect(call.data.message).toContain("delete");
+    });
+
+    it("applies replace directly in apply mode", async () => {
+      const editor = createMockEditor(["old text"]);
+      // Add tr and replaceRange to mock editor
+      (editor as Record<string, unknown>).state = {
+        ...editor.state,
+        tr: {
+          replaceRange: vi.fn().mockReturnThis(),
+        },
+      };
+      mockGetEditor.mockReturnValue(editor);
+      mockIsAutoApproveEnabled.mockReturnValue(true);
+
+      await handleParagraphWrite("req-18", {
+        baseRevision: "rev-1",
+        target: { index: 0 },
+        operation: "replace",
+        content: "new text",
+        mode: "apply",
+      });
+
+      const call = mockRespond.mock.calls[0][0];
+      expect(call.success).toBe(true);
+      expect(call.data.applied).toBe(true);
+      expect(call.data.message).toContain("replaced");
+    });
+
+    it("applies append directly in apply mode", async () => {
+      const editor = createMockEditor(["hello"]);
+      (editor as Record<string, unknown>).state = {
+        ...editor.state,
+        tr: {
+          replaceRange: vi.fn().mockReturnThis(),
+        },
+      };
+      mockGetEditor.mockReturnValue(editor);
+      mockIsAutoApproveEnabled.mockReturnValue(true);
+
+      await handleParagraphWrite("req-19", {
+        baseRevision: "rev-1",
+        target: { index: 0 },
+        operation: "append",
+        content: " world",
+        mode: "apply",
+      });
+
+      const call = mockRespond.mock.calls[0][0];
+      expect(call.success).toBe(true);
+      expect(call.data.message).toContain("appended to");
+    });
+
+    it("applies prepend directly in apply mode", async () => {
+      const editor = createMockEditor(["world"]);
+      (editor as Record<string, unknown>).state = {
+        ...editor.state,
+        tr: {
+          replaceRange: vi.fn().mockReturnThis(),
+        },
+      };
+      mockGetEditor.mockReturnValue(editor);
+      mockIsAutoApproveEnabled.mockReturnValue(true);
+
+      await handleParagraphWrite("req-20", {
+        baseRevision: "rev-1",
+        target: { index: 0 },
+        operation: "prepend",
+        content: "hello ",
+        mode: "apply",
+      });
+
+      const call = mockRespond.mock.calls[0][0];
+      expect(call.success).toBe(true);
+      expect(call.data.message).toContain("prepended to");
+    });
+
+    it("finds paragraph by containing text", async () => {
+      const editor = createMockEditor(["first", "target text", "third"]);
+      mockGetEditor.mockReturnValue(editor);
+      mockIsAutoApproveEnabled.mockReturnValue(false);
+
+      await handleParagraphWrite("req-21", {
+        baseRevision: "rev-1",
+        target: { containing: "target" },
+        operation: "replace",
+        content: "replaced",
+        mode: "suggest",
+      });
+
+      const call = mockRespond.mock.calls[0][0];
+      expect(call.success).toBe(true);
+    });
+  });
+
+  describe("handleParagraphRead — with context", () => {
+    it("includes context when requested", async () => {
+      const editor = createMockEditor(["Before", "Target", "After"]);
+      mockGetEditor.mockReturnValue(editor);
+
+      await handleParagraphRead("req-30", {
+        target: { index: 1 },
+        includeContext: true,
+      });
+
+      const call = mockRespond.mock.calls[0][0];
+      expect(call.success).toBe(true);
+      expect(call.data.context).toBeDefined();
+      expect(call.data.context.before).toBe("Before");
+      expect(call.data.context.after).toBe("After");
+    });
+
+    it("includes word and char counts", async () => {
+      const editor = createMockEditor(["Hello world"]);
+      mockGetEditor.mockReturnValue(editor);
+
+      await handleParagraphRead("req-31", {
+        target: { index: 0 },
+      });
+
+      const call = mockRespond.mock.calls[0][0];
+      expect(call.data.wordCount).toBe(2);
+      expect(call.data.charCount).toBe(11);
+    });
+
+    it("returns not_found for non-matching containing text", async () => {
+      const editor = createMockEditor(["First", "Second"]);
+      mockGetEditor.mockReturnValue(editor);
+
+      await handleParagraphRead("req-32", {
+        target: { containing: "nonexistent" },
+      });
+
+      const call = mockRespond.mock.calls[0][0];
+      expect(call.success).toBe(false);
+      expect(call.data.code).toBe("not_found");
+    });
+
+    it("returns no target missing error", async () => {
+      mockGetEditor.mockReturnValue(createMockEditor(["text"]));
+
+      await handleParagraphRead("req-33", {});
+
+      expect(mockRespond).toHaveBeenCalledWith({
+        id: "req-33",
+        success: false,
+        error: "target must specify index or containing",
+      });
+    });
   });
 });

@@ -102,4 +102,21 @@ describe("useWorkspaceSync", () => {
 
     expect(mockRehydrate).toHaveBeenCalledTimes(1);
   });
+
+  it("catches rehydration errors without crashing", () => {
+    mockRehydrate.mockImplementation(() => {
+      throw new Error("rehydration failed");
+    });
+
+    renderHook(() => useWorkspaceSync());
+
+    const event = new StorageEvent("storage", {
+      key: "vmark-workspace:main",
+      newValue: "{}",
+    });
+
+    // Should not throw
+    expect(() => window.dispatchEvent(event)).not.toThrow();
+    expect(mockRehydrate).toHaveBeenCalledTimes(1);
+  });
 });

@@ -183,4 +183,46 @@ describe("htmlPaste extension", () => {
       expect(handled).toBeFalsy();
     });
   });
+
+  describe("plain mode edge cases", () => {
+    it("should return false when plain mode but no text available", () => {
+      (useSettingsStore.getState as ReturnType<typeof vi.fn>).mockReturnValue({
+        markdown: { pasteMode: "plain" },
+      });
+
+      editor = createEditor();
+      const event = createClipboardEvent("", "<p>html</p>");
+
+      const handled = editor.view.someProp("handlePaste", (f) => f(editor.view, event, Slice.empty));
+      // No text available in plain mode, return false
+      expect(handled).toBeFalsy();
+    });
+  });
+
+  describe("large HTML fallback", () => {
+    it("should return false for large HTML when no plain text fallback", () => {
+      editor = createEditor();
+      const largeHtml = "<p>" + "x".repeat(101000) + "</p>";
+      const event = createClipboardEvent("", largeHtml);
+
+      const handled = editor.view.someProp("handlePaste", (f) => f(editor.view, event, Slice.empty));
+      // No plain text fallback available
+      expect(handled).toBeFalsy();
+    });
+  });
+
+  describe("markdown conversion result", () => {
+    it("should not handle when HTML is not substantial (simple div/span)", () => {
+      editor = createEditor();
+      // Non-substantial HTML (just a div/span wrapper) should be skipped
+      const event = createClipboardEvent(
+        "x",
+        "<div><span>x</span></div>"
+      );
+
+      const handled = editor.view.someProp("handlePaste", (f) => f(editor.view, event, Slice.empty));
+      // Non-substantial HTML returns false before conversion
+      expect(handled).toBeFalsy();
+    });
+  });
 });

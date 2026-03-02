@@ -226,4 +226,69 @@ describe("useCrashRecoveryStartup", () => {
       expect(mockReadRecoverySnapshots).toHaveBeenCalled();
     });
   });
+
+  it("continues recovery even when hot exit restore times out", async () => {
+    mockWaitForRestoreComplete.mockResolvedValue(false);
+    const snapshot = makeSnapshot({ content: "# After timeout" });
+    mockReadRecoverySnapshots.mockResolvedValue([snapshot]);
+
+    renderHook(() => useCrashRecoveryStartup());
+
+    await vi.waitFor(() => {
+      expect(mockToastInfo).toHaveBeenCalledWith(
+        expect.stringContaining("1")
+      );
+    });
+
+    const tabs = useTabStore.getState().getTabsByWindow("main");
+    expect(tabs.length).toBe(1);
+  });
+
+  it("continues restoring other snapshots when one fails", async () => {
+    // Create a snapshot that will cause restoreSnapshot to throw
+    // by manipulating the tab store to throw on createTab
+    const snapshot1 = makeSnapshot({ tabId: "t1", content: "Doc 1" });
+    const snapshot2 = makeSnapshot({ tabId: "t2", content: "Doc 2" });
+    mockReadRecoverySnapshots.mockResolvedValue([snapshot1, snapshot2]);
+
+    // Make createTab throw for first call only
+    const origCreateTab = useTabStore.getState().createTab;
+    let callCount = 0;
+    vi.spyOn(useTabStore.getState(), "createTab").mockImplementation(
+      (...args) => {
+        callCount++;
+        if (callCount === 1) throw new Error("createTab failed");
+        return origCreateTab(...args);
+      }
+    );
+
+    renderHook(() => useCrashRecoveryStartup());
+
+    await vi.waitFor(() => {
+      expect(mockDeleteRecoverySnapshot).toHaveBeenCalled();
+    });
+
+    // Should have restored at least the second snapshot
+    const tabs = useTabStore.getState().getTabsByWindow("main");
+    expect(tabs.length).toBe(1);
+    // Toast should show 1 recovered (the one that succeeded)
+    expect(mockToastInfo).toHaveBeenCalledWith(
+      expect.stringContaining("1")
+    );
+  });
+
+  it("only runs once even if re-rendered", async () => {
+    mockReadRecoverySnapshots.mockResolvedValue([]);
+
+    const { rerender } = renderHook(() => useCrashRecoveryStartup());
+
+    await vi.waitFor(() => {
+      expect(mockReadRecoverySnapshots).toHaveBeenCalledTimes(1);
+    });
+
+    rerender();
+
+    // Should still only have been called once due to hasRun ref guard
+    expect(mockReadRecoverySnapshots).toHaveBeenCalledTimes(1);
+  });
 });

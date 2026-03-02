@@ -67,7 +67,16 @@ vi.mock("@/utils/historyTypes", async (importOriginal) => {
   };
 });
 
-import { createSnapshot, deleteSnapshot } from "../useHistoryOperations";
+import {
+  createSnapshot,
+  deleteSnapshot,
+  getHistoryIndex,
+  getSnapshots,
+  loadSnapshot,
+  revertToSnapshot,
+  pruneSnapshots,
+  markAsDeleted,
+} from "../useHistoryOperations";
 
 const DOC_PATH = "/docs/test.md";
 
@@ -616,5 +625,226 @@ describe("deleteSnapshot", () => {
     const writtenIndex = getLastWrittenIndex();
     const snapshots = writtenIndex.snapshots as Array<{ id: string }>;
     expect(snapshots).toHaveLength(0);
+  });
+});
+
+describe("getHistoryIndex", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    fileStore.clear();
+  });
+
+  it("returns null when no index file exists", async () => {
+    const result = await getHistoryIndex(DOC_PATH);
+    expect(result).toBeNull();
+  });
+
+  it("returns parsed index when file exists", async () => {
+    seedIndex([
+      { id: "snap-1", timestamp: 1000, type: "auto", size: 10, preview: "a" },
+    ]);
+
+    const result = await getHistoryIndex(DOC_PATH);
+    expect(result).not.toBeNull();
+    expect(result!.documentPath).toBe(DOC_PATH);
+    expect(result!.snapshots).toHaveLength(1);
+  });
+
+  it("returns null for invalid JSON in index file", async () => {
+    fileStore.set(INDEX_PATH, "not valid json {{{");
+
+    const result = await getHistoryIndex(DOC_PATH);
+    expect(result).toBeNull();
+  });
+});
+
+describe("getSnapshots", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    fileStore.clear();
+  });
+
+  it("returns empty array when no history exists", async () => {
+    const result = await getSnapshots(DOC_PATH);
+    expect(result).toEqual([]);
+  });
+
+  it("returns snapshots sorted by timestamp descending (newest first)", async () => {
+    seedIndex([
+      { id: "snap-1", timestamp: 1000, type: "auto", size: 10, preview: "a" },
+      { id: "snap-3", timestamp: 3000, type: "auto", size: 10, preview: "c" },
+      { id: "snap-2", timestamp: 2000, type: "manual", size: 20, preview: "b" },
+    ]);
+
+    const result = await getSnapshots(DOC_PATH);
+    expect(result).toHaveLength(3);
+    expect(result[0].id).toBe("snap-3");
+    expect(result[1].id).toBe("snap-2");
+    expect(result[2].id).toBe("snap-1");
+  });
+});
+
+describe("loadSnapshot", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    fileStore.clear();
+  });
+
+  it("returns null when snapshot file does not exist", async () => {
+    const result = await loadSnapshot(DOC_PATH, "nonexistent");
+    expect(result).toBeNull();
+  });
+
+  it("returns content when snapshot file exists", async () => {
+    const snapshotPath = `${HISTORY_DIR}/snap-1.md`;
+    fileStore.set(snapshotPath, "# Snapshot content");
+    fileStore.set(HISTORY_DIR, "");
+
+    const result = await loadSnapshot(DOC_PATH, "snap-1");
+    expect(result).toBe("# Snapshot content");
+  });
+});
+
+describe("revertToSnapshot", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.useFakeTimers();
+    fileStore.clear();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("creates a revert snapshot of current content before loading target", async () => {
+    const now = 1700000000000;
+    vi.setSystemTime(now);
+
+    // Snapshot must be within maxAgeDays so pruning doesn't remove it
+    const recentTimestamp = now - 1000;
+    seedIndex([
+      { id: "snap-old", timestamp: recentTimestamp, type: "manual", size: 15, preview: "old" },
+    ]);
+    fileStore.set(`${HISTORY_DIR}/snap-old.md`, "# Old version");
+
+    const result = await revertToSnapshot(
+      DOC_PATH,
+      "snap-old",
+      "# Current version",
+      defaultSettings
+    );
+
+    expect(result).toBe("# Old version");
+
+    // Should have created a revert snapshot
+    const writtenIndex = getLastWrittenIndex();
+    const snapshots = writtenIndex.snapshots as Array<{ type: string }>;
+    const revertSnap = snapshots.find((s) => s.type === "revert");
+    expect(revertSnap).toBeDefined();
+  });
+
+  it("returns null when target snapshot does not exist", async () => {
+    vi.setSystemTime(1700000000000);
+
+    seedIndex([]);
+
+    const result = await revertToSnapshot(
+      DOC_PATH,
+      "nonexistent",
+      "# Current",
+      defaultSettings
+    );
+
+    expect(result).toBeNull();
+  });
+});
+
+describe("pruneSnapshots", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.useFakeTimers();
+    fileStore.clear();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("no-ops when no history exists", async () => {
+    await pruneSnapshots(DOC_PATH);
+    expect(mockRemove).not.toHaveBeenCalled();
+  });
+
+  it("removes snapshots exceeding maxSnapshots limit", async () => {
+    vi.setSystemTime(1700000000000);
+
+    const snapshots = [];
+    for (let i = 0; i < 5; i++) {
+      snapshots.push({
+        id: `snap-${i}`,
+        timestamp: 1700000000000 - (4 - i) * 1000,
+        type: "auto",
+        size: 10,
+        preview: `s${i}`,
+      });
+    }
+    seedIndex(snapshots, { ...defaultSettings, maxSnapshots: 3, maxAgeDays: 365 });
+
+    await pruneSnapshots(DOC_PATH);
+
+    // Should keep 3 newest, remove 2 oldest
+    expect(mockRemove).toHaveBeenCalledTimes(2);
+    expect(mockRemove).toHaveBeenCalledWith(`${HISTORY_DIR}/snap-0.md`);
+    expect(mockRemove).toHaveBeenCalledWith(`${HISTORY_DIR}/snap-1.md`);
+  });
+
+  it("removes snapshots older than maxAgeDays", async () => {
+    const now = 1700000000000;
+    vi.setSystemTime(now);
+
+    const oldTimestamp = now - 10 * 24 * 60 * 60 * 1000; // 10 days ago
+    seedIndex(
+      [
+        { id: "snap-old", timestamp: oldTimestamp, type: "auto", size: 10, preview: "old" },
+        { id: "snap-new", timestamp: now - 1000, type: "auto", size: 10, preview: "new" },
+      ],
+      { ...defaultSettings, maxAgeDays: 7 }
+    );
+
+    await pruneSnapshots(DOC_PATH);
+
+    expect(mockRemove).toHaveBeenCalledWith(`${HISTORY_DIR}/snap-old.md`);
+  });
+});
+
+describe("markAsDeleted", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.useFakeTimers();
+    fileStore.clear();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("no-ops when no history exists", async () => {
+    await markAsDeleted(DOC_PATH);
+    expect(mockWriteTextFile).not.toHaveBeenCalled();
+  });
+
+  it("sets status to deleted and records deletedAt timestamp", async () => {
+    const now = 1700000000000;
+    vi.setSystemTime(now);
+
+    seedIndex([
+      { id: "snap-1", timestamp: 1000, type: "auto", size: 10, preview: "a" },
+    ]);
+
+    await markAsDeleted(DOC_PATH);
+
+    const writtenIndex = getLastWrittenIndex();
+    expect(writtenIndex.status).toBe("deleted");
+    expect(writtenIndex.deletedAt).toBe(now);
   });
 });

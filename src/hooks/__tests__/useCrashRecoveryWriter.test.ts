@@ -179,4 +179,68 @@ describe("useCrashRecoveryWriter", () => {
     await vi.advanceTimersByTimeAsync(10_000);
     expect(mockWriteRecoverySnapshot).not.toHaveBeenCalled();
   });
+
+  it("prunes hash entries for tabs that no longer exist", async () => {
+    renderHook(() => useCrashRecoveryWriter());
+
+    // First interval: write snapshots for tab-1 and tab-2 (dirty)
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(mockWriteRecoverySnapshot).toHaveBeenCalledTimes(2);
+
+    mockWriteRecoverySnapshot.mockClear();
+
+    // Remove tab-1 from the tab store
+    useTabStore.setState({
+      tabs: {
+        main: [
+          { id: "tab-2", filePath: "/path/doc.md", title: "doc.md", isPinned: false },
+          { id: "tab-3", filePath: null, title: "Untitled-2", isPinned: false },
+        ],
+      },
+    });
+
+    // Make tab-3 dirty now
+    useDocumentStore.setState({
+      documents: {
+        ...useDocumentStore.getState().documents,
+        "tab-3": {
+          ...useDocumentStore.getState().documents["tab-3"],
+          content: "# Now dirty",
+          isDirty: true,
+        },
+      },
+    });
+
+    await vi.advanceTimersByTimeAsync(10_000);
+
+    // tab-3 should be written (newly dirty), tab-1 hash should have been pruned
+    expect(mockWriteRecoverySnapshot).toHaveBeenCalledWith(
+      expect.objectContaining({ tabId: "tab-3" })
+    );
+  });
+
+  it("skips writing when already in flight", async () => {
+    // Make write take longer than the interval by never resolving quickly
+    let resolveWrite: (() => void) | undefined;
+    mockWriteRecoverySnapshot.mockImplementation(
+      () => new Promise<boolean>((resolve) => {
+        resolveWrite = () => resolve(true);
+      })
+    );
+
+    renderHook(() => useCrashRecoveryWriter());
+
+    // Start first write pass
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(mockWriteRecoverySnapshot).toHaveBeenCalledTimes(1);
+
+    // Second interval fires while first is still in flight
+    await vi.advanceTimersByTimeAsync(10_000);
+    // Should still only be 1 call since guard prevents re-entry
+    expect(mockWriteRecoverySnapshot).toHaveBeenCalledTimes(1);
+
+    // Resolve the first write
+    resolveWrite?.();
+    await vi.advanceTimersByTimeAsync(0);
+  });
 });

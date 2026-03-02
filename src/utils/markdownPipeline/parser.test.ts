@@ -352,4 +352,125 @@ Content`;
       expect(result.modified).toBe(false);
     });
   });
+
+  describe("escaped custom markers", () => {
+    it("restores escaped == to literal ==", () => {
+      const result = parseMarkdownToMdast("Use \\== for equals");
+      const para = result.children[0] as Paragraph;
+      const textContent = para.children
+        .filter((c): c is Text => c.type === "text")
+        .map((c) => c.value)
+        .join("");
+      expect(textContent).toContain("==");
+      // Should NOT create a highlight node
+      const hasHighlight = para.children.some((c) => c.type === "highlight");
+      expect(hasHighlight).toBe(false);
+    });
+
+    it("restores escaped ++ to literal ++", () => {
+      const result = parseMarkdownToMdast("Use \\++ for plus");
+      const para = result.children[0] as Paragraph;
+      const textContent = para.children
+        .filter((c): c is Text => c.type === "text")
+        .map((c) => c.value)
+        .join("");
+      expect(textContent).toContain("++");
+    });
+
+    it("restores escaped ^ to literal ^", () => {
+      const result = parseMarkdownToMdast("Use \\^ for caret");
+      const para = result.children[0] as Paragraph;
+      const textContent = para.children
+        .filter((c): c is Text => c.type === "text")
+        .map((c) => c.value)
+        .join("");
+      expect(textContent).toContain("^");
+    });
+
+    it("restores escaped ~ to literal ~", () => {
+      const result = parseMarkdownToMdast("Use \\~ for tilde");
+      const para = result.children[0] as Paragraph;
+      const textContent = para.children
+        .filter((c): c is Text => c.type === "text")
+        .map((c) => c.value)
+        .join("");
+      expect(textContent).toContain("~");
+    });
+
+    it("does not escape inside inline code spans", () => {
+      const result = parseMarkdownToMdast("`\\==`");
+      const para = result.children[0] as Paragraph;
+      const codeNode = para.children.find((c) => c.type === "inlineCode") as import("mdast").InlineCode;
+      expect(codeNode).toBeDefined();
+      // Backslash should be preserved verbatim in code
+      expect(codeNode.value).toContain("\\==");
+    });
+
+    it("does not escape inside fenced code blocks", () => {
+      const result = parseMarkdownToMdast("```\n\\==\n```");
+      const code = result.children[0] as import("mdast").Code;
+      expect(code.type).toBe("code");
+      // Backslash should be preserved verbatim in code block
+      expect(code.value).toContain("\\==");
+    });
+
+    it("handles tilde fenced code blocks", () => {
+      const result = parseMarkdownToMdast("~~~\n\\==\n~~~");
+      const code = result.children[0] as import("mdast").Code;
+      expect(code.type).toBe("code");
+      expect(code.value).toContain("\\==");
+    });
+  });
+
+  describe("hardBreakStyle option", () => {
+    it("does not affect parsing", () => {
+      // hardBreakStyle is a serializer option, not parser
+      const result = parseMarkdownToMdast("Hello\nWorld");
+      expect(result.children).toHaveLength(1);
+    });
+  });
+
+  describe("CJK text", () => {
+    it("parses CJK content correctly", () => {
+      const result = parseMarkdownToMdast("# 中文标题\n\n这是一段中文文本。");
+      expect(result.children).toHaveLength(2);
+      expect(result.children[0].type).toBe("heading");
+      expect(result.children[1].type).toBe("paragraph");
+    });
+
+    it("parses CJK with inline formatting", () => {
+      const result = parseMarkdownToMdast("**粗体** 和 *斜体*");
+      const para = result.children[0] as Paragraph;
+      const hasStrong = para.children.some((c) => c.type === "strong");
+      const hasEmphasis = para.children.some((c) => c.type === "emphasis");
+      expect(hasStrong).toBe(true);
+      expect(hasEmphasis).toBe(true);
+    });
+  });
+
+  describe("empty content edge cases", () => {
+    it("parses whitespace-only document", () => {
+      const result = parseMarkdownToMdast("   \n   \n   ");
+      expect(result.type).toBe("root");
+    });
+
+    it("parses newlines-only document", () => {
+      const result = parseMarkdownToMdast("\n\n\n");
+      expect(result.type).toBe("root");
+    });
+  });
+
+  describe("nested lists", () => {
+    it("parses deeply nested lists", () => {
+      const md = "- L1\n  - L2\n    - L3";
+      const result = parseMarkdownToMdast(md);
+      expect(result.children[0].type).toBe("list");
+    });
+
+    it("parses mixed ordered and unordered nested lists", () => {
+      const md = "- Bullet\n  1. Ordered";
+      const result = parseMarkdownToMdast(md);
+      expect(result.children[0].type).toBe("list");
+    });
+  });
 });

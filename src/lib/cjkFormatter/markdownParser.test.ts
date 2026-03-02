@@ -199,6 +199,23 @@ describe("findProtectedRegions", () => {
       const indentedRegion = regions.find((r) => r.type === "indented_code");
       expect(indentedRegion).toBeUndefined();
     });
+
+    it("detects indented code block at end of file", () => {
+      // Line 251: indented block extends to text.length when file ends with indented code
+      const text = "text\n\n    code line\n    more code";
+      const regions = findProtectedRegions(text);
+      const indentedRegion = regions.find((r) => r.type === "indented_code");
+      expect(indentedRegion).toBeDefined();
+      expect(indentedRegion!.end).toBe(text.length);
+    });
+
+    it("detects tab-indented code block at end of file", () => {
+      const text = "text\n\n\tcode line\n\tmore code";
+      const regions = findProtectedRegions(text);
+      const indentedRegion = regions.find((r) => r.type === "indented_code");
+      expect(indentedRegion).toBeDefined();
+      expect(indentedRegion!.end).toBe(text.length);
+    });
   });
 });
 

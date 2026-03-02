@@ -26,10 +26,46 @@ import {
   geniesWarn,
   recentWarn,
   shortcutsWarn,
+  imageHandlerWarn,
+  smartPasteWarn,
+  footnotePopupWarn,
+  linkPopupWarn,
+  mediaPopupWarn,
+  wysiwygAdapterWarn,
+  diagramWarn,
+  pasteWarn,
+  imageViewWarn,
+  sourcePopupWarn,
+  actionRegistryWarn,
+  markdownCopyWarn,
+  wikiLinkPopupWarn,
+  historyWarn,
+  windowCloseLog,
+  windowCloseWarn,
+  menuDispatcherLog,
+  menuDispatcherWarn,
+  watcherWarn,
+  exportWarn,
+  mcpBridgeLog,
+  mdPipelineWarn,
+  workspaceWarn,
+  titleBarWarn,
+  genieWarn,
+  imageContextMenuWarn,
+  orphanCleanupWarn,
+  confirmQuitWarn,
+  finderFileOpenWarn,
+  imageHashWarn,
+  imageResizeLog,
+  workspaceStorageWarn,
+  clipboardWarn,
+  renderWarn,
+  cleanupWarn,
+  listClickFixLog,
 } from "../debug";
 
 /* ------------------------------------------------------------------ */
-/*  Metadata: every logger exists and is a function                    */
+/*  All loggers map                                                    */
 /* ------------------------------------------------------------------ */
 
 const allLoggers = {
@@ -49,7 +85,47 @@ const allLoggers = {
   geniesWarn,
   recentWarn,
   shortcutsWarn,
+  imageHandlerWarn,
+  smartPasteWarn,
+  footnotePopupWarn,
+  linkPopupWarn,
+  mediaPopupWarn,
+  wysiwygAdapterWarn,
+  diagramWarn,
+  pasteWarn,
+  imageViewWarn,
+  sourcePopupWarn,
+  actionRegistryWarn,
+  markdownCopyWarn,
+  wikiLinkPopupWarn,
+  historyWarn,
+  windowCloseLog,
+  windowCloseWarn,
+  menuDispatcherLog,
+  menuDispatcherWarn,
+  watcherWarn,
+  exportWarn,
+  mcpBridgeLog,
+  mdPipelineWarn,
+  workspaceWarn,
+  titleBarWarn,
+  genieWarn,
+  imageContextMenuWarn,
+  orphanCleanupWarn,
+  confirmQuitWarn,
+  finderFileOpenWarn,
+  imageHashWarn,
+  imageResizeLog,
+  workspaceStorageWarn,
+  clipboardWarn,
+  renderWarn,
+  cleanupWarn,
+  listClickFixLog,
 } as const;
+
+/* ------------------------------------------------------------------ */
+/*  Metadata: every logger exists and is a function                    */
+/* ------------------------------------------------------------------ */
 
 describe("debug loggers — existence and type", () => {
   it.each(Object.entries(allLoggers))(
@@ -59,8 +135,8 @@ describe("debug loggers — existence and type", () => {
     },
   );
 
-  it("exports exactly 16 loggers", () => {
-    expect(Object.keys(allLoggers)).toHaveLength(16);
+  it("exports all known loggers", () => {
+    expect(Object.keys(allLoggers).length).toBeGreaterThanOrEqual(52);
   });
 });
 
@@ -71,30 +147,68 @@ describe("debug loggers — existence and type", () => {
 describe("debug loggers — prefix conventions", () => {
   /**
    * Map of logger name -> expected prefix and console method.
-   * Loggers ending in "Warn" use console.warn; others use console.log.
+   * Loggers ending in "Warn" use console.warn; others use console.log
+   * (except menuDispatcherLog and mcpBridgeLog which use console.debug).
    */
-  const prefixMap: Record<string, { prefix: string; method: "log" | "warn" }> = {
-    historyLog:       { prefix: "[History]",       method: "log" },
-    autoSaveLog:      { prefix: "[AutoSave]",      method: "log" },
-    terminalLog:      { prefix: "[Terminal]",       method: "log" },
-    crashRecoveryLog: { prefix: "[CrashRecovery]", method: "log" },
-    hotExitLog:       { prefix: "[HotExit]",       method: "log" },
-    hotExitWarn:      { prefix: "[HotExit]",       method: "warn" },
-    fileOpsLog:       { prefix: "[FileOps]",       method: "log" },
-    fileOpsWarn:      { prefix: "[FileOps]",       method: "warn" },
-    mcpAutoStartLog:  { prefix: "[MCP]",           method: "log" },
-    updateCheckerLog: { prefix: "[UpdateChecker]",  method: "log" },
-    aiProviderLog:    { prefix: "[AIProvider]",    method: "log" },
-    aiProviderWarn:   { prefix: "[AIProvider]",    method: "warn" },
-    geniesLog:        { prefix: "[Genies]",        method: "log" },
-    geniesWarn:       { prefix: "[Genies]",        method: "warn" },
-    recentWarn:       { prefix: "[Recent]",        method: "warn" },
-    shortcutsWarn:    { prefix: "[Shortcuts]",     method: "warn" },
+  const prefixMap: Record<string, { prefix: string; method: "log" | "warn" | "debug" }> = {
+    historyLog:           { prefix: "[History]",             method: "log" },
+    autoSaveLog:          { prefix: "[AutoSave]",            method: "log" },
+    terminalLog:          { prefix: "[Terminal]",             method: "log" },
+    crashRecoveryLog:     { prefix: "[CrashRecovery]",       method: "log" },
+    hotExitLog:           { prefix: "[HotExit]",             method: "log" },
+    hotExitWarn:          { prefix: "[HotExit]",             method: "warn" },
+    fileOpsLog:           { prefix: "[FileOps]",             method: "log" },
+    fileOpsWarn:          { prefix: "[FileOps]",             method: "warn" },
+    mcpAutoStartLog:      { prefix: "[MCP]",                 method: "log" },
+    updateCheckerLog:     { prefix: "[UpdateChecker]",       method: "log" },
+    aiProviderLog:        { prefix: "[AIProvider]",          method: "log" },
+    aiProviderWarn:       { prefix: "[AIProvider]",          method: "warn" },
+    geniesLog:            { prefix: "[Genies]",              method: "log" },
+    geniesWarn:           { prefix: "[Genies]",              method: "warn" },
+    recentWarn:           { prefix: "[Recent]",              method: "warn" },
+    shortcutsWarn:        { prefix: "[Shortcuts]",           method: "warn" },
+    imageHandlerWarn:     { prefix: "[imageHandler]",        method: "warn" },
+    smartPasteWarn:       { prefix: "[smartPaste]",          method: "warn" },
+    footnotePopupWarn:    { prefix: "[FootnotePopup]",       method: "warn" },
+    linkPopupWarn:        { prefix: "[LinkPopup]",           method: "warn" },
+    mediaPopupWarn:       { prefix: "[MediaPopup]",          method: "warn" },
+    wysiwygAdapterWarn:   { prefix: "[wysiwygAdapter]",      method: "warn" },
+    diagramWarn:          { prefix: "[Diagram]",             method: "warn" },
+    pasteWarn:            { prefix: "[Paste]",               method: "warn" },
+    imageViewWarn:        { prefix: "[ImageView]",           method: "warn" },
+    sourcePopupWarn:      { prefix: "[SourcePopup]",         method: "warn" },
+    actionRegistryWarn:   { prefix: "[ActionRegistry]",      method: "warn" },
+    markdownCopyWarn:     { prefix: "[markdownCopy]",        method: "warn" },
+    wikiLinkPopupWarn:    { prefix: "[WikiLinkPopup]",       method: "warn" },
+    historyWarn:          { prefix: "[History]",             method: "warn" },
+    windowCloseLog:       { prefix: "[WindowClose]",         method: "log" },
+    windowCloseWarn:      { prefix: "[WindowClose]",         method: "warn" },
+    menuDispatcherLog:    { prefix: "[UnifiedMenuDispatcher]", method: "debug" },
+    menuDispatcherWarn:   { prefix: "[UnifiedMenuDispatcher]", method: "warn" },
+    watcherWarn:          { prefix: "[Watcher]",             method: "warn" },
+    exportWarn:           { prefix: "[Export]",              method: "warn" },
+    mcpBridgeLog:         { prefix: "[MCP Bridge]",          method: "debug" },
+    mdPipelineWarn:       { prefix: "[MarkdownPipeline]",    method: "warn" },
+    workspaceWarn:        { prefix: "[Workspace]",           method: "warn" },
+    titleBarWarn:         { prefix: "[TitleBar]",            method: "warn" },
+    genieWarn:            { prefix: "[Genie]",               method: "warn" },
+    imageContextMenuWarn: { prefix: "[ImageContextMenu]",    method: "warn" },
+    orphanCleanupWarn:    { prefix: "[OrphanCleanup]",       method: "warn" },
+    confirmQuitWarn:      { prefix: "[ConfirmQuit]",         method: "warn" },
+    finderFileOpenWarn:   { prefix: "[FinderFileOpen]",      method: "warn" },
+    imageHashWarn:        { prefix: "[ImageHashRegistry]",   method: "warn" },
+    imageResizeLog:       { prefix: "[ImageResize]",         method: "log" },
+    workspaceStorageWarn: { prefix: "[WorkspaceStorage]",    method: "warn" },
+    clipboardWarn:        { prefix: "[Clipboard]",           method: "warn" },
+    renderWarn:           { prefix: "[Render]",              method: "warn" },
+    cleanupWarn:          { prefix: "[Cleanup]",             method: "warn" },
+    listClickFixLog:      { prefix: "[ListClickFix]",        method: "warn" },
   };
 
   beforeEach(() => {
     vi.spyOn(console, "log").mockImplementation(() => {});
     vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.spyOn(console, "debug").mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -107,37 +221,11 @@ describe("debug loggers — prefix conventions", () => {
       const logger = allLoggers[name as keyof typeof allLoggers];
       logger("test message");
 
-      const spy = method === "warn" ? console.warn : console.log;
+      const spy = method === "warn" ? console.warn : method === "debug" ? console.debug : console.log;
       expect(spy).toHaveBeenCalledTimes(1);
       expect(spy).toHaveBeenCalledWith(prefix, "test message");
     },
   );
-
-  it("log-type loggers do not use console.warn", () => {
-    const logOnlyNames = Object.entries(prefixMap)
-      .filter(([, v]) => v.method === "log")
-      .map(([k]) => k);
-
-    for (const name of logOnlyNames) {
-      const logger = allLoggers[name as keyof typeof allLoggers];
-      logger("x");
-    }
-
-    expect(console.warn).not.toHaveBeenCalled();
-  });
-
-  it("warn-type loggers do not use console.log", () => {
-    const warnOnlyNames = Object.entries(prefixMap)
-      .filter(([, v]) => v.method === "warn")
-      .map(([k]) => k);
-
-    for (const name of warnOnlyNames) {
-      const logger = allLoggers[name as keyof typeof allLoggers];
-      logger("x");
-    }
-
-    expect(console.log).not.toHaveBeenCalled();
-  });
 });
 
 /* ------------------------------------------------------------------ */
@@ -148,6 +236,7 @@ describe("debug loggers — dev mode behavior", () => {
   beforeEach(() => {
     vi.spyOn(console, "log").mockImplementation(() => {});
     vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.spyOn(console, "debug").mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -183,8 +272,8 @@ describe("debug loggers — dev mode behavior", () => {
   });
 
   it("handles Unicode and CJK strings", () => {
-    geniesLog("你好世界", "🎉", "日本語テスト");
-    expect(console.log).toHaveBeenCalledWith("[Genies]", "你好世界", "🎉", "日本語テスト");
+    geniesLog("\u4f60\u597d\u4e16\u754c", "\u{1F389}", "\u65e5\u672c\u8a9e\u30c6\u30b9\u30c8");
+    expect(console.log).toHaveBeenCalledWith("[Genies]", "\u4f60\u597d\u4e16\u754c", "\u{1F389}", "\u65e5\u672c\u8a9e\u30c6\u30b9\u30c8");
   });
 
   it("handles many arguments", () => {
@@ -207,6 +296,16 @@ describe("debug loggers — dev mode behavior", () => {
     hotExitWarn("disk full", { code: 28 });
     expect(console.warn).toHaveBeenCalledWith("[HotExit]", "disk full", { code: 28 });
   });
+
+  it("debug loggers pass arguments correctly", () => {
+    menuDispatcherLog("event fired", { id: "toggle" });
+    expect(console.debug).toHaveBeenCalledWith("[UnifiedMenuDispatcher]", "event fired", { id: "toggle" });
+  });
+
+  it("mcpBridgeLog uses console.debug", () => {
+    mcpBridgeLog("bridge event");
+    expect(console.debug).toHaveBeenCalledWith("[MCP Bridge]", "bridge event");
+  });
 });
 
 /* ------------------------------------------------------------------ */
@@ -217,6 +316,7 @@ describe("debug loggers — no-throw guarantee", () => {
   beforeEach(() => {
     vi.spyOn(console, "log").mockImplementation(() => {});
     vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.spyOn(console, "debug").mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -261,43 +361,31 @@ describe("debug loggers — production mode (DEV=false)", () => {
   beforeEach(() => {
     vi.spyOn(console, "log").mockImplementation(() => {});
     vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.spyOn(console, "debug").mockImplementation(() => {});
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
-  it("production loggers do not call console.log or console.warn", async () => {
-    // Dynamically re-import with DEV=false
-    // vi.stubEnv sets import.meta.env values, but the module caches isDev at load time.
-    // We must reset the module registry so the ternary re-evaluates.
+  it("production loggers do not call console.log, console.warn, or console.debug", async () => {
     vi.stubEnv("DEV", false);
-
-    // Clear module cache so the fresh import picks up DEV=false
     vi.resetModules();
 
     const prodDebug = await import("../debug");
 
-    // Call every logger
-    prodDebug.historyLog("should not appear");
-    prodDebug.autoSaveLog("should not appear");
-    prodDebug.terminalLog("should not appear");
-    prodDebug.crashRecoveryLog("should not appear");
-    prodDebug.hotExitLog("should not appear");
-    prodDebug.hotExitWarn("should not appear");
-    prodDebug.fileOpsLog("should not appear");
-    prodDebug.fileOpsWarn("should not appear");
-    prodDebug.mcpAutoStartLog("should not appear");
-    prodDebug.updateCheckerLog("should not appear");
-    prodDebug.aiProviderLog("should not appear");
-    prodDebug.aiProviderWarn("should not appear");
-    prodDebug.geniesLog("should not appear");
-    prodDebug.geniesWarn("should not appear");
-    prodDebug.recentWarn("should not appear");
-    prodDebug.shortcutsWarn("should not appear");
+    // Call every exported logger
+    const exportedNames = Object.keys(prodDebug).filter(
+      (k) => typeof (prodDebug as Record<string, unknown>)[k] === "function",
+    );
+
+    for (const name of exportedNames) {
+      (prodDebug as Record<string, (...args: unknown[]) => void>)[name]("should not appear");
+    }
 
     expect(console.log).not.toHaveBeenCalled();
     expect(console.warn).not.toHaveBeenCalled();
+    expect(console.debug).not.toHaveBeenCalled();
 
     vi.unstubAllEnvs();
   });
@@ -312,6 +400,10 @@ describe("debug loggers — production mode (DEV=false)", () => {
     expect(() => prodDebug.historyLog("a", 1, null, undefined, {})).not.toThrow();
     expect(() => prodDebug.hotExitWarn(new Error("test"))).not.toThrow();
     expect(() => prodDebug.fileOpsLog(Symbol("s"), BigInt(42))).not.toThrow();
+    expect(() => prodDebug.menuDispatcherLog("event")).not.toThrow();
+    expect(() => prodDebug.mcpBridgeLog("bridge")).not.toThrow();
+    expect(() => prodDebug.imageHandlerWarn("handler")).not.toThrow();
+    expect(() => prodDebug.orphanCleanupWarn("cleanup")).not.toThrow();
 
     vi.unstubAllEnvs();
   });

@@ -25,6 +25,32 @@ describe("workspaceIdentity", () => {
       }
       expect(uuids.size).toBe(100);
     });
+
+    it("uses fallback when crypto.randomUUID is unavailable", () => {
+      const originalRandomUUID = crypto.randomUUID;
+      // Temporarily remove randomUUID to trigger fallback
+      Object.defineProperty(crypto, "randomUUID", { value: undefined, configurable: true });
+
+      const uuid = generateUUID();
+      // Fallback generates UUID v4 format: xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+      expect(uuid).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+
+      // Restore
+      Object.defineProperty(crypto, "randomUUID", { value: originalRandomUUID, configurable: true });
+    });
+
+    it("fallback generates unique UUIDs", () => {
+      const originalRandomUUID = crypto.randomUUID;
+      Object.defineProperty(crypto, "randomUUID", { value: undefined, configurable: true });
+
+      const uuids = new Set<string>();
+      for (let i = 0; i < 50; i++) {
+        uuids.add(generateUUID());
+      }
+      expect(uuids.size).toBe(50);
+
+      Object.defineProperty(crypto, "randomUUID", { value: originalRandomUUID, configurable: true });
+    });
   });
 
   describe("isValidUUID", () => {

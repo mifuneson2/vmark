@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { useTabStore } from "@/stores/tabStore";
 import { useDocumentStore } from "@/stores/documentStore";
-import { closeTabWithDirtyCheck } from "@/hooks/useTabOperations";
+import { closeTabWithDirtyCheck, closeTabsWithDirtyCheck } from "@/hooks/useTabOperations";
 import { message, save } from "@tauri-apps/plugin-dialog";
 import { invoke } from "@tauri-apps/api/core";
 import { saveToPath } from "@/utils/saveToPath";
@@ -174,5 +174,79 @@ describe("closeTabWithDirtyCheck", () => {
     const tabs = useTabStore.getState().tabs[WINDOW_LABEL] ?? [];
     expect(tabs.length).toBe(1);
     expect(tabs[0].filePath).toBeNull();
+  });
+
+  it("returns true when tab doesn't exist (already closed)", async () => {
+    const result = await closeTabWithDirtyCheck(WINDOW_LABEL, "nonexistent-tab");
+    expect(result).toBe(true);
+    expect(message).not.toHaveBeenCalled();
+  });
+
+  it("does not close window when other tabs remain", async () => {
+    const tabId1 = useTabStore.getState().createTab(WINDOW_LABEL, "/tmp/a.md");
+    const tabId2 = useTabStore.getState().createTab(WINDOW_LABEL, "/tmp/b.md");
+    useDocumentStore.getState().initDocument(tabId1, "a", "/tmp/a.md");
+    useDocumentStore.getState().initDocument(tabId2, "b", "/tmp/b.md");
+
+    const result = await closeTabWithDirtyCheck(WINDOW_LABEL, tabId1);
+
+    expect(result).toBe(true);
+    expect(invoke).not.toHaveBeenCalledWith("close_window", expect.anything());
+    // Other tab should still exist
+    const tabs = useTabStore.getState().tabs[WINDOW_LABEL] ?? [];
+    expect(tabs.length).toBe(1);
+    expect(tabs[0].id).toBe(tabId2);
+  });
+
+  it("removes document from store on close", async () => {
+    const tabId = useTabStore.getState().createTab(WINDOW_LABEL, "/tmp/test.md");
+    useDocumentStore.getState().initDocument(tabId, "content", "/tmp/test.md");
+
+    await closeTabWithDirtyCheck(WINDOW_LABEL, tabId);
+
+    expect(useDocumentStore.getState().getDocument(tabId)).toBeUndefined();
+  });
+});
+
+describe("closeTabsWithDirtyCheck", () => {
+  beforeEach(() => {
+    resetStores();
+    vi.clearAllMocks();
+    vi.mocked(isMacPlatform).mockReturnValue(true);
+  });
+
+  it("closes all clean tabs successfully", async () => {
+    const tabId1 = useTabStore.getState().createTab(WINDOW_LABEL, "/tmp/a.md");
+    const tabId2 = useTabStore.getState().createTab(WINDOW_LABEL, "/tmp/b.md");
+    useDocumentStore.getState().initDocument(tabId1, "a", "/tmp/a.md");
+    useDocumentStore.getState().initDocument(tabId2, "b", "/tmp/b.md");
+
+    const result = await closeTabsWithDirtyCheck(WINDOW_LABEL, [tabId1, tabId2]);
+
+    expect(result).toBe(true);
+    expect(useDocumentStore.getState().getDocument(tabId1)).toBeUndefined();
+    expect(useDocumentStore.getState().getDocument(tabId2)).toBeUndefined();
+  });
+
+  it("stops and returns false when user cancels one tab", async () => {
+    const tabId1 = useTabStore.getState().createTab(WINDOW_LABEL, "/tmp/a.md");
+    const tabId2 = useTabStore.getState().createTab(WINDOW_LABEL, "/tmp/b.md");
+    useDocumentStore.getState().initDocument(tabId1, "a", "/tmp/a.md");
+    useDocumentStore.getState().initDocument(tabId2, "b", "/tmp/b.md");
+    useDocumentStore.getState().setContent(tabId1, "dirty");
+
+    // User cancels on first dirty tab
+    vi.mocked(message).mockResolvedValueOnce("Cancel");
+
+    const result = await closeTabsWithDirtyCheck(WINDOW_LABEL, [tabId1, tabId2]);
+
+    expect(result).toBe(false);
+    // Second tab should not have been processed
+    expect(useDocumentStore.getState().getDocument(tabId2)).toBeDefined();
+  });
+
+  it("returns true for empty tab list", async () => {
+    const result = await closeTabsWithDirtyCheck(WINDOW_LABEL, []);
+    expect(result).toBe(true);
   });
 });

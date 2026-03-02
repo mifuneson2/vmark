@@ -341,4 +341,258 @@ describe("saveAllDocuments", () => {
     expect(onProgress).toHaveBeenCalledWith(1, 2, "Doc 1");
     expect(onProgress).toHaveBeenCalledWith(2, 2, "Doc 2");
   });
+
+  it("returns cancelled when save fails for a doc with path", async () => {
+    vi.mocked(saveToPath).mockResolvedValueOnce(false);
+
+    const result = await saveAllDocuments([
+      createContext("1", "/tmp/doc1.md"),
+    ]);
+
+    expect(result.action).toBe("cancelled");
+  });
+
+  it("saves single untitled doc via Save As dialog", async () => {
+    vi.mocked(save).mockResolvedValueOnce("/tmp/new-file.md");
+    vi.mocked(saveToPath).mockResolvedValue(true);
+
+    const result = await saveAllDocuments([
+      createContext("1", null),
+    ]);
+
+    expect(save).toHaveBeenCalled();
+    expect(saveToPath).toHaveBeenCalledWith("1", "/tmp/new-file.md", "content 1", "manual");
+    expect(result.action).toBe("saved-all");
+  });
+
+  it("returns cancelled when single untitled Save As is cancelled", async () => {
+    vi.mocked(save).mockResolvedValueOnce(null);
+
+    const result = await saveAllDocuments([
+      createContext("1", null),
+    ]);
+
+    expect(result.action).toBe("cancelled");
+  });
+
+  it("returns cancelled when single untitled saveToPath fails", async () => {
+    vi.mocked(save).mockResolvedValueOnce("/tmp/new-file.md");
+    vi.mocked(saveToPath).mockResolvedValueOnce(false);
+
+    const result = await saveAllDocuments([
+      createContext("1", null),
+    ]);
+
+    expect(result.action).toBe("cancelled");
+  });
+
+  it("returns cancelled when batch save fails for untitled doc", async () => {
+    vi.mocked(open).mockResolvedValueOnce("/tmp/folder");
+    vi.mocked(saveToPath).mockResolvedValueOnce(false);
+
+    const result = await saveAllDocuments([
+      createContext("1", null),
+      createContext("2", null),
+    ]);
+
+    expect(result.action).toBe("cancelled");
+  });
+
+  it("returns cancelled when batch folder picker returns non-string", async () => {
+    vi.mocked(open).mockResolvedValueOnce(null);
+
+    const result = await saveAllDocuments([
+      createContext("1", null),
+      createContext("2", null),
+    ]);
+
+    expect(result.action).toBe("cancelled");
+  });
+
+  it("calls progress callback for untitled docs", async () => {
+    vi.mocked(save).mockResolvedValueOnce("/tmp/saved.md");
+    vi.mocked(saveToPath).mockResolvedValue(true);
+    const onProgress = vi.fn();
+
+    await saveAllDocuments(
+      [createContext("1", null)],
+      { onProgress }
+    );
+
+    expect(onProgress).toHaveBeenCalledWith(1, 1, "Untitled 1");
+  });
+});
+
+describe("promptSaveForDirtyDocument — edge cases", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("returns cancelled for unexpected dialog result", async () => {
+    vi.mocked(message).mockResolvedValueOnce("SomethingUnexpected");
+
+    const result = await promptSaveForDirtyDocument({
+      windowLabel: "main",
+      tabId: "tab-1",
+      title: "Doc",
+      filePath: "/tmp/test.md",
+      content: "content",
+    });
+
+    expect(result.action).toBe("cancelled");
+  });
+
+  it("returns cancelled when saveToPath fails for saved doc", async () => {
+    vi.mocked(message).mockResolvedValueOnce("Yes");
+    vi.mocked(saveToPath).mockResolvedValueOnce(false);
+
+    const result = await promptSaveForDirtyDocument({
+      windowLabel: "main",
+      tabId: "tab-1",
+      title: "Doc",
+      filePath: "/tmp/test.md",
+      content: "content",
+    });
+
+    expect(result.action).toBe("cancelled");
+  });
+
+  it("sanitizes title with invalid filename characters for Save As", async () => {
+    vi.mocked(message).mockResolvedValueOnce("Yes");
+    vi.mocked(save).mockResolvedValueOnce("/tmp/new.md");
+    vi.mocked(saveToPath).mockResolvedValue(true);
+
+    await promptSaveForDirtyDocument({
+      windowLabel: "main",
+      tabId: "tab-1",
+      title: 'My/Doc:with*invalid?"chars',
+      filePath: null,
+      content: "content",
+    });
+
+    // save() should have been called with a sanitized defaultPath
+    const callArgs = vi.mocked(save).mock.calls[0][0];
+    const defaultPath = callArgs?.defaultPath ?? "";
+    // Extract just the filename (after last slash) and verify it's sanitized
+    const filename = defaultPath.split("/").pop() ?? "";
+    expect(filename).not.toMatch(/[\\:*?"<>|]/);
+    expect(filename).toMatch(/\.md$/);
+  });
+});
+
+describe("promptSaveForMultipleDocuments — additional edge cases", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  const createContext = (id: string, filePath: string | null = "/tmp/test.md") => ({
+    windowLabel: "main",
+    tabId: id,
+    title: filePath ? `Doc ${id}` : `Untitled ${id}`,
+    filePath,
+    content: `content ${id}`,
+  });
+
+  it("returns cancelled for unexpected dialog result", async () => {
+    vi.mocked(message).mockResolvedValueOnce("SomethingUnexpected");
+
+    const result = await promptSaveForMultipleDocuments([
+      createContext("1"),
+    ]);
+
+    expect(result.action).toBe("cancelled");
+  });
+
+  it("calls progress callback for saved docs", async () => {
+    vi.mocked(message).mockResolvedValueOnce("Save All");
+    vi.mocked(saveToPath).mockResolvedValue(true);
+    const onProgress = vi.fn();
+
+    await promptSaveForMultipleDocuments(
+      [createContext("1", "/tmp/doc1.md")],
+      { onProgress }
+    );
+
+    expect(onProgress).toHaveBeenCalledWith(1, 1, "Doc 1");
+  });
+
+  it("calls progress callback for single untitled doc", async () => {
+    vi.mocked(message).mockResolvedValueOnce("Save All");
+    vi.mocked(save).mockResolvedValueOnce("/tmp/saved.md");
+    vi.mocked(saveToPath).mockResolvedValue(true);
+    const onProgress = vi.fn();
+
+    await promptSaveForMultipleDocuments(
+      [createContext("1", null)],
+      { onProgress }
+    );
+
+    expect(onProgress).toHaveBeenCalledWith(1, 1, "Untitled 1");
+  });
+
+  it("returns cancelled when single untitled saveToPath fails", async () => {
+    vi.mocked(message).mockResolvedValueOnce("Save All");
+    vi.mocked(save).mockResolvedValueOnce("/tmp/saved.md");
+    vi.mocked(saveToPath).mockResolvedValueOnce(false);
+
+    const result = await promptSaveForMultipleDocuments([
+      createContext("1", null),
+    ]);
+
+    expect(result.action).toBe("cancelled");
+  });
+
+  it("returns cancelled when batch untitled saveToPath fails", async () => {
+    vi.mocked(message).mockResolvedValueOnce("Save All");
+    vi.mocked(open).mockResolvedValueOnce("/tmp/folder");
+    vi.mocked(saveToPath).mockResolvedValueOnce(false);
+
+    const result = await promptSaveForMultipleDocuments([
+      createContext("1", null),
+      createContext("2", null),
+    ]);
+
+    expect(result.action).toBe("cancelled");
+  });
+
+  it("calls progress callback for batch untitled docs", async () => {
+    vi.mocked(message).mockResolvedValueOnce("Save All");
+    vi.mocked(open).mockResolvedValueOnce("/tmp/folder");
+    vi.mocked(saveToPath).mockResolvedValue(true);
+    const onProgress = vi.fn();
+
+    await promptSaveForMultipleDocuments(
+      [createContext("1", null), createContext("2", null)],
+      { onProgress }
+    );
+
+    expect(onProgress).toHaveBeenCalledWith(1, 2, "Untitled 1");
+    expect(onProgress).toHaveBeenCalledWith(2, 2, "Untitled 2");
+  });
+
+  it("includes singular text for single document", async () => {
+    vi.mocked(message).mockResolvedValueOnce("Cancel");
+
+    await promptSaveForMultipleDocuments([
+      createContext("1"),
+    ]);
+
+    expect(message).toHaveBeenCalledWith(
+      expect.stringContaining("1 unsaved document:"),
+      expect.anything()
+    );
+  });
+
+  it("includes singular text for single new document hint", async () => {
+    vi.mocked(message).mockResolvedValueOnce("Cancel");
+
+    await promptSaveForMultipleDocuments([
+      createContext("1", null),
+    ]);
+
+    expect(message).toHaveBeenCalledWith(
+      expect.stringContaining("1 new document will need"),
+      expect.anything()
+    );
+  });
 });

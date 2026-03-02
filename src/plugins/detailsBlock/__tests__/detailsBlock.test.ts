@@ -1,9 +1,38 @@
 /**
- * Tests for detailsBlock extension — input rule regex, extension metadata.
+ * Tests for detailsBlock extension — input rule regex, extension metadata,
+ * renderHTML, addAttributes, insertDetailsBlock command, click-to-toggle plugin.
  */
 
 import { describe, it, expect } from "vitest";
+import { getSchema } from "@tiptap/core";
+import StarterKit from "@tiptap/starter-kit";
+import { EditorState, TextSelection } from "@tiptap/pm/state";
+import { DOMSerializer, DOMParser as PMDOMParser } from "@tiptap/pm/model";
 import { detailsBlockExtension, detailsSummaryExtension } from "../tiptap";
+
+// ---------------------------------------------------------------------------
+// Schema helper
+// ---------------------------------------------------------------------------
+
+function createSchema() {
+  return getSchema([StarterKit, detailsBlockExtension, detailsSummaryExtension]);
+}
+
+function createDocWithParagraph(text: string) {
+  const schema = createSchema();
+  const paragraph = schema.nodes.paragraph.create(null, text ? [schema.text(text)] : []);
+  const doc = schema.nodes.doc.create(null, [paragraph]);
+  return { schema, doc };
+}
+
+function createDocWithDetails(open: boolean, summaryText: string, contentText: string) {
+  const schema = createSchema();
+  const summary = schema.nodes.detailsSummary.create(null, summaryText ? [schema.text(summaryText)] : []);
+  const content = schema.nodes.paragraph.create(null, contentText ? [schema.text(contentText)] : []);
+  const details = schema.nodes.detailsBlock.create({ open }, [summary, content]);
+  const doc = schema.nodes.doc.create(null, [details]);
+  return { schema, doc };
+}
 
 // ---------------------------------------------------------------------------
 // Input rule regex (replicated from source to test directly)
@@ -39,7 +68,7 @@ describe("DETAILS_INPUT_PATTERN", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Extension metadata
+// Extension metadata — detailsBlockExtension
 // ---------------------------------------------------------------------------
 
 describe("detailsBlockExtension", () => {
@@ -54,9 +83,13 @@ describe("detailsBlockExtension", () => {
   });
 
   it("has open attribute defaulting to false", () => {
-    // Access the attributes config
-    const addAttributes = detailsBlockExtension.config.addAttributes;
-    expect(addAttributes).toBeDefined();
+    const schema = createSchema();
+    expect(schema.nodes.detailsBlock.spec.attrs?.open?.default).toBe(false);
+  });
+
+  it("has sourceLine attribute defaulting to null", () => {
+    const schema = createSchema();
+    expect(schema.nodes.detailsBlock.spec.attrs?.sourceLine?.default).toBeNull();
   });
 
   it("parseHTML matches details tag", () => {
@@ -64,6 +97,10 @@ describe("detailsBlockExtension", () => {
     expect(parseRules![0].tag).toBe("details");
   });
 });
+
+// ---------------------------------------------------------------------------
+// Extension metadata — detailsSummaryExtension
+// ---------------------------------------------------------------------------
 
 describe("detailsSummaryExtension", () => {
   it("has correct name", () => {
@@ -78,8 +115,279 @@ describe("detailsSummaryExtension", () => {
     expect(detailsSummaryExtension.config.selectable).toBe(false);
   });
 
+  it("is defining", () => {
+    expect(detailsSummaryExtension.config.defining).toBe(true);
+  });
+
   it("parseHTML matches summary tag", () => {
     const parseRules = detailsSummaryExtension.config.parseHTML!.call({} as never);
     expect(parseRules![0].tag).toBe("summary");
+  });
+
+  it("has sourceLine attribute", () => {
+    const schema = createSchema();
+    expect(schema.nodes.detailsSummary.spec.attrs?.sourceLine?.default).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// renderHTML
+// ---------------------------------------------------------------------------
+
+describe("detailsBlock renderHTML", () => {
+  it("serializes details block to DOM without errors", () => {
+    const { schema, doc } = createDocWithDetails(true, "Summary", "Content");
+    const serializer = DOMSerializer.fromSchema(schema);
+    expect(() => serializer.serializeFragment(doc.content)).not.toThrow();
+  });
+
+  it("renders with 'details' tag and 'details-block' class", () => {
+    const { schema, doc } = createDocWithDetails(true, "Summary", "Content");
+    const serializer = DOMSerializer.fromSchema(schema);
+    const fragment = serializer.serializeFragment(doc.content);
+    const container = document.createElement("div");
+    container.appendChild(fragment);
+
+    const details = container.querySelector("details");
+    expect(details).not.toBeNull();
+    expect(details!.classList.contains("details-block")).toBe(true);
+  });
+
+  it("renders with open attribute when open is true", () => {
+    const { schema, doc } = createDocWithDetails(true, "Summary", "Content");
+    const serializer = DOMSerializer.fromSchema(schema);
+    const fragment = serializer.serializeFragment(doc.content);
+    const container = document.createElement("div");
+    container.appendChild(fragment);
+
+    const details = container.querySelector("details");
+    expect(details!.hasAttribute("open")).toBe(true);
+  });
+
+  it("does not render open attribute when open is false", () => {
+    const { schema, doc } = createDocWithDetails(false, "Summary", "Content");
+    const serializer = DOMSerializer.fromSchema(schema);
+    const fragment = serializer.serializeFragment(doc.content);
+    const container = document.createElement("div");
+    container.appendChild(fragment);
+
+    const details = container.querySelector("details");
+    expect(details!.hasAttribute("open")).toBe(false);
+  });
+
+  it("renders summary with 'details-summary' class", () => {
+    const { schema, doc } = createDocWithDetails(true, "My Summary", "Content");
+    const serializer = DOMSerializer.fromSchema(schema);
+    const fragment = serializer.serializeFragment(doc.content);
+    const container = document.createElement("div");
+    container.appendChild(fragment);
+
+    const summary = container.querySelector("summary");
+    expect(summary).not.toBeNull();
+    expect(summary!.classList.contains("details-summary")).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// insertDetailsBlock command
+// ---------------------------------------------------------------------------
+
+describe("insertDetailsBlock command", () => {
+  it("returns true on dry run (no dispatch)", () => {
+    const { doc } = createDocWithParagraph("Hello");
+    const state = EditorState.create({
+      doc,
+      selection: TextSelection.create(doc, 3),
+    });
+
+    const commandFn = detailsBlockExtension.config.addCommands!.call({
+      name: "detailsBlock", options: {}, storage: {}, editor: {},
+    } as never);
+    const insertCmd = commandFn.insertDetailsBlock;
+
+    const canRun = insertCmd()({
+      state, dispatch: undefined, tr: state.tr,
+      chain: () => ({}) as never, can: () => ({}) as never,
+      commands: {} as never, editor: {} as never, view: {} as never,
+    } as never);
+    expect(canRun).toBe(true);
+  });
+
+  it("dispatches transaction when dispatch is provided", () => {
+    const { doc } = createDocWithParagraph("Hello");
+    const state = EditorState.create({
+      doc,
+      selection: TextSelection.create(doc, 3),
+    });
+
+    const commandFn = detailsBlockExtension.config.addCommands!.call({
+      name: "detailsBlock", options: {}, storage: {}, editor: {},
+    } as never);
+    const insertCmd = commandFn.insertDetailsBlock;
+
+    let dispatched = false;
+    insertCmd()({
+      state, dispatch: () => { dispatched = true; }, tr: state.tr,
+      chain: () => ({}) as never, can: () => ({}) as never,
+      commands: {} as never, editor: {} as never, view: {} as never,
+    } as never);
+    expect(dispatched).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// parseHTML — open attribute
+// ---------------------------------------------------------------------------
+
+describe("detailsBlock parseHTML open attribute", () => {
+  it("parses open=true from <details open>", () => {
+    const schema = createSchema();
+    const html = "<details open><summary>Title</summary><p>Content</p></details>";
+    const dom = new window.DOMParser().parseFromString(html, "text/html").body;
+    const doc = PMDOMParser.fromSchema(schema).parse(dom);
+    const detailsNode = doc.firstChild!;
+    expect(detailsNode.type.name).toBe("detailsBlock");
+    expect(detailsNode.attrs.open).toBe(true);
+  });
+
+  it("parses open=false from <details> without open attribute", () => {
+    const schema = createSchema();
+    const html = "<details><summary>Title</summary><p>Content</p></details>";
+    const dom = new window.DOMParser().parseFromString(html, "text/html").body;
+    const doc = PMDOMParser.fromSchema(schema).parse(dom);
+    const detailsNode = doc.firstChild!;
+    expect(detailsNode.attrs.open).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// addInputRules
+// ---------------------------------------------------------------------------
+
+describe("detailsBlock addInputRules", () => {
+  it("defines input rules", () => {
+    const addInputRules = detailsBlockExtension.config.addInputRules;
+    expect(addInputRules).toBeDefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Click-to-toggle plugin
+// ---------------------------------------------------------------------------
+
+describe("detailsBlock ProseMirror plugins", () => {
+  it("registers at least one plugin", () => {
+    const addPlugins = detailsBlockExtension.config.addProseMirrorPlugins;
+    expect(addPlugins).toBeDefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Click handler — toggle open state
+// ---------------------------------------------------------------------------
+
+describe("detailsBlock click handler", () => {
+  function getClickHandler() {
+    const plugins = detailsBlockExtension.config.addProseMirrorPlugins!.call({
+      editor: {},
+      name: "detailsBlock",
+      options: {},
+      storage: {},
+      type: undefined,
+      parent: undefined,
+    } as never);
+    return (plugins[0] as { props: { handleClick: (view: unknown, pos: number, event: unknown) => boolean } }).props.handleClick;
+  }
+
+  it("returns false when click target is not an Element", () => {
+    const handleClick = getClickHandler();
+    // Text nodes are not Elements
+    const result = handleClick({}, 0, { target: "text node" });
+    expect(result).toBe(false);
+  });
+
+  it("returns false when click target is not a summary", () => {
+    const handleClick = getClickHandler();
+    const div = document.createElement("div");
+    const result = handleClick({}, 0, { target: div });
+    expect(result).toBe(false);
+  });
+
+  it("toggles open state when clicking on summary element", () => {
+    const handleClick = getClickHandler();
+    const { schema, doc } = createDocWithDetails(false, "Summary", "Content");
+    const state = EditorState.create({ doc });
+
+    // Create a summary DOM element for the event target
+    const summary = document.createElement("summary");
+    summary.classList.add("details-summary");
+
+    let dispatchedTr: unknown = null;
+    const mockView = {
+      state,
+      dispatch: (tr: unknown) => { dispatchedTr = tr; },
+    };
+
+    // Position 2 is inside the detailsSummary
+    const result = handleClick(mockView, 2, { target: summary });
+    expect(result).toBe(true);
+    expect(dispatchedTr).not.toBeNull();
+  });
+
+  it("toggles from open=true to open=false", () => {
+    const handleClick = getClickHandler();
+    const { schema, doc } = createDocWithDetails(true, "Summary", "Content");
+    const state = EditorState.create({ doc });
+
+    const summary = document.createElement("summary");
+    summary.classList.add("details-summary");
+
+    let dispatchedTr: { doc: { firstChild: { attrs: { open: boolean } } } } | null = null;
+    const mockView = {
+      state,
+      dispatch: (tr: unknown) => { dispatchedTr = tr as typeof dispatchedTr; },
+    };
+
+    handleClick(mockView, 2, { target: summary });
+    expect(dispatchedTr).not.toBeNull();
+    // The resulting doc should have open toggled
+    expect(dispatchedTr!.doc.firstChild.attrs.open).toBe(false);
+  });
+
+  it("toggles from open=false to open=true", () => {
+    const handleClick = getClickHandler();
+    const { schema, doc } = createDocWithDetails(false, "Summary", "Content");
+    const state = EditorState.create({ doc });
+
+    const summary = document.createElement("summary");
+    summary.classList.add("details-summary");
+
+    let dispatchedTr: { doc: { firstChild: { attrs: { open: boolean } } } } | null = null;
+    const mockView = {
+      state,
+      dispatch: (tr: unknown) => { dispatchedTr = tr as typeof dispatchedTr; },
+    };
+
+    handleClick(mockView, 2, { target: summary });
+    expect(dispatchedTr).not.toBeNull();
+    expect(dispatchedTr!.doc.firstChild.attrs.open).toBe(true);
+  });
+
+  it("sets addToHistory=false meta on toggle transaction", () => {
+    const handleClick = getClickHandler();
+    const { schema, doc } = createDocWithDetails(false, "Summary", "Content");
+    const state = EditorState.create({ doc });
+
+    const summary = document.createElement("summary");
+    summary.classList.add("details-summary");
+
+    let dispatchedTr: { getMeta: (key: string) => unknown } | null = null;
+    const mockView = {
+      state,
+      dispatch: (tr: unknown) => { dispatchedTr = tr as typeof dispatchedTr; },
+    };
+
+    handleClick(mockView, 2, { target: summary });
+    expect(dispatchedTr!.getMeta("addToHistory")).toBe(false);
   });
 });

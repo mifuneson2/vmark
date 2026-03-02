@@ -296,4 +296,81 @@ describe("quotePairing", () => {
       // This might not detect the CJK comma as a boundary
     });
   });
+
+  describe("edge cases - apostrophe with curly quotes", () => {
+    test("detects apostrophe with curly single close quote (right quote)", () => {
+      // \u2019 is curly single close, used as apostrophe
+      const tokens = tokenizeQuotes("don\u2019t");
+      expect(tokens).toHaveLength(1);
+      expect(tokens[0].role).toBe("apostrophe");
+    });
+
+    test("detects apostrophe with curly single open quote", () => {
+      // \u2018 is curly single open, also checked in isApostrophe
+      const tokens = tokenizeQuotes("don\u2018t");
+      expect(tokens).toHaveLength(1);
+      expect(tokens[0].role).toBe("apostrophe");
+    });
+
+    test("detects possessive 's followed by non-letter", () => {
+      // Xiaolai's followed by space (non-letter after s)
+      const tokens = tokenizeQuotes("Xiaolai's .");
+      const apostrophes = tokens.filter((t) => t.role === "apostrophe");
+      expect(apostrophes).toHaveLength(1);
+    });
+
+    test("does not treat letter-quote-s-letter as possessive", () => {
+      // "Cat'stuff" - the s is followed by more letters, so it's not possessive
+      const tokens = tokenizeQuotes("Cat'stuff");
+      // It's apostrophe because letter + ' + letter pattern
+      expect(tokens[0].role).toBe("apostrophe");
+    });
+
+    test("detects possessive at end of string", () => {
+      const tokens = tokenizeQuotes("Xiaolai's");
+      const apostrophes = tokens.filter((t) => t.role === "apostrophe");
+      expect(apostrophes).toHaveLength(1);
+    });
+  });
+
+  describe("edge cases - decade abbreviation with curly open", () => {
+    test("detects decade with curly single open quote", () => {
+      const tokens = tokenizeQuotes("\u201890s");
+      expect(tokens).toHaveLength(1);
+      expect(tokens[0].role).toBe("apostrophe");
+    });
+
+    test("does not detect decade when preceded by digit", () => {
+      // 5'90s - digit before quote means feet, not decade
+      const tokens = tokenizeQuotes("5'90s");
+      const primes = tokens.filter((t) => t.role === "prime");
+      expect(primes.length).toBeGreaterThanOrEqual(1);
+    });
+  });
+
+  describe("edge cases - prime with non-digit break", () => {
+    test("double prime after digits with non-digit lookback break", () => {
+      // Pattern like a10" — the lookback for ' finds 'a' (non-digit) and breaks
+      const tokens = tokenizeQuotes('a10"');
+      const primes = tokens.filter((t) => t.role === "prime");
+      expect(primes).toHaveLength(1);
+    });
+  });
+
+  describe("applyContextualQuotes - unknown mode fallthrough", () => {
+    test("handles single quotes in corner-for-cjk mode with CJK", () => {
+      const result = applyContextualQuotes("中文'Hello'", "corner-for-cjk");
+      expect(result).toBe("中文『Hello』");
+    });
+
+    test("single quotes in contextual mode stay straight for Latin", () => {
+      const result = applyContextualQuotes("'Hello'", "contextual");
+      expect(result).toBe("'Hello'");
+    });
+
+    test("single quotes in curly-everywhere mode become curly", () => {
+      const result = applyContextualQuotes("'Hello'", "curly-everywhere");
+      expect(result).toBe("\u2018Hello\u2019");
+    });
+  });
 });

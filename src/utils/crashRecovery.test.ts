@@ -17,6 +17,7 @@ import {
   readRecoverySnapshots,
   deleteRecoverySnapshot,
   deleteAllRecoveryFiles,
+  deleteRecoveryFilesForTabs,
   deleteStaleRecoveryFiles,
   type RecoverySnapshot,
 } from "./crashRecovery";
@@ -256,6 +257,146 @@ describe("crashRecovery", () => {
     it("does not throw if dir does not exist", async () => {
       mockExists.mockResolvedValue(false);
       await expect(deleteStaleRecoveryFiles(7)).resolves.toBeUndefined();
+    });
+
+    it("skips non-snapshot files (tmp files)", async () => {
+      mockExists.mockResolvedValue(true);
+      mockReadDir.mockResolvedValue([
+        { name: ".tmp-tab-1-12345", isDirectory: false, isFile: true, isSymlink: false },
+      ] as never);
+
+      await deleteStaleRecoveryFiles(7);
+      expect(mockRemove).not.toHaveBeenCalled();
+    });
+
+    it("skips files with non-finite timestamps", async () => {
+      mockExists.mockResolvedValue(true);
+      mockReadDir.mockResolvedValue([
+        { name: "snapshot-tab-1.json", isDirectory: false, isFile: true, isSymlink: false },
+      ] as never);
+      mockReadTextFile.mockResolvedValue(JSON.stringify({ timestamp: "not-a-number" }));
+
+      await deleteStaleRecoveryFiles(7);
+      expect(mockRemove).not.toHaveBeenCalled();
+    });
+
+    it("skips unreadable files without throwing", async () => {
+      mockExists.mockResolvedValue(true);
+      mockReadDir.mockResolvedValue([
+        { name: "snapshot-tab-1.json", isDirectory: false, isFile: true, isSymlink: false },
+      ] as never);
+      mockReadTextFile.mockRejectedValue(new Error("read error"));
+
+      await expect(deleteStaleRecoveryFiles(7)).resolves.toBeUndefined();
+      expect(mockRemove).not.toHaveBeenCalled();
+    });
+
+    it("handles readDir throwing", async () => {
+      mockExists.mockResolvedValue(true);
+      mockReadDir.mockRejectedValue(new Error("readDir failed"));
+
+      await expect(deleteStaleRecoveryFiles(7)).resolves.toBeUndefined();
+    });
+  });
+
+  describe("deleteRecoveryFilesForTabs", () => {
+    it("deletes snapshots for each tab ID", async () => {
+      mockExists.mockResolvedValue(true);
+      await deleteRecoveryFilesForTabs(["tab-1", "tab-2"]);
+      expect(mockRemove).toHaveBeenCalledTimes(2);
+    });
+
+    it("handles empty tab array", async () => {
+      await deleteRecoveryFilesForTabs([]);
+      expect(mockRemove).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("deleteAllRecoveryFiles - edge cases", () => {
+    it("skips entries without names", async () => {
+      mockExists.mockResolvedValue(true);
+      mockReadDir.mockResolvedValue([
+        { name: null, isDirectory: false, isFile: true, isSymlink: false },
+        { name: "snapshot-tab-1.json", isDirectory: false, isFile: true, isSymlink: false },
+      ] as never);
+
+      await deleteAllRecoveryFiles();
+      // Should only remove the one with a name
+      expect(mockRemove).toHaveBeenCalledTimes(1);
+    });
+
+    it("handles individual remove errors gracefully", async () => {
+      mockExists.mockResolvedValue(true);
+      mockReadDir.mockResolvedValue([
+        { name: "snapshot-tab-1.json", isDirectory: false, isFile: true, isSymlink: false },
+        { name: "snapshot-tab-2.json", isDirectory: false, isFile: true, isSymlink: false },
+      ] as never);
+      mockRemove
+        .mockRejectedValueOnce(new Error("permission denied"))
+        .mockResolvedValueOnce(undefined);
+
+      // Should not throw even if individual remove fails
+      await expect(deleteAllRecoveryFiles()).resolves.toBeUndefined();
+    });
+
+    it("handles readDir throwing", async () => {
+      mockExists.mockResolvedValue(true);
+      mockReadDir.mockRejectedValue(new Error("readDir failed"));
+
+      await expect(deleteAllRecoveryFiles()).resolves.toBeUndefined();
+    });
+  });
+
+  describe("readRecoverySnapshots - edge cases", () => {
+    it("skips entries without names", async () => {
+      mockExists.mockResolvedValue(true);
+      mockReadDir.mockResolvedValue([
+        { name: null, isDirectory: false, isFile: true, isSymlink: false },
+      ] as never);
+
+      const result = await readRecoverySnapshots();
+      expect(result).toEqual([]);
+    });
+
+    it("handles readDir throwing", async () => {
+      mockExists.mockResolvedValue(true);
+      mockReadDir.mockRejectedValue(new Error("readDir failed"));
+
+      const result = await readRecoverySnapshots();
+      expect(result).toEqual([]);
+    });
+
+    it("validates snapshot with string filePath", async () => {
+      mockExists.mockResolvedValue(true);
+      const snapshot = makeSnapshot({ filePath: "/path/to/file.md" });
+      mockReadDir.mockResolvedValue([
+        { name: "snapshot-tab-1.json", isDirectory: false, isFile: true, isSymlink: false },
+      ] as never);
+      mockReadTextFile.mockResolvedValue(JSON.stringify(snapshot));
+
+      const result = await readRecoverySnapshots();
+      expect(result).toHaveLength(1);
+      expect(result[0].filePath).toBe("/path/to/file.md");
+    });
+
+    it("rejects snapshot with non-finite timestamp", async () => {
+      mockExists.mockResolvedValue(true);
+      const bad = { ...makeSnapshot(), timestamp: Infinity };
+      mockReadDir.mockResolvedValue([
+        { name: "snapshot-tab-1.json", isDirectory: false, isFile: true, isSymlink: false },
+      ] as never);
+      mockReadTextFile.mockResolvedValue(JSON.stringify(bad));
+
+      const result = await readRecoverySnapshots();
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe("writeRecoverySnapshot - edge cases", () => {
+    it("returns false on non-Error rejection", async () => {
+      mockWriteTextFile.mockRejectedValue("string error");
+      const result = await writeRecoverySnapshot(makeSnapshot());
+      expect(result).toBe(false);
     });
   });
 });

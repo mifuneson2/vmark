@@ -158,6 +158,95 @@ describe("proseMirrorToMdast blocks", () => {
     expect(md).toContain("Footnote content");
   });
 
+  it("serializes blockquotes", () => {
+    const md = pmToMarkdown([
+      testSchema.node("blockquote", null, [
+        testSchema.node("paragraph", null, [testSchema.text("quoted")]),
+      ]),
+    ]);
+
+    expect(md).toContain("> quoted");
+  });
+
+  it("serializes bullet lists", () => {
+    const md = pmToMarkdown([
+      testSchema.node("bulletList", null, [
+        testSchema.node("listItem", null, [
+          testSchema.node("paragraph", null, [testSchema.text("item 1")]),
+        ]),
+        testSchema.node("listItem", null, [
+          testSchema.node("paragraph", null, [testSchema.text("item 2")]),
+        ]),
+      ]),
+    ]);
+
+    expect(md).toContain("- item 1");
+    expect(md).toContain("- item 2");
+  });
+
+  it("serializes ordered lists with start", () => {
+    const md = pmToMarkdown([
+      testSchema.node("orderedList", { start: 3 }, [
+        testSchema.node("listItem", null, [
+          testSchema.node("paragraph", null, [testSchema.text("third")]),
+        ]),
+      ]),
+    ]);
+
+    expect(md).toContain("3.");
+    expect(md).toContain("third");
+  });
+
+  it("serializes task list items", () => {
+    const md = pmToMarkdown([
+      testSchema.node("bulletList", null, [
+        testSchema.node("listItem", { checked: false }, [
+          testSchema.node("paragraph", null, [testSchema.text("todo")]),
+        ]),
+        testSchema.node("listItem", { checked: true }, [
+          testSchema.node("paragraph", null, [testSchema.text("done")]),
+        ]),
+      ]),
+    ]);
+
+    expect(md).toContain("[ ] todo");
+    expect(md).toContain("[x] done");
+  });
+
+  it("serializes horizontal rule", () => {
+    const md = pmToMarkdown([
+      testSchema.node("paragraph", null, [testSchema.text("before")]),
+      testSchema.node("horizontalRule"),
+      testSchema.node("paragraph", null, [testSchema.text("after")]),
+    ]);
+
+    expect(md).toContain("---");
+  });
+
+  it("serializes code blocks without language", () => {
+    const md = pmToMarkdown([
+      testSchema.node("codeBlock", { language: null }, [
+        testSchema.text("plain code"),
+      ]),
+    ]);
+
+    expect(md).toContain("```");
+    expect(md).toContain("plain code");
+  });
+
+  it("serializes details block without summary node", () => {
+    // When first child is NOT detailsSummary, should use "Details" as default
+    const md = pmToMarkdown([
+      testSchema.node("detailsBlock", { open: false }, [
+        testSchema.node("detailsSummary", null, [testSchema.text("Custom")]),
+        testSchema.node("paragraph", null, [testSchema.text("Body")]),
+      ]),
+    ]);
+
+    expect(md).toContain("<summary>Custom</summary>");
+    expect(md).toContain("Body");
+  });
+
   it("serializes a listItem with no children as empty bullet (not ## heading)", () => {
     // A listItem with 0 children is structurally invalid but can occur
     // from certain markdown parsers. The serializer must not produce garbage.

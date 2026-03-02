@@ -1,0 +1,161 @@
+import { describe, it, expect } from "vitest";
+import { EditorState } from "@codemirror/state";
+import { EditorView } from "@codemirror/view";
+import { getHeadingInfo, setHeadingLevel, convertToHeading } from "./headingDetection";
+
+function createView(doc: string, cursor: number): EditorView {
+  const state = EditorState.create({
+    doc,
+    selection: { anchor: cursor },
+  });
+  return new EditorView({ state, parent: document.createElement("div") });
+}
+
+describe("getHeadingInfo", () => {
+  it.each([
+    { doc: "# Heading 1", cursor: 5, level: 1 },
+    { doc: "## Heading 2", cursor: 5, level: 2 },
+    { doc: "### Heading 3", cursor: 5, level: 3 },
+    { doc: "#### Heading 4", cursor: 5, level: 4 },
+    { doc: "##### Heading 5", cursor: 5, level: 5 },
+    { doc: "###### Heading 6", cursor: 5, level: 6 },
+  ])("detects heading level $level", ({ doc, cursor, level }) => {
+    const view = createView(doc, cursor);
+    const info = getHeadingInfo(view);
+    expect(info).not.toBeNull();
+    expect(info!.level).toBe(level);
+    view.destroy();
+  });
+
+  it("returns null for plain paragraph", () => {
+    const view = createView("Just a paragraph", 5);
+    expect(getHeadingInfo(view)).toBeNull();
+    view.destroy();
+  });
+
+  it("returns null for empty document", () => {
+    const view = createView("", 0);
+    expect(getHeadingInfo(view)).toBeNull();
+    view.destroy();
+  });
+
+  it("returns null when # not followed by space", () => {
+    const view = createView("#NoSpace", 3);
+    expect(getHeadingInfo(view)).toBeNull();
+    view.destroy();
+  });
+
+  it("returns null for more than 6 hashes", () => {
+    const view = createView("####### Not a heading", 10);
+    expect(getHeadingInfo(view)).toBeNull();
+    view.destroy();
+  });
+
+  it("detects heading on multiline document", () => {
+    const doc = "paragraph\n## Title\nmore text";
+    const view = createView(doc, 14); // inside "Title"
+    const info = getHeadingInfo(view);
+    expect(info).not.toBeNull();
+    expect(info!.level).toBe(2);
+    view.destroy();
+  });
+
+  it("returns lineStart and lineEnd correctly", () => {
+    const doc = "line one\n# Heading\nline three";
+    const view = createView(doc, 12);
+    const info = getHeadingInfo(view);
+    expect(info).not.toBeNull();
+    expect(info!.lineStart).toBe(9); // start of "# Heading"
+    expect(info!.lineEnd).toBe(18); // end of "# Heading"
+    view.destroy();
+  });
+
+  it("uses explicit pos parameter when provided", () => {
+    const doc = "paragraph\n## Title\nmore text";
+    const view = createView(doc, 0); // cursor at paragraph
+    // Pass pos inside heading line
+    const info = getHeadingInfo(view, 14);
+    expect(info).not.toBeNull();
+    expect(info!.level).toBe(2);
+    view.destroy();
+  });
+
+  it("handles heading with CJK text", () => {
+    const view = createView("# 你好世界", 4);
+    const info = getHeadingInfo(view);
+    expect(info).not.toBeNull();
+    expect(info!.level).toBe(1);
+    view.destroy();
+  });
+
+  it("returns null for blank line", () => {
+    const doc = "text\n\nmore";
+    const view = createView(doc, 5); // at the blank line
+    expect(getHeadingInfo(view)).toBeNull();
+    view.destroy();
+  });
+});
+
+describe("setHeadingLevel", () => {
+  it("changes heading level from 1 to 3", () => {
+    const view = createView("# Heading", 5);
+    const info = getHeadingInfo(view)!;
+    setHeadingLevel(view, info, 3);
+    expect(view.state.doc.toString()).toBe("### Heading");
+    view.destroy();
+  });
+
+  it("removes heading when level is 0", () => {
+    const view = createView("## Title", 5);
+    const info = getHeadingInfo(view)!;
+    setHeadingLevel(view, info, 0);
+    expect(view.state.doc.toString()).toBe("Title");
+    view.destroy();
+  });
+
+  it("changes heading level from 3 to 1", () => {
+    const view = createView("### Deep heading", 5);
+    const info = getHeadingInfo(view)!;
+    setHeadingLevel(view, info, 1);
+    expect(view.state.doc.toString()).toBe("# Deep heading");
+    view.destroy();
+  });
+});
+
+describe("convertToHeading", () => {
+  it("converts paragraph to heading", () => {
+    const view = createView("Plain text", 3);
+    convertToHeading(view, 2);
+    expect(view.state.doc.toString()).toBe("## Plain text");
+    view.destroy();
+  });
+
+  it("does nothing for level 0", () => {
+    const view = createView("text", 2);
+    convertToHeading(view, 0);
+    expect(view.state.doc.toString()).toBe("text");
+    view.destroy();
+  });
+
+  it("does nothing for level 7", () => {
+    const view = createView("text", 2);
+    convertToHeading(view, 7);
+    expect(view.state.doc.toString()).toBe("text");
+    view.destroy();
+  });
+
+  it("replaces existing heading markers when called on heading line", () => {
+    const view = createView("### Old heading", 5);
+    convertToHeading(view, 1);
+    expect(view.state.doc.toString()).toBe("# Old heading");
+    view.destroy();
+  });
+
+  it("uses explicit pos parameter", () => {
+    const doc = "first line\nsecond line";
+    const view = createView(doc, 0);
+    convertToHeading(view, 3, 15); // pos in "second line"
+    expect(view.state.doc.toString()).toBe("first line\n### second line");
+    view.destroy();
+  });
+});

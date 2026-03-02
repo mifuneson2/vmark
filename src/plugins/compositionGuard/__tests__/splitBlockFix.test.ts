@@ -153,4 +153,28 @@ describe("fixCompositionSplitBlock", () => {
     expect(tr).not.toBeNull();
     expect(tr!.getMeta("uiEvent")).toBe("composition-cleanup");
   });
+
+  it("returns null when pinyin extends beyond heading end", () => {
+    // Heading has "wo" (2 chars), but pinyin is "wo kj kj" (8 chars)
+    // pinyinEnd = 1 + 8 = 9, but heading content ends at 1 + 2 = 3
+    const state = createSplitState("wo", "\u6211\u770B\u770B");
+    const tr = fixCompositionSplitBlock(state, 1, "\u6211\u770B\u770B", "wo kj kj");
+    expect(tr).toBeNull();
+  });
+
+  it("returns null when textBetween throws for invalid range", () => {
+    // Create a state where startPos is valid but pinyin range overlaps block boundary
+    const doc = schema.node("doc", null, [
+      schema.node("heading", { level: 1 }, [schema.text("ab")]),
+      schema.node("paragraph", null, [schema.text("\u6211\u770B\u770B")]),
+    ]);
+    const paragraphStart = 1 + 2 + 2; // heading content + boundaries
+    const state = EditorState.create({
+      doc,
+      selection: TextSelection.create(doc, paragraphStart + "\u6211\u770B\u770B".length),
+    });
+    // pinyin "abcdef" is longer than heading content "ab" (2 chars)
+    const tr = fixCompositionSplitBlock(state, 1, "\u6211\u770B\u770B", "abcdef");
+    expect(tr).toBeNull();
+  });
 });

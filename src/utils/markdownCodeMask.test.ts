@@ -151,4 +151,31 @@ describe("buildCodeMask", () => {
     const mask = buildCodeMask(md);
     expect(maskToString(mask)).toBe("0".repeat(md.length));
   });
+
+  it("marks mismatched backtick run inside inline code as content", () => {
+    // ``a`b`` — opening: ``, content: a`b (` is mismatched run), closing: ``
+    const md = "``a`b``";
+    const mask = buildCodeMask(md);
+    //           `  `  a  `  b  `  `
+    //           0  0  1  1  1  0  0
+    expect(maskToString(mask)).toBe("0011100");
+  });
+
+  it("marks inline code content correctly when unclosed at EOF", () => {
+    // Inline code that is never closed
+    const md = "`abc";
+    const mask = buildCodeMask(md);
+    //           `  a  b  c
+    //           0  1  1  1
+    expect(maskToString(mask)).toBe("0111");
+  });
+
+  it("handles inline code with double backtick containing single backtick", () => {
+    // `` ` `` — opening: ``, content: space ` space, closing: ``
+    const md = "`` ` ``";
+    const mask = buildCodeMask(md);
+    //           `  `     `        `  `
+    //           0  0  1  1  1  0  0
+    expect(maskToString(mask)).toBe("0011100");
+  });
 });

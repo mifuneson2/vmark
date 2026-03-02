@@ -323,4 +323,237 @@ describe("ModelComboBox", () => {
 
     expect(onChange).toHaveBeenCalledWith("claude-haiku-4-5-20251001");
   });
+
+  it("ArrowUp wraps to the last item from the first", () => {
+    render(
+      <ModelComboBox
+        provider="anthropic"
+        value=""
+        apiKey=""
+        endpoint=""
+        onChange={onChange}
+      />,
+    );
+
+    const input = screen.getByPlaceholderText("Model");
+    fireEvent.focus(input);
+
+    // ArrowDown to idx 0 (first), then ArrowUp wraps to idx 1 (last)
+    fireEvent.keyDown(input, { key: "ArrowDown" }); // idx 0
+    fireEvent.keyDown(input, { key: "ArrowUp" });   // wrap to idx 1 (last)
+    fireEvent.keyDown(input, { key: "Enter" });
+
+    // Anthropic: idx 0 -> ArrowUp wraps to last (idx 1)
+    expect(onChange).toHaveBeenCalledWith("claude-haiku-4-5-20251001");
+  });
+
+  it("ArrowDown wraps from last to first item", () => {
+    render(
+      <ModelComboBox
+        provider="anthropic"
+        value=""
+        apiKey=""
+        endpoint=""
+        onChange={onChange}
+      />,
+    );
+
+    const input = screen.getByPlaceholderText("Model");
+    fireEvent.focus(input);
+
+    // Move to first, second, then wrap around
+    fireEvent.keyDown(input, { key: "ArrowDown" }); // idx 0
+    fireEvent.keyDown(input, { key: "ArrowDown" }); // idx 1
+    fireEvent.keyDown(input, { key: "ArrowDown" }); // wrap to idx 0
+    fireEvent.keyDown(input, { key: "Enter" });
+
+    expect(onChange).toHaveBeenCalledWith("claude-sonnet-4-5-20250929");
+  });
+
+  it("Enter with no highlight closes dropdown", () => {
+    render(
+      <ModelComboBox
+        provider="openai"
+        value=""
+        apiKey=""
+        endpoint=""
+        onChange={onChange}
+      />,
+    );
+
+    const input = screen.getByPlaceholderText("Model");
+    fireEvent.focus(input);
+    expect(screen.getByRole("listbox")).toBeInTheDocument();
+
+    // Enter without moving highlight
+    fireEvent.keyDown(input, { key: "Enter" });
+
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+    // Should not have called onChange with a model selection
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it("toggles dropdown with chevron button", () => {
+    render(
+      <ModelComboBox
+        provider="openai"
+        value=""
+        apiKey=""
+        endpoint=""
+        onChange={onChange}
+      />,
+    );
+
+    const chevronBtn = screen.getByTitle("Show models");
+
+    // Open
+    fireEvent.click(chevronBtn);
+    expect(screen.getByRole("listbox")).toBeInTheDocument();
+
+    // Close
+    fireEvent.click(chevronBtn);
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+  });
+
+  it("opens dropdown on ArrowDown when closed", () => {
+    render(
+      <ModelComboBox
+        provider="openai"
+        value=""
+        apiKey=""
+        endpoint=""
+        onChange={onChange}
+      />,
+    );
+
+    const input = screen.getByPlaceholderText("Model");
+
+    // Ensure closed first (blur to close if opened by focus)
+    fireEvent.blur(input);
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+
+    // ArrowDown should open it
+    fireEvent.keyDown(input, { key: "ArrowDown" });
+    expect(screen.getByRole("listbox")).toBeInTheDocument();
+  });
+
+  it("shows 'No models found' when filter matches nothing", () => {
+    render(
+      <ModelComboBox
+        provider="openai"
+        value=""
+        apiKey=""
+        endpoint=""
+        onChange={onChange}
+      />,
+    );
+
+    const input = screen.getByPlaceholderText("Model");
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: "zzz-nonexistent" } });
+
+    expect(screen.getByText("No models found")).toBeInTheDocument();
+  });
+
+  it("shows 'Loading models...' while fetching with no curated results", async () => {
+    let resolveList: (v: string[]) => void;
+    mockInvoke.mockImplementation(
+      () => new Promise<string[]>((r) => { resolveList = r; }),
+    );
+
+    render(
+      <ModelComboBox
+        provider="ollama-api"
+        value=""
+        apiKey=""
+        endpoint=""
+        onChange={onChange}
+      />,
+    );
+
+    fireEvent.focus(screen.getByPlaceholderText("Model"));
+
+    expect(screen.getByText("Loading models...")).toBeInTheDocument();
+
+    // Resolve to clean up
+    resolveList!(["llama3"]);
+    await waitFor(() => {
+      expect(screen.getByText("llama3")).toBeInTheDocument();
+    });
+  });
+
+  it("closes dropdown on outside click", () => {
+    render(
+      <div>
+        <ModelComboBox
+          provider="openai"
+          value=""
+          apiKey=""
+          endpoint=""
+          onChange={onChange}
+        />
+        <button data-testid="outside">Outside</button>
+      </div>,
+    );
+
+    fireEvent.focus(screen.getByPlaceholderText("Model"));
+    expect(screen.getByRole("listbox")).toBeInTheDocument();
+
+    fireEvent.mouseDown(screen.getByTestId("outside"));
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+  });
+
+  it("highlights selected model in the list", () => {
+    render(
+      <ModelComboBox
+        provider="openai"
+        value="gpt-4o"
+        apiKey=""
+        endpoint=""
+        onChange={onChange}
+      />,
+    );
+
+    fireEvent.focus(screen.getByPlaceholderText("Model"));
+
+    const selectedOption = screen.getByRole("option", { name: "gpt-4o" });
+    expect(selectedOption).toHaveAttribute("aria-selected", "true");
+  });
+
+  it("handles fetch failure gracefully (keeps curated list)", async () => {
+    mockInvoke.mockRejectedValue(new Error("Network error"));
+
+    render(
+      <ModelComboBox
+        provider="openai"
+        value=""
+        apiKey="sk-test"
+        endpoint=""
+        onChange={onChange}
+      />,
+    );
+
+    fireEvent.click(screen.getByTitle("Refresh models"));
+
+    // Should still show curated models despite fetch failure
+    await waitFor(() => {
+      fireEvent.focus(screen.getByPlaceholderText("Model"));
+      expect(screen.getByText("gpt-4o")).toBeInTheDocument();
+    });
+  });
+
+  it("applies custom className", () => {
+    const { container } = render(
+      <ModelComboBox
+        provider="openai"
+        value=""
+        apiKey=""
+        endpoint=""
+        onChange={onChange}
+        className="flex-1"
+      />,
+    );
+
+    expect(container.firstChild).toHaveClass("flex-1");
+  });
 });

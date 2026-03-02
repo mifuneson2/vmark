@@ -461,4 +461,157 @@ describe("ImagePasteToastView message display", () => {
     const message = container.querySelector(".image-paste-toast-message");
     expect(message?.textContent).toBe("5 images");
   });
+
+  it("shows 'Insert All' button title for multiple images", async () => {
+    const editorDom = container.querySelector(".ProseMirror") as HTMLElement;
+    initImagePasteToast();
+
+    (useImagePasteToastStore as unknown as { _setState: (s: object) => void })._setState({
+      isOpen: true,
+      anchorRect,
+      imagePath: "test.png",
+      imageType: "url" as const,
+      editorDom,
+      isMultiple: true,
+      imageCount: 3,
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    const insertBtn = container.querySelector(".image-paste-toast-btn-insert") as HTMLButtonElement;
+    expect(insertBtn?.title).toBe("Insert All");
+  });
+
+  it("shows single image message for isMultiple with count 1", async () => {
+    const editorDom = container.querySelector(".ProseMirror") as HTMLElement;
+    initImagePasteToast();
+
+    (useImagePasteToastStore as unknown as { _setState: (s: object) => void })._setState({
+      isOpen: true,
+      anchorRect,
+      imagePath: "test.png",
+      imageType: "url" as const,
+      editorDom,
+      isMultiple: true,
+      imageCount: 1,
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    const message = container.querySelector(".image-paste-toast-message");
+    // isMultiple=true but imageCount=1 should show "Image URL"
+    expect(message?.textContent).toBe("Image URL");
+  });
+});
+
+describe("ImagePasteToastView keyboard edge cases", () => {
+  let container: HTMLElement;
+  const anchorRect: AnchorRect = { top: 200, left: 150, bottom: 220, right: 250 };
+
+  beforeEach(() => {
+    document.body.replaceChildren();
+    container = createEditorContainer();
+    (useImagePasteToastStore as unknown as { _reset: () => void })._reset();
+  });
+
+  afterEach(() => {
+    destroyImagePasteToast();
+    container.remove();
+  });
+
+  it("Enter on dismiss button calls dismiss", async () => {
+    const editorDom = container.querySelector(".ProseMirror") as HTMLElement;
+    initImagePasteToast();
+
+    const store = useImagePasteToastStore as unknown as { _setState: (s: object) => void; getState: () => { dismiss: ReturnType<typeof vi.fn> } };
+    store._setState({
+      isOpen: true,
+      anchorRect,
+      imagePath: "test.png",
+      imageType: "url" as const,
+      editorDom,
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 20));
+
+    // Focus the dismiss button
+    const dismissBtn = container.querySelector(".image-paste-toast-btn-dismiss") as HTMLElement;
+    expect(dismissBtn).not.toBeNull();
+    dismissBtn.focus();
+
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+
+    expect(store.getState().dismiss).toHaveBeenCalled();
+  });
+
+  it("Enter with no button focused defaults to insert", async () => {
+    const editorDom = container.querySelector(".ProseMirror") as HTMLElement;
+    initImagePasteToast();
+
+    const store = useImagePasteToastStore as unknown as { _setState: (s: object) => void; getState: () => { confirm: ReturnType<typeof vi.fn> } };
+    store._setState({
+      isOpen: true,
+      anchorRect,
+      imagePath: "test.png",
+      imageType: "url" as const,
+      editorDom,
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 20));
+
+    // Focus something outside the toast buttons
+    document.body.focus();
+
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+
+    expect(store.getState().confirm).toHaveBeenCalled();
+  });
+
+  it("Shift+Tab cycles focus backwards", async () => {
+    const editorDom = container.querySelector(".ProseMirror") as HTMLElement;
+    initImagePasteToast();
+
+    (useImagePasteToastStore as unknown as { _setState: (s: object) => void })._setState({
+      isOpen: true,
+      anchorRect,
+      imagePath: "test.png",
+      imageType: "url" as const,
+      editorDom,
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 20));
+
+    const insertBtn = container.querySelector(".image-paste-toast-btn-insert") as HTMLElement;
+    const dismissBtn = container.querySelector(".image-paste-toast-btn-dismiss") as HTMLElement;
+
+    // Focus on insert button (index 0)
+    insertBtn.focus();
+
+    // Shift+Tab from first button should wrap to last
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", shiftKey: true, bubbles: true }));
+    expect(document.activeElement).toBe(dismissBtn);
+  });
+
+  it("auto-dismiss timer hides toast after timeout", async () => {
+    vi.useFakeTimers();
+
+    const editorDom = container.querySelector(".ProseMirror") as HTMLElement;
+    initImagePasteToast();
+
+    const store = useImagePasteToastStore as unknown as { _setState: (s: object) => void; getState: () => { hideToast: ReturnType<typeof vi.fn> } };
+    store._setState({
+      isOpen: true,
+      anchorRect,
+      imagePath: "test.png",
+      imageType: "url" as const,
+      editorDom,
+    });
+
+    // Advance timer past auto-dismiss threshold (5000ms)
+    vi.advanceTimersByTime(5100);
+
+    expect(store.getState().hideToast).toHaveBeenCalled();
+
+    vi.useRealTimers();
+  });
 });

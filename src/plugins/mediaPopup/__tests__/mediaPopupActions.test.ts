@@ -265,4 +265,42 @@ describe("browseAndReplaceMedia", () => {
       })
     );
   });
+
+  it("returns false when node type does not match after async operation", async () => {
+    mockOpen.mockResolvedValue("/new-video.mp4");
+    mockCopyMediaToAssets.mockResolvedValue("assets/new-video.mp4");
+
+    // Node type has changed during async operation
+    const view = createMockView("block_audio"); // node is audio, but we browse as video
+    storeState = { ...storeState, mediaNodeType: "block_video", mediaNodePos: 10 };
+
+    const result = await browseAndReplaceMedia(view, 10, "block_video");
+
+    expect(result).toBe(false);
+    expect(view.dispatch).not.toHaveBeenCalled();
+  });
+
+  it("returns false and shows error when copy fails", async () => {
+    mockOpen.mockResolvedValue("/new-video.mp4");
+    mockCopyMediaToAssets.mockRejectedValue(new Error("Copy failed"));
+
+    const view = createMockView();
+    const result = await browseAndReplaceMedia(view, 10, "block_video");
+
+    expect(result).toBe(false);
+    expect(mockMessage).toHaveBeenCalledWith(
+      "Failed to change media file.",
+      expect.objectContaining({ kind: "error" })
+    );
+  });
+
+  it("returns false when document has no filePath", async () => {
+    mockOpen.mockResolvedValue("/new-video.mp4");
+    mockGetDocument = () => ({ filePath: "" } as { filePath: string });
+
+    const view = createMockView();
+    const result = await browseAndReplaceMedia(view, 10, "block_video");
+
+    expect(result).toBe(false);
+  });
 });

@@ -18,6 +18,7 @@ import { AlignedTableCell, AlignedTableHeader } from "@/components/Editor/aligne
 import {
   createSourcePeekSlice,
   getSourcePeekRange,
+  getExpandedSourcePeekRange,
   serializeSourcePeekRange,
   applySourcePeekMarkdown,
 } from "./sourcePeek";
@@ -138,6 +139,80 @@ describe("sourcePeek helpers", () => {
     // Should fall back to selection from/to
     expect(range.from).toBe(0);
     expect(range.to).toBe(doc.content.size);
+  });
+});
+
+describe("getExpandedSourcePeekRange", () => {
+  it("returns node selection bounds for block node selections", () => {
+    const schema = createSchema();
+    const blockImage = schema.nodes.block_image.create({ src: "img.png", alt: "", title: "" });
+    const doc = schema.nodes.doc.create(null, [blockImage]);
+    const selection = NodeSelection.create(doc, 0);
+    const state = EditorState.create({ doc, selection });
+
+    const range = getExpandedSourcePeekRange(state);
+    expect(range).toEqual({ from: selection.from, to: selection.to });
+  });
+
+  it("expands to compound block ancestor for table", () => {
+    const schema = createSchema();
+    const md = "| A | B |\n| --- | --- |\n| 1 | 2 |";
+    const doc = parseMarkdown(schema, md);
+    // Position inside the table content
+    const selection = TextSelection.create(doc, 4);
+    const state = EditorState.create({ doc, selection });
+
+    const range = getExpandedSourcePeekRange(state);
+    // Range should include the entire table
+    expect(range.from).toBe(0);
+    expect(range.to).toBe(doc.content.size);
+  });
+
+  it("expands to compound block ancestor for bullet list", () => {
+    const schema = createSchema();
+    const md = "- item 1\n- item 2";
+    const doc = parseMarkdown(schema, md);
+    const selection = TextSelection.create(doc, 3);
+    const state = EditorState.create({ doc, selection });
+
+    const range = getExpandedSourcePeekRange(state);
+    // Should include the entire list
+    expect(range.from).toBe(0);
+    expect(range.to).toBe(doc.content.size);
+  });
+
+  it("returns depth-1 range for non-compound block", () => {
+    const schema = createSchema();
+    const md = "Just a paragraph";
+    const doc = parseMarkdown(schema, md);
+    const selection = TextSelection.create(doc, 3);
+    const state = EditorState.create({ doc, selection });
+
+    const range = getExpandedSourcePeekRange(state);
+    expect(range.from).toBe(0);
+    expect(range.to).toBe(doc.content.size);
+  });
+
+  it("handles shallow selection (depth < 1)", () => {
+    const schema = createSchema();
+    const doc = parseMarkdown(schema, "Test");
+    const state = EditorState.create({
+      doc,
+      selection: TextSelection.create(doc, 0, doc.content.size),
+    });
+
+    const range = getExpandedSourcePeekRange(state);
+    expect(range.from).toBe(0);
+    expect(range.to).toBe(doc.content.size);
+  });
+});
+
+describe("sourcePeek - createDocFromSlice edge case", () => {
+  it("handles slice where docType.create throws", () => {
+    const schema = createSchema();
+    // Creating a slice from invalid markdown should still work via fallback
+    const slice = createSourcePeekSlice(schema, "# Valid heading");
+    expect(slice.content.childCount).toBeGreaterThan(0);
   });
 });
 

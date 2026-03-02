@@ -295,4 +295,195 @@ describe("smartInsertHandlers", () => {
     expect(call.data.applied).toBe(false);
     expect(call.data.suggestionId).toBeDefined();
   });
+
+  it("creates suggestion when auto-approve is disabled even with apply mode", async () => {
+    const editor = createMockEditor();
+    mockGetEditor.mockReturnValue(editor);
+    mockIsAutoApproveEnabled.mockReturnValue(false);
+
+    await handleSmartInsert("req-12", {
+      baseRevision: "rev-1",
+      destination: "end_of_document",
+      content: "text",
+      mode: "apply",
+    });
+
+    // When auto-approve is off, suggest mode is forced
+    expect(mockAddSuggestion).toHaveBeenCalled();
+    const call = mockRespond.mock.calls[0][0];
+    expect(call.data.applied).toBe(false);
+  });
+
+  it("inserts after section heading", async () => {
+    const editor = createMockEditor();
+    mockGetEditor.mockReturnValue(editor);
+
+    await handleSmartInsert("req-13", {
+      baseRevision: "rev-1",
+      destination: { after_section: "Section A" },
+      content: "after section",
+      mode: "apply",
+    });
+
+    const call = mockRespond.mock.calls[0][0];
+    expect(call.success).toBe(true);
+    expect(call.data.applied).toBe(true);
+  });
+
+  it("returns not_found for non-matching section heading", async () => {
+    const editor = createMockEditor();
+    mockGetEditor.mockReturnValue(editor);
+
+    await handleSmartInsert("req-14", {
+      baseRevision: "rev-1",
+      destination: { after_section: "Nonexistent Section" },
+      content: "text",
+    });
+
+    const call = mockRespond.mock.calls[0][0];
+    expect(call.success).toBe(false);
+    expect(call.data.code).toBe("not_found");
+  });
+
+  it("returns not_found for invalid destination type", async () => {
+    const editor = createMockEditor();
+    mockGetEditor.mockReturnValue(editor);
+
+    await handleSmartInsert("req-15", {
+      baseRevision: "rev-1",
+      destination: { unknown_key: "value" },
+      content: "text",
+    });
+
+    const call = mockRespond.mock.calls[0][0];
+    expect(call.success).toBe(false);
+    expect(call.error).toContain("Invalid destination");
+  });
+
+  it("returns error when baseRevision is missing", async () => {
+    mockGetEditor.mockReturnValue(createMockEditor());
+
+    await handleSmartInsert("req-16", {
+      destination: "end_of_document",
+      content: "text",
+    });
+
+    const call = mockRespond.mock.calls[0][0];
+    expect(call.success).toBe(false);
+    expect(call.error).toContain("'baseRevision'");
+  });
+
+  it("includes insertPosition in response for apply mode", async () => {
+    const editor = createMockEditor();
+    mockGetEditor.mockReturnValue(editor);
+
+    await handleSmartInsert("req-17", {
+      baseRevision: "rev-1",
+      destination: "start_of_document",
+      content: "text",
+      mode: "apply",
+    });
+
+    const call = mockRespond.mock.calls[0][0];
+    expect(call.success).toBe(true);
+    expect(call.data.insertPosition).toBe(0);
+    expect(call.data.newRevision).toBe("rev-new");
+  });
+
+  it("includes insertPosition in response for suggest mode", async () => {
+    const editor = createMockEditor();
+    mockGetEditor.mockReturnValue(editor);
+    mockIsAutoApproveEnabled.mockReturnValue(false);
+
+    await handleSmartInsert("req-18", {
+      baseRevision: "rev-1",
+      destination: "end_of_document",
+      content: "text",
+      mode: "suggest",
+    });
+
+    const call = mockRespond.mock.calls[0][0];
+    expect(call.success).toBe(true);
+    expect(call.data.insertPosition).toBeDefined();
+  });
+
+  it("section boundary stops at same-level heading", async () => {
+    // Create editor with heading followed by content, then another same-level heading
+    const nodes = [
+      {
+        type: { name: "heading" },
+        nodeSize: 10,
+        attrs: { level: 2 },
+        isText: false,
+        descendants: (cb: (child: unknown) => boolean) => {
+          cb({ isText: true, text: "Target" });
+        },
+      },
+      {
+        type: { name: "paragraph" },
+        nodeSize: 15,
+        attrs: {},
+        isText: false,
+        descendants: (cb: (child: unknown) => boolean) => {
+          cb({ isText: true, text: "Target content" });
+        },
+      },
+      {
+        type: { name: "heading" },
+        nodeSize: 10,
+        attrs: { level: 2 },
+        isText: false,
+        descendants: (cb: (child: unknown) => boolean) => {
+          cb({ isText: true, text: "Next Section" });
+        },
+      },
+    ];
+
+    const docSize = nodes.reduce((sum, n) => sum + n.nodeSize, 0);
+
+    const editor = {
+      state: {
+        doc: {
+          content: { size: docSize },
+          descendants: (
+            cb: (node: unknown, pos: number) => boolean | undefined
+          ) => {
+            let pos = 0;
+            for (const n of nodes) {
+              const result = cb(n, pos);
+              if (result === false) break;
+              pos += n.nodeSize;
+            }
+          },
+          forEach: (cb: (node: unknown, offset: number) => void) => {
+            let offset = 0;
+            for (const n of nodes) {
+              cb(n, offset);
+              offset += n.nodeSize;
+            }
+          },
+        },
+        tr: {
+          replaceRange: vi.fn().mockReturnThis(),
+          scrollIntoView: vi.fn().mockReturnThis(),
+        },
+      },
+      view: {
+        dispatch: vi.fn(),
+      },
+    };
+    mockGetEditor.mockReturnValue(editor);
+
+    await handleSmartInsert("req-19", {
+      baseRevision: "rev-1",
+      destination: { after_section: "Target" },
+      content: "after target section",
+      mode: "apply",
+    });
+
+    const call = mockRespond.mock.calls[0][0];
+    expect(call.success).toBe(true);
+    // Insert position should be at end of section (before next heading)
+    expect(call.data.insertPosition).toBe(25); // 10 + 15
+  });
 });

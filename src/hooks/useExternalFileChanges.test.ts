@@ -40,6 +40,16 @@ vi.mock("sonner", () => ({
     info: mocks.toastInfo,
     success: vi.fn(),
     error: vi.fn(),
+    warning: vi.fn(),
+  },
+}));
+
+vi.mock("@/utils/imeToast", () => ({
+  imeToast: {
+    info: mocks.toastInfo,
+    success: vi.fn(),
+    error: vi.fn(),
+    warning: vi.fn(),
   },
 }));
 
@@ -334,6 +344,94 @@ describe("useExternalFileChanges — remove events", () => {
 
     const doc = useDocumentStore.getState().documents["tab-1"];
     expect(doc?.isMissing).toBe(true);
+  });
+});
+
+describe("useExternalFileChanges — event filtering", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("ignores events from a different window watcher", async () => {
+    seedStores();
+    mocks.readTextFile.mockResolvedValue("# new content");
+
+    const callback = await setupHookAndCallback();
+
+    await callback({
+      payload: {
+        watchId: "other-window",
+        rootPath: "/workspace",
+        paths: ["/workspace/test.md"],
+        kind: "modify",
+      },
+    });
+
+    // Should not read the file since watchId doesn't match
+    expect(mocks.readTextFile).not.toHaveBeenCalled();
+  });
+
+  it("ignores events for files that are not open", async () => {
+    seedStores();
+    mocks.readTextFile.mockResolvedValue("# new content");
+
+    const callback = await setupHookAndCallback();
+
+    await callback({
+      payload: {
+        watchId: "main",
+        rootPath: "/workspace",
+        paths: ["/workspace/other-file.md"],
+        kind: "modify",
+      },
+    });
+
+    // other-file.md is not open — should not attempt to read
+    expect(mocks.readTextFile).not.toHaveBeenCalled();
+  });
+
+  it("skips modify events when file is unreadable", async () => {
+    seedStores({ lastDiskContent: "# old content" });
+    mocks.readTextFile.mockRejectedValue(new Error("file locked"));
+
+    const callback = await setupHookAndCallback();
+
+    await callback({
+      payload: {
+        watchId: "main",
+        rootPath: "/workspace",
+        paths: ["/workspace/test.md"],
+        kind: "modify",
+      },
+    });
+
+    // Should not crash, just skip
+    const doc = useDocumentStore.getState().documents["tab-1"];
+    expect(doc?.isMissing).toBe(false);
+  });
+
+  it("auto-reloads clean document on external modify", async () => {
+    seedStores({ lastDiskContent: "# old content" });
+    mocks.readTextFile.mockResolvedValue("# updated by external tool");
+    mocks.matchesPendingSave.mockReturnValue(false);
+
+    const callback = await setupHookAndCallback();
+
+    await callback({
+      payload: {
+        watchId: "main",
+        rootPath: "/workspace",
+        paths: ["/workspace/test.md"],
+        kind: "modify",
+      },
+    });
+
+    // readTextFile should have been called for the changed file
+    expect(mocks.readTextFile).toHaveBeenCalledWith("/workspace/test.md");
+    // Should auto-reload: clean doc with different disk content
+    const doc = useDocumentStore.getState().documents["tab-1"];
+    expect(doc?.content).toBe("# updated by external tool");
+    expect(mocks.toastInfo).toHaveBeenCalledWith("Reloaded: test.md");
   });
 });
 

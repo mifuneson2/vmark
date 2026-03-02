@@ -85,4 +85,53 @@ describe("persistWorkspaceSession", () => {
       },
     });
   });
+
+  it("handles invoke error gracefully", async () => {
+    const config: WorkspaceConfig = {
+      version: 1,
+      excludeFolders: [".git"],
+      lastOpenTabs: [],
+      showHiddenFiles: false,
+      showAllFiles: false,
+    };
+
+    useWorkspaceStore.setState({
+      rootPath: "/project",
+      config,
+      isWorkspaceMode: true,
+    });
+
+    vi.mocked(invoke).mockRejectedValueOnce(new Error("write failed"));
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    await persistWorkspaceSession(WINDOW_LABEL);
+
+    expect(consoleSpy).toHaveBeenCalledWith(
+      "Failed to save workspace config:",
+      expect.any(Error)
+    );
+    consoleSpy.mockRestore();
+  });
+
+  it("does nothing when rootPath is null but workspace mode is true", async () => {
+    useWorkspaceStore.setState({
+      rootPath: null,
+      config: { version: 1, excludeFolders: [], lastOpenTabs: [], showHiddenFiles: false, showAllFiles: false },
+      isWorkspaceMode: true,
+    });
+
+    await persistWorkspaceSession(WINDOW_LABEL);
+    expect(invoke).not.toHaveBeenCalled();
+  });
+
+  it("does nothing when config is null", async () => {
+    useWorkspaceStore.setState({
+      rootPath: "/project",
+      config: null,
+      isWorkspaceMode: true,
+    });
+
+    await persistWorkspaceSession(WINDOW_LABEL);
+    expect(invoke).not.toHaveBeenCalled();
+  });
 });

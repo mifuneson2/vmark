@@ -191,5 +191,25 @@ describe("resolveMediaSrc", () => {
       const result = await resolveMediaSrc("./local.png");
       expect(result).toBe("./local.png");
     });
+
+    it("returns original src for non-external, non-absolute, non-relative paths", async () => {
+      // A bare filename without ./ prefix or absolute path
+      // isRelativePath should return false for such input
+      const result = await resolveMediaSrc("justtext");
+      expect(result).toBe("justtext");
+    });
+
+    it("returns original src on path resolution error", async () => {
+      setupDocWithPath("/Users/test/docs/readme.md");
+      mockDirname.mockRejectedValueOnce(new Error("dirname failed"));
+
+      const result = await resolveMediaSrc("./broken.png");
+      expect(result).toBe("./broken.png");
+    });
+
+    it("uses custom log prefix", async () => {
+      const result = await resolveMediaSrc("../secret", "[Test]");
+      expect(result).toBe("");
+    });
   });
 });

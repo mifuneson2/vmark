@@ -298,4 +298,58 @@ describe("installMediaPopupKeyboardNavigation", () => {
 
     expect(onClose).not.toHaveBeenCalled();
   });
+
+  it("ignores Tab when focus is outside popup", () => {
+    // Focus an element outside the container
+    const outside = document.createElement("input");
+    document.body.appendChild(outside);
+    outside.focus();
+
+    const event = new KeyboardEvent("keydown", { key: "Tab", bubbles: true });
+    document.dispatchEvent(event);
+
+    // Should not change focus
+    expect(document.activeElement).toBe(outside);
+    outside.remove();
+  });
+
+  it("ignores Tab when no focusable elements exist", () => {
+    // Remove all children from the container
+    container.textContent = "";
+
+    const event = new KeyboardEvent("keydown", { key: "Tab", bubbles: true });
+    document.dispatchEvent(event);
+
+    // No error should occur
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("Escape does not fire when focus is outside popup", () => {
+    const outside = document.createElement("input");
+    document.body.appendChild(outside);
+    outside.focus();
+
+    const event = new KeyboardEvent("keydown", { key: "Escape", bubbles: true });
+    document.dispatchEvent(event);
+
+    expect(onClose).not.toHaveBeenCalled();
+    outside.remove();
+  });
+
+  it("filters hidden elements from focusable list", () => {
+    // Add a disabled button (should be excluded)
+    const disabledBtn = document.createElement("button");
+    disabledBtn.disabled = true;
+    container.appendChild(disabledBtn);
+
+    // Focus the input
+    const input = container.querySelector("input") as HTMLInputElement;
+    input.focus();
+
+    // Tab should skip the disabled button
+    const event = new KeyboardEvent("keydown", { key: "Tab", bubbles: true });
+    document.dispatchEvent(event);
+
+    expect(document.activeElement).toBe(container.querySelectorAll("button:not([disabled])")[0]);
+  });
 });

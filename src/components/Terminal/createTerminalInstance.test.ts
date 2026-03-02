@@ -153,3 +153,129 @@ describe("createTerminalInstance link error handling", () => {
     });
   });
 });
+
+describe("createTerminalInstance basics", () => {
+  it("creates a child container appended to parentEl", () => {
+    const inst = makeInstance();
+    expect(inst.container).toBeInstanceOf(HTMLDivElement);
+    expect(inst.container.style.display).toBe("none");
+  });
+
+  it("exposes term, fitAddon, searchAddon, serializeAddon", () => {
+    const inst = makeInstance();
+    expect(inst.term).toBeDefined();
+    expect(inst.fitAddon).toBeDefined();
+    expect(inst.searchAddon).toBeDefined();
+    expect(inst.serializeAddon).toBeDefined();
+  });
+
+  it("opens terminal in the container", () => {
+    const inst = makeInstance();
+    expect(inst.term.open).toHaveBeenCalledWith(inst.container);
+  });
+
+  it("sets unicode version to 11", () => {
+    const inst = makeInstance();
+    expect(inst.term.unicode.activeVersion).toBe("11");
+  });
+
+  it("attaches custom key event handler", () => {
+    const inst = makeInstance();
+    expect(inst.term.attachCustomKeyEventHandler).toHaveBeenCalledWith(expect.any(Function));
+  });
+
+  it("registers a link provider", () => {
+    const inst = makeInstance();
+    expect(inst.term.registerLinkProvider).toHaveBeenCalled();
+  });
+
+  it("registers selection change handler", () => {
+    const inst = makeInstance();
+    expect(inst.term.onSelectionChange).toHaveBeenCalledWith(expect.any(Function));
+  });
+});
+
+describe("createTerminalInstance dispose", () => {
+  it("disposes the terminal on dispose()", () => {
+    const parentEl = document.createElement("div");
+    const inst = createTerminalInstance({
+      parentEl,
+      settings: {
+        fontSize: 14,
+        lineHeight: 1.2,
+        cursorStyle: "block",
+        cursorBlink: true,
+        useWebGL: false,
+      },
+      ptyRef: { current: null },
+      onSearch: vi.fn(),
+    });
+    inst.dispose();
+    expect(inst.term.dispose).toHaveBeenCalled();
+  });
+
+  it("removes container from parentEl on dispose()", () => {
+    const parentEl = document.createElement("div");
+    const inst = createTerminalInstance({
+      parentEl,
+      settings: {
+        fontSize: 14,
+        lineHeight: 1.2,
+        cursorStyle: "block",
+        cursorBlink: true,
+        useWebGL: false,
+      },
+      ptyRef: { current: null },
+      onSearch: vi.fn(),
+    });
+    expect(parentEl.contains(inst.container)).toBe(true);
+    inst.dispose();
+    expect(parentEl.contains(inst.container)).toBe(false);
+  });
+});
+
+describe("createTerminalInstance composing property", () => {
+  it("starts with composing=false", () => {
+    const inst = makeInstance();
+    expect(inst.composing).toBe(false);
+  });
+
+  it("onCompositionCommit starts as null", () => {
+    const inst = makeInstance();
+    expect(inst.onCompositionCommit).toBeNull();
+  });
+
+  it("allows setting onCompositionCommit callback", () => {
+    const inst = makeInstance();
+    const cb = vi.fn();
+    inst.onCompositionCommit = cb;
+    expect(inst.onCompositionCommit).toBe(cb);
+  });
+});
+
+describe("createTerminalInstance with WebGL", () => {
+  it("does not throw when WebGL is enabled", () => {
+    vi.mock("@xterm/addon-webgl", () => ({
+      WebglAddon: class {
+        onContextLoss = vi.fn((cb: () => void) => cb);
+        dispose = vi.fn();
+      },
+    }));
+
+    const parentEl = document.createElement("div");
+    expect(() =>
+      createTerminalInstance({
+        parentEl,
+        settings: {
+          fontSize: 14,
+          lineHeight: 1.2,
+          cursorStyle: "block",
+          cursorBlink: true,
+          useWebGL: true,
+        },
+        ptyRef: { current: null },
+        onSearch: vi.fn(),
+      })
+    ).not.toThrow();
+  });
+});

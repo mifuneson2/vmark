@@ -5,6 +5,8 @@ import {
   getSourceExpandedRange,
   getSourceLineRange,
   getSourceWordRange,
+  getSourceSelectionRange,
+  getSourceDocRange,
 } from "./sourceSelection";
 
 function createState(doc: string, from: number, to = from) {
@@ -61,5 +63,66 @@ describe("sourceSelection", () => {
     const fullState = createState(doc, 0, docState.doc.length);
     const fullRange = getSourceExpandedRange(fullState, 0, fullState.doc.length);
     expect(fullRange).toBeNull();
+  });
+
+  it("normalizes reversed range (from > to)", () => {
+    const doc = "one\ntwo\nthree";
+    const state = createState(doc, 10);
+    // Pass reversed range to getSourceBlockRange to exercise normalizeRange swap
+    const range = getSourceBlockRange(state, 10, 5);
+    expect(range.from).toBeLessThanOrEqual(range.to);
+  });
+
+  it("expands block range reaching end of document", () => {
+    // Block at the very end with no trailing blank line
+    const doc = "one\n\ntwo\nthree";
+    const state = createState(doc, 10);
+    const range = getSourceBlockRange(state, 5, 10);
+    // Should expand to include "three" since no blank line after it
+    const lastLine = state.doc.line(state.doc.lines);
+    expect(range.to).toBe(lastLine.to);
+  });
+
+  it("returns null for getSourceWordRange at space position", () => {
+    // Position 5 is at the space between "Hello" and "world"
+    // CodeMirror's wordAt(5) may still return "Hello" since 5 is at end of word.
+    // Position inside the space char returns null for wordAt.
+    const state = createState("Hello  world", 6);
+    const range = getSourceWordRange(state, 6);
+    // Position 6 is inside double-space, not at a word
+    expect(range).toBeNull();
+  });
+
+  describe("getSourceSelectionRange", () => {
+    it("returns the main selection range normalized", () => {
+      const state = createState("Hello world", 3, 8);
+      const range = getSourceSelectionRange(state);
+      expect(range).toEqual({ from: 3, to: 8 });
+    });
+
+    it("normalizes reversed selection", () => {
+      // EditorSelection.range with anchor > head
+      const state = EditorState.create({
+        doc: "Hello world",
+        selection: EditorSelection.single(8, 3),
+      });
+      const range = getSourceSelectionRange(state);
+      expect(range).toEqual({ from: 3, to: 8 });
+    });
+  });
+
+  describe("getSourceDocRange", () => {
+    it("returns full document range", () => {
+      const doc = "Hello world";
+      const state = createState(doc, 0);
+      const range = getSourceDocRange(state.doc);
+      expect(range).toEqual({ from: 0, to: doc.length });
+    });
+
+    it("returns {0,0} for empty document", () => {
+      const state = createState("", 0);
+      const range = getSourceDocRange(state.doc);
+      expect(range).toEqual({ from: 0, to: 0 });
+    });
   });
 });

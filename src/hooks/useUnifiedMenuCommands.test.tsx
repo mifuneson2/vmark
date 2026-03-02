@@ -196,4 +196,42 @@ describe("useUnifiedMenuCommands", () => {
     expect(performWysiwygToolbarAction).not.toHaveBeenCalled();
     expect(performSourceToolbarAction).not.toHaveBeenCalled();
   });
+
+  it("ignores events targeted at a different window", async () => {
+    sourceMode = false;
+    activeWysiwygEditor = { view: {} };
+
+    render(<TestHarness />);
+    await waitFor(() => expect(listeners.has("menu:italic")).toBe(true));
+
+    // Payload is a different window label
+    listeners.get("menu:italic")?.({ payload: "other-window" });
+
+    expect(performWysiwygToolbarAction).not.toHaveBeenCalled();
+    expect(performSourceToolbarAction).not.toHaveBeenCalled();
+  });
+
+  it("ignores events with non-string payload", async () => {
+    sourceMode = false;
+    activeWysiwygEditor = { view: {} };
+
+    render(<TestHarness />);
+    await waitFor(() => expect(listeners.has("menu:italic")).toBe(true));
+
+    // Payload is not a string
+    listeners.get("menu:italic")?.({ payload: 123 as unknown as string });
+
+    expect(performWysiwygToolbarAction).not.toHaveBeenCalled();
+  });
+
+  it("registers listeners for all menu events in the registry", async () => {
+    render(<TestHarness />);
+    await waitFor(() => expect(listeners.size).toBeGreaterThan(0));
+
+    // Should have listeners for all 4 events in our mock MENU_TO_ACTION
+    expect(listeners.has("menu:bold")).toBe(true);
+    expect(listeners.has("menu:italic")).toBe(true);
+    expect(listeners.has("menu:undo")).toBe(true);
+    expect(listeners.has("menu:redo")).toBe(true);
+  });
 });

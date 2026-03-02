@@ -1,0 +1,208 @@
+/**
+ * Tests for Smart Paste Utilities
+ *
+ * Tests pure/small helper functions used by the smart paste plugin.
+ */
+
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { EditorState } from "@codemirror/state";
+import { EditorView } from "@codemirror/view";
+
+import {
+  isViewConnected,
+  isValidUrl,
+  getActiveFilePath,
+  getToastAnchorRect,
+  pasteAsText,
+} from "./smartPasteUtils";
+
+// Track views for cleanup
+const views: EditorView[] = [];
+afterEach(() => {
+  views.forEach((v) => v.destroy());
+  views.length = 0;
+});
+
+function createView(content: string, cursorPos?: number): EditorView {
+  const pos = cursorPos ?? content.length;
+  const state = EditorState.create({
+    doc: content,
+    selection: { anchor: pos },
+  });
+  const container = document.createElement("div");
+  document.body.appendChild(container);
+  const view = new EditorView({ state, parent: container });
+  views.push(view);
+  return view;
+}
+
+describe("isViewConnected", () => {
+  it("returns false for null", () => {
+    expect(isViewConnected(null)).toBe(false);
+  });
+
+  it("returns false for undefined", () => {
+    expect(isViewConnected(undefined)).toBe(false);
+  });
+
+  it("returns true for a connected view", () => {
+    const view = createView("hello");
+    expect(isViewConnected(view)).toBe(true);
+  });
+
+  it("returns false for a destroyed/disconnected view", () => {
+    const state = EditorState.create({ doc: "hello" });
+    // Create a view with a detached parent (not in document)
+    const detachedContainer = document.createElement("div");
+    const view = new EditorView({ state, parent: detachedContainer });
+    // detachedContainer is not appended to document, so dom.isConnected = false
+    expect(isViewConnected(view)).toBe(false);
+    view.destroy();
+  });
+
+  it("handles view with broken dom gracefully", () => {
+    const fakeView = {
+      get dom() {
+        throw new Error("broken");
+      },
+    } as unknown as EditorView;
+    expect(isViewConnected(fakeView)).toBe(false);
+  });
+});
+
+describe("isValidUrl", () => {
+  it("returns true for http URLs", () => {
+    expect(isValidUrl("http://example.com")).toBe(true);
+  });
+
+  it("returns true for https URLs", () => {
+    expect(isValidUrl("https://example.com")).toBe(true);
+  });
+
+  it("returns true for URLs with paths", () => {
+    expect(isValidUrl("https://example.com/path/to/page")).toBe(true);
+  });
+
+  it("returns true for URLs with query strings", () => {
+    expect(isValidUrl("https://example.com?q=search&page=1")).toBe(true);
+  });
+
+  it("returns true for trimmed URL with whitespace", () => {
+    expect(isValidUrl("  https://example.com  ")).toBe(true);
+  });
+
+  it("returns false for empty string", () => {
+    expect(isValidUrl("")).toBe(false);
+  });
+
+  it("returns false for plain text", () => {
+    expect(isValidUrl("just some text")).toBe(false);
+  });
+
+  it("returns false for file paths", () => {
+    expect(isValidUrl("/Users/test/file.md")).toBe(false);
+  });
+
+  it("returns false for ftp URLs", () => {
+    expect(isValidUrl("ftp://example.com")).toBe(false);
+  });
+
+  it("returns false for mailto links", () => {
+    expect(isValidUrl("mailto:test@example.com")).toBe(false);
+  });
+
+  it("returns false for URLs without protocol", () => {
+    expect(isValidUrl("example.com")).toBe(false);
+  });
+
+  it("returns true for URLs with spaces (matches prefix before space)", () => {
+    // The regex matches "https://exam" which is valid \S+
+    expect(isValidUrl("https://exam ple.com")).toBe(true);
+  });
+
+  it("returns false for protocol-only with no path", () => {
+    expect(isValidUrl("https:// ")).toBe(false);
+  });
+});
+
+describe("getActiveFilePath", () => {
+  it("returns null when no active tab", () => {
+    // Default store state has no active tab
+    expect(getActiveFilePath()).toBeNull();
+  });
+});
+
+describe("getToastAnchorRect", () => {
+  it("returns fallback rect when coordsAtPos fails", () => {
+    const view = createView("hello");
+    // jsdom doesn't implement coordsAtPos, so it will throw/return null
+    const rect = getToastAnchorRect(view, 0);
+    // Should return center-of-window fallback
+    expect(rect).toHaveProperty("top");
+    expect(rect).toHaveProperty("left");
+    expect(rect).toHaveProperty("bottom");
+    expect(rect).toHaveProperty("right");
+    expect(typeof rect.top).toBe("number");
+  });
+
+  it("returns fallback rect for out-of-range position", () => {
+    const view = createView("hello");
+    const rect = getToastAnchorRect(view, 9999);
+    expect(rect).toHaveProperty("top");
+    expect(typeof rect.top).toBe("number");
+  });
+
+  it("returns fallback rect for empty document", () => {
+    const view = createView("");
+    const rect = getToastAnchorRect(view, 0);
+    expect(rect).toHaveProperty("top");
+  });
+});
+
+describe("pasteAsText", () => {
+  it("inserts text at captured position", () => {
+    const view = createView("hello world", 5);
+    pasteAsText(view, " there", 5, 5);
+    expect(view.state.doc.toString()).toBe("hello there world");
+  });
+
+  it("replaces selection range", () => {
+    const state = EditorState.create({
+      doc: "hello world",
+      selection: { anchor: 0, head: 5 },
+    });
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    const view = new EditorView({ state, parent: container });
+    views.push(view);
+
+    pasteAsText(view, "goodbye", 0, 5);
+    expect(view.state.doc.toString()).toBe("goodbye world");
+  });
+
+  it("does nothing for disconnected view", () => {
+    const result = pasteAsText(null as unknown as EditorView, "text", 0, 0);
+    expect(result).toBeUndefined();
+  });
+
+  it("clamps positions to document length", () => {
+    const view = createView("hi", 2);
+    // Captured positions beyond doc length
+    pasteAsText(view, "!", 2, 2);
+    expect(view.state.doc.toString()).toBe("hi!");
+  });
+
+  it("uses current positions when selection has changed", () => {
+    const view = createView("hello", 3);
+    // Captured positions differ from current
+    pasteAsText(view, "X", 0, 0);
+    // Current selection is at 3, captured was 0 — they differ, so uses current
+    expect(view.state.doc.toString()).toBe("helXlo");
+  });
+
+  it("handles empty text insertion", () => {
+    const view = createView("hello", 0);
+    pasteAsText(view, "", 0, 0);
+    expect(view.state.doc.toString()).toBe("hello");
+  });
+});

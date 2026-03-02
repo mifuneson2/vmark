@@ -26,6 +26,8 @@ const mockTabStoreState = {
   } as Record<string, Array<{ id: string; title: string; filePath: string | null }>>,
   createTab: vi.fn().mockReturnValue("tab-new"),
   closeTab: vi.fn(),
+  updateTabPath: vi.fn(),
+  updateTabTitle: vi.fn(),
 };
 vi.mock("@/stores/tabStore", () => ({
   useTabStore: {
@@ -39,6 +41,8 @@ const mockDocStoreState = {
     isDirty: false,
   }),
   initDocument: vi.fn(),
+  markSaved: vi.fn(),
+  setFilePath: vi.fn(),
 };
 vi.mock("@/stores/documentStore", () => ({
   useDocumentStore: {
@@ -89,11 +93,16 @@ vi.mock("@/utils/reloadFromDisk", () => ({
 import {
   handleWindowsList,
   handleWindowsGetFocused,
+  handleWindowsFocus,
   handleWorkspaceNewDocument,
+  handleWorkspaceOpenDocument,
+  handleWorkspaceSaveDocument,
+  handleWorkspaceSaveDocumentAs,
   handleWorkspaceGetDocumentInfo,
   handleWorkspaceGetInfo,
   handleWorkspaceListRecentFiles,
   handleWorkspaceCloseWindow,
+  handleWorkspaceReloadDocument,
 } from "../workspaceHandlers";
 
 describe("workspaceHandlers", () => {
@@ -223,6 +232,276 @@ describe("workspaceHandlers", () => {
         success: true,
         data: null,
       });
+    });
+  });
+
+  describe("handleWindowsFocus", () => {
+    it("returns error when windowId is missing", async () => {
+      await handleWindowsFocus("req-20", {});
+
+      expect(mockRespond).toHaveBeenCalledWith({
+        id: "req-20",
+        success: false,
+        error: "windowId is required",
+      });
+    });
+
+    it("focuses the current window", async () => {
+      await handleWindowsFocus("req-21", { windowId: "main" });
+
+      expect(mockRespond).toHaveBeenCalledWith({
+        id: "req-21",
+        success: true,
+        data: null,
+      });
+    });
+  });
+
+  describe("handleWorkspaceOpenDocument", () => {
+    it("returns error when path is missing", async () => {
+      await handleWorkspaceOpenDocument("req-30", {});
+
+      expect(mockRespond).toHaveBeenCalledWith({
+        id: "req-30",
+        success: false,
+        error: "path is required",
+      });
+    });
+
+    it("opens a document from filesystem", async () => {
+      await handleWorkspaceOpenDocument("req-31", {
+        path: "/test/file.md",
+      });
+
+      expect(mockTabStoreState.createTab).toHaveBeenCalledWith(
+        "main",
+        "/test/file.md"
+      );
+      expect(mockDocStoreState.initDocument).toHaveBeenCalledWith(
+        "tab-new",
+        "# Content",
+        "/test/file.md"
+      );
+      expect(mockRespond).toHaveBeenCalledWith({
+        id: "req-31",
+        success: true,
+        data: { windowId: "main" },
+      });
+    });
+  });
+
+  describe("handleWorkspaceSaveDocument", () => {
+    it("returns error when no active document", async () => {
+      mockTabStoreState.activeTabId = {};
+
+      await handleWorkspaceSaveDocument("req-40");
+
+      expect(mockRespond).toHaveBeenCalledWith({
+        id: "req-40",
+        success: false,
+        error: "No active document",
+      });
+    });
+
+    it("returns error when document has no file path", async () => {
+      mockDocStoreState.getDocument.mockReturnValue({
+        filePath: null,
+        isDirty: true,
+        content: "content",
+      });
+
+      await handleWorkspaceSaveDocument("req-41");
+
+      expect(mockRespond).toHaveBeenCalledWith({
+        id: "req-41",
+        success: false,
+        error: "Document has no file path (use save-as instead)",
+      });
+    });
+
+    it("saves document successfully", async () => {
+      mockDocStoreState.getDocument.mockReturnValue({
+        filePath: "/test.md",
+        isDirty: true,
+        content: "# Saved content",
+      });
+
+      await handleWorkspaceSaveDocument("req-42");
+
+      expect(mockRespond).toHaveBeenCalledWith({
+        id: "req-42",
+        success: true,
+        data: null,
+      });
+    });
+  });
+
+  describe("handleWorkspaceSaveDocumentAs", () => {
+    it("returns error when path is missing", async () => {
+      await handleWorkspaceSaveDocumentAs("req-50", {});
+
+      expect(mockRespond).toHaveBeenCalledWith({
+        id: "req-50",
+        success: false,
+        error: "path is required",
+      });
+    });
+
+    it("returns error when no active document", async () => {
+      mockTabStoreState.activeTabId = {};
+
+      await handleWorkspaceSaveDocumentAs("req-51", {
+        path: "/new/path.md",
+      });
+
+      expect(mockRespond).toHaveBeenCalledWith({
+        id: "req-51",
+        success: false,
+        error: "No active document",
+      });
+    });
+
+    it("returns error when getDocument returns null", async () => {
+      mockDocStoreState.getDocument.mockReturnValue(null);
+
+      await handleWorkspaceSaveDocumentAs("req-52", {
+        path: "/new/path.md",
+      });
+
+      expect(mockRespond).toHaveBeenCalledWith({
+        id: "req-52",
+        success: false,
+        error: "No active document",
+      });
+    });
+  });
+
+  describe("handleWorkspaceReloadDocument", () => {
+    it("returns error when no active document", async () => {
+      mockTabStoreState.activeTabId = {};
+
+      await handleWorkspaceReloadDocument("req-60", {});
+
+      expect(mockRespond).toHaveBeenCalledWith({
+        id: "req-60",
+        success: false,
+        error: "No active document",
+      });
+    });
+
+    it("returns error when document has no file path", async () => {
+      mockDocStoreState.getDocument.mockReturnValue({
+        filePath: null,
+        isDirty: false,
+      });
+
+      await handleWorkspaceReloadDocument("req-61", {});
+
+      expect(mockRespond).toHaveBeenCalledWith({
+        id: "req-61",
+        success: false,
+        error: "Document has no file path (untitled documents cannot be reloaded)",
+      });
+    });
+
+    it("returns error when document is dirty and force is not set", async () => {
+      mockDocStoreState.getDocument.mockReturnValue({
+        filePath: "/test.md",
+        isDirty: true,
+      });
+
+      await handleWorkspaceReloadDocument("req-62", {});
+
+      const call = mockRespond.mock.calls[0][0];
+      expect(call.success).toBe(false);
+      expect(call.error).toContain("unsaved changes");
+    });
+
+    it("reloads when document is dirty and force=true", async () => {
+      mockDocStoreState.getDocument.mockReturnValue({
+        filePath: "/test.md",
+        isDirty: true,
+      });
+
+      await handleWorkspaceReloadDocument("req-63", { force: true });
+
+      const call = mockRespond.mock.calls[0][0];
+      expect(call.success).toBe(true);
+      expect(call.data.filePath).toBe("/test.md");
+    });
+
+    it("reloads clean document without force", async () => {
+      mockDocStoreState.getDocument.mockReturnValue({
+        filePath: "/test.md",
+        isDirty: false,
+      });
+
+      await handleWorkspaceReloadDocument("req-64", {});
+
+      const call = mockRespond.mock.calls[0][0];
+      expect(call.success).toBe(true);
+      expect(call.data.filePath).toBe("/test.md");
+    });
+  });
+
+  describe("handleWindowsList — edge cases", () => {
+    it("returns Untitled when no active tab", async () => {
+      mockTabStoreState.activeTabId = {};
+
+      await handleWindowsList("req-70");
+
+      const call = mockRespond.mock.calls[0][0];
+      expect(call.success).toBe(true);
+      expect(call.data[0].title).toBe("Untitled");
+      expect(call.data[0].filePath).toBeNull();
+    });
+
+    it("returns Untitled when doc has no filePath", async () => {
+      mockDocStoreState.getDocument.mockReturnValue({
+        filePath: null,
+        isDirty: false,
+      });
+
+      await handleWindowsList("req-71");
+
+      const call = mockRespond.mock.calls[0][0];
+      expect(call.success).toBe(true);
+      expect(call.data[0].title).toBe("Untitled");
+    });
+  });
+
+  describe("handleWorkspaceGetDocumentInfo — edge cases", () => {
+    it("returns zero counts when editor is null", async () => {
+      mockGetEditor.mockReturnValue(null);
+      mockDocStoreState.getDocument.mockReturnValue({
+        filePath: "/test.md",
+        isDirty: false,
+      });
+
+      await handleWorkspaceGetDocumentInfo("req-80", {});
+
+      const call = mockRespond.mock.calls[0][0];
+      expect(call.success).toBe(true);
+      expect(call.data.wordCount).toBe(0);
+      expect(call.data.charCount).toBe(0);
+    });
+
+    it("returns zero word count for empty text", async () => {
+      mockGetEditor.mockReturnValue({
+        state: {
+          doc: { textContent: "" },
+        },
+      });
+      mockDocStoreState.getDocument.mockReturnValue({
+        filePath: "/test.md",
+        isDirty: false,
+      });
+
+      await handleWorkspaceGetDocumentInfo("req-81", {});
+
+      const call = mockRespond.mock.calls[0][0];
+      expect(call.data.wordCount).toBe(0);
+      expect(call.data.charCount).toBe(0);
     });
   });
 });
