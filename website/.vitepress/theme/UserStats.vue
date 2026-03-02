@@ -36,6 +36,22 @@ const versionRows = computed(() => {
   return rows
 })
 
+const detailRows = computed(() => {
+  const platforms = hasPlatforms.value
+    ? Object.entries(stats.value.platforms).map(([k, v]) => ({ label: label(k), count: v }))
+    : []
+  const versions = versionRows.value
+  const len = Math.max(platforms.length, versions.length)
+  const rows = []
+  for (let i = 0; i < len; i++) {
+    rows.push({
+      platform: platforms[i] || null,
+      version: versions[i] || null,
+    })
+  }
+  return rows
+})
+
 onMounted(async () => {
   try {
     const res = await fetch('https://log.vmark.app/api/stats')
@@ -72,25 +88,19 @@ onMounted(async () => {
       </div>
     </div>
 
-    <div v-if="hasPlatforms || hasVersions" class="stats-details">
-      <div v-if="hasPlatforms" class="stats-breakdown">
-        <h4 class="breakdown-title">Platforms</h4>
-        <div class="breakdown-list">
-          <div v-for="(count, platform) in stats.platforms" :key="platform" class="breakdown-item">
-            <span class="breakdown-label">{{ label(platform) }}</span>
-            <span class="breakdown-value">{{ count }}</span>
-          </div>
-        </div>
-      </div>
-      <div v-if="hasVersions" class="stats-breakdown">
-        <h4 class="breakdown-title">Versions</h4>
-        <div class="breakdown-list">
-          <div v-for="row in versionRows" :key="row.label" class="breakdown-item">
-            <span class="breakdown-label">{{ row.label }}</span>
-            <span class="breakdown-value">{{ row.count }}</span>
-          </div>
-        </div>
-      </div>
+    <div v-if="hasPlatforms || hasVersions" class="details-grid">
+      <template v-if="hasPlatforms">
+        <span class="details-header">Platforms</span>
+        <span class="details-header" v-if="hasVersions">Versions</span>
+        <template v-for="(row, i) in detailRows" :key="i">
+          <span class="details-label">{{ row.platform?.label ?? '' }}</span>
+          <span class="details-value">{{ row.platform?.count ?? '' }}</span>
+          <template v-if="hasVersions">
+            <span class="details-label">{{ row.version?.label ?? '' }}</span>
+            <span class="details-value">{{ row.version?.count ?? '' }}</span>
+          </template>
+        </template>
+      </template>
     </div>
 
     <p class="stats-note">
@@ -153,50 +163,37 @@ onMounted(async () => {
   padding: 0.35rem 0;
 }
 
-.stats-details {
-  display: flex;
-  gap: 2rem;
-  justify-content: center;
-  flex-wrap: wrap;
-  margin-top: 1.25rem;
+.details-grid {
+  display: inline-grid;
+  grid-template-columns: auto auto auto auto;
+  gap: 0.15rem 1.5rem;
+  justify-items: center;
+  margin: 1.25rem auto 0;
 }
 
-.stats-breakdown {
-  min-width: 160px;
-}
-
-.breakdown-title {
-  font-size: 0.8rem;
+.details-header {
+  grid-column: span 2;
+  font-size: 0.75rem;
   font-weight: 600;
+  color: var(--vp-c-text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding-bottom: 0.25rem;
+}
+
+.details-label {
+  font-size: 0.875rem;
   color: var(--vp-c-text-2);
-  margin: 0 0 0.5rem 0;
-  text-align: center;
+  justify-self: end;
+  padding: 0.2rem 0;
 }
 
-.breakdown-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.breakdown-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.25rem 0.75rem;
-  border-radius: 6px;
-  background: var(--vp-c-bg-soft);
-  font-size: 0.8rem;
-}
-
-.breakdown-label {
-  color: var(--vp-c-text-2);
-}
-
-.breakdown-value {
+.details-value {
+  font-size: 0.875rem;
+  font-weight: 600;
   color: var(--vp-c-brand-1);
-  font-weight: 600;
-  margin-left: 1rem;
+  justify-self: start;
+  padding: 0.2rem 0;
 }
 
 .stats-note {
