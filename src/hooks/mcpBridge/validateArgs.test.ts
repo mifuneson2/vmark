@@ -1,3 +1,4 @@
+import { describe, it, expect } from "vitest";
 import { requireString, optionalString, optionalNumber, stringWithDefault } from "./validateArgs";
 
 describe("requireString", () => {

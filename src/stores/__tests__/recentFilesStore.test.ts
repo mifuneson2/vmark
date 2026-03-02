@@ -1,4 +1,4 @@
-import { vi } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 
 // Mock Tauri invoke before importing the store
 vi.mock("@tauri-apps/api/core", () => ({

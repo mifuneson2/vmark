@@ -1,3 +1,4 @@
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { useInlineMathEditingStore } from "../inlineMathEditingStore";
 import type { InlineMathEditingCallbacks } from "../inlineMathEditingStore";
 
@@ -54,7 +55,6 @@ describe("inlineMathEditingStore", () => {
     });
 
     it("does NOT clear state when pos does not match (race condition guard)", () => {
-      const cbOld = makeCallbacks();
       const cbNew = makeCallbacks();
       useInlineMathEditingStore.getState().startEditing(20, cbNew);
       // Stale stopEditing from pos 10 should not clear pos 20
