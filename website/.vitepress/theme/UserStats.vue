@@ -103,6 +103,7 @@ onMounted(async () => {
 <style scoped>
 .user-stats {
   margin: 1.5rem 0;
+  text-align: center;
 }
 
 .stats-grid {
