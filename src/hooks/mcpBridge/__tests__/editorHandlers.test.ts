@@ -281,5 +281,124 @@ describe("editorHandlers", () => {
         error: expect.stringContaining("Invalid mode"),
       });
     });
+
+    it("switches to wysiwyg mode from source", async () => {
+      mockEditorState.sourceMode = true;
+
+      await handleSetMode("req-10", { mode: "wysiwyg" });
+
+      expect(mockEditorState.setSourceMode).toHaveBeenCalledWith(false);
+      expect(mockRespond).toHaveBeenCalledWith({
+        id: "req-10",
+        success: true,
+        data: { mode: "wysiwyg", changed: true },
+      });
+    });
+
+    it("handles non-Error thrown in catch", async () => {
+      mockEditorState.sourceMode = false;
+      // setSourceMode throws a non-Error
+      mockEditorState.setSourceMode = vi.fn(() => { throw "string error"; });
+
+      await handleSetMode("req-11", { mode: "source" });
+
+      expect(mockRespond).toHaveBeenCalledWith({
+        id: "req-11",
+        success: false,
+        error: "string error",
+      });
+
+      // Restore
+      mockEditorState.setSourceMode = vi.fn();
+    });
+  });
+
+  describe("handleGetUndoState — edge cases", () => {
+    it("returns zero checkpoint state when tabId is falsy", async () => {
+      mockTabStore.activeTabId = { main: "" };
+      mockCanNativeUndo.mockReturnValue(false);
+      mockCanNativeRedo.mockReturnValue(false);
+      mockGetEditor.mockReturnValue({ state: {} });
+
+      await handleGetUndoState("req-undo-no-tab");
+
+      const call = mockRespond.mock.calls[0][0];
+      expect(call.success).toBe(true);
+      expect(call.data.hasCheckpointUndo).toBe(false);
+      expect(call.data.hasCheckpointRedo).toBe(false);
+
+      // Restore
+      mockTabStore.activeTabId = { main: "tab-1" };
+    });
+
+    it("returns zero depths in WYSIWYG mode when no editor", async () => {
+      mockEditorState.sourceMode = false;
+      mockCanNativeUndo.mockReturnValue(false);
+      mockCanNativeRedo.mockReturnValue(false);
+      mockGetEditor.mockReturnValue(null);
+
+      await handleGetUndoState("req-undo-no-editor");
+
+      const call = mockRespond.mock.calls[0][0];
+      expect(call.success).toBe(true);
+      expect(call.data.undoDepth).toBe(0);
+      expect(call.data.redoDepth).toBe(0);
+    });
+
+    it("handles non-Error thrown in catch", async () => {
+      mockCanNativeUndo.mockImplementation(() => { throw 42; });
+
+      await handleGetUndoState("req-undo-nonstr");
+
+      expect(mockRespond).toHaveBeenCalledWith({
+        id: "req-undo-nonstr",
+        success: false,
+        error: "42",
+      });
+    });
+  });
+
+  describe("handleUndo — non-Error catch", () => {
+    it("handles non-Error thrown in catch", async () => {
+      mockPerformUnifiedUndo.mockImplementation(() => { throw "undo string"; });
+
+      await handleUndo("req-undo-str");
+
+      expect(mockRespond).toHaveBeenCalledWith({
+        id: "req-undo-str",
+        success: false,
+        error: "undo string",
+      });
+    });
+  });
+
+  describe("handleRedo — non-Error catch", () => {
+    it("handles non-Error thrown in catch", async () => {
+      mockPerformUnifiedRedo.mockImplementation(() => { throw "redo string"; });
+
+      await handleRedo("req-redo-str");
+
+      expect(mockRespond).toHaveBeenCalledWith({
+        id: "req-redo-str",
+        success: false,
+        error: "redo string",
+      });
+    });
+  });
+
+  describe("handleFocus — non-Error catch", () => {
+    it("handles non-Error thrown in catch", async () => {
+      mockGetEditor.mockReturnValue({
+        commands: { focus: vi.fn(() => { throw 123; }) },
+      });
+
+      await handleFocus("req-focus-str");
+
+      expect(mockRespond).toHaveBeenCalledWith({
+        id: "req-focus-str",
+        success: false,
+        error: "123",
+      });
+    });
   });
 });

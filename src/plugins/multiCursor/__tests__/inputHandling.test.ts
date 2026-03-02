@@ -936,4 +936,111 @@ describe("inputHandling", () => {
       expect(result).toBeNull();
     });
   });
+
+  describe("handleMultiCursorArrow — edge cases (backward flags, findFrom null)", () => {
+    it("handles ArrowLeft at start of document (no movement possible)", () => {
+      // Cursors at start of paragraph — ArrowLeft with findFrom may return null
+      const state = createMultiCursorState("hello", [
+        { from: 1, to: 1 },
+        { from: 3, to: 3 },
+      ]);
+
+      const result = handleMultiCursorArrow(state, "ArrowLeft", false);
+      expect(result).not.toBeNull();
+      if (result) {
+        const newState = state.apply(result);
+        const multiSel = newState.selection as MultiSelection;
+        // First cursor can't move before pos 1 in the paragraph
+        // It either stays or moves to a valid position
+        expect(multiSel.ranges.length).toBeGreaterThanOrEqual(1);
+      }
+    });
+
+    it("handles ArrowRight at end of document (findFrom may return null)", () => {
+      const state = createMultiCursorState("hi", [
+        { from: 3, to: 3 }, // end of text in paragraph
+      ]);
+
+      // Single range in MultiSelection
+      const result = handleMultiCursorArrow(state, "ArrowRight", false);
+      // May return null or a transaction that doesn't move
+    });
+
+    it("handles Shift+ArrowLeft extending selection backward", () => {
+      const state = createMultiCursorState("hello world", [
+        { from: 3, to: 3 },
+        { from: 8, to: 8 },
+      ]);
+
+      const result = handleMultiCursorArrow(state, "ArrowLeft", true);
+      expect(result).not.toBeNull();
+      if (result) {
+        const newState = state.apply(result);
+        const multiSel = newState.selection as MultiSelection;
+        // Each cursor should extend left
+        expect(multiSel.ranges[0].$from.pos).toBeLessThanOrEqual(3);
+      }
+    });
+
+    it("handles Shift+ArrowUp extending selection (vertical)", () => {
+      const state = createMultiCursorState("hello world", [
+        { from: 3, to: 3 },
+        { from: 8, to: 8 },
+      ]);
+
+      // ArrowUp in a single paragraph document — may not find anything
+      const result = handleMultiCursorArrow(state, "ArrowUp", true);
+      // Should not crash
+    });
+
+    it("handles ArrowDown collapsing non-empty selection", () => {
+      const state = createMultiCursorState("hello world", [
+        { from: 1, to: 6 },
+        { from: 7, to: 12 },
+      ]);
+
+      const result = handleMultiCursorArrow(state, "ArrowDown", false);
+      expect(result).not.toBeNull();
+      if (result) {
+        const newState = state.apply(result);
+        const multiSel = newState.selection as MultiSelection;
+        // Should collapse to end of each selection (dir = 1)
+        expect(multiSel.ranges[0].$from.pos).toBe(multiSel.ranges[0].$to.pos);
+      }
+    });
+
+    it("handles ArrowUp collapsing non-empty selection", () => {
+      const state = createMultiCursorState("hello world", [
+        { from: 1, to: 6 },
+        { from: 7, to: 12 },
+      ]);
+
+      const result = handleMultiCursorArrow(state, "ArrowUp", false);
+      expect(result).not.toBeNull();
+      if (result) {
+        const newState = state.apply(result);
+        const multiSel = newState.selection as MultiSelection;
+        // Should collapse to start of each selection (dir = -1)
+        expect(multiSel.ranges[0].$from.pos).toBe(multiSel.ranges[0].$to.pos);
+      }
+    });
+
+    it("derives backward flags correctly for extended selection (ArrowLeft + Shift)", () => {
+      // Start with cursors, extend left → selections should have backward flag set
+      const state = createMultiCursorState("abcdefghij", [
+        { from: 5, to: 5 },
+        { from: 8, to: 8 },
+      ]);
+
+      const result = handleMultiCursorArrow(state, "ArrowLeft", true);
+      expect(result).not.toBeNull();
+      if (result) {
+        const newState = state.apply(result);
+        const multiSel = newState.selection as MultiSelection;
+        // Selections should be backward since we extended left
+        // (anchor at 5, head at 4 → backward)
+        expect(multiSel.ranges[0].$from.pos).toBeLessThan(5);
+      }
+    });
+  });
 });

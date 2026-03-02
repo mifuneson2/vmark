@@ -668,6 +668,39 @@ describe("lineOperationCommands", () => {
     });
   });
 
+  describe("doWysiwygJoinLines — non-textblock next node (line 157)", () => {
+    const listSchema = new Schema({
+      nodes: {
+        doc: { content: "block+", toDOM: () => ["div", 0] },
+        paragraph: { group: "block", content: "text*", toDOM: () => ["p", 0] },
+        bulletList: { group: "block", content: "listItem+", toDOM: () => ["ul", 0] },
+        listItem: { content: "paragraph+", toDOM: () => ["li", 0] },
+        text: { inline: true },
+      },
+    });
+
+    it("returns false when next node is not a textblock (e.g., bulletList)", () => {
+      // doc = [paragraph("hello"), bulletList > [listItem > paragraph("item")]]
+      const para = listSchema.node("paragraph", null, [listSchema.text("hello")]);
+      const listPara = listSchema.node("paragraph", null, [listSchema.text("item")]);
+      const li = listSchema.node("listItem", null, [listPara]);
+      const ul = listSchema.node("bulletList", null, [li]);
+      const doc = listSchema.node("doc", null, [para, ul]);
+
+      let state = EditorState.create({ doc, schema: listSchema });
+      state = state.apply(
+        state.tr.setSelection(TextSelection.create(state.doc, 2))
+      );
+      const container = document.createElement("div");
+      const view = new EditorView(container, { state });
+
+      // nextNode is bulletList which is NOT a textblock
+      const result = doWysiwygJoinLines(view);
+      expect(result).toBe(false);
+      view.destroy();
+    });
+  });
+
   describe("getBlockRange returns null (no block node)", () => {
     // A schema where the doc directly contains text (no block wrapper)
     const flatSchema = new Schema({

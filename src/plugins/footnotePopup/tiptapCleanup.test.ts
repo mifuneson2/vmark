@@ -116,6 +116,17 @@ describe("getDefinitionInfo", () => {
     expect(defs[1].size).toBeGreaterThan(0);
   });
 
+  it("handles definition with null label attribute (line 35 nullish coalescing)", () => {
+    const doc = createDoc([
+      p("Text"),
+      schema.node("footnote_definition", { label: null }, [p("Def content")]),
+    ]);
+    const defs = getDefinitionInfo(doc);
+    expect(defs).toHaveLength(1);
+    // null ?? "" → ""
+    expect(defs[0].label).toBe("");
+  });
+
   it("handles single definition", () => {
     const doc = createDoc([p("Text"), fnDef("5")]);
     const defs = getDefinitionInfo(doc);
@@ -204,6 +215,102 @@ describe("createRenumberTransaction", () => {
   });
 });
 
+describe("createRenumberTransaction — additional branch coverage", () => {
+  const refType = schema.nodes.footnote_reference;
+  const defType = schema.nodes.footnote_definition;
+
+  it("skips replacement when newLabel equals ref.label (line 79 false branch)", () => {
+    // Refs: "2", "1" → labelMap: "2"→"1", "1"→"2"
+    // Ref "1" maps to "2" (needs change), ref "2" maps to "1" (needs change)
+    // Both labels change, so renumber happens. But this tests the general path.
+    const state = stateFrom(
+      createDoc([
+        pWithRef("A", "2"),
+        pWithRef("B", "1"),
+        fnDef("1", "Def one"),
+        fnDef("2", "Def two"),
+      ])
+    );
+    const tr = createRenumberTransaction(state, refType, defType);
+    expect(tr).not.toBeNull();
+    const newRefs = getReferenceLabels(tr!.doc);
+    expect(newRefs).toEqual(new Set(["1", "2"]));
+  });
+
+  it("skips ref replacement when newLabel equals ref.label for some refs (line 79 mixed branch)", () => {
+    // Refs: "1", "3" → labelMap: "1"→"1", "3"→"2"
+    // Ref "1" maps to "1" (same, skip), ref "3" maps to "2" (different, replace)
+    // This exercises both the true and false branches of `newLabel !== ref.label`
+    const state = stateFrom(
+      createDoc([
+        pWithRef("A", "1"),
+        pWithRef("B", "3"),
+        fnDef("1", "Def one"),
+        fnDef("3", "Def three"),
+      ])
+    );
+    const tr = createRenumberTransaction(state, refType, defType);
+    expect(tr).not.toBeNull();
+    const newRefs = getReferenceLabels(tr!.doc);
+    expect(newRefs).toEqual(new Set(["1", "2"]));
+    // Def content should be preserved
+    const newDefs = getDefinitionInfo(tr!.doc);
+    expect(newDefs).toHaveLength(2);
+    const def1 = tr!.doc.nodeAt(newDefs[0].pos);
+    expect(def1?.textContent).toBe("Def one");
+    const def2 = tr!.doc.nodeAt(newDefs[1].pos);
+    expect(def2?.textContent).toBe("Def three");
+  });
+
+  it("creates empty paragraph when oldDef is not found (line 118 else branch)", () => {
+    // Ref "5" exists but no definition with label "5"
+    const state = stateFrom(
+      createDoc([
+        pWithRef("Text", "5"),
+      ])
+    );
+    const tr = createRenumberTransaction(state, refType, defType);
+    expect(tr).not.toBeNull();
+    const newDefs = getDefinitionInfo(tr!.doc);
+    expect(newDefs).toHaveLength(1);
+    expect(newDefs[0].label).toBe("1");
+    // Definition should have an empty paragraph since no content existed
+    const defNode = tr!.doc.nodeAt(newDefs[0].pos);
+    expect(defNode?.textContent).toBe("");
+  });
+
+  it("handles ref with null label in createRenumberTransaction (line 48 nullish coalescing)", () => {
+    // Create a ref with null label — it gets coerced to ""
+    const doc = createDoc([
+      schema.node("paragraph", null, [
+        schema.text("Text"),
+        schema.node("footnote_reference", { label: null }),
+      ]),
+      fnDef("", "Def for empty label"),
+    ]);
+    const state = stateFrom(doc);
+    const tr = createRenumberTransaction(state, refType, defType);
+    // Label "" maps to "1" — needs renumber
+    expect(tr).not.toBeNull();
+  });
+
+  it("handles duplicate ref labels — labelMap only stores first mapping (line 61 has guard)", () => {
+    // Two refs with label "3" — only one entry in labelMap
+    const state = stateFrom(
+      createDoc([
+        pWithRef("A", "3"),
+        pWithRef("B", "3"),
+        fnDef("3", "Shared def"),
+      ])
+    );
+    const tr = createRenumberTransaction(state, refType, defType);
+    expect(tr).not.toBeNull();
+    const newDefs = getDefinitionInfo(tr!.doc);
+    expect(newDefs).toHaveLength(1);
+    expect(newDefs[0].label).toBe("1");
+  });
+});
+
 describe("createCleanupAndRenumberTransaction", () => {
   const refType = schema.nodes.footnote_reference;
   const defType = schema.nodes.footnote_definition;
@@ -270,6 +377,95 @@ describe("createCleanupAndRenumberTransaction", () => {
     const newDefs = getDefinitionInfo(newDoc);
     expect(newDefs).toHaveLength(1);
     expect(newDefs[0].label).toBe("1");
+  });
+
+  it("creates empty paragraph fallback when def label not in remaining set (line 199 else)", () => {
+    // Reference "q" exists, but its label is NOT in remainingRefLabels → defContentByLabel has no entry
+    // The oldDef ternary at line 199 takes the false branch
+    const state = stateFrom(
+      createDoc([
+        pWithRef("Text ", "q"),
+        fnDef("q", "will not be retained"),
+      ])
+    );
+    // "q" is not in remaining → its content won't be in defContentByLabel
+    const remainingRefLabels = new Set<string>();
+    const tr = createCleanupAndRenumberTransaction(state, remainingRefLabels, refType, defType);
+    expect(tr).not.toBeNull();
+    // The ref still exists in doc → gets renumbered to "1" with empty paragraph content
+    const newDefs = getDefinitionInfo(tr!.doc);
+    expect(newDefs).toHaveLength(1);
+    expect(newDefs[0].label).toBe("1");
+  });
+
+  it("skips renumber when new label equals old label (line 168 false branch)", () => {
+    // Single ref with label "1" — labelMap maps "1" → "1", so no replacement needed
+    const state = stateFrom(
+      createDoc([
+        pWithRef("Text ", "1"),
+        fnDef("1", "stays same"),
+      ])
+    );
+    const remainingRefLabels = new Set(["1"]);
+    const tr = createCleanupAndRenumberTransaction(state, remainingRefLabels, refType, defType);
+    expect(tr).not.toBeNull();
+    const refs = getReferenceLabels(tr!.doc);
+    expect(refs.has("1")).toBe(true);
+  });
+
+  it("deduplicates labels in orderedLabels (line 184 seenLabels guard)", () => {
+    // Two refs with same label "a" — the second should not add duplicate to orderedLabels
+    const state = stateFrom(
+      createDoc([
+        pWithRef("First ", "a"),
+        pWithRef("Second ", "a"),
+        fnDef("a", "shared"),
+      ])
+    );
+    const remainingRefLabels = new Set(["a"]);
+    const tr = createCleanupAndRenumberTransaction(state, remainingRefLabels, refType, defType);
+    expect(tr).not.toBeNull();
+    const newDefs = getDefinitionInfo(tr!.doc);
+    // Only one definition should be created (deduped)
+    expect(newDefs).toHaveLength(1);
+  });
+
+  it("preserves content for definitions whose labels are in remainingRefLabels (line 157 node truthy)", () => {
+    // Ensure the defContentByLabel branch where node IS found is covered
+    const state = stateFrom(
+      createDoc([
+        pWithRef("A", "x"),
+        pWithRef("B", "y"),
+        fnDef("x", "Content X"),
+        fnDef("y", "Content Y"),
+      ])
+    );
+    const remainingRefLabels = new Set(["x", "y"]);
+    const tr = createCleanupAndRenumberTransaction(state, remainingRefLabels, refType, defType);
+    expect(tr).not.toBeNull();
+    const newDefs = getDefinitionInfo(tr!.doc);
+    expect(newDefs).toHaveLength(2);
+    // Content should be preserved from original definitions
+    const def1 = tr!.doc.nodeAt(newDefs[0].pos);
+    expect(def1?.textContent).toBe("Content X");
+    const def2 = tr!.doc.nodeAt(newDefs[1].pos);
+    expect(def2?.textContent).toBe("Content Y");
+  });
+
+  it("handles ref with null label in createCleanupAndRenumberTransaction (line 138 nullish coalescing)", () => {
+    const doc = createDoc([
+      schema.node("paragraph", null, [
+        schema.text("Text"),
+        schema.node("footnote_reference", { label: null }),
+      ]),
+    ]);
+    const state = stateFrom(doc);
+    const remainingRefLabels = new Set([""]);
+    const tr = createCleanupAndRenumberTransaction(state, remainingRefLabels, refType, defType);
+    expect(tr).not.toBeNull();
+    // Label "" gets renumbered to "1"
+    const newRefs = getReferenceLabels(tr!.doc);
+    expect(newRefs.has("1")).toBe(true);
   });
 
   it("handles empty remaining refs — removes all definitions", () => {

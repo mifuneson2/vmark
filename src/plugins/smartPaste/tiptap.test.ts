@@ -247,6 +247,75 @@ describe("smartPaste", () => {
     });
   });
 
+  describe("handlePaste — code context guard (line 34)", () => {
+    it("does not handle paste when selection is in code context", () => {
+      editor = createEditor("<p>hello world</p>");
+      editor.commands.setTextSelection({ from: 1, to: 6 });
+
+      // Mock isSelectionInCode to return true
+      vi.mocked(mockIsSelectionInCode).mockReturnValueOnce(true);
+
+      const event = createClipboardEvent("https://example.com");
+      const handled = editor.view.someProp("handlePaste", (f) =>
+        f(editor.view, event, Slice.empty),
+      );
+      expect(handled).toBeFalsy();
+    });
+  });
+
+  describe("handlePaste — missing link mark (line 40)", () => {
+    it("does not handle paste when schema has no link mark", () => {
+      // Create an editor with a schema that doesn't have link marks
+      // Using a custom extension set without link support
+      const { Extension } = require("@tiptap/core");
+      const { Schema: PmSchema } = require("@tiptap/pm/model");
+      const { EditorState: PmState } = require("@tiptap/pm/state");
+      const { Plugin, PluginKey } = require("@tiptap/pm/state");
+
+      // Build a schema without link marks
+      const schema = new PmSchema({
+        nodes: {
+          doc: { content: "paragraph+" },
+          paragraph: { group: "block", content: "text*" },
+          text: { inline: true },
+        },
+        // No marks at all — no link mark
+      });
+
+      const doc = schema.node("doc", null, [
+        schema.node("paragraph", null, [schema.text("hello world")]),
+      ]);
+
+      // Get the smartPaste plugin
+      const plugins = smartPasteExtension.config.addProseMirrorPlugins!.call({
+        name: "smartPaste", options: {}, storage: {}, editor: {},
+      } as never);
+
+      const state = PmState.create({ doc, schema, plugins });
+
+      // Create a selection (non-empty)
+      const { TextSelection } = require("@tiptap/pm/state");
+      const stateWithSel = state.apply(
+        state.tr.setSelection(TextSelection.create(state.doc, 1, 6))
+      );
+
+      // Get handlePaste from plugin props
+      const plugin = plugins[0];
+      const handlePaste = (plugin as { props: { handlePaste: Function } }).props.handlePaste;
+
+      const event = createClipboardEvent("https://example.com");
+
+      // Create a minimal view mock
+      const mockView = {
+        state: stateWithSel,
+        dispatch: vi.fn(),
+      };
+
+      const result = handlePaste(mockView, event);
+      expect(result).toBe(false);
+    });
+  });
+
   describe("extension creation", () => {
     it("has name 'smartPaste'", () => {
       expect(smartPasteExtension.name).toBe("smartPaste");

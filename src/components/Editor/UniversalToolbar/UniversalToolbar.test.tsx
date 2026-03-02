@@ -1518,4 +1518,77 @@ describe("UniversalToolbar", () => {
       });
     });
   });
+
+  describe("Cmd+A prevention in toolbar (line 100-102)", () => {
+    beforeEach(() => {
+      mockEnableRules.getToolbarButtonState.mockImplementation(() => ({
+        disabled: false, notImplemented: false, active: false,
+      }));
+    });
+
+    it("does not crash on Cmd+A / Ctrl+A keydown", () => {
+      useUIStore.setState({
+        universalToolbarVisible: true,
+        universalToolbarHasFocus: true,
+        toolbarSessionFocusIndex: 0,
+      });
+      render(<UniversalToolbar />);
+      const toolbar = screen.getByRole("toolbar");
+
+      fireEvent.keyDown(toolbar, { key: "a", metaKey: true });
+      fireEvent.keyDown(toolbar, { key: "a", ctrlKey: true });
+
+      expect(toolbar).toBeInTheDocument();
+    });
+  });
+
+  describe("Home/End keyboard navigation (lines 157-164)", () => {
+    beforeEach(() => {
+      mockEnableRules.getToolbarButtonState.mockImplementation(() => ({
+        disabled: false, notImplemented: false, active: false,
+      }));
+    });
+
+    it("Home moves to first, End moves to last focusable button", async () => {
+      useUIStore.setState({
+        universalToolbarVisible: true,
+        universalToolbarHasFocus: true,
+        toolbarSessionFocusIndex: 3,
+      });
+      render(<UniversalToolbar />);
+      const toolbar = screen.getByRole("toolbar");
+      const buttons = screen.getAllByRole("button");
+
+      fireEvent.keyDown(toolbar, { key: "End" });
+      fireEvent.keyDown(toolbar, { key: "Home" });
+
+      await waitFor(() => {
+        expect(buttons[0]).toHaveAttribute("tabindex", "0");
+      });
+    });
+  });
+
+  describe("isButtonFocusable — nullish state fallback (line 89)", () => {
+    beforeEach(() => {
+      mockEnableRules.getToolbarButtonState.mockImplementation(() => ({
+        disabled: false, notImplemented: false, active: false,
+      }));
+    });
+
+    it("toolbar handles Tab navigation without crashing", () => {
+      useUIStore.setState({
+        universalToolbarVisible: true,
+        universalToolbarHasFocus: true,
+        toolbarSessionFocusIndex: 0,
+      });
+      render(<UniversalToolbar />);
+      const toolbar = screen.getByRole("toolbar");
+
+      // Tab and Shift+Tab use isButtonFocusable internally
+      fireEvent.keyDown(toolbar, { key: "Tab" });
+      fireEvent.keyDown(toolbar, { key: "Tab", shiftKey: true });
+
+      expect(toolbar).toBeInTheDocument();
+    });
+  });
 });

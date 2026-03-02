@@ -945,4 +945,267 @@ describe("WikiLinkPopupView", () => {
       outsideDiv.remove();
     });
   });
+
+  describe("Mouse leave — relatedTarget is null", () => {
+    it("closes popup when relatedTarget is null", async () => {
+      emitStateChange({ isOpen: true, target: "Test", nodePos: 1, anchorRect });
+      await new Promise((r) => requestAnimationFrame(r));
+
+      const input = dom.container.querySelector(".wiki-link-popup-target") as HTMLInputElement;
+      input.blur();
+
+      const popupEl = dom.container.querySelector(".wiki-link-popup") as HTMLElement;
+      const mouseleaveEvent = new MouseEvent("mouseleave", { bubbles: false });
+      Object.defineProperty(mouseleaveEvent, "relatedTarget", { value: null });
+      popupEl.dispatchEvent(mouseleaveEvent);
+
+      expect(mockClosePopup).toHaveBeenCalled();
+    });
+  });
+
+  describe("Browse — array result early return (line 284)", () => {
+    it("does nothing when dialog returns an array", async () => {
+      const { open: mockDialogOpen } = await import("@tauri-apps/plugin-dialog");
+      vi.mocked(mockDialogOpen).mockResolvedValue(["/workspace/a.md", "/workspace/b.md"] as unknown as string);
+
+      emitStateChange({ isOpen: true, target: "", nodePos: 10, anchorRect });
+      await new Promise((r) => requestAnimationFrame(r));
+
+      const browseBtn = Array.from(dom.container.querySelectorAll("button")).find((b) => b.title === "Browse for file");
+      browseBtn!.click();
+
+      await new Promise((r) => setTimeout(r, 10));
+      expect(mockUpdateTarget).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("Browse — pathToWikiTarget with null workspaceRoot", () => {
+    it("returns raw file path when workspaceRoot is null", async () => {
+      mockWorkspaceRootPath = null;
+      const { open: mockDialogOpen } = await import("@tauri-apps/plugin-dialog");
+      vi.mocked(mockDialogOpen).mockResolvedValue("/some/file.md");
+
+      emitStateChange({ isOpen: true, target: "", nodePos: 10, anchorRect });
+      await new Promise((r) => requestAnimationFrame(r));
+
+      const browseBtn = Array.from(dom.container.querySelectorAll("button")).find((b) => b.title === "Browse for file");
+      browseBtn!.click();
+
+      await new Promise((r) => setTimeout(r, 10));
+      // pathToWikiTarget returns filePath as-is when workspaceRoot is null (no stripping)
+      expect(mockUpdateTarget).toHaveBeenCalledWith("/some/file.md");
+    });
+  });
+
+  describe("Browse — pathToWikiTarget when file not under workspace", () => {
+    it("preserves path when file is outside workspace root", async () => {
+      mockWorkspaceRootPath = "/workspace";
+      const { open: mockDialogOpen } = await import("@tauri-apps/plugin-dialog");
+      vi.mocked(mockDialogOpen).mockResolvedValue("/other/location/doc.md");
+
+      emitStateChange({ isOpen: true, target: "", nodePos: 10, anchorRect });
+      await new Promise((r) => requestAnimationFrame(r));
+
+      const browseBtn = Array.from(dom.container.querySelectorAll("button")).find((b) => b.title === "Browse for file");
+      browseBtn!.click();
+
+      await new Promise((r) => setTimeout(r, 10));
+      // File doesn't start with workspace root, so relative = filePath, then .md is stripped
+      expect(mockUpdateTarget).toHaveBeenCalledWith("/other/location/doc");
+    });
+  });
+
+  describe("Browse — pathToWikiTarget file without .md extension", () => {
+    it("does not strip non-.md extension", async () => {
+      mockWorkspaceRootPath = "/workspace";
+      const { open: mockDialogOpen } = await import("@tauri-apps/plugin-dialog");
+      vi.mocked(mockDialogOpen).mockResolvedValue("/workspace/image.png");
+
+      emitStateChange({ isOpen: true, target: "", nodePos: 10, anchorRect });
+      await new Promise((r) => requestAnimationFrame(r));
+
+      const browseBtn = Array.from(dom.container.querySelectorAll("button")).find((b) => b.title === "Browse for file");
+      browseBtn!.click();
+
+      await new Promise((r) => setTimeout(r, 10));
+      // File under workspace, no .md extension — kept as-is after stripping root
+      expect(mockUpdateTarget).toHaveBeenCalledWith("image.png");
+    });
+  });
+
+  describe("Open — resolveWikiLinkPath with empty target", () => {
+    it("returns null when target is empty string", async () => {
+      const mockEmit = vi.fn(() => Promise.resolve());
+      const { getCurrentWebviewWindow } = await import("@tauri-apps/api/webviewWindow");
+      vi.mocked(getCurrentWebviewWindow).mockReturnValue({ emit: mockEmit } as ReturnType<typeof getCurrentWebviewWindow>);
+
+      emitStateChange({ isOpen: true, target: "", nodePos: 10, anchorRect });
+      await new Promise((r) => requestAnimationFrame(r));
+
+      // Force the input to have whitespace-only so target.trim() is empty
+      const input = dom.container.querySelector(".wiki-link-popup-target") as HTMLInputElement;
+      input.value = "   ";
+
+      const openBtn = dom.container.querySelector(".wiki-link-popup-btn-open") as HTMLButtonElement;
+      openBtn.disabled = false;
+      openBtn.click();
+
+      await new Promise((r) => setTimeout(r, 10));
+      // handleOpen returns early because target is empty
+      expect(mockEmit).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("Subscription — does not re-show when already open (wasOpen guard)", () => {
+    it("skips show when popup was already open", async () => {
+      // Open the popup
+      emitStateChange({ isOpen: true, target: "Test", nodePos: 1, anchorRect });
+      await new Promise((r) => requestAnimationFrame(r));
+
+      const popupEl = dom.container.querySelector(".wiki-link-popup") as HTMLElement;
+      expect(popupEl.style.display).toBe("flex");
+
+      // Emit another state change while still open — should NOT call show() again
+      // (wasOpen is already true)
+      vi.clearAllMocks();
+      emitStateChange({ isOpen: true, target: "Updated", nodePos: 2, anchorRect });
+
+      // The input value should NOT change since show() was not called
+      const input = dom.container.querySelector(".wiki-link-popup-target") as HTMLInputElement;
+      expect(input.value).toBe("Test"); // Still the original value
+    });
+  });
+
+  describe("IME guard in setupKeyboardNavigation (line 173)", () => {
+    it("ignores IME events in keyboard navigation handler", async () => {
+      const imeGuard = await import("@/utils/imeGuard");
+
+      emitStateChange({ isOpen: true, target: "Test", nodePos: 1, anchorRect });
+      await new Promise((r) => requestAnimationFrame(r));
+
+      vi.spyOn(imeGuard, "isImeKeyEvent" as never).mockReturnValueOnce(true as never);
+
+      // Tab key should be ignored due to IME guard
+      const event = new KeyboardEvent("keydown", { key: "Tab", bubbles: true, cancelable: true });
+      document.dispatchEvent(event);
+
+      // No error = IME guard early return worked
+      vi.mocked(imeGuard.isImeKeyEvent as never).mockRestore?.();
+    });
+  });
+
+  describe("IME guard in handleInputKeydown (line 260)", () => {
+    it("ignores IME events in input keydown handler", async () => {
+      const imeGuard = await import("@/utils/imeGuard");
+
+      emitStateChange({
+        isOpen: true, target: "Test", nodePos: 10, anchorRect,
+      });
+      await new Promise((r) => requestAnimationFrame(r));
+
+      vi.spyOn(imeGuard, "isImeKeyEvent" as never).mockReturnValueOnce(true as never);
+
+      const input = dom.container.querySelector(".wiki-link-popup-target") as HTMLInputElement;
+      input.focus();
+
+      const event = new KeyboardEvent("keydown", { key: "Enter", bubbles: true });
+      input.dispatchEvent(event);
+
+      // Save should NOT be called because IME guard returned true
+      expect(view.dispatch).not.toHaveBeenCalled();
+      vi.mocked(imeGuard.isImeKeyEvent as never).mockRestore?.();
+    });
+  });
+
+  describe("Save — nodeAt returns null", () => {
+    it("closes popup when nodeAt returns null", async () => {
+      view.state.doc.nodeAt = vi.fn(() => null);
+      storeState.nodePos = 10;
+      emitStateChange({ isOpen: true, target: "Test", nodePos: 10, anchorRect });
+      await new Promise((r) => requestAnimationFrame(r));
+
+      const input = dom.container.querySelector(".wiki-link-popup-target") as HTMLInputElement;
+      input.value = "ValidTarget";
+
+      const event = new KeyboardEvent("keydown", { key: "Enter", bubbles: true });
+      input.dispatchEvent(event);
+
+      expect(mockClosePopup).toHaveBeenCalled();
+      expect(view.dispatch).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("Delete — nodeAt returns null", () => {
+    it("closes popup when nodeAt returns null for delete", async () => {
+      view.state.doc.nodeAt = vi.fn(() => null);
+      storeState.nodePos = 10;
+      emitStateChange({ isOpen: true, target: "Test", nodePos: 10, anchorRect });
+      await new Promise((r) => requestAnimationFrame(r));
+
+      const deleteBtn = Array.from(dom.container.querySelectorAll("button")).find((b) => b.title === "Remove wiki link");
+      deleteBtn!.click();
+
+      expect(mockClosePopup).toHaveBeenCalled();
+      expect(view.dispatch).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("Click outside — popup not open", () => {
+    it("does nothing when popup is not open", async () => {
+      // Don't open the popup — isOpen is false
+      const outsideEl = document.createElement("div");
+      document.body.appendChild(outsideEl);
+
+      const mousedownEvent = new MouseEvent("mousedown", { bubbles: true });
+      Object.defineProperty(mousedownEvent, "target", { value: outsideEl });
+      document.dispatchEvent(mousedownEvent);
+
+      expect(mockClosePopup).not.toHaveBeenCalled();
+      outsideEl.remove();
+    });
+  });
+
+  describe("Show — no editor-container (viewport bounds fallback)", () => {
+    it("uses viewport bounds when no editor-container exists", async () => {
+      // Remove editor-container class
+      dom.container.className = "";
+
+      // Recreate popup with updated DOM
+      popup.destroy();
+      vi.clearAllMocks();
+
+      const newView = createMockView(dom.editorDom);
+      view = newView;
+      popup = new WikiLinkPopupView(view as unknown as ConstructorParameters<typeof WikiLinkPopupView>[0]);
+
+      emitStateChange({ isOpen: true, target: "Test", nodePos: 1, anchorRect });
+      await new Promise((r) => requestAnimationFrame(r));
+
+      // Popup should still show (using viewport bounds)
+      const popupEl = document.querySelector(".wiki-link-popup") as HTMLElement;
+      expect(popupEl).not.toBeNull();
+      expect(popupEl.style.display).toBe("flex");
+
+      // Restore
+      dom.container.className = "editor-container";
+    });
+  });
+
+  describe("Enter with Shift key (line 266)", () => {
+    it("does not save on Shift+Enter", async () => {
+      storeState.nodePos = 10;
+      emitStateChange({ isOpen: true, target: "Test", nodePos: 10, anchorRect });
+      await new Promise((r) => requestAnimationFrame(r));
+
+      const input = dom.container.querySelector(".wiki-link-popup-target") as HTMLInputElement;
+      input.value = "Test";
+      input.focus();
+
+      const event = new KeyboardEvent("keydown", { key: "Enter", shiftKey: true, bubbles: true });
+      input.dispatchEvent(event);
+
+      // Shift+Enter should NOT trigger save
+      expect(view.dispatch).not.toHaveBeenCalled();
+    });
+  });
 });

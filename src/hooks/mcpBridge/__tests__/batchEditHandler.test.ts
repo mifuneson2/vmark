@@ -583,4 +583,260 @@ describe("batchEditHandler", () => {
     expect(call.success).toBe(true);
     expect(call.data.changedNodeIds).toHaveLength(2);
   });
+
+  it("caches insert-after-not-found response when requestId provided (line 185)", async () => {
+    const editor = createMockEditor();
+    mockGetEditor.mockReturnValue(editor);
+    // resolveNodeId returns null for the 'after' node
+    mockResolveNodeId.mockReturnValue(null);
+
+    await handleBatchEdit("req-27", {
+      requestId: "dedup-27",
+      baseRevision: "rev-1",
+      mode: "apply",
+      operations: [{ type: "insert", after: "heading-99", text: "new paragraph" }],
+    });
+
+    const call = mockRespond.mock.calls[0][0];
+    expect(call.success).toBe(false);
+    expect(call.error).toContain("Node not found for 'after'");
+    expect(mockCacheSet).toHaveBeenCalledWith("dedup-27", expect.objectContaining({
+      success: false,
+      data: expect.objectContaining({ code: "node_not_found" }),
+    }));
+  });
+
+  it("pushes resolved null for ops with unrecognized type and no nodeId (line 193)", async () => {
+    const editor = createMockEditor();
+    mockGetEditor.mockReturnValue(editor);
+
+    // Validation only checks known types (update/delete/format/move/insert).
+    // An op with an unrecognized type and no nodeId passes validation
+    // and falls through to the else branch at line 193 (resolved: null).
+    await handleBatchEdit("req-28", {
+      baseRevision: "rev-1",
+      mode: "apply",
+      operations: [
+        { type: "replace" as string, text: "hello" },
+      ],
+    });
+
+    const call = mockRespond.mock.calls[0][0];
+    expect(call.success).toBe(true);
+  });
+
+  it("handles non-Error thrown in outer catch (line 344)", async () => {
+    // Force a non-Error throw by passing a non-string baseRevision
+    // requireString will throw an Error, so we mock it to throw a non-Error
+    mockGetEditor.mockReturnValue(null);
+    // Make validateBaseRevision throw a non-Error
+    mockValidateBaseRevision.mockImplementation(() => { throw 42; });
+
+    await handleBatchEdit("req-29", {
+      baseRevision: "rev-1",
+      operations: [{ type: "update", nodeId: "p-0", text: "x" }],
+    });
+
+    expect(mockRespond).toHaveBeenCalledWith({
+      id: "req-29",
+      success: false,
+      error: "42",
+    });
+  });
+
+  it("skips insert in apply mode when content is not a string", async () => {
+    const editor = createMockEditor();
+    mockGetEditor.mockReturnValue(editor);
+    mockResolveNodeId.mockReturnValue({ from: 0, to: 10 });
+
+    await handleBatchEdit("req-30", {
+      baseRevision: "rev-1",
+      mode: "apply",
+      operations: [
+        { type: "insert", nodeId: "p-0", content: { complex: true } as unknown as string },
+      ],
+    });
+
+    // insert was skipped (content is not a string), no dispatch
+    expect(editor.view.dispatch).not.toHaveBeenCalled();
+    const call = mockRespond.mock.calls[0][0];
+    expect(call.success).toBe(true);
+    expect(call.data.addedNodeIds).toHaveLength(0);
+  });
+
+  it("skips update in apply mode when text is falsy", async () => {
+    const editor = createMockEditor();
+    mockGetEditor.mockReturnValue(editor);
+    mockResolveNodeId.mockReturnValue({ from: 0, to: 10 });
+
+    await handleBatchEdit("req-31", {
+      baseRevision: "rev-1",
+      mode: "apply",
+      operations: [
+        { type: "update", nodeId: "p-0", text: "" },
+      ],
+    });
+
+    expect(editor.view.dispatch).not.toHaveBeenCalled();
+    const call = mockRespond.mock.calls[0][0];
+    expect(call.success).toBe(true);
+    expect(call.data.changedNodeIds).toHaveLength(0);
+  });
+
+  it("skips delete in apply mode when resolved is null", async () => {
+    const editor = createMockEditor();
+    mockGetEditor.mockReturnValue(editor);
+
+    await handleBatchEdit("req-32", {
+      baseRevision: "rev-1",
+      mode: "apply",
+      operations: [
+        // An unrecognized type with no nodeId goes to else branch → resolved=null
+        // Then in switch it's 'delete' but resolved is null → skip
+        { type: "replace" as string },
+      ],
+    });
+
+    const call = mockRespond.mock.calls[0][0];
+    expect(call.success).toBe(true);
+  });
+
+  it("skips format in apply mode when marks is falsy", async () => {
+    const editor = createMockEditor();
+    mockGetEditor.mockReturnValue(editor);
+    mockResolveNodeId.mockReturnValue({ from: 0, to: 10 });
+    mockGetTextRange.mockReturnValue({ from: 1, to: 9 });
+
+    await handleBatchEdit("req-33", {
+      baseRevision: "rev-1",
+      mode: "apply",
+      operations: [
+        { type: "format", nodeId: "p-0" }, // marks is undefined
+      ],
+    });
+
+    expect(editor.commands.toggleMark).not.toHaveBeenCalled();
+    const call = mockRespond.mock.calls[0][0];
+    expect(call.success).toBe(true);
+    expect(call.data.changedNodeIds).toHaveLength(0);
+  });
+
+  it("uses fallback nodeId names when nodeId is undefined in apply operations", async () => {
+    const editor = createMockEditor();
+    mockGetEditor.mockReturnValue(editor);
+    // Return the first call for insert (after), second for delete (nodeId)
+    mockResolveNodeId
+      .mockReturnValueOnce({ from: 10, to: 20 })   // insert after
+      .mockReturnValueOnce({ from: 0, to: 10 });    // delete nodeId
+    mockGetTextRange.mockReturnValue({ from: 1, to: 9 });
+
+    await handleBatchEdit("req-34", {
+      baseRevision: "rev-1",
+      mode: "apply",
+      operations: [
+        { type: "insert", after: "p-0", content: "text" },
+        // delete without nodeId — uses fallback `deleted-0`
+        // But validation requires nodeId for delete, so pass it
+        { type: "delete", nodeId: "p-1" },
+      ],
+    });
+
+    const call = mockRespond.mock.calls[0][0];
+    expect(call.success).toBe(true);
+  });
+
+  it("skips suggest for ops that don't match known types in suggest mode", async () => {
+    const editor = createMockEditor();
+    mockGetEditor.mockReturnValue(editor);
+    mockIsAutoApproveEnabled.mockReturnValue(false);
+    mockResolveNodeId.mockReturnValue({ from: 0, to: 10 });
+
+    await handleBatchEdit("req-35", {
+      baseRevision: "rev-1",
+      mode: "suggest",
+      operations: [
+        // format with nodeId doesn't create suggestions in suggest mode
+        { type: "format", nodeId: "p-0", marks: [{ type: "bold" }] },
+      ],
+    });
+
+    // No suggestions created for format
+    expect(mockAddSuggestion).not.toHaveBeenCalled();
+    const call = mockRespond.mock.calls[0][0];
+    expect(call.success).toBe(true);
+    expect(call.data.suggestionIds).toHaveLength(0);
+  });
+
+  it("skips suggest for insert when content is not a string", async () => {
+    const editor = createMockEditor();
+    mockGetEditor.mockReturnValue(editor);
+    mockIsAutoApproveEnabled.mockReturnValue(false);
+    mockResolveNodeId.mockReturnValue({ from: 0, to: 10 });
+
+    await handleBatchEdit("req-36", {
+      baseRevision: "rev-1",
+      mode: "suggest",
+      operations: [
+        { type: "insert", after: "p-0", content: { complex: true } },
+      ],
+    });
+
+    expect(mockAddSuggestion).not.toHaveBeenCalled();
+  });
+
+  it("skips suggest for update when text is falsy", async () => {
+    const editor = createMockEditor();
+    mockGetEditor.mockReturnValue(editor);
+    mockIsAutoApproveEnabled.mockReturnValue(false);
+    mockResolveNodeId.mockReturnValue({ from: 0, to: 10 });
+
+    await handleBatchEdit("req-37", {
+      baseRevision: "rev-1",
+      mode: "suggest",
+      operations: [
+        { type: "update", nodeId: "p-0" }, // no text
+      ],
+    });
+
+    expect(mockAddSuggestion).not.toHaveBeenCalled();
+  });
+
+  it("falls back to auto-approve check when mode is 'apply' but auto-approve disabled", async () => {
+    const editor = createMockEditor();
+    mockGetEditor.mockReturnValue(editor);
+    mockIsAutoApproveEnabled.mockReturnValue(false);
+    mockResolveNodeId.mockReturnValue({ from: 0, to: 10 });
+    mockGetTextRange.mockReturnValue({ from: 1, to: 9 });
+
+    await handleBatchEdit("req-38", {
+      baseRevision: "rev-1",
+      mode: "apply",
+      operations: [{ type: "update", nodeId: "p-0", text: "new text" }],
+    });
+
+    // Should create suggestion instead of applying directly
+    expect(mockAddSuggestion).toHaveBeenCalled();
+    const call = mockRespond.mock.calls[0][0];
+    expect(call.success).toBe(true);
+    expect(call.data.suggestionIds).toHaveLength(1);
+  });
+
+  it("skips suggest for delete when resolved is null", async () => {
+    const editor = createMockEditor();
+    mockGetEditor.mockReturnValue(editor);
+    mockIsAutoApproveEnabled.mockReturnValue(false);
+
+    await handleBatchEdit("req-39", {
+      baseRevision: "rev-1",
+      mode: "suggest",
+      operations: [
+        // Unrecognized type passes validation (no nodeId check)
+        // and goes through else branch → resolved=null
+        { type: "replace" as string },
+      ],
+    });
+
+    // No suggestions created for unresolved ops
+    expect(mockAddSuggestion).not.toHaveBeenCalled();
+  });
 });

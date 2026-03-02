@@ -462,6 +462,28 @@ describe("cmdWhenInTable via real EditorView keydown dispatch (L81-83, L98-102)"
   });
 });
 
+describe("contextmenu DOM event handler — pluginState null/missing contextMenu", () => {
+  it("handles contextmenu when plugin state contextMenu is null", () => {
+    mockIsInTable.mockReturnValue(true);
+
+    const plugins = getPlugins();
+    const state = EditorState.create({ doc: createDoc(), schema, plugins });
+    const mockView = createMockEditorView(state);
+
+    // plugin state has contextMenu: null by default (init)
+    // Don't set contextMenu in plugin state
+    const mainPlugin = plugins.find((p) => (p as unknown as { key: string }).key === tiptapTableUIPluginKey.key)!;
+    const handler = (mainPlugin as unknown as { spec: { props: { handleDOMEvents: { contextmenu: (v: unknown, e: unknown) => boolean } } } })
+      .spec.props!.handleDOMEvents!.contextmenu;
+
+    const event = { preventDefault: vi.fn(), clientX: 100, clientY: 200 };
+    // contextMenu is null, so show() won't be called but it still returns true
+    const result = handler(mockView, event);
+    expect(result).toBe(true);
+    expect(event.preventDefault).toHaveBeenCalled();
+  });
+});
+
 describe("contextmenu DOM event handler", () => {
   let state: EditorState;
   let mockView: EditorView;

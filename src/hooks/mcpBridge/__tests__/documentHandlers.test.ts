@@ -317,5 +317,151 @@ describe("documentHandlers", () => {
       expect(call.success).toBe(true);
       expect(call.data.title).toBe("My Document Title");
     });
+
+    it("returns wordCount 0 for empty text", async () => {
+      const editor = {
+        state: {
+          doc: {
+            textContent: "",
+            descendants: () => {},
+          },
+        },
+      };
+      mockGetEditor.mockReturnValue(editor);
+
+      await handleMetadataGet("req-empty-text");
+
+      const call = mockRespond.mock.calls[0][0];
+      expect(call.success).toBe(true);
+      expect(call.data.wordCount).toBe(0);
+      expect(call.data.characterCount).toBe(0);
+    });
+
+    it("returns Untitled when tab is not found in tabs array", async () => {
+      // Set tabs to empty array so tab lookup returns undefined
+      const origTabs = mockTabStoreState.tabs;
+      mockTabStoreState.tabs = { main: [] };
+
+      const editor = {
+        state: {
+          doc: {
+            textContent: "some text",
+            descendants: () => {},
+          },
+        },
+      };
+      mockGetEditor.mockReturnValue(editor);
+
+      await handleMetadataGet("req-no-tab");
+
+      const call = mockRespond.mock.calls[0][0];
+      expect(call.success).toBe(true);
+      expect(call.data.title).toBe("Untitled");
+
+      mockTabStoreState.tabs = origTabs;
+    });
+
+    it("returns null filePath and false isModified when document not found", async () => {
+      mockDocStoreState.getDocument.mockReturnValueOnce(null);
+
+      const editor = {
+        state: {
+          doc: {
+            textContent: "test",
+            descendants: () => {},
+          },
+        },
+      };
+      mockGetEditor.mockReturnValue(editor);
+
+      await handleMetadataGet("req-no-doc");
+
+      const call = mockRespond.mock.calls[0][0];
+      expect(call.success).toBe(true);
+      expect(call.data.filePath).toBeNull();
+      expect(call.data.isModified).toBe(false);
+    });
+
+    it("handles non-Error thrown value (String(error) branch)", async () => {
+      mockGetEditor.mockImplementation(() => {
+        throw 42; // eslint-disable-line no-throw-literal
+      });
+
+      await handleMetadataGet("req-ne-meta");
+
+      expect(mockRespond).toHaveBeenCalledWith({
+        id: "req-ne-meta",
+        success: false,
+        error: "42",
+      });
+    });
+  });
+
+  // ── non-Error catch branches for getContent, search, outline ──
+
+  describe("handleGetContent — non-Error catch branch", () => {
+    it("handles non-Error thrown value", async () => {
+      mockGetDocumentContent.mockImplementation(() => {
+        throw "raw string"; // eslint-disable-line no-throw-literal
+      });
+
+      await handleGetContent("req-ne-gc");
+
+      expect(mockRespond).toHaveBeenCalledWith({
+        id: "req-ne-gc",
+        success: false,
+        error: "raw string",
+      });
+    });
+  });
+
+  describe("handleDocumentSearch — non-Error catch branch", () => {
+    it("handles non-Error thrown value", async () => {
+      mockGetEditor.mockImplementation(() => {
+        throw null; // eslint-disable-line no-throw-literal
+      });
+
+      await handleDocumentSearch("req-ne-ds", { query: "x" });
+
+      expect(mockRespond).toHaveBeenCalledWith({
+        id: "req-ne-ds",
+        success: false,
+        error: "null",
+      });
+    });
+  });
+
+  describe("handleOutlineGet — non-Error catch branch", () => {
+    it("handles non-Error thrown value", async () => {
+      mockGetEditor.mockImplementation(() => {
+        throw false; // eslint-disable-line no-throw-literal
+      });
+
+      await handleOutlineGet("req-ne-og");
+
+      expect(mockRespond).toHaveBeenCalledWith({
+        id: "req-ne-og",
+        success: false,
+        error: "false",
+      });
+    });
+  });
+
+  describe("handleDocumentSearch — lineEnd === -1 branch (no newline after match)", () => {
+    it("handles match at end of text without trailing newline", async () => {
+      const editor = {
+        state: {
+          doc: { textContent: "no newline here" },
+        },
+      };
+      mockGetEditor.mockReturnValue(editor);
+
+      await handleDocumentSearch("req-lineend", { query: "here" });
+
+      const call = mockRespond.mock.calls[0][0];
+      expect(call.success).toBe(true);
+      expect(call.data).toHaveLength(1);
+      expect(call.data[0].text).toBe("no newline here");
+    });
   });
 });

@@ -390,6 +390,100 @@ describe("useHistoryOperations", () => {
     });
   });
 
+  describe("createSnapshot — merge window old snapshot does not exist (branch 12, line 189)", () => {
+    it("pops last snapshot from index even when old file does not exist on disk", async () => {
+      const now = Date.now();
+      const prevSnapshot = {
+        id: "prev-id",
+        timestamp: now - 5000,
+        type: "auto",
+        size: 100,
+        preview: "old",
+      };
+      const index = makeIndex({ snapshots: [prevSnapshot] });
+
+      // Sequence: historyDir exists, index exists, old snapshot file does NOT exist, prune paths
+      mockExists
+        .mockResolvedValueOnce(true)   // historyDir exists
+        .mockResolvedValueOnce(true)   // index file exists (for getHistoryIndex)
+        .mockResolvedValueOnce(false)  // old snapshot file does NOT exist (branch 12 false)
+        .mockResolvedValueOnce(false); // prune: index doesn't exist
+
+      mockReadTextFile.mockResolvedValue(JSON.stringify(index));
+
+      await createSnapshot("/test/doc.md", "new content", "auto", {
+        ...defaultSettings,
+        mergeWindowSeconds: 60,
+      });
+
+      // The old snapshot was NOT on disk, so remove should NOT have been called for it
+      expect(mockRemove).not.toHaveBeenCalled();
+      // But the snapshot should still have been replaced in the index (pop + push new)
+      expect(mockWriteTextFile).toHaveBeenCalled();
+    });
+  });
+
+  describe("pruneSnapshots — snapshot file does not exist during prune (branch 17, line 313)", () => {
+    it("skips remove when snapshot file does not exist on disk", async () => {
+      const now = Date.now();
+      const snapshots = Array.from({ length: 5 }, (_, i) => ({
+        id: `snap-${i}`,
+        timestamp: now - i * 1000,
+        type: "auto" as const,
+        size: 10,
+        preview: "",
+      }));
+      const index = makeIndex({
+        snapshots,
+        settings: { ...defaultSettings, maxSnapshots: 3 },
+      });
+
+      // For getHistoryIndex calls and getDocHistoryDir
+      // exists calls: index file exists(true), then for each of 2 pruned snapshots: file does NOT exist
+      mockExists
+        .mockResolvedValueOnce(true)   // index file exists
+        .mockResolvedValueOnce(false)  // snap-4 does not exist on disk (branch 17 false)
+        .mockResolvedValueOnce(false); // snap-3 does not exist on disk (branch 17 false)
+
+      mockReadTextFile.mockResolvedValue(JSON.stringify(index));
+
+      await pruneSnapshots("/test/doc.md");
+
+      // remove should NOT have been called since files don't exist
+      expect(mockRemove).not.toHaveBeenCalled();
+      // But index should still be saved with only 3 snapshots
+      expect(mockWriteTextFile).toHaveBeenCalled();
+      const writtenIndex = JSON.parse(mockWriteTextFile.mock.calls[0][1]);
+      expect(writtenIndex.snapshots).toHaveLength(3);
+    });
+  });
+
+  describe("pruneSnapshots — individual snapshot deletion error (line 316-318)", () => {
+    it("continues pruning when individual snapshot file deletion throws", async () => {
+      const now = Date.now();
+      const snapshots = Array.from({ length: 4 }, (_, i) => ({
+        id: `snap-${i}`,
+        timestamp: now - i * 1000,
+        type: "auto" as const,
+        size: 10,
+        preview: "",
+      }));
+      const index = makeIndex({
+        snapshots,
+        settings: { ...defaultSettings, maxSnapshots: 2 },
+      });
+
+      mockExists.mockResolvedValue(true); // all paths exist
+      mockReadTextFile.mockResolvedValue(JSON.stringify(index));
+      mockRemove.mockRejectedValue(new Error("permission denied"));
+
+      await pruneSnapshots("/test/doc.md");
+
+      // Despite deletion errors, the index should still be saved
+      expect(mockWriteTextFile).toHaveBeenCalled();
+    });
+  });
+
   describe("createSnapshot — merge window sort (line 179)", () => {
     it("sorts snapshots when merge window is active but last snapshot is outside window", async () => {
       const now = Date.now();

@@ -487,4 +487,84 @@ describe("BlockVideoNodeView", () => {
       expect(mockOpenPopup).not.toHaveBeenCalled();
     });
   });
+
+  describe("cached external video fast-path (lines 121-122)", () => {
+    it("clears loading state when readyState >= 1", () => {
+      mockIsExternalUrl.mockReturnValue(true);
+      const node = createMockNode({ src: "https://example.com/cached.mp4" });
+      nodeView = new BlockVideoNodeView(node, getPos, mockEditor);
+      const video = nodeView.dom.querySelector("video")!;
+      Object.defineProperty(video, "readyState", { value: 1, writable: true });
+
+      vi.clearAllMocks();
+      mockIsExternalUrl.mockReturnValue(true);
+      nodeView.update(createMockNode({ src: "https://example.com/cached2.mp4" }));
+
+      expect(mockClearMediaLoadState).toHaveBeenCalled();
+    });
+  });
+
+  describe("setupLoadHandlers callbacks (lines 152-153)", () => {
+    it("onLoaded callback does not throw", () => {
+      mockIsExternalUrl.mockReturnValue(true);
+      createNodeView({ src: "https://example.com/video.mp4" });
+      const onLoaded = mockAttachMediaLoadHandlers.mock.calls[0][3];
+      expect(() => onLoaded()).not.toThrow();
+    });
+
+    it("onError callback calls showMediaError with correct message", () => {
+      mockIsExternalUrl.mockReturnValue(true);
+      createNodeView({ src: "https://example.com/video.mp4" });
+      const onError = mockAttachMediaLoadHandlers.mock.calls[0]?.[4];
+      expect(onError).toBeDefined();
+      vi.clearAllMocks();
+      onError();
+      expect(mockShowMediaError).toHaveBeenCalledWith(
+        nodeView.dom,
+        expect.any(HTMLVideoElement),
+        expect.any(String),
+        "Failed to load video",
+        expect.any(Object),
+      );
+    });
+  });
+
+  describe("null-coalescing fallback branches", () => {
+    it("handles null src attr", () => {
+      createNodeView({ src: null });
+      expect(mockShowMediaError).toHaveBeenCalledWith(
+        nodeView.dom, expect.any(HTMLVideoElement), "", "No video source", expect.any(Object),
+      );
+    });
+
+    it("handles null title attr", () => {
+      createNodeView({ title: null });
+      const video = nodeView.dom.querySelector("video")!;
+      expect(video.title).toBe("");
+    });
+
+    it("handles null poster attr", () => {
+      createNodeView({ poster: null });
+      const video = nodeView.dom.querySelector("video")!;
+      expect(video.poster).toBe("");
+    });
+
+    it("update handles null attrs", () => {
+      createNodeView();
+      expect(nodeView.update(createMockNode({ title: null, controls: null, preload: null, poster: null }))).toBe(true);
+    });
+  });
+
+  describe("stopEvent click on video element (line 186)", () => {
+    it("returns true for click on video outside controls area", () => {
+      createNodeView();
+      const video = nodeView.dom.querySelector("video")!;
+      video.getBoundingClientRect = vi.fn(() => ({
+        top: 0, left: 0, bottom: 400, right: 600, width: 600, height: 400, x: 0, y: 0, toJSON: () => ({}),
+      }));
+      const event = new MouseEvent("click", { clientY: 100 });
+      Object.defineProperty(event, "target", { value: video });
+      expect(nodeView.stopEvent(event)).toBe(true);
+    });
+  });
 });

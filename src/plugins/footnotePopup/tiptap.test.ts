@@ -1519,4 +1519,123 @@ describe("footnotePopup plugin handler integration", () => {
       expect(result!.doc.childCount).toBeLessThan(newState.doc.childCount);
     });
   });
+
+  describe("checkSelectionForFootnote — NodeSelection on non-footnote node (line 176)", () => {
+    it("does not open popup when NodeSelection is on a non-footnote node", () => {
+      // Create doc with just a paragraph (no footnote reference)
+      const doc = schema.node("doc", null, [
+        p("Text"),
+        fnDef("1", "Def 1"),
+      ]);
+      const state = createState(doc);
+
+      // Find the footnote_definition node position (a non-inline node)
+      let defPos = -1;
+      state.doc.descendants((node, pos) => {
+        if (node.type.name === "footnote_definition") {
+          defPos = pos;
+          return false;
+        }
+        return true;
+      });
+      expect(defPos).toBeGreaterThanOrEqual(0);
+
+      // Create NodeSelection on the footnote_definition (not a footnote_reference)
+      const nodeSelState = state.apply(
+        state.tr.setSelection(NodeSelection.create(state.doc, defPos))
+      );
+
+      const mockEditorView = {
+        state: nodeSelState,
+        dom: document.createElement("div"),
+        nodeDOM: vi.fn(() => null),
+      };
+
+      const viewResult = plugin.spec.view!(mockEditorView as never);
+      vi.clearAllMocks();
+      viewResult.update!({} as never, {} as never);
+
+      // Should not open popup because node is footnote_definition, not footnote_reference
+      expect(mockOpenPopup).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("mouseout — popup matches :hover (line 99)", () => {
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("does not close popup when popup element matches :hover", () => {
+      vi.useFakeTimers();
+
+      // Create a popup element that matches :hover
+      const popupEl = document.createElement("div");
+      popupEl.className = "footnote-popup";
+      // Override matches to return true for :hover
+      popupEl.matches = vi.fn((selector: string) => selector === ":hover");
+      document.body.appendChild(popupEl);
+
+      // Override querySelector to return our popup
+      const origQuerySelector = document.querySelector.bind(document);
+      vi.spyOn(document, "querySelector").mockImplementation((selector: string) => {
+        if (selector === ".footnote-popup") return popupEl;
+        return origQuerySelector(selector);
+      });
+
+      const div = document.createElement("div");
+      const event = new MouseEvent("mouseout");
+      Object.defineProperty(event, "relatedTarget", { value: div });
+
+      const handler = plugin.props.handleDOMEvents!.mouseout!;
+      handler({} as never, event);
+
+      vi.advanceTimersByTime(200);
+      // Should NOT close because popup matches :hover
+      expect(mockClosePopup).not.toHaveBeenCalled();
+
+      document.body.removeChild(popupEl);
+      vi.mocked(document.querySelector).mockRestore();
+    });
+  });
+
+  describe("appendTransaction — schema without footnote types (line 240)", () => {
+    it("returns null when schema has no footnote_reference type", () => {
+      // Create a schema without footnote nodes
+      const plainSchema = new Schema({
+        nodes: {
+          doc: { content: "block+" },
+          paragraph: { group: "block", content: "inline*" },
+          text: { group: "inline" },
+        },
+      });
+
+      const plainDoc = plainSchema.node("doc", null, [
+        plainSchema.node("paragraph", null, [plainSchema.text("hello")])
+      ]);
+      const plainState = EditorState.create({ doc: plainDoc, schema: plainSchema });
+
+      // Create a plugin from the extension
+      const extensionContext = {
+        name: footnotePopupExtension.name,
+        options: footnotePopupExtension.options,
+        storage: footnotePopupExtension.storage,
+        editor: {} as import("@tiptap/core").Editor,
+        type: null,
+        parent: undefined,
+      };
+      const plugins = footnotePopupExtension.config.addProseMirrorPlugins?.call(extensionContext) ?? [];
+      const plainPlugin = plugins[0];
+
+      // Create a doc-changing transaction
+      const tr = plainState.tr.insertText("x", 1);
+
+      const result = plainPlugin.spec.appendTransaction!(
+        [tr],
+        plainState,
+        plainState,
+      );
+      // Should return null because schema has no footnote_reference / footnote_definition
+      expect(result).toBeNull();
+    });
+  });
 });

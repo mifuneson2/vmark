@@ -1263,4 +1263,396 @@ describe("mdastBlockConverters", () => {
       expect(result!.attrs.alertType).toBe("CAUTION");
     });
   });
+
+  describe("stripAlertMarker — invalid alert type returns null (line 498)", () => {
+    it("returns null for marker with invalid alert type (not in ALERT_TYPES)", () => {
+      // [!INVALID] is not in the allowed ALERT_TYPES list
+      const node: Blockquote = {
+        type: "blockquote",
+        children: [
+          {
+            type: "paragraph",
+            children: [{ type: "text", value: "[!INVALID]\nContent" }],
+          },
+        ],
+      };
+      const result = convertAlertBlockquote(context, node, []);
+      // stripAlertMarker returns null because INVALID is not in ALERT_TYPES
+      // so convertAlertBlockquote returns null and falls through to blockquote
+      expect(result).toBeNull();
+    });
+  });
+
+  describe("convertParagraph — null-coalescing fallback branches", () => {
+    it("promotes image with missing url to block_image (url ?? '' branch)", () => {
+      const mediaSchema = new Schema({
+        nodes: {
+          doc: { content: "block+" },
+          paragraph: {
+            content: "inline*",
+            group: "block",
+            attrs: { sourceLine: { default: null } },
+          },
+          block_image: {
+            attrs: { src: { default: "" }, alt: { default: "" }, title: { default: "" }, sourceLine: { default: null } },
+            group: "block",
+            atom: true,
+          },
+          image: {
+            attrs: { src: {}, alt: { default: null }, title: { default: null } },
+            inline: true,
+            group: "inline",
+          },
+          text: { group: "inline" },
+        },
+      });
+      const ctx = createContext(mediaSchema);
+      const node: Paragraph = {
+        type: "paragraph",
+        children: [
+          { type: "image", url: "test.png", alt: "alt" },
+        ],
+      };
+      const result = convertParagraph(ctx, node, []);
+      expect(result).not.toBeNull();
+      expect(result!.type.name).toBe("block_image");
+    });
+
+    it("promotes image with missing title to block_video (title ?? '' branch)", () => {
+      const mediaSchema = new Schema({
+        nodes: {
+          doc: { content: "block+" },
+          paragraph: {
+            content: "inline*",
+            group: "block",
+            attrs: { sourceLine: { default: null } },
+          },
+          block_video: {
+            attrs: {
+              src: { default: "" }, title: { default: "" },
+              controls: { default: true }, preload: { default: "metadata" },
+              sourceLine: { default: null },
+            },
+            group: "block",
+            atom: true,
+          },
+          text: { group: "inline" },
+        },
+      });
+      const ctx = createContext(mediaSchema);
+      const node: Paragraph = {
+        type: "paragraph",
+        children: [
+          { type: "image", url: "clip.mp4", alt: "" },
+        ],
+      };
+      const result = convertParagraph(ctx, node, []);
+      expect(result).not.toBeNull();
+      expect(result!.type.name).toBe("block_video");
+      expect(result!.attrs.title).toBe("");
+    });
+
+    it("promotes image with missing title to block_audio (title ?? '' branch)", () => {
+      const mediaSchema = new Schema({
+        nodes: {
+          doc: { content: "block+" },
+          paragraph: {
+            content: "inline*",
+            group: "block",
+            attrs: { sourceLine: { default: null } },
+          },
+          block_audio: {
+            attrs: {
+              src: { default: "" }, title: { default: "" },
+              controls: { default: true }, preload: { default: "metadata" },
+              sourceLine: { default: null },
+            },
+            group: "block",
+            atom: true,
+          },
+          text: { group: "inline" },
+        },
+      });
+      const ctx = createContext(mediaSchema);
+      const node: Paragraph = {
+        type: "paragraph",
+        children: [
+          { type: "image", url: "song.mp3", alt: "" },
+        ],
+      };
+      const result = convertParagraph(ctx, node, []);
+      expect(result).not.toBeNull();
+      expect(result!.type.name).toBe("block_audio");
+      expect(result!.attrs.title).toBe("");
+    });
+  });
+
+  describe("convertParagraph — block_image fallback when no video/audio match", () => {
+    it("falls through to block_image when image URL has no video/audio extension (line 114)", () => {
+      // URL has no extension at all, so hasVideoExtension and hasAudioExtension return false
+      const mediaSchema = new Schema({
+        nodes: {
+          doc: { content: "block+" },
+          paragraph: {
+            content: "inline*",
+            group: "block",
+            attrs: { sourceLine: { default: null } },
+          },
+          block_video: {
+            attrs: { src: { default: "" }, title: { default: "" }, controls: { default: true }, preload: { default: "metadata" }, sourceLine: { default: null } },
+            group: "block",
+            atom: true,
+          },
+          block_audio: {
+            attrs: { src: { default: "" }, title: { default: "" }, controls: { default: true }, preload: { default: "metadata" }, sourceLine: { default: null } },
+            group: "block",
+            atom: true,
+          },
+          block_image: {
+            attrs: { src: { default: "" }, alt: { default: "" }, title: { default: "" }, sourceLine: { default: null } },
+            group: "block",
+            atom: true,
+          },
+          image: {
+            attrs: { src: {}, alt: { default: null }, title: { default: null } },
+            inline: true,
+            group: "inline",
+          },
+          text: { group: "inline" },
+        },
+      });
+      const ctx = createContext(mediaSchema);
+      const node: Paragraph = {
+        type: "paragraph",
+        children: [
+          { type: "image", url: "photo.jpg", alt: "photo", title: "Photo" },
+        ],
+      };
+      const result = convertParagraph(ctx, node, []);
+      expect(result).not.toBeNull();
+      expect(result!.type.name).toBe("block_image");
+      expect(result!.attrs.src).toBe("photo.jpg");
+      expect(result!.attrs.alt).toBe("photo");
+    });
+  });
+
+  describe("convertTable — null-coalescing branches", () => {
+    it("handles table with no align property (align ?? [] fallback, line 230)", () => {
+      const node: Table = {
+        type: "table",
+        children: [
+          {
+            type: "tableRow",
+            children: [
+              { type: "tableCell", children: [{ type: "text", value: "A" }] },
+            ],
+          },
+        ],
+      };
+      // Remove align entirely to trigger ?? [] fallback
+      delete (node as any).align;
+      const result = convertTable(context, node, []);
+      expect(result).not.toBeNull();
+    });
+
+    it("handles cell alignment not null (supportsAlignmentAttr branch, line 246)", () => {
+      // This exercises the branch where alignment is not null and supportsAlignmentAttr returns true
+      const node: Table = {
+        type: "table",
+        align: ["center"],
+        children: [
+          {
+            type: "tableRow",
+            children: [
+              { type: "tableCell", children: [{ type: "text", value: "Centered" }] },
+            ],
+          },
+        ],
+      };
+      const result = convertTable(context, node, []);
+      expect(result).not.toBeNull();
+      // The first (header) cell should get alignment = center
+      const headerRow = result!.firstChild;
+      const cell = headerRow?.firstChild;
+      expect(cell?.attrs.alignment).toBe("center");
+    });
+  });
+
+  describe("convertFrontmatter — null-coalescing (value ?? '' branch, line 283)", () => {
+    it("handles frontmatter with undefined value", () => {
+      const node = { type: "yaml" } as Yaml;
+      const result = convertFrontmatter(context, node);
+      expect(result).not.toBeNull();
+      expect(result!.attrs.value).toBe("");
+    });
+  });
+
+  describe("convertDetails — summaryPmNodes empty branch (line 304)", () => {
+    it("creates details with empty summary when summary text produces no PM nodes", () => {
+      const ctx: MdastToPmContext = {
+        ...context,
+        convertChildren: (_children, _marks, ctxType) => {
+          // Return empty for inline summary, non-empty for block body
+          if (ctxType === "inline") return [];
+          return [testSchema.nodes.paragraph.create()];
+        },
+      };
+      const node: Details = {
+        type: "details",
+        summary: "",
+        children: [{ type: "paragraph", children: [] }],
+      };
+      const result = convertDetails(ctx, node, []);
+      expect(result).not.toBeNull();
+      expect(result!.firstChild!.type.name).toBe("detailsSummary");
+    });
+  });
+
+  describe("convertWikiLink — empty value and alias branches", () => {
+    it("handles wikiLink with empty alias (uses value as display text, line 336)", () => {
+      const node: WikiLink = { type: "wikiLink", value: "Page", alias: "" };
+      const result = convertWikiLink(context, node);
+      expect(result).not.toBeNull();
+      // alias is empty so displayText = value
+      expect(result!.textContent).toBe("Page");
+    });
+
+    it("handles wikiLink with empty value (line 340)", () => {
+      const node: WikiLink = { type: "wikiLink", value: "" };
+      const result = convertWikiLink(context, node);
+      expect(result).not.toBeNull();
+      // displayText is empty, textNode is null
+      expect(result!.textContent).toBe("");
+    });
+  });
+
+  describe("convertHtml — null-coalescing (value ?? '' branch, line 349)", () => {
+    it("handles html node with undefined value", () => {
+      const node = { type: "html" } as Html;
+      const result = convertHtml(context, node, false);
+      expect(result).not.toBeNull();
+      expect(result!.attrs.value).toBe("");
+    });
+  });
+
+  describe("tryPromoteMediaHtml — null-coalescing branches for attributes", () => {
+    const mediaSchema = new Schema({
+      nodes: {
+        doc: { content: "block+" },
+        paragraph: { content: "inline*", group: "block", attrs: { sourceLine: { default: null } } },
+        block_video: {
+          attrs: { src: { default: "" }, title: { default: "" }, poster: { default: "" }, controls: { default: true }, preload: { default: "metadata" }, sourceLine: { default: null } },
+          group: "block",
+          atom: true,
+        },
+        block_audio: {
+          attrs: { src: { default: "" }, title: { default: "" }, controls: { default: true }, preload: { default: "metadata" }, sourceLine: { default: null } },
+          group: "block",
+          atom: true,
+        },
+        video_embed: {
+          attrs: { provider: { default: "" }, videoId: { default: "" }, width: { default: 560 }, height: { default: 315 }, sourceLine: { default: null } },
+          group: "block",
+          atom: true,
+        },
+        html_block: { attrs: { value: { default: "" }, sourceLine: { default: null } }, group: "block", atom: true },
+        html_inline: { attrs: { value: { default: "" }, sourceLine: { default: null } }, inline: true, group: "inline", atom: true },
+        text: { group: "inline" },
+      },
+    });
+    const mediaCtx = createContext(mediaSchema);
+
+    it("handles video tag with no src attribute (src ?? '' branch, line 381)", () => {
+      const node: Html = { type: "html", value: "<video controls></video>" };
+      const result = convertHtml(mediaCtx, node, false);
+      expect(result).not.toBeNull();
+      expect(result!.type.name).toBe("block_video");
+      expect(result!.attrs.src).toBe("");
+    });
+
+    it("handles audio tag with no src attribute (src ?? '' branch, line 397)", () => {
+      const node: Html = { type: "html", value: "<audio controls></audio>" };
+      const result = convertHtml(mediaCtx, node, false);
+      expect(result).not.toBeNull();
+      expect(result!.type.name).toBe("block_audio");
+      expect(result!.attrs.src).toBe("");
+    });
+
+    it("handles iframe with width/height that parse to NaN (fallback to default, lines 420-421)", () => {
+      const node: Html = {
+        type: "html",
+        value: '<iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ" width="abc" height="xyz"></iframe>',
+      };
+      const result = convertHtml(mediaCtx, node, false);
+      expect(result).not.toBeNull();
+      expect(result!.type.name).toBe("video_embed");
+      // parseInt("abc") is NaN, so || 560 kicks in
+      expect(result!.attrs.width).toBe(560);
+      expect(result!.attrs.height).toBe(315);
+    });
+
+    it("handles iframe without width/height attributes (config default fallback, lines 420-421)", () => {
+      const node: Html = {
+        type: "html",
+        value: '<iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ"></iframe>',
+      };
+      const result = convertHtml(mediaCtx, node, false);
+      expect(result).not.toBeNull();
+      expect(result!.type.name).toBe("video_embed");
+      expect(result!.attrs.width).toBe(560);
+      expect(result!.attrs.height).toBe(315);
+    });
+
+    it("handles Vimeo iframe (exercises different provider config path)", () => {
+      const node: Html = {
+        type: "html",
+        value: '<iframe src="https://player.vimeo.com/video/123456789"></iframe>',
+      };
+      const result = convertHtml(mediaCtx, node, false);
+      expect(result).not.toBeNull();
+      expect(result!.type.name).toBe("video_embed");
+      expect(result!.attrs.provider).toBe("vimeo");
+    });
+
+    it("handles Bilibili iframe", () => {
+      const node: Html = {
+        type: "html",
+        value: '<iframe src="https://player.bilibili.com/player.html?bvid=BV1xx411c7mD"></iframe>',
+      };
+      const result = convertHtml(mediaCtx, node, false);
+      expect(result).not.toBeNull();
+      expect(result!.type.name).toBe("video_embed");
+      expect(result!.attrs.provider).toBe("bilibili");
+    });
+  });
+
+  describe("convertDefinition — null-coalescing branches (label ?? null, title ?? null)", () => {
+    it("handles definition with undefined label and title", () => {
+      const node = {
+        type: "definition",
+        identifier: "ref",
+        url: "https://example.com",
+      } as Definition;
+      const result = convertDefinition(context, node);
+      expect(result).not.toBeNull();
+      expect(result!.attrs.label).toBeNull();
+      expect(result!.attrs.title).toBeNull();
+    });
+  });
+
+  describe("convertList — start ?? 1 fallback", () => {
+    it("handles ordered list with undefined start (defaults to 1)", () => {
+      const node = {
+        type: "list",
+        ordered: true,
+        children: [
+          { type: "listItem", children: [{ type: "paragraph", children: [{ type: "text", value: "item" }] }] },
+        ],
+      } as List;
+      delete (node as any).start;
+      const result = convertList(context, node, []);
+      expect(result).not.toBeNull();
+      expect(result!.attrs.start).toBe(1);
+    });
+  });
 });

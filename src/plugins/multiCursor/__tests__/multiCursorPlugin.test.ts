@@ -740,4 +740,162 @@ describe("multiCursorPlugin", () => {
       expect(decorations).toBeDefined();
     });
   });
+
+  describe("view() lifecycle — syncClass, update, destroy", () => {
+    it("adds and removes multi-cursor-active class on the DOM element", () => {
+      // The view() hook manages a CSS class on editorView.dom.
+      // We simulate by calling the view() method returned by the plugin spec.
+      const state = createState("hello world");
+      const plugin = state.plugins[0];
+      const spec = (plugin as never as { spec: { view: (v: unknown) => { update: (v: unknown) => void; destroy: () => void } } }).spec;
+
+      const dom = document.createElement("div");
+      const fakeView = { state, dom };
+
+      const viewReturn = spec.view(fakeView);
+
+      // On init: state has TextSelection, so multi-cursor-active should NOT be set
+      expect(dom.classList.contains("multi-cursor-active")).toBe(false);
+
+      // On update with MultiSelection state
+      const multiState = createMultiCursorState("hello world", [
+        { from: 1, to: 1 },
+        { from: 7, to: 7 },
+      ]);
+      viewReturn.update({ state: multiState });
+      expect(dom.classList.contains("multi-cursor-active")).toBe(true);
+
+      // On update back to single selection
+      viewReturn.update({ state });
+      expect(dom.classList.contains("multi-cursor-active")).toBe(false);
+
+      // On destroy
+      // First set it active again
+      viewReturn.update({ state: multiState });
+      expect(dom.classList.contains("multi-cursor-active")).toBe(true);
+      viewReturn.destroy();
+      expect(dom.classList.contains("multi-cursor-active")).toBe(false);
+    });
+  });
+
+  describe("handlePaste — edge cases", () => {
+    it("returns false when clipboard text is empty", () => {
+      const state = createMultiCursorState("hello world", [
+        { from: 1, to: 1 },
+        { from: 7, to: 7 },
+      ]);
+      const plugin = state.plugins[0];
+      const dispatch = vi.fn();
+      const mockView = { state, dispatch } as never;
+
+      // clipboardData.getData returns empty string
+      const event = {
+        clipboardData: { getData: () => "" },
+        preventDefault: vi.fn(),
+      } as unknown as ClipboardEvent;
+
+      const result = plugin.props.handlePaste!(mockView, event, {} as never);
+      expect(result).toBe(false);
+      expect(dispatch).not.toHaveBeenCalled();
+    });
+
+    it("returns false when clipboardData is null", () => {
+      const state = createMultiCursorState("hello world", [
+        { from: 1, to: 1 },
+        { from: 7, to: 7 },
+      ]);
+      const plugin = state.plugins[0];
+      const dispatch = vi.fn();
+      const mockView = { state, dispatch } as never;
+
+      // clipboardData is null — getData falls back to ""
+      const event = {
+        clipboardData: null,
+        preventDefault: vi.fn(),
+      } as unknown as ClipboardEvent;
+
+      const result = plugin.props.handlePaste!(mockView, event, {} as never);
+      expect(result).toBe(false);
+    });
+  });
+
+  describe("copy — edge cases", () => {
+    it("returns false for single collapsed MultiSelection (empty clipboard text)", () => {
+      // A MultiSelection with exactly 1 collapsed range returns "" from getTextContent
+      const state = createState("hello world");
+      const doc = state.doc;
+      const $pos = doc.resolve(1);
+      const range = new SelectionRange($pos, $pos);
+      const multiSel = new MultiSelection([range], 0);
+      const singleMultiState = state.apply(state.tr.setSelection(multiSel));
+
+      const plugin = singleMultiState.plugins[0];
+      const domEvents = plugin.props.handleDOMEvents;
+      const mockView = { state: singleMultiState, dispatch: vi.fn() } as never;
+
+      const setData = vi.fn();
+      const event = {
+        clipboardData: { setData },
+        preventDefault: vi.fn(),
+      } as unknown as ClipboardEvent;
+
+      const result = domEvents!.copy!(mockView, event);
+      // getTextContent for 1 collapsed cursor = "" → !text is true → returns false
+      expect(result).toBe(false);
+      expect(event.preventDefault).not.toHaveBeenCalled();
+      expect(setData).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("cut — edge cases", () => {
+    it("returns false for MultiSelection with all collapsed cursors (no text to cut)", () => {
+      // All cursors collapsed → handleMultiCursorCut returns null (hasNonEmptyRange is false)
+      const state = createMultiCursorState("hello world", [
+        { from: 1, to: 1 },
+        { from: 7, to: 7 },
+      ]);
+      const plugin = state.plugins[0];
+      const domEvents = plugin.props.handleDOMEvents;
+      const dispatch = vi.fn();
+      const mockView = { state, dispatch } as never;
+
+      const setData = vi.fn();
+      const event = {
+        clipboardData: { setData },
+        preventDefault: vi.fn(),
+      } as unknown as ClipboardEvent;
+
+      const result = domEvents!.cut!(mockView, event);
+      // handleMultiCursorCut returns null for all-collapsed → result is false
+      expect(result).toBe(false);
+      expect(dispatch).not.toHaveBeenCalled();
+    });
+
+    it("still sets clipboard data even when cut tr is null", () => {
+      // 2 collapsed cursors: getTextContent returns "\n" (truthy),
+      // but handleMultiCursorCut returns null (no non-empty ranges)
+      // So text is set via setData, but tr is null → returns false
+      const state = createMultiCursorState("hello world", [
+        { from: 1, to: 1 },
+        { from: 7, to: 7 },
+      ]);
+      const plugin = state.plugins[0];
+      const domEvents = plugin.props.handleDOMEvents;
+      const dispatch = vi.fn();
+      const mockView = { state, dispatch } as never;
+
+      const setData = vi.fn();
+      const event = {
+        clipboardData: { setData },
+        preventDefault: vi.fn(),
+      } as unknown as ClipboardEvent;
+
+      const result = domEvents!.cut!(mockView, event);
+      // text = "\n" (truthy for 2 collapsed ranges) → setData is called
+      // handleMultiCursorCut returns null → returns false
+      expect(setData).toHaveBeenCalledWith("text/plain", "\n");
+      expect(result).toBe(false);
+      expect(dispatch).not.toHaveBeenCalled();
+    });
+  });
 });

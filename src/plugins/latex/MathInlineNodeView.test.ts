@@ -451,3 +451,136 @@ describe("MathInlineNodeView — handleClassChange", () => {
     expect(() => handleClassChange.call(nodeView)).not.toThrow();
   });
 });
+
+describe("MathInlineNodeView — enterEditMode already editing guard (line 118)", () => {
+  it("enterEditMode returns early when already editing", () => {
+    const doc = schema.node("doc", null, [schema.node("math_inline", { content: "x^2" })]);
+    const state = EditorState.create({ schema, doc });
+    const view = createMockView(state);
+    const nodeView = new MathInlineNodeView(createMockNode("x^2"), view, () => 0);
+
+    // Set isEditing to true manually
+    (nodeView as unknown as { isEditing: boolean }).isEditing = true;
+
+    // Calling enterEditMode again should return early (line 118)
+    const enterEditMode = (nodeView as unknown as { enterEditMode: () => void }).enterEditMode;
+    mathEditingStoreState.startEditing.mockClear();
+    enterEditMode.call(nodeView);
+
+    // startEditing should NOT be called since we returned early
+    expect(mathEditingStoreState.startEditing).not.toHaveBeenCalled();
+  });
+});
+
+describe("MathInlineNodeView — enterEditMode exitingLeft/Right guard (line 120)", () => {
+  it("enterEditMode returns early when exitingLeft is true", () => {
+    const doc = schema.node("doc", null, [schema.node("math_inline", { content: "x^2" })]);
+    const state = EditorState.create({ schema, doc });
+    const view = createMockView(state);
+    const nodeView = new MathInlineNodeView(createMockNode("x^2"), view, () => 0);
+
+    // Set exitingLeft flag
+    (nodeView as unknown as { exitingLeft: boolean }).exitingLeft = true;
+
+    const enterEditMode = (nodeView as unknown as { enterEditMode: () => void }).enterEditMode;
+    mathEditingStoreState.startEditing.mockClear();
+    enterEditMode.call(nodeView);
+
+    expect(mathEditingStoreState.startEditing).not.toHaveBeenCalled();
+  });
+
+  it("enterEditMode returns early when exitingRight is true", () => {
+    const doc = schema.node("doc", null, [schema.node("math_inline", { content: "x^2" })]);
+    const state = EditorState.create({ schema, doc });
+    const view = createMockView(state);
+    const nodeView = new MathInlineNodeView(createMockNode("x^2"), view, () => 0);
+
+    // Set exitingRight flag
+    (nodeView as unknown as { exitingRight: boolean }).exitingRight = true;
+
+    const enterEditMode = (nodeView as unknown as { enterEditMode: () => void }).enterEditMode;
+    mathEditingStoreState.startEditing.mockClear();
+    enterEditMode.call(nodeView);
+
+    expect(mathEditingStoreState.startEditing).not.toHaveBeenCalled();
+  });
+});
+
+describe("MathInlineNodeView — enterEditMode getPos undefined guard (line 122–123)", () => {
+  it("enterEditMode returns early when getPos returns undefined", () => {
+    const view = createMockView();
+    const nodeView = new MathInlineNodeView(createMockNode("x^2"), view, () => undefined);
+
+    const enterEditMode = (nodeView as unknown as { enterEditMode: () => void }).enterEditMode;
+    mathEditingStoreState.startEditing.mockClear();
+    enterEditMode.call(nodeView);
+
+    expect(mathEditingStoreState.startEditing).not.toHaveBeenCalled();
+  });
+});
+
+describe("MathInlineNodeView — exitEditMode not editing guard (line 186)", () => {
+  it("exitEditMode returns early when not editing", () => {
+    const view = createMockView();
+    const nodeView = new MathInlineNodeView(createMockNode(), view, () => 0);
+
+    // isEditing is false by default
+    const exitEditMode = (nodeView as unknown as { exitEditMode: () => void }).exitEditMode;
+    mathEditingStoreState.stopEditing.mockClear();
+    exitEditMode.call(nodeView);
+
+    // stopEditing should NOT be called since isEditing is false
+    expect(mathEditingStoreState.stopEditing).not.toHaveBeenCalled();
+  });
+});
+
+describe("MathInlineNodeView — unwrapToText empty content (line 327 fallback)", () => {
+  it("unwrapToText replaces math node with empty fragment when content is empty", () => {
+    const doc = schema.node("doc", null, [schema.node("math_inline", { content: "" })]);
+    const state = EditorState.create({ schema, doc });
+    const view = createMockView(state);
+    const nodeView = new MathInlineNodeView(createMockNode(""), view, () => 0);
+
+    // Ensure inputDom is null (not editing) → unwrapToText uses currentLatex ("")
+    const unwrapToText = (nodeView as unknown as { unwrapToText: () => void }).unwrapToText;
+    unwrapToText.call(nodeView);
+
+    // dispatch should be called — replaces math node with empty content (line 337)
+    expect(view.dispatch).toHaveBeenCalled();
+  });
+});
+
+describe("MathInlineNodeView — stopEvent branches", () => {
+  it("stopEvent returns true for all events when editing", () => {
+    const view = createMockView();
+    const nodeView = new MathInlineNodeView(createMockNode(), view, () => 0);
+    (nodeView as unknown as { isEditing: boolean }).isEditing = true;
+
+    const event = new Event("keydown");
+    expect(nodeView.stopEvent(event)).toBe(true);
+  });
+
+  it("stopEvent returns true for mousedown when not editing", () => {
+    const view = createMockView();
+    const nodeView = new MathInlineNodeView(createMockNode(), view, () => 0);
+
+    const event = new MouseEvent("mousedown");
+    expect(nodeView.stopEvent(event)).toBe(true);
+  });
+
+  it("stopEvent returns false for non-mouse events when not editing", () => {
+    const view = createMockView();
+    const nodeView = new MathInlineNodeView(createMockNode(), view, () => 0);
+
+    const event = new Event("keydown");
+    expect(nodeView.stopEvent(event)).toBe(false);
+  });
+});
+
+describe("MathInlineNodeView — ignoreMutation", () => {
+  it("always returns true", () => {
+    const view = createMockView();
+    const nodeView = new MathInlineNodeView(createMockNode(), view, () => 0);
+    expect(nodeView.ignoreMutation()).toBe(true);
+  });
+});

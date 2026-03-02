@@ -416,6 +416,50 @@ describe("quotePairing", () => {
     });
   });
 
+  describe("isApostrophe — non-quote char returns false (line 88)", () => {
+    test("double quote character is never treated as apostrophe", () => {
+      // Double quote between letters: a"b — isApostrophe returns false for '"'
+      const tokens = tokenizeQuotes('a"b');
+      const dblQuote = tokens.find(t => t.type === "double");
+      expect(dblQuote).toBeDefined();
+      expect(dblQuote!.role).not.toBe("apostrophe");
+    });
+  });
+
+  describe("possessive — afterS check branches (lines 100-105)", () => {
+    test("letter+apostrophe+s followed by letter is NOT possessive (falls to contraction)", () => {
+      // "it'stuff" — t + ' + s, afterS='t' (a letter) → possessive fails
+      // But letter+'+letter (t+'+s) triggers isApostrophe at line 95 first
+      const tokens = tokenizeQuotes("it'stuff");
+      // First check: before='t' (letter), after='s' (letter) → line 95 returns true
+      expect(tokens[0].role).toBe("apostrophe");
+    });
+
+    test("possessive with afterS as empty (end of string, line 102 false branch)", () => {
+      // "cat's" — at end, pos+2 >= length → afterS="" → possessive ✓
+      const tokens = tokenizeQuotes("cat's");
+      expect(tokens[0].role).toBe("apostrophe");
+    });
+
+    test("possessive where afterS is a non-letter (space)", () => {
+      // "dog's tail" — s followed by space → possessive ✓
+      const tokens = tokenizeQuotes("dog's tail");
+      const apostrophes = tokens.filter(t => t.role === "apostrophe");
+      expect(apostrophes).toHaveLength(1);
+    });
+  });
+
+  describe("classifyQuote — stack close with empty stack default (line 118/222)", () => {
+    test("quote with no contextual signals and empty stack defaults to open", () => {
+      // Place a quote between two non-whitespace, non-bracket, non-punctuation chars
+      // with an empty stack → default to "open"
+      const tokens = tokenizeQuotes('x"y');
+      const qt = tokens.find(t => t.type === "double" && (t.role === "open" || t.role === "close"));
+      expect(qt).toBeDefined();
+      expect(qt!.role).toBe("open");
+    });
+  });
+
   describe("tokenizeQuotes — apostrophe edge cases", () => {
     // line 88: char is not ' or curly single → return false from isApostrophe
     // (These exercise the `if (char !== ...)` guard that returns false for non-apostrophe chars)

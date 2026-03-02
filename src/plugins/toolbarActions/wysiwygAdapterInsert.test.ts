@@ -1203,6 +1203,210 @@ describe("handleInsertImage — error handling", () => {
   });
 });
 
+describe("insertInlineMath — unwrap NodeSelection math_inline with empty content (line 262)", () => {
+  it("uses empty array when NodeSelection math_inline has empty content", () => {
+    const mockNode = {
+      type: { name: "math_inline" },
+      attrs: { content: "" },
+      nodeSize: 3,
+    };
+    const resolvedPos = { pos: 5 };
+    const mockTr = {
+      replaceWith: vi.fn().mockReturnThis(),
+      setSelection: vi.fn().mockReturnThis(),
+      doc: { resolve: vi.fn(() => resolvedPos) },
+    };
+    const mockSelection = Object.create(NodeSelection.prototype);
+    Object.defineProperties(mockSelection, {
+      from: { get: () => 5, configurable: true },
+      to: { get: () => 8, configurable: true },
+      $from: { get: () => ({ nodeAfter: null, nodeBefore: null }), configurable: true },
+      node: { get: () => mockNode, configurable: true },
+    });
+
+    const mockView = {
+      state: {
+        selection: mockSelection,
+        doc: { textBetween: vi.fn(() => "") },
+        schema: {
+          nodes: { math_inline: { create: vi.fn() } },
+          text: vi.fn((t: string) => ({ text: t })),
+        },
+        tr: mockTr,
+      },
+      dispatch: vi.fn(),
+      focus: vi.fn(),
+      dom: { querySelector: vi.fn() },
+    };
+
+    const nearSpy = vi.spyOn(Selection, "near").mockReturnValue({} as never);
+
+    const context = createBaseContext({ view: mockView as never });
+    const result = insertInlineMath(context);
+
+    expect(result).toBe(true);
+    // content is "" so replaceWith should receive empty array (line 262 ternary false branch)
+    expect(mockTr.replaceWith).toHaveBeenCalledWith(5, 8, []);
+    nearSpy.mockRestore();
+  });
+});
+
+describe("insertInlineMath — unwrap nodeBefore math_inline with empty content (line 295)", () => {
+  it("uses empty array when nodeBefore math_inline has empty content", () => {
+    const mathNode = {
+      type: { name: "math_inline" },
+      attrs: { content: "" },
+      nodeSize: 3,
+    };
+    const resolvedPos = { pos: 5 };
+    const mockTr = {
+      replaceWith: vi.fn().mockReturnThis(),
+      setSelection: vi.fn().mockReturnThis(),
+      doc: { resolve: vi.fn(() => resolvedPos) },
+    };
+
+    const mockView = {
+      state: {
+        selection: {
+          from: 8,
+          to: 8,
+          $from: { nodeAfter: null, nodeBefore: mathNode },
+        },
+        doc: { textBetween: vi.fn(() => "") },
+        schema: {
+          nodes: { math_inline: { create: vi.fn() } },
+          text: vi.fn((t: string) => ({ text: t })),
+        },
+        tr: mockTr,
+      },
+      dispatch: vi.fn(),
+      focus: vi.fn(),
+      dom: { querySelector: vi.fn() },
+    };
+
+    const nearSpy = vi.spyOn(Selection, "near").mockReturnValue({} as never);
+
+    const context = createBaseContext({ view: mockView as never });
+    const result = insertInlineMath(context);
+
+    expect(result).toBe(true);
+    // content is "" so line 295 ternary → empty array
+    expect(mockTr.replaceWith).toHaveBeenCalledWith(5, 8, []);
+    nearSpy.mockRestore();
+  });
+});
+
+describe("handleInsertImage — image type missing in schema (line 36)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(withReentryGuard).mockImplementation((_label, _guard, fn) => fn());
+    vi.mocked(isViewConnected).mockReturnValue(true);
+    vi.mocked(getActiveFilePath).mockReturnValue("/path/to/doc.md");
+  });
+
+  it("returns early when image node type is missing from schema", async () => {
+    vi.mocked(readClipboardImagePath).mockResolvedValue({
+      isImage: true,
+      validated: true,
+      path: "https://example.com/img.png",
+      needsCopy: false,
+    } as never);
+
+    const mockTr = { replaceWith: vi.fn().mockReturnThis() };
+    const mockView = {
+      state: {
+        selection: { from: 0, to: 0, $from: { nodeAfter: null, nodeBefore: null } },
+        doc: { textBetween: vi.fn(() => "") },
+        // No image type in schema
+        schema: { nodes: {}, text: vi.fn() },
+        tr: mockTr,
+      },
+      dispatch: vi.fn(),
+      focus: vi.fn(),
+      dom: { isConnected: true },
+    };
+    const context = createBaseContext({ view: mockView as never });
+
+    handleInsertImage(context);
+
+    // trySmartImageInsertion calls insertImageWithAlt which checks for imageType
+    // When imageType is falsy, it returns early without dispatching
+    await new Promise((r) => setTimeout(r, 20));
+    expect(mockView.dispatch).not.toHaveBeenCalled();
+  });
+});
+
+describe("handleInsertImage — file picker view disconnect (line 151)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(withReentryGuard).mockImplementation((_label, _guard, fn) => fn());
+    vi.mocked(getActiveFilePath).mockReturnValue("/path/to/doc.md");
+  });
+
+  it("does not insert when view disconnects after file picker copy", async () => {
+    vi.mocked(readClipboardImagePath).mockResolvedValue(null);
+    vi.mocked(open).mockResolvedValue("/Users/test/photo.png" as never);
+    vi.mocked(copyImageToAssets).mockResolvedValue("assets/photo.png");
+    vi.mocked(isViewConnected).mockReturnValue(false);
+
+    const mockView = {
+      state: {
+        selection: { from: 0, to: 0, $from: { nodeAfter: null, nodeBefore: null } },
+        doc: { textBetween: vi.fn(() => "") },
+        schema: { nodes: { image: { create: vi.fn() } } },
+      },
+      dispatch: vi.fn(),
+      focus: vi.fn(),
+      dom: { isConnected: false },
+    };
+    const context = createBaseContext({ view: mockView as never });
+
+    handleInsertImage(context);
+
+    await new Promise((r) => setTimeout(r, 20));
+    expect(insertBlockImageNode).not.toHaveBeenCalled();
+  });
+});
+
+describe("handleInsertVideo/Audio — error with non-Error throw (line 170/391/431)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(isViewConnected).mockReturnValue(true);
+  });
+
+  it("handles non-Error throw in video insertion", async () => {
+    vi.mocked(withReentryGuard).mockRejectedValue("string video error");
+
+    const mockView = { dom: { isConnected: true } };
+    const context = createBaseContext({ view: mockView as never });
+
+    handleInsertVideo(context);
+
+    await vi.waitFor(() => {
+      expect(wysiwygAdapterWarn).toHaveBeenCalledWith(
+        "Video insertion failed:",
+        "string video error"
+      );
+    });
+  });
+
+  it("handles non-Error throw in audio insertion", async () => {
+    vi.mocked(withReentryGuard).mockRejectedValue("string audio error");
+
+    const mockView = { dom: { isConnected: true } };
+    const context = createBaseContext({ view: mockView as never });
+
+    handleInsertAudio(context);
+
+    await vi.waitFor(() => {
+      expect(wysiwygAdapterWarn).toHaveBeenCalledWith(
+        "Audio insertion failed:",
+        "string audio error"
+      );
+    });
+  });
+});
+
 describe("insertInlineMath — focusMathInput with real mathInput (lines 308-310)", () => {
   let originalRAF: typeof requestAnimationFrame;
 

@@ -739,4 +739,37 @@ describe("SourceEditor", () => {
       document.body.removeChild(editorContent);
     });
   });
+
+  describe("getCursorInfo callback (line 260)", () => {
+    it("passes getCursorInfo lambda that returns cursorInfoRef.current", async () => {
+      const mod = await import("@/hooks/useSourceEditorSync");
+      const cursorVal = { line: 10, ch: 5 };
+      const docMod = await import("@/hooks/useDocumentState");
+      (docMod.useDocumentCursorInfo as ReturnType<typeof vi.fn>).mockReturnValue(cursorVal);
+
+      render(<SourceEditor />);
+
+      const syncCall = (mod.useSourceEditorSync as ReturnType<typeof vi.fn>).mock.calls[0][0];
+      expect(syncCall.getCursorInfo).toBeInstanceOf(Function);
+      expect(syncCall.getCursorInfo()).toEqual(cursorVal);
+    });
+  });
+
+  describe("isInternalChange RAF callback (line 116)", () => {
+    it("resets isInternalChange via requestAnimationFrame after doc change", () => {
+      render(<SourceEditor />);
+      expect(capturedUpdateListener).toBeInstanceOf(Function);
+
+      capturedUpdateListener!({
+        docChanged: true,
+        selectionSet: false,
+        state: { doc: { toString: () => "changed content" } },
+        view: mockEditorViewInstance,
+      });
+
+      expect(mockSetContent).toHaveBeenCalledWith("changed content");
+      // Advance timers to fire the RAF callback at line 116
+      vi.advanceTimersByTime(16);
+    });
+  });
 });

@@ -125,6 +125,130 @@ describe("tableHandlers", () => {
         error: "No active editor",
       });
     });
+
+    it("warns when column count mismatch occurs", async () => {
+      const insertTable = vi.fn().mockReturnValue(true);
+      // Table node has 2 actual columns, but we request 5
+      const tableNode = {
+        type: { name: "table" },
+        firstChild: { childCount: 2 },
+      };
+      const editor = {
+        commands: { insertTable },
+        state: {
+          selection: {
+            $from: {
+              depth: 1,
+              node: (d: number) =>
+                d === 1 ? tableNode : { type: { name: "doc" } },
+            },
+          },
+        },
+      };
+      mockGetEditor.mockReturnValue(editor);
+
+      await handleTableInsert("req-mismatch", { rows: 3, cols: 5 });
+
+      const call = mockRespond.mock.calls[0][0];
+      expect(call.success).toBe(true);
+      expect(call.data.warnings).toBeDefined();
+      expect(call.data.warnings[0]).toContain("Column count mismatch");
+      expect(call.data.warnings[0]).toContain("requested 5, got 2");
+    });
+
+    it("accepts custom withHeaderRow=false", async () => {
+      const insertTable = vi.fn().mockReturnValue(true);
+      const tableNode = {
+        type: { name: "table" },
+        firstChild: { childCount: 2 },
+      };
+      const editor = {
+        commands: { insertTable },
+        state: {
+          selection: {
+            $from: {
+              depth: 1,
+              node: (d: number) =>
+                d === 1 ? tableNode : { type: { name: "doc" } },
+            },
+          },
+        },
+      };
+      mockGetEditor.mockReturnValue(editor);
+
+      await handleTableInsert("req-nohdr", { rows: 2, cols: 2, withHeaderRow: false });
+
+      expect(insertTable).toHaveBeenCalledWith({
+        rows: 2,
+        cols: 2,
+        withHeaderRow: false,
+      });
+      const call = mockRespond.mock.calls[0][0];
+      expect(call.success).toBe(true);
+      expect(call.data.withHeaderRow).toBe(false);
+    });
+
+    it("handles non-Error thrown in catch", async () => {
+      mockGetEditor.mockReturnValue({
+        commands: { insertTable: vi.fn(() => { throw "string error"; }) },
+      });
+
+      await handleTableInsert("req-str-err", { rows: 2, cols: 2 });
+
+      expect(mockRespond).toHaveBeenCalledWith({
+        id: "req-str-err",
+        success: false,
+        error: "string error",
+      });
+    });
+
+    it("returns no warnings when table node is not found in parent chain", async () => {
+      const insertTable = vi.fn().mockReturnValue(true);
+      // No table node in the parent chain
+      const editor = {
+        commands: { insertTable },
+        state: {
+          selection: {
+            $from: {
+              depth: 1,
+              node: () => ({ type: { name: "paragraph" } }),
+            },
+          },
+        },
+      };
+      mockGetEditor.mockReturnValue(editor);
+
+      await handleTableInsert("req-no-table-parent", { rows: 2, cols: 2 });
+
+      const call = mockRespond.mock.calls[0][0];
+      expect(call.success).toBe(true);
+      // No warnings since no table found in parent chain
+      expect(call.data.warnings).toBeUndefined();
+    });
+
+    it("returns error for non-finite cols (Infinity)", async () => {
+      mockGetEditor.mockReturnValue({ commands: {} });
+
+      await handleTableInsert("req-inf", { rows: 2, cols: Infinity });
+
+      expect(mockRespond).toHaveBeenCalledWith({
+        id: "req-inf",
+        success: false,
+        error: "rows and cols must be finite numbers",
+      });
+    });
+
+    it("returns error for decimal cols", async () => {
+      mockGetEditor.mockReturnValue({ commands: {} });
+
+      await handleTableInsert("req-dec-cols", { rows: 2, cols: 1.5 });
+
+      expect(mockRespond).toHaveBeenCalledWith({
+        id: "req-dec-cols",
+        success: false,
+        error: "rows and cols must be integers (no decimals)",
+      });
+    });
   });
 
   describe("handleTableDelete", () => {
@@ -151,6 +275,20 @@ describe("tableHandlers", () => {
         id: "req-8",
         success: false,
         error: "No active editor",
+      });
+    });
+
+    it("handles non-Error thrown in catch", async () => {
+      mockGetEditor.mockReturnValue({
+        commands: { deleteTable: vi.fn(() => { throw "string delete error"; }) },
+      });
+
+      await handleTableDelete("req-del-str");
+
+      expect(mockRespond).toHaveBeenCalledWith({
+        id: "req-del-str",
+        success: false,
+        error: "string delete error",
       });
     });
   });

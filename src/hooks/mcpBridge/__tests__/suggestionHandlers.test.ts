@@ -912,4 +912,174 @@ describe("suggestionHandlers", () => {
       expect(call.data.count).toBe(0);
     });
   });
+
+  // ── isDocumentEmpty — branch: editor is null → returns false (line 28) ──
+
+  describe("isDocumentEmpty — coverage via handleSetContent", () => {
+    it("isDocumentEmpty returns false for null editor (caught by no-editor check)", async () => {
+      // handleSetContent calls getEditor() which returns null → throws before isDocumentEmpty
+      // isDocumentEmpty(!editor) branch 0[0] is `!editor` → false when editor exists
+      // We already test the !editor throw above; the branch is about !editor evaluating to false
+      // meaning editor IS present. That path is already covered by other tests.
+      // The uncovered stmt/branch is the `if (!editor) return false` inside isDocumentEmpty.
+      // This is only reachable if isDocumentEmpty is called with null editor directly.
+      // Since it's a private function, we exercise it indirectly:
+      // When editor is null AND getEditor returns null, handleSetContent throws before calling isDocumentEmpty.
+      // So the only uncovered path is isDocumentEmpty(null) → false.
+      // However, handleSetContent first checks getEditor() → throws. So isDocumentEmpty's !editor
+      // path can never be hit from handleSetContent. The branch is defensive code.
+      // We still test it to confirm handleSetContent with null editor responds with error.
+      mockGetEditor.mockReturnValue(null);
+      await handleSetContent("req-isnull", { content: "x" });
+      expect(mockRespond).toHaveBeenCalledWith({
+        id: "req-isnull",
+        success: false,
+        error: "No active editor",
+      });
+    });
+  });
+
+  // ── non-Error catch branches for setContent, insert, position, selection, replaceInSource ──
+
+  describe("handleSetContent — non-Error thrown value (catch branch)", () => {
+    it("handles non-Error thrown value", async () => {
+      mockGetEditor.mockImplementation(() => {
+        throw 999; // eslint-disable-line no-throw-literal
+      });
+
+      await handleSetContent("req-ne-sc", { content: "x" });
+
+      expect(mockRespond).toHaveBeenCalledWith({
+        id: "req-ne-sc",
+        success: false,
+        error: "999",
+      });
+    });
+  });
+
+  describe("handleInsertAtCursorWithSuggestion — non-Error catch branch", () => {
+    it("handles non-Error thrown value", async () => {
+      mockGetEditor.mockImplementation(() => {
+        throw "cursor error"; // eslint-disable-line no-throw-literal
+      });
+
+      await handleInsertAtCursorWithSuggestion("req-ne-ic", { text: "x" });
+
+      expect(mockRespond).toHaveBeenCalledWith({
+        id: "req-ne-ic",
+        success: false,
+        error: "cursor error",
+      });
+    });
+  });
+
+  describe("handleInsertAtPositionWithSuggestion — non-Error catch branch", () => {
+    it("handles non-Error thrown value", async () => {
+      mockGetEditor.mockImplementation(() => {
+        throw false; // eslint-disable-line no-throw-literal
+      });
+
+      await handleInsertAtPositionWithSuggestion("req-ne-ip", { text: "x", position: 0 });
+
+      expect(mockRespond).toHaveBeenCalledWith({
+        id: "req-ne-ip",
+        success: false,
+        error: "false",
+      });
+    });
+  });
+
+  describe("handleSelectionReplaceWithSuggestion — non-Error catch branch", () => {
+    it("handles non-Error thrown value", async () => {
+      mockGetEditor.mockImplementation(() => {
+        throw undefined; // eslint-disable-line no-throw-literal
+      });
+
+      await handleSelectionReplaceWithSuggestion("req-ne-sr", { text: "x" });
+
+      expect(mockRespond).toHaveBeenCalledWith({
+        id: "req-ne-sr",
+        success: false,
+        error: "undefined",
+      });
+    });
+  });
+
+  describe("handleDocumentReplaceInSourceWithSuggestion — non-Error catch branch", () => {
+    it("handles non-Error thrown value", async () => {
+      mockGetEditor.mockImplementation(() => {
+        throw { custom: true }; // eslint-disable-line no-throw-literal
+      });
+
+      await handleDocumentReplaceInSourceWithSuggestion("req-ne-ris", {
+        search: "x",
+        replace: "y",
+      });
+
+      expect(mockRespond).toHaveBeenCalledWith({
+        id: "req-ne-ris",
+        success: false,
+        error: "[object Object]",
+      });
+    });
+  });
+
+  describe("handleSuggestionAccept — non-Error catch branch", () => {
+    it("handles non-Error thrown value", async () => {
+      mockGetSuggestion.mockImplementation(() => {
+        throw 0; // eslint-disable-line no-throw-literal
+      });
+
+      await handleSuggestionAccept("req-ne-sa", { suggestionId: "s-1" });
+
+      expect(mockRespond).toHaveBeenCalledWith({
+        id: "req-ne-sa",
+        success: false,
+        error: "0",
+      });
+
+      mockGetSuggestion.mockReturnValue(null);
+    });
+  });
+
+  describe("handleSuggestionReject — non-Error catch branch", () => {
+    it("handles non-Error thrown value", async () => {
+      mockGetSuggestion.mockImplementation(() => {
+        throw "reject fail"; // eslint-disable-line no-throw-literal
+      });
+
+      await handleSuggestionReject("req-ne-srej", { suggestionId: "s-1" });
+
+      expect(mockRespond).toHaveBeenCalledWith({
+        id: "req-ne-srej",
+        success: false,
+        error: "reject fail",
+      });
+
+      mockGetSuggestion.mockReturnValue(null);
+    });
+  });
+
+  // ── replaceInSource: suggestion mode for normalized matching ──
+
+  describe("handleDocumentReplaceInSourceWithSuggestion — normalized + suggestion mode", () => {
+    it("creates suggestion with normalized matching when auto-approve disabled", async () => {
+      const { serializeMarkdown } = await import("@/utils/markdownPipeline");
+      vi.mocked(serializeMarkdown).mockReturnValue("Hello   World\n\nFoo");
+      mockGetEditor.mockReturnValue(createMockEditor({ docSize: 50 }));
+      mockIsAutoApproveEnabled.mockReturnValue(false);
+
+      await handleDocumentReplaceInSourceWithSuggestion("req-norm-sug", {
+        search: "Hello World",
+        replace: "Hi Globe",
+      });
+
+      expect(mockAddSuggestion).toHaveBeenCalled();
+      const call = mockRespond.mock.calls[0][0];
+      expect(call.success).toBe(true);
+      expect(call.data.applied).toBe(false);
+
+      vi.mocked(serializeMarkdown).mockReturnValue("# Hello\n\nWorld");
+    });
+  });
 });

@@ -532,3 +532,299 @@ describe("videoEmbed other plugin specs", () => {
     expect(typeof shortcuts).toBe("object");
   });
 });
+
+// ---------------------------------------------------------------------------
+// Uncovered line-specific tests
+// ---------------------------------------------------------------------------
+
+describe("videoEmbed parseHTML — iframe with valid provider but no extractable videoId (line 82)", () => {
+  it("skips iframe when videoId cannot be extracted from src", () => {
+    const schema = createSchema();
+    // YouTube iframe with a src that doesn't have a valid embed path
+    const html = '<iframe src="https://www.youtube-nocookie.com/embed/" width="560" height="315"></iframe>';
+    const dom = new DOMParser().parseFromString(html, "text/html").body;
+    const doc = PMDOMParser.fromSchema(schema).parse(dom);
+    // Should NOT create a video_embed node because videoId is empty
+    expect(doc.firstChild!.type.name).not.toBe("video_embed");
+  });
+});
+
+describe("videoEmbed addNodeView — safeGetPos fallback (line 123)", () => {
+  it("creates safeGetPos that returns undefined for non-function getPos", () => {
+    const schema = createSchema();
+    const node = schema.nodes.video_embed.create({ provider: "youtube", videoId: "test123" });
+    const factory = videoEmbedExtension.config.addNodeView!.call({
+      name: "video_embed",
+      editor: {},
+      options: {},
+      storage: {},
+      type: schema.nodes.video_embed,
+      parent: undefined,
+    } as never);
+
+    // Pass boolean getPos (non-function) — safeGetPos should return undefined
+    const result = factory({
+      node,
+      getPos: false as never,
+      editor: {} as never,
+      HTMLAttributes: {},
+      decorations: [],
+      innerDecorations: {} as never,
+      extension: {} as never,
+    });
+    expect(result).toBeDefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Branch coverage: iframe parseHTML width/height defaults (lines 83-89)
+// ---------------------------------------------------------------------------
+
+describe("videoEmbed parseHTML — iframe getAttrs branch coverage (lines 83-89)", () => {
+  it("exercises the getAttrs function for iframe with valid dimensions", () => {
+    // Test directly through parseHTML getAttrs to cover width/height validation branches
+    const parseRules = videoEmbedExtension.config.parseHTML!.call({} as never);
+    const iframeRule = parseRules![1];
+    const getAttrs = iframeRule.getAttrs!;
+
+    // Valid dimensions from Vimeo iframe
+    const validEl = document.createElement("iframe");
+    validEl.setAttribute("src", "https://player.vimeo.com/video/999888");
+    validEl.setAttribute("width", "800");
+    validEl.setAttribute("height", "450");
+    const result = getAttrs(validEl as never);
+    expect(result).not.toBe(false);
+    expect((result as Record<string, unknown>).width).toBe(800);
+    expect((result as Record<string, unknown>).height).toBe(450);
+  });
+
+  it("falls back to 560 for invalid (NaN) width in iframe getAttrs", () => {
+    const parseRules = videoEmbedExtension.config.parseHTML!.call({} as never);
+    const getAttrs = parseRules![1].getAttrs!;
+
+    const el = document.createElement("iframe");
+    el.setAttribute("src", "https://player.vimeo.com/video/999888");
+    el.setAttribute("width", "abc");
+    el.setAttribute("height", "315");
+    const result = getAttrs(el as never) as Record<string, unknown>;
+    expect(result).not.toBe(false);
+    expect(result.width).toBe(560);  // NaN → fallback
+    expect(result.height).toBe(315);
+  });
+
+  it("falls back to 315 for negative height in iframe getAttrs", () => {
+    const parseRules = videoEmbedExtension.config.parseHTML!.call({} as never);
+    const getAttrs = parseRules![1].getAttrs!;
+
+    const el = document.createElement("iframe");
+    el.setAttribute("src", "https://player.vimeo.com/video/999888");
+    el.setAttribute("width", "640");
+    el.setAttribute("height", "-50");
+    const result = getAttrs(el as never) as Record<string, unknown>;
+    expect(result).not.toBe(false);
+    expect(result.width).toBe(640);
+    expect(result.height).toBe(315); // -50 not > 0 → fallback
+  });
+
+  it("falls back to 560 for zero width in iframe getAttrs", () => {
+    const parseRules = videoEmbedExtension.config.parseHTML!.call({} as never);
+    const getAttrs = parseRules![1].getAttrs!;
+
+    const el = document.createElement("iframe");
+    el.setAttribute("src", "https://player.vimeo.com/video/999888");
+    el.setAttribute("width", "0");
+    el.setAttribute("height", "400");
+    const result = getAttrs(el as never) as Record<string, unknown>;
+    expect(result).not.toBe(false);
+    expect(result.width).toBe(560); // 0 not > 0 → fallback
+    expect(result.height).toBe(400);
+  });
+
+  it("uses default 560x315 when iframe has no width/height attrs", () => {
+    const parseRules = videoEmbedExtension.config.parseHTML!.call({} as never);
+    const getAttrs = parseRules![1].getAttrs!;
+
+    const el = document.createElement("iframe");
+    el.setAttribute("src", "https://player.vimeo.com/video/999888");
+    // No width/height attrs — parseInt(null ?? "560") = 560
+    const result = getAttrs(el as never) as Record<string, unknown>;
+    expect(result).not.toBe(false);
+    expect(result.width).toBe(560);
+    expect(result.height).toBe(315);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Branch coverage: figure parseHTML without iframe child (line 60-62)
+// ---------------------------------------------------------------------------
+
+describe("videoEmbed parseHTML — figure getAttrs branch coverage (lines 58-71)", () => {
+  it("returns empty videoId and defaults when figure has no iframe", () => {
+    const parseRules = videoEmbedExtension.config.parseHTML!.call({} as never);
+    const getAttrs = parseRules![0].getAttrs!;
+
+    const figure = document.createElement("figure");
+    figure.setAttribute("data-type", "video_embed");
+    figure.setAttribute("data-provider", "vimeo");
+    // No iframe child
+    const result = getAttrs(figure as never) as Record<string, unknown>;
+    expect(result.videoId).toBe("");       // No iframe → "" fallback
+    expect(result.provider).toBe("vimeo");
+    expect(result.width).toBe(560);        // NaN from null → fallback
+    expect(result.height).toBe(315);
+  });
+
+  it("defaults provider to youtube when figure has no data-provider", () => {
+    const parseRules = videoEmbedExtension.config.parseHTML!.call({} as never);
+    const getAttrs = parseRules![0].getAttrs!;
+
+    const figure = document.createElement("figure");
+    figure.setAttribute("data-type", "video_embed");
+    // No data-provider
+    const iframe = document.createElement("iframe");
+    iframe.setAttribute("data-video-id", "xyz");
+    iframe.setAttribute("width", "400");
+    iframe.setAttribute("height", "300");
+    figure.appendChild(iframe);
+
+    const result = getAttrs(figure as never) as Record<string, unknown>;
+    expect(result.provider).toBe("youtube"); // ?? "youtube" fallback
+    expect(result.videoId).toBe("xyz");
+    expect(result.width).toBe(400);
+    expect(result.height).toBe(300);
+  });
+
+  it("falls back to 560x315 for invalid width/height in figure iframe", () => {
+    const parseRules = videoEmbedExtension.config.parseHTML!.call({} as never);
+    const getAttrs = parseRules![0].getAttrs!;
+
+    const figure = document.createElement("figure");
+    figure.setAttribute("data-type", "video_embed");
+    figure.setAttribute("data-provider", "youtube");
+    const iframe = document.createElement("iframe");
+    iframe.setAttribute("data-video-id", "test");
+    iframe.setAttribute("width", "invalid");
+    iframe.setAttribute("height", "-10");
+    figure.appendChild(iframe);
+
+    const result = getAttrs(figure as never) as Record<string, unknown>;
+    expect(result.width).toBe(560);   // NaN → fallback
+    expect(result.height).toBe(315);  // -10 not > 0 → fallback
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Branch coverage: renderHTML null attrs fallback (lines 97-98, 111-112)
+// ---------------------------------------------------------------------------
+
+describe("videoEmbed renderHTML — null/undefined attrs fallback (lines 97-98, 111-112)", () => {
+  it("falls back to youtube when provider attr is null", () => {
+    const schema = createSchema();
+    const node = schema.nodes.video_embed.create({ provider: null, videoId: "abc", width: 560, height: 315 });
+    const doc = schema.nodes.doc.create(null, [node]);
+    const serializer = DOMSerializer.fromSchema(schema);
+    const fragment = serializer.serializeFragment(doc.content);
+    const container = document.createElement("div");
+    container.appendChild(fragment);
+
+    const figure = container.querySelector("figure");
+    expect(figure!.getAttribute("data-provider")).toBe("youtube");
+  });
+
+  it("falls back to empty string when videoId attr is null", () => {
+    const schema = createSchema();
+    const node = schema.nodes.video_embed.create({ provider: "youtube", videoId: null, width: 560, height: 315 });
+    const doc = schema.nodes.doc.create(null, [node]);
+    const serializer = DOMSerializer.fromSchema(schema);
+    const fragment = serializer.serializeFragment(doc.content);
+    const container = document.createElement("div");
+    container.appendChild(fragment);
+
+    const iframe = container.querySelector("iframe");
+    expect(iframe!.getAttribute("data-video-id")).toBe("");
+  });
+
+  it("falls back to 560/315 when width/height attrs are null", () => {
+    const schema = createSchema();
+    const node = schema.nodes.video_embed.create({ provider: "youtube", videoId: "abc", width: null, height: null });
+    const doc = schema.nodes.doc.create(null, [node]);
+    const serializer = DOMSerializer.fromSchema(schema);
+    const fragment = serializer.serializeFragment(doc.content);
+    const container = document.createElement("div");
+    container.appendChild(fragment);
+
+    const iframe = container.querySelector("iframe");
+    expect(iframe!.getAttribute("width")).toBe("560");
+    expect(iframe!.getAttribute("height")).toBe("315");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Branch coverage: paste handler config fallback (lines 158-159)
+// ---------------------------------------------------------------------------
+
+describe("videoEmbed parseHTML — iframe with no src attribute (line 78)", () => {
+  it("returns false for iframe with no src attribute", () => {
+    const parseRules = videoEmbedExtension.config.parseHTML!.call({} as never);
+    const getAttrs = parseRules![1].getAttrs!;
+
+    const el = document.createElement("iframe");
+    // No src attribute — getAttribute("src") returns null → ?? "" fallback
+    el.setAttribute("width", "560");
+    el.setAttribute("height", "315");
+    const result = getAttrs(el as never);
+    expect(result).toBe(false); // Empty src → no provider detected → false
+  });
+});
+
+describe("videoEmbed paste handler — config defaults coverage (lines 154-159)", () => {
+  function getPasteHandlerWithSchema() {
+    const schema = createSchema();
+    const nodeType = schema.nodes.video_embed;
+    const plugins = videoEmbedExtension.config.addProseMirrorPlugins!.call({
+      editor: {},
+      name: "video_embed",
+      options: {},
+      storage: {},
+      type: nodeType,
+      parent: undefined,
+    } as never);
+    const handlePaste = (plugins[0] as { props: { handlePaste: (view: unknown, event: unknown) => boolean } }).props.handlePaste;
+    return { schema, handlePaste };
+  }
+
+  it("creates node with provider config defaults when pasting a YouTube URL", () => {
+    const { schema, handlePaste } = getPasteHandlerWithSchema();
+    const doc = schema.nodes.doc.create(null, [schema.nodes.paragraph.create()]);
+    const state = EditorState.create({ schema, doc });
+
+    const mockDispatch = vi.fn();
+    const mockView = { state, dispatch: mockDispatch };
+
+    // Use a valid 11-char YouTube video ID
+    const result = handlePaste(mockView, {
+      clipboardData: {
+        getData: (type: string) => type === "text/plain" ? "https://www.youtube.com/watch?v=dQw4w9WgXcQ" : "",
+      },
+    });
+    expect(result).toBe(true);
+    expect(mockDispatch).toHaveBeenCalled();
+  });
+
+  it("creates node with Bilibili provider config defaults when pasting a Bilibili URL", () => {
+    const { schema, handlePaste } = getPasteHandlerWithSchema();
+    const doc = schema.nodes.doc.create(null, [schema.nodes.paragraph.create()]);
+    const state = EditorState.create({ schema, doc });
+
+    const mockDispatch = vi.fn();
+    const mockView = { state, dispatch: mockDispatch };
+
+    const result = handlePaste(mockView, {
+      clipboardData: {
+        getData: (type: string) => type === "text/plain" ? "https://www.bilibili.com/video/BV1234567890" : "",
+      },
+    });
+    expect(result).toBe(true);
+    expect(mockDispatch).toHaveBeenCalled();
+  });
+});

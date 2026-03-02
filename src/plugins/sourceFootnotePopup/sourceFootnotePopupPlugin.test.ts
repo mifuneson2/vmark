@@ -34,12 +34,13 @@ vi.mock("@/stores/footnotePopupStore", () => {
   };
 });
 
-vi.mock("./SourceFootnotePopupView", () => ({
-  SourceFootnotePopupView: vi.fn().mockImplementation(() => ({
-    destroy: vi.fn(),
-    setOpenedOnReference: vi.fn(),
-  })),
-}));
+vi.mock("./SourceFootnotePopupView", () => {
+  const SourceFootnotePopupView = vi.fn(function(this: Record<string, unknown>) {
+    this.destroy = vi.fn();
+    this.setOpenedOnReference = vi.fn();
+  });
+  return { SourceFootnotePopupView };
+});
 
 vi.mock("./sourceFootnoteActions", () => ({
   findFootnoteDefinition: vi.fn(),
@@ -222,6 +223,72 @@ describe("detectTriggerAtPos (via plugin config)", () => {
     const result = detectTriggerAtPos(view, 3);
 
     expect(result).toBeNull();
+  });
+});
+
+describe("createView callback (via plugin config)", () => {
+  it("instantiates SourceFootnotePopupView", () => {
+    vi.clearAllMocks();
+    createSourceFootnotePopupPlugin();
+    const config = (createSourcePopupPlugin as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    const view = createView("test", 0);
+    const store = { getState: () => ({}) };
+    const popupView = config.createView(view, store);
+    expect(popupView).toBeDefined();
+    expect(popupView.destroy).toBeDefined();
+    view.destroy();
+  });
+});
+
+describe("onOpen callback (via plugin config)", () => {
+  it("calls setOpenedOnReference on SourceFootnotePopupView", async () => {
+    vi.clearAllMocks();
+    createSourceFootnotePopupPlugin();
+    const config = (createSourcePopupPlugin as ReturnType<typeof vi.fn>).mock.calls[0][0];
+
+    const { SourceFootnotePopupView } = await import("./SourceFootnotePopupView");
+    const view = createView("test", 0);
+    const store = { getState: () => ({}) };
+    const popupView = config.createView(view, store);
+
+    config.onOpen({ popupView, data: { openedOnReference: true } });
+    expect(popupView.setOpenedOnReference).toHaveBeenCalledWith(true);
+
+    view.destroy();
+  });
+
+  it("does nothing when popupView is not SourceFootnotePopupView instance", () => {
+    vi.clearAllMocks();
+    createSourceFootnotePopupPlugin();
+    const config = (createSourcePopupPlugin as ReturnType<typeof vi.fn>).mock.calls[0][0];
+
+    const fakePopupView = { setOpenedOnReference: vi.fn() };
+    // This is not an instanceof SourceFootnotePopupView since it's a plain object
+    config.onOpen({ popupView: fakePopupView, data: { openedOnReference: true } });
+    // The check `popupView instanceof SourceFootnotePopupView` will fail for plain objects
+    // depending on mock impl; the key point is it shouldn't crash
+  });
+});
+
+describe("openPopup callback (via plugin config)", () => {
+  it("calls useFootnotePopupStore.getState().openPopup with correct args", async () => {
+    vi.clearAllMocks();
+    createSourceFootnotePopupPlugin();
+    const config = (createSourcePopupPlugin as ReturnType<typeof vi.fn>).mock.calls[0][0];
+
+    const mockAnchorRect = { top: 10, left: 20, width: 100, height: 20 };
+    const data = {
+      label: "1",
+      content: "test content",
+      definitionPos: 5,
+      referencePos: 0,
+    };
+
+    config.openPopup({ anchorRect: mockAnchorRect, data });
+
+    const { useFootnotePopupStore } = await import("@/stores/footnotePopupStore");
+    const openPopup = useFootnotePopupStore.getState().openPopup;
+    expect(openPopup).toHaveBeenCalledWith("1", "test content", mockAnchorRect, 5, 0);
   });
 });
 

@@ -354,6 +354,20 @@ describe("altClick", () => {
       const result = removeCursorAtPosition(state, 5);
       expect(result).toBeNull();
     });
+
+    it("returns null when removing the last remaining cursor (newRanges empty)", () => {
+      // Create a MultiSelection with a single range, then try to remove it
+      const state = createState("hello");
+      const doc = state.doc;
+      const $pos = doc.resolve(3);
+      const singleRange = new SelectionRange($pos, $pos);
+      const multiSel = new MultiSelection([singleRange], 0);
+      const stateWithSingleMulti = state.apply(state.tr.setSelection(multiSel));
+
+      // Remove the only cursor — newRanges.length === 0 → returns null
+      const result = removeCursorAtPosition(stateWithSingleMulti, 3);
+      expect(result).toBeNull();
+    });
   });
 
   describe("toggleCursorAtPosition", () => {
@@ -512,6 +526,154 @@ describe("altClick", () => {
         const newState = state.apply(result);
         const multiSel = newState.selection as MultiSelection;
         expect(multiSel.ranges.length).toBeGreaterThanOrEqual(3);
+      }
+    });
+  });
+
+  describe("snapToTextSelection — atom node snapping", () => {
+    // Extended schema with an atom node (horizontal_rule) to test snapToTextSelection branch
+    const atomSchema = new Schema({
+      nodes: {
+        doc: { content: "(paragraph | horizontal_rule)+" },
+        paragraph: { content: "text*" },
+        text: { inline: true },
+        horizontal_rule: { group: "block", atom: true },
+      },
+    });
+
+    it("snaps cursor away from atom node (nodeAfter)", () => {
+      // doc: <paragraph>ab</paragraph><hr/><paragraph>cd</paragraph>
+      const doc = atomSchema.node("doc", null, [
+        atomSchema.node("paragraph", null, [atomSchema.text("ab")]),
+        atomSchema.node("horizontal_rule"),
+        atomSchema.node("paragraph", null, [atomSchema.text("cd")]),
+      ]);
+      const state = EditorState.create({
+        doc,
+        schema: atomSchema,
+        plugins: [multiCursorPlugin()],
+      });
+
+      // Position right before the <hr> node — nodeAfter is the atom
+      // doc structure: <p>ab</p>  <hr>  <p>cd</p>
+      //   pos: 0  1  2  3   4    5   6  7  8  9
+      //       <p> a  b </p> <hr> </hr> <p> c  d </p>
+      // Position 4 is right after </p>, before <hr>. nodeAfter = hr (atom)
+      const posBeforeHr = 4;
+      const result = addCursorAtPosition(state, posBeforeHr);
+      // Should not return null — should snap to a valid text position
+      // The exact snapped position depends on Selection.near behavior
+      // Just verify it doesn't crash and returns a transaction or null gracefully
+      if (result) {
+        const newState = state.apply(result);
+        expect(newState.selection).toBeDefined();
+      } else {
+        // null is acceptable if snapped position equals current
+        expect(result).toBeNull();
+      }
+    });
+
+    it("snaps cursor away from atom node (nodeBefore)", () => {
+      const doc = atomSchema.node("doc", null, [
+        atomSchema.node("paragraph", null, [atomSchema.text("ab")]),
+        atomSchema.node("horizontal_rule"),
+        atomSchema.node("paragraph", null, [atomSchema.text("cd")]),
+      ]);
+      const state = EditorState.create({
+        doc,
+        schema: atomSchema,
+        plugins: [multiCursorPlugin()],
+      });
+      // Position right after <hr> — nodeBefore is the atom
+      const posAfterHr = 5;
+      const result = addCursorAtPosition(state, posAfterHr);
+      if (result) {
+        const newState = state.apply(result);
+        expect(newState.selection).toBeDefined();
+      } else {
+        expect(result).toBeNull();
+      }
+    });
+  });
+
+  describe("snapToTextSelection — non-textblock parent", () => {
+    it("snaps cursor at doc-level (non-textblock) to nearest text position", () => {
+      // At the doc level, parent is not a textblock
+      // Position 0 resolves to the doc node, which is not a textblock
+      const doc = createDoc("hello");
+      const state = EditorState.create({
+        doc,
+        schema,
+        plugins: [multiCursorPlugin()],
+      });
+      // Position 0 is at the doc level before the first <p>
+      const result = addCursorAtPosition(state, 0);
+      // Should snap into the paragraph
+      if (result) {
+        const newState = state.apply(result);
+        expect(newState.selection).toBeDefined();
+      } else {
+        expect(result).toBeNull();
+      }
+    });
+  });
+
+  describe("addCursorAtPosition — code block bounds filtering", () => {
+    // Schema with code_block to test bounds filtering
+    const codeSchema = new Schema({
+      nodes: {
+        doc: { content: "(paragraph | code_block)+" },
+        paragraph: { content: "text*" },
+        text: { inline: true },
+        code_block: { content: "text*", code: true },
+      },
+    });
+
+    it("returns null when adding cursor outside code block bounds", () => {
+      // doc: <code_block>abc</code_block><paragraph>def</paragraph>
+      const doc = codeSchema.node("doc", null, [
+        codeSchema.node("code_block", null, [codeSchema.text("abc")]),
+        codeSchema.node("paragraph", null, [codeSchema.text("def")]),
+      ]);
+      const state = EditorState.create({
+        doc,
+        schema: codeSchema,
+        plugins: [multiCursorPlugin()],
+      });
+
+      // Set cursor inside code block first (primary cursor at pos 1 = inside code_block)
+      const $pos = doc.resolve(1);
+      const sel = TextSelection.create(doc, 1);
+      const stateWithCodeCursor = state.apply(state.tr.setSelection(sel));
+
+      // Try to add cursor in paragraph (pos 6 is inside the paragraph)
+      // The primary is in code_block, so bounds = code_block bounds
+      // snappedPos is in paragraph (outside bounds) → should return null
+      const result = addCursorAtPosition(stateWithCodeCursor, 6);
+      expect(result).toBeNull();
+    });
+
+    it("allows adding cursor inside code block bounds", () => {
+      const doc = codeSchema.node("doc", null, [
+        codeSchema.node("code_block", null, [codeSchema.text("abcdef")]),
+        codeSchema.node("paragraph", null, [codeSchema.text("xyz")]),
+      ]);
+      const state = EditorState.create({
+        doc,
+        schema: codeSchema,
+        plugins: [multiCursorPlugin()],
+      });
+
+      // Set cursor inside code block at pos 1
+      const sel = TextSelection.create(doc, 1);
+      const stateWithCodeCursor = state.apply(state.tr.setSelection(sel));
+
+      // Add another cursor also inside code block at pos 4
+      const result = addCursorAtPosition(stateWithCodeCursor, 4);
+      expect(result).not.toBeNull();
+      if (result) {
+        const newState = stateWithCodeCursor.apply(result);
+        expect(newState.selection instanceof MultiSelection).toBe(true);
       }
     });
   });

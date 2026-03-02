@@ -295,4 +295,152 @@ describe("replaceAnchoredHandler", () => {
     const call = mockRespond.mock.calls[0][0];
     expect(call.data.suggestionIds).toHaveLength(1);
   });
+
+  it("handles non-Error thrown value in catch branch", async () => {
+    mockGetEditor.mockImplementation(() => {
+      throw "raw string error"; // eslint-disable-line no-throw-literal
+    });
+
+    await handleReplaceAnchored("req-ne", {
+      baseRevision: "rev-1",
+      anchor: { text: "Hello", beforeContext: "", afterContext: "", maxDistance: 100 },
+      replacement: "Hi",
+    });
+
+    expect(mockRespond).toHaveBeenCalledWith({
+      id: "req-ne",
+      success: false,
+      error: "raw string error",
+    });
+  });
+
+  it("filters candidates that exceed maxDistance", async () => {
+    mockGetEditor.mockReturnValue(createMockEditor());
+    // Context length exceeds maxDistance
+    mockFindTextMatches.mockReturnValue([
+      {
+        from: 0,
+        to: 5,
+        nodeId: "p-0",
+        context: { before: "a".repeat(50), after: "b".repeat(50) },
+      },
+    ]);
+
+    await handleReplaceAnchored("req-maxdist", {
+      baseRevision: "rev-1",
+      anchor: {
+        text: "Hello",
+        beforeContext: "a".repeat(50),
+        afterContext: "b".repeat(50),
+        maxDistance: 10,
+      },
+      replacement: "Hi",
+    });
+
+    const call = mockRespond.mock.calls[0][0];
+    expect(call.data.error).toBe("not_found");
+  });
+
+  it("uses default maxDistance of Infinity when not specified", async () => {
+    mockGetEditor.mockReturnValue(createMockEditor());
+    // Match with high similarity context
+    mockFindTextMatches.mockReturnValue([
+      {
+        from: 0,
+        to: 5,
+        nodeId: "p-0",
+        context: { before: "same context", after: "same after" },
+      },
+    ]);
+
+    await handleReplaceAnchored("req-no-maxdist", {
+      baseRevision: "rev-1",
+      anchor: {
+        text: "Hello",
+        beforeContext: "same context",
+        afterContext: "same after",
+      },
+      replacement: "Hi",
+    });
+
+    // Should apply since maxDistance defaults to Infinity
+    expect(mockRespond).toHaveBeenCalled();
+    const call = mockRespond.mock.calls[0][0];
+    expect(call.data.success).toBe(true);
+  });
+
+  describe("calculateSimilarity edge cases (tested indirectly)", () => {
+    it("returns similarity 0 when context is empty on one side", async () => {
+      mockGetEditor.mockReturnValue(createMockEditor());
+      // Match with empty before context vs non-empty anchor context
+      mockFindTextMatches.mockReturnValue([
+        {
+          from: 0,
+          to: 5,
+          nodeId: "p-0",
+          context: { before: "some text here", after: "" },
+        },
+      ]);
+
+      await handleReplaceAnchored("req-empty-ctx", {
+        baseRevision: "rev-1",
+        anchor: {
+          text: "Hello",
+          beforeContext: "",
+          afterContext: "something entirely different",
+          maxDistance: 1000,
+        },
+        replacement: "Hi",
+      });
+
+      // beforeContext "" vs "some text here": a.length === 0 → sim = 0
+      // afterContext "something entirely different" vs "": b.length === 0 → sim = 0
+      // avg = 0 < 0.8 → filtered out
+      const call = mockRespond.mock.calls[0][0];
+      expect(call.data.error).toBe("not_found");
+    });
+
+    it("handles both anchor and match having identical empty contexts (sim = 1)", async () => {
+      mockGetEditor.mockReturnValue(createMockEditor());
+      mockFindTextMatches.mockReturnValue([
+        {
+          from: 0,
+          to: 5,
+          nodeId: "p-0",
+          context: { before: "", after: "" },
+        },
+      ]);
+
+      await handleReplaceAnchored("req-both-empty", {
+        baseRevision: "rev-1",
+        anchor: {
+          text: "Hello",
+          beforeContext: "",
+          afterContext: "",
+          maxDistance: 1000,
+        },
+        replacement: "Hi",
+      });
+
+      // Both empty → a === b → sim = 1 for each, avg = 1 → passes
+      const call = mockRespond.mock.calls[0][0];
+      expect(call.data.success).toBe(true);
+    });
+
+    it("handles anchor with null value treated as missing", async () => {
+      mockGetEditor.mockReturnValue(createMockEditor());
+
+      await handleReplaceAnchored("req-null-anchor", {
+        baseRevision: "rev-1",
+        anchor: null,
+        replacement: "Hi",
+      });
+
+      expect(mockRespond).toHaveBeenCalledWith({
+        id: "req-null-anchor",
+        success: false,
+        error: "anchor.text is required",
+      });
+    });
+  });
 });

@@ -150,6 +150,35 @@ describe("getBlockquoteInfo", () => {
     view.destroy();
   });
 
+  it("scans upward to line 1 when entire document is blockquote (covers line 71 loop exit)", () => {
+    // When upward scan reaches line 1 without finding a non-blockquote line,
+    // startLine = lineNum (1) from the final iteration (line 71)
+    const view = createView("> line 1\n> line 2\n> line 3", 15); // cursor on line 2
+    const info = getBlockquoteInfo(view);
+    expect(info!.startLine).toBe(1);
+    expect(info!.endLine).toBe(3);
+    view.destroy();
+  });
+
+  it("scans downward to last line when document ends with blockquote (covers line 82 loop exit)", () => {
+    // When downward scan reaches totalLines without finding a non-blockquote line,
+    // endLine = lineNum from the final iteration (line 82)
+    const view = createView("> line 1\n> line 2\n> line 3", 20); // cursor on line 3
+    const info = getBlockquoteInfo(view);
+    expect(info!.startLine).toBe(1);
+    expect(info!.endLine).toBe(3);
+    view.destroy();
+  });
+
+  it("handles cursor on second line scanning upward past one blockquote line", () => {
+    // Ensures the upward scan loop iterates and sets startLine = lineNum (line 71)
+    const view = createView("> first\n> second", 10); // cursor on second line
+    const info = getBlockquoteInfo(view);
+    expect(info!.startLine).toBe(1);
+    expect(info!.endLine).toBe(2);
+    view.destroy();
+  });
+
   it("handles blockquote at end of document", () => {
     const view = createView("paragraph\n> last line", 12);
     const info = getBlockquoteInfo(view);
@@ -190,6 +219,17 @@ describe("nestBlockquote", () => {
     expect(view.state.doc.toString()).toBe("> > text");
     view.destroy();
   });
+
+  it("does nothing when no changes are needed (empty changes array)", () => {
+    // Craft a blockquote info that covers a line range with lines that have no > match
+    // This is synthetic: we pass an info pointing to lines that aren't blockquotes
+    const view = createView("plain text", 3);
+    const fakeInfo = { startLine: 1, endLine: 1, from: 0, to: 10, level: 0, lineStart: 0, lineEnd: 10 };
+    nestBlockquote(view, fakeInfo);
+    // No changes should be dispatched — document stays the same
+    expect(view.state.doc.toString()).toBe("plain text");
+    view.destroy();
+  });
 });
 
 describe("unnestBlockquote", () => {
@@ -206,6 +246,14 @@ describe("unnestBlockquote", () => {
     const info = getBlockquoteInfo(view)!;
     unnestBlockquote(view, info);
     expect(view.state.doc.toString()).toBe("text");
+    view.destroy();
+  });
+
+  it("does nothing when no > markers match (empty changes)", () => {
+    const view = createView("plain text", 3);
+    const fakeInfo = { startLine: 1, endLine: 1, from: 0, to: 10, level: 0, lineStart: 0, lineEnd: 10 };
+    unnestBlockquote(view, fakeInfo);
+    expect(view.state.doc.toString()).toBe("plain text");
     view.destroy();
   });
 });
@@ -240,6 +288,14 @@ describe("removeBlockquote", () => {
     const info = getBlockquoteInfo(view)!;
     removeBlockquote(view, info);
     expect(view.state.doc.toString()).toBe("level 1\nlevel 2");
+    view.destroy();
+  });
+
+  it("does nothing when no > markers match (empty changes)", () => {
+    const view = createView("plain text", 3);
+    const fakeInfo = { startLine: 1, endLine: 1, from: 0, to: 10, level: 0, lineStart: 0, lineEnd: 10 };
+    removeBlockquote(view, fakeInfo);
+    expect(view.state.doc.toString()).toBe("plain text");
     view.destroy();
   });
 });

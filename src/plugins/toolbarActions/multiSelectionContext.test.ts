@@ -462,6 +462,26 @@ describe("getWysiwygMultiSelectionContext", () => {
     expect(result.blockParentType).toBe("blockquote");
   });
 
+  it("returns null blockParent when no textblock found (getBlockParentName null, line 85)", () => {
+    // Both $from and $to have isTextblock=false at all depths → blockParent=null
+    const range1 = createMockRange("paragraph", [], false);
+    const range2 = createMockRange("paragraph", [], false);
+    const selection = new MultiSelection([range1, range2]);
+    const mockView = {
+      state: {
+        selection,
+        doc: {
+          nodesBetween: vi.fn(),
+          resolve: vi.fn(() => ({ marks: () => [] })),
+        },
+      },
+    } as unknown as import("@tiptap/pm/view").EditorView;
+
+    const result = getWysiwygMultiSelectionContext(mockView);
+    expect(result.enabled).toBe(true);
+    expect(result.blockParentType).toBeNull();
+  });
+
   it("detects sameBlockParent=false for mixed block types", () => {
     const range1 = createMockRange("paragraph");
     const range2 = createMockRange("heading");

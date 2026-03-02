@@ -437,4 +437,108 @@ describe("BlockAudioNodeView", () => {
       expect(mockOpenPopup).not.toHaveBeenCalled();
     });
   });
+
+  describe("external URL fast-path (cached media, line 102–103)", () => {
+    it("clears loading state when audio is already cached (readyState >= 1)", () => {
+      mockIsExternalUrl.mockReturnValue(true);
+      const node = createMockNode({ src: "https://example.com/cached.mp3" });
+      nodeView = new BlockAudioNodeView(
+        node,
+        getPos,
+        mockEditor as unknown as import("@tiptap/core").Editor,
+      );
+      const audio = nodeView.dom.querySelector("audio")!;
+      // Simulate cached: readyState >= 1
+      Object.defineProperty(audio, "readyState", { value: 1, writable: true });
+
+      // Trigger src update with a new external URL
+      vi.clearAllMocks();
+      mockIsExternalUrl.mockReturnValue(true);
+      nodeView.update(createMockNode({ src: "https://example.com/cached2.mp3" }));
+
+      expect(mockClearMediaLoadState).toHaveBeenCalled();
+    });
+  });
+
+  describe("setupLoadHandlers callbacks (lines 133–134)", () => {
+    it("onLoaded callback is a no-op (does not throw)", () => {
+      mockIsExternalUrl.mockReturnValue(true);
+      createNodeView({ src: "https://example.com/audio.mp3" });
+
+      // The onLoaded callback (arg index 3) is () => {}
+      const onLoaded = mockAttachMediaLoadHandlers.mock.calls[0][3];
+      expect(() => onLoaded()).not.toThrow();
+    });
+
+    it("onError callback calls showMediaError", () => {
+      mockIsExternalUrl.mockReturnValue(true);
+      createNodeView({ src: "https://example.com/audio.mp3" });
+
+      // Grab the onError callback (arg index 4) before clearing
+      const onError = mockAttachMediaLoadHandlers.mock.calls[0]?.[4];
+      expect(onError).toBeDefined();
+
+      vi.clearAllMocks();
+      onError();
+      expect(mockShowMediaError).toHaveBeenCalledWith(
+        nodeView.dom,
+        expect.any(HTMLAudioElement),
+        expect.any(String),
+        "Failed to load audio",
+        expect.any(Object),
+      );
+    });
+  });
+
+  describe("stale rejection handler — non-Error (line 122–123)", () => {
+    it("shows generic error when resolveMediaSrc rejects with non-Error", async () => {
+      mockIsExternalUrl.mockReturnValue(false);
+      mockResolveMediaSrc.mockRejectedValue("string error");
+      createNodeView({ src: "bad.mp3" });
+      await vi.waitFor(() => {
+        expect(mockShowMediaError).toHaveBeenCalledWith(
+          nodeView.dom,
+          expect.any(HTMLAudioElement),
+          "bad.mp3",
+          "Failed to resolve path",
+          expect.any(Object),
+        );
+      });
+    });
+  });
+
+  describe("null-coalescing fallback branches", () => {
+    it("handles null src attr (line 46)", () => {
+      createNodeView({ src: null });
+      expect(mockShowMediaError).toHaveBeenCalledWith(
+        nodeView.dom,
+        expect.any(HTMLAudioElement),
+        "",
+        "No audio source",
+        expect.any(Object),
+      );
+    });
+
+    it("handles null title attr (line 53)", () => {
+      createNodeView({ title: null });
+      const audio = nodeView.dom.querySelector("audio")!;
+      expect(audio.title).toBe("");
+    });
+
+    it("handleClick title fallback (line 72)", () => {
+      createNodeView({ src: "track.mp3" });
+      const audio = nodeView.dom.querySelector("audio")!;
+      audio.getBoundingClientRect = vi.fn(() => ({
+        top: 100, left: 200, bottom: 150, right: 400,
+        width: 200, height: 50, x: 200, y: 100,
+        toJSON: () => ({}),
+      }));
+      // Set title to empty to test the ?? fallback
+      audio.title = "";
+      nodeView.dom.dispatchEvent(new MouseEvent("dblclick", { bubbles: true }));
+      expect(mockOpenPopup).toHaveBeenCalledWith(
+        expect.objectContaining({ mediaTitle: "" }),
+      );
+    });
+  });
 });

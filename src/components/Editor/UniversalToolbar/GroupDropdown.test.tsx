@@ -837,6 +837,173 @@ describe("GroupDropdown", () => {
     });
   });
 
+  describe("Enter/Space key selection in dropdown (lines 194-209)", () => {
+    it("Enter on focused enabled item calls onSelect with action", () => {
+      const items = [makeItem("bold"), makeItem("italic"), makeItem("code")];
+
+      render(
+        <GroupDropdown
+          anchorRect={mockAnchorRect}
+          items={items}
+          groupId="inline"
+          onSelect={onSelect}
+          onClose={onClose}
+        />
+      );
+
+      // First item is focused by default
+      const buttons = screen.getAllByRole("menuitemcheckbox");
+      expect(document.activeElement).toBe(buttons[0]);
+
+      // Press Enter — should call onSelect("bold")
+      fireEvent.keyDown(document.activeElement!, { key: "Enter" });
+      expect(onSelect).toHaveBeenCalledWith("bold");
+    });
+
+    it("Space on focused enabled item calls onSelect with action", () => {
+      const items = [makeItem("bold"), makeItem("italic")];
+
+      render(
+        <GroupDropdown
+          anchorRect={mockAnchorRect}
+          items={items}
+          groupId="inline"
+          onSelect={onSelect}
+          onClose={onClose}
+        />
+      );
+
+      fireEvent.keyDown(document.activeElement!, { key: " " });
+      expect(onSelect).toHaveBeenCalledWith("bold");
+    });
+
+    it("Enter on disabled item does NOT call onSelect (line 201)", () => {
+      const items = [makeDisabledItem("bold"), makeItem("italic")];
+
+      render(
+        <GroupDropdown
+          anchorRect={mockAnchorRect}
+          items={items}
+          groupId="inline"
+          onSelect={onSelect}
+          onClose={onClose}
+        />
+      );
+
+      // First enabled item (italic) is focused by default
+      // Manually focus the disabled one
+      const buttons = screen.getAllByRole("menuitemcheckbox");
+      buttons[0].focus();
+
+      fireEvent.keyDown(buttons[0], { key: "Enter" });
+      // onSelect should NOT be called for disabled item
+      expect(onSelect).not.toHaveBeenCalled();
+    });
+
+    it("Enter with no active element (activeButtonIndex=-1) does not select", () => {
+      const items = [makeItem("bold")];
+
+      render(
+        <GroupDropdown
+          anchorRect={mockAnchorRect}
+          items={items}
+          groupId="inline"
+          onSelect={onSelect}
+          onClose={onClose}
+        />
+      );
+
+      // Blur all buttons so activeElement is not inside the dropdown
+      (document.activeElement as HTMLElement)?.blur();
+
+      // Press Enter on the menu container
+      const menu = screen.getByRole("menu");
+      fireEvent.keyDown(menu, { key: "Enter" });
+
+      // Should not call onSelect since activeButtonIndex is -1
+      expect(onSelect).not.toHaveBeenCalled();
+    });
+
+    it("Enter on second item iterates buttonIdx past first (covers line 206)", () => {
+      const items = [makeItem("bold"), makeItem("italic"), makeItem("code")];
+
+      render(
+        <GroupDropdown
+          anchorRect={mockAnchorRect}
+          items={items}
+          groupId="inline"
+          onSelect={onSelect}
+          onClose={onClose}
+        />
+      );
+
+      // Navigate down to second item
+      fireEvent.keyDown(document.activeElement!, { key: "ArrowDown" });
+      const buttons = screen.getAllByRole("menuitemcheckbox");
+      expect(document.activeElement).toBe(buttons[1]);
+
+      // Press Enter on second item — loop must iterate past first (buttonIdx++)
+      fireEvent.keyDown(buttons[1], { key: "Enter" });
+      expect(onSelect).toHaveBeenCalledWith("italic");
+    });
+
+    it("Enter skips separator items when finding action (line 198)", () => {
+      const items = [makeSeparator("sep1"), makeItem("bold")];
+
+      render(
+        <GroupDropdown
+          anchorRect={mockAnchorRect}
+          items={items}
+          groupId="inline"
+          onSelect={onSelect}
+          onClose={onClose}
+        />
+      );
+
+      // First button (bold at buttonIndex 0) is focused
+      fireEvent.keyDown(document.activeElement!, { key: "Enter" });
+      expect(onSelect).toHaveBeenCalledWith("bold");
+    });
+  });
+
+  describe("notImplemented title (line 253 cond-expr)", () => {
+    it("shows 'Not available yet' suffix when item is notImplemented", () => {
+      const item = makeItem("bold", "Bold");
+      item.state.notImplemented = true;
+
+      render(
+        <GroupDropdown
+          anchorRect={mockAnchorRect}
+          items={[item]}
+          groupId="inline"
+          onSelect={onSelect}
+          onClose={onClose}
+        />
+      );
+
+      const button = screen.getByRole("menuitemcheckbox");
+      expect(button).toHaveAttribute("title", "Bold — Not available yet");
+    });
+
+    it("shows just the label when item is NOT notImplemented", () => {
+      const item = makeItem("bold", "Bold");
+      item.state.notImplemented = false;
+
+      render(
+        <GroupDropdown
+          anchorRect={mockAnchorRect}
+          items={[item]}
+          groupId="inline"
+          onSelect={onSelect}
+          onClose={onClose}
+        />
+      );
+
+      const button = screen.getByRole("menuitemcheckbox");
+      expect(button).toHaveAttribute("title", "Bold");
+    });
+  });
+
   describe("re-render does not steal focus (isInitialMount guard)", () => {
     it("does not re-focus on re-render when items change", () => {
       const initialItems = [makeItem("bold"), makeItem("italic")];

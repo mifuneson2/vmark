@@ -1,20 +1,22 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { MathPreviewView, getMathPreviewView } from "./MathPreviewView";
 
-// Mock KaTeX loader
+// Mock KaTeX loader — allow per-test override via mockLoadKatex
+const mockLoadKatex = vi.fn(() =>
+  Promise.resolve({
+    default: {
+      render: vi.fn((content: string, element: HTMLElement, options: { throwOnError?: boolean }) => {
+        if (options?.throwOnError && content === "\\invalid") {
+          throw new Error("Unknown macro: \\invalid");
+        }
+        element.innerHTML = `<span class="katex">${content}</span>`;
+      }),
+    },
+  })
+);
+
 vi.mock("@/plugins/latex/katexLoader", () => ({
-  loadKatex: vi.fn(() =>
-    Promise.resolve({
-      default: {
-        render: vi.fn((content: string, element: HTMLElement, options: { throwOnError?: boolean }) => {
-          if (options?.throwOnError && content === "\\invalid") {
-            throw new Error("Unknown macro: \\invalid");
-          }
-          element.innerHTML = `<span class="katex">${content}</span>`;
-        }),
-      },
-    })
-  ),
+  loadKatex: (...args: unknown[]) => mockLoadKatex(...args),
 }));
 
 // Mock popup position utils
@@ -24,10 +26,24 @@ vi.mock("@/utils/popupPosition", () => ({
   getViewportBounds: vi.fn(() => ({ top: 0, left: 0, bottom: 800, right: 1200 })),
 }));
 
-// Mock sourcePopup utils
+// Mock sourcePopup utils — allow per-test override of getPopupHostForDom
+const mockGetPopupHostForDom = vi.fn(() => null);
 vi.mock("@/plugins/sourcePopup", () => ({
-  getPopupHostForDom: vi.fn(() => null),
-  toHostCoordsForDom: vi.fn((_host, pos) => pos),
+  getPopupHostForDom: (...args: unknown[]) => mockGetPopupHostForDom(...args),
+  toHostCoordsForDom: vi.fn((_host: unknown, pos: { top: number; left: number }) => pos),
+}));
+
+// Mock latexErrorParser
+vi.mock("@/plugins/latex/latexErrorParser", () => ({
+  parseLatexError: vi.fn((_e: unknown, _content: string) => ({
+    message: "Invalid LaTeX",
+    hint: "some hint",
+  })),
+}));
+
+// Mock renderWarn
+vi.mock("@/utils/debug", () => ({
+  renderWarn: vi.fn(),
 }));
 
 describe("MathPreviewView", () => {
@@ -214,6 +230,146 @@ describe("MathPreviewView", () => {
     it("returns a MathPreviewView instance", () => {
       const instance = getMathPreviewView();
       expect(instance).toBeInstanceOf(MathPreviewView);
+    });
+  });
+
+  describe("renderPreview — loadKatex rejection (.catch handler, lines 152–158)", () => {
+    it("shows error state when loadKatex rejects with Error", async () => {
+      mockLoadKatex.mockRejectedValue(new Error("Failed to load KaTeX"));
+
+      view.show("x^2", { top: 0, left: 0, bottom: 0, right: 0 });
+
+      // Wait for the rejection to propagate
+      await new Promise((r) => setTimeout(r, 50));
+
+      const content = document.querySelector(".math-preview-content");
+      expect(content?.classList.contains("math-preview-error-state")).toBe(true);
+      expect(content?.textContent).toBe("x^2");
+
+      const error = document.querySelector(".math-preview-error");
+      expect(error?.textContent).toBe("Preview failed");
+
+      // Reset to default behavior
+      mockLoadKatex.mockResolvedValue({
+        default: {
+          render: vi.fn((_c: string, el: HTMLElement) => {
+            el.innerHTML = '<span class="katex">ok</span>';
+          }),
+        },
+      });
+    });
+
+    it("shows error state when loadKatex rejects with non-Error", async () => {
+      mockLoadKatex.mockRejectedValue("string rejection");
+
+      view.show("y^2", { top: 0, left: 0, bottom: 0, right: 0 });
+
+      await new Promise((r) => setTimeout(r, 50));
+
+      const content = document.querySelector(".math-preview-content");
+      expect(content?.classList.contains("math-preview-error-state")).toBe(true);
+
+      const error = document.querySelector(".math-preview-error");
+      expect(error?.textContent).toBe("Preview failed");
+
+      // Reset
+      mockLoadKatex.mockResolvedValue({
+        default: {
+          render: vi.fn((_c: string, el: HTMLElement) => {
+            el.innerHTML = '<span class="katex">ok</span>';
+          }),
+        },
+      });
+    });
+
+    it("ignores stale rejection when renderToken has advanced", async () => {
+      // First call rejects slowly
+      let rejectFirst: ((e: unknown) => void) | undefined;
+      mockLoadKatex.mockReturnValueOnce(
+        new Promise((_resolve, reject) => { rejectFirst = reject; })
+      );
+
+      view.show("first", { top: 0, left: 0, bottom: 0, right: 0 });
+
+      // Second call succeeds immediately (advances renderToken)
+      mockLoadKatex.mockResolvedValueOnce({
+        default: {
+          render: vi.fn((_c: string, el: HTMLElement) => {
+            el.innerHTML = '<span class="katex">second</span>';
+          }),
+        },
+      });
+      view.updateContent("second");
+
+      // Now reject the first call — should be ignored (stale token)
+      rejectFirst!(new Error("stale"));
+      await Promise.resolve();
+
+      await vi.waitFor(() => {
+        const content = document.querySelector(".math-preview-content");
+        return content?.innerHTML.includes("second");
+      });
+
+      const error = document.querySelector(".math-preview-error");
+      expect(error?.textContent).toBe("");
+    });
+  });
+
+  describe("show — mounting inside editor container (host !== body, line 96–100)", () => {
+    it("uses absolute positioning and host-relative coords when popup host exists", () => {
+      const host = document.createElement("div");
+      host.className = "editor-container";
+      host.style.position = "relative";
+      document.body.appendChild(host);
+
+      // Make getPopupHostForDom return the host container
+      mockGetPopupHostForDom.mockReturnValue(host);
+
+      const editorDom = document.createElement("div");
+      host.appendChild(editorDom);
+
+      view.show("x^2", { top: 50, left: 100, bottom: 70, right: 200 }, editorDom);
+
+      // Container should be appended to host, not body
+      expect(host.querySelector(".math-preview-popup")).not.toBeNull();
+      const container = host.querySelector(".math-preview-popup") as HTMLElement;
+      expect(container.style.position).toBe("absolute");
+
+      host.remove();
+      mockGetPopupHostForDom.mockReturnValue(null);
+    });
+
+    it("uses fixed positioning when mounted in body (no editor container)", () => {
+      view.show("x^2", { top: 50, left: 100, bottom: 70, right: 200 });
+
+      const container = document.querySelector(".math-preview-popup") as HTMLElement;
+      expect(container.style.position).toBe("fixed");
+    });
+  });
+
+  describe("renderPreview — KaTeX error with hint (line 149 hint branch)", () => {
+    it("shows error message with hint when parseLatexError returns hint", async () => {
+      // Restore loadKatex to default behavior that throws on \invalid
+      mockLoadKatex.mockImplementation(() =>
+        Promise.resolve({
+          default: {
+            render: vi.fn((content: string, _element: HTMLElement, options: { throwOnError?: boolean }) => {
+              if (options?.throwOnError && content === "\\invalid") {
+                throw new Error("Unknown macro: \\invalid");
+              }
+            }),
+          },
+        })
+      );
+
+      view.show("\\invalid", { top: 0, left: 0, bottom: 0, right: 0 });
+
+      await new Promise((r) => setTimeout(r, 50));
+
+      const error = document.querySelector(".math-preview-error");
+      // parseLatexError mock returns { message: "Invalid LaTeX", hint: "some hint" }
+      expect(error?.textContent).toContain("Invalid LaTeX");
+      expect(error?.textContent).toContain("some hint");
     });
   });
 });

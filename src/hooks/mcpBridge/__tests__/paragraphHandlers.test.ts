@@ -516,5 +516,103 @@ describe("paragraphHandlers", () => {
         error: "target must specify index or containing",
       });
     });
+
+    it("handles context at first paragraph (no before)", async () => {
+      const editor = createMockEditor(["First", "Second"]);
+      mockGetEditor.mockReturnValue(editor);
+
+      await handleParagraphRead("req-ctx-first", {
+        target: { index: 0 },
+        includeContext: true,
+      });
+
+      const call = mockRespond.mock.calls[0][0];
+      expect(call.success).toBe(true);
+      expect(call.data.context.before).toBeUndefined();
+      expect(call.data.context.after).toBe("Second");
+    });
+
+    it("handles context at last paragraph (no after)", async () => {
+      const editor = createMockEditor(["First", "Last"]);
+      mockGetEditor.mockReturnValue(editor);
+
+      await handleParagraphRead("req-ctx-last", {
+        target: { index: 1 },
+        includeContext: true,
+      });
+
+      const call = mockRespond.mock.calls[0][0];
+      expect(call.success).toBe(true);
+      expect(call.data.context.before).toBe("First");
+      expect(call.data.context.after).toBeUndefined();
+    });
+
+    it("returns null from findParagraph when target has neither index nor containing", async () => {
+      // target: {} triggers the "target must specify index or containing" error
+      // but a target with both missing also exercises findParagraph returning null
+      mockGetEditor.mockReturnValue(createMockEditor(["text"]));
+
+      await handleParagraphRead("req-fp-null", { target: {} });
+
+      expect(mockRespond).toHaveBeenCalledWith({
+        id: "req-fp-null",
+        success: false,
+        error: "target must specify index or containing",
+      });
+    });
+  });
+
+  // ── non-Error catch branches ──
+
+  describe("handleParagraphRead — non-Error catch branch", () => {
+    it("handles non-Error thrown value", async () => {
+      mockGetEditor.mockImplementation(() => {
+        throw 42; // eslint-disable-line no-throw-literal
+      });
+
+      await handleParagraphRead("req-ne-read", { target: { index: 0 } });
+
+      expect(mockRespond).toHaveBeenCalledWith({
+        id: "req-ne-read",
+        success: false,
+        error: "42",
+      });
+    });
+  });
+
+  describe("handleParagraphWrite — non-Error catch branch", () => {
+    it("handles non-Error thrown value", async () => {
+      mockGetEditor.mockImplementation(() => {
+        throw "write error"; // eslint-disable-line no-throw-literal
+      });
+
+      await handleParagraphWrite("req-ne-write", {
+        baseRevision: "rev-1",
+        target: { index: 0 },
+        operation: "replace",
+        content: "new",
+      });
+
+      expect(mockRespond).toHaveBeenCalledWith({
+        id: "req-ne-write",
+        success: false,
+        error: "write error",
+      });
+    });
+  });
+
+  describe("handleParagraphRead — countWords edge cases", () => {
+    it("counts words correctly for empty string", async () => {
+      const editor = createMockEditor([""]);
+      mockGetEditor.mockReturnValue(editor);
+
+      await handleParagraphRead("req-cw-empty", {
+        target: { index: 0 },
+      });
+
+      const call = mockRespond.mock.calls[0][0];
+      expect(call.data.wordCount).toBe(0);
+      expect(call.data.charCount).toBe(0);
+    });
   });
 });

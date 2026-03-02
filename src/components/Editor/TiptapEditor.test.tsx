@@ -1197,6 +1197,71 @@ describe("TiptapEditorInner — cursor update scheduling", () => {
   });
 });
 
+// ── getEditorView — hidden vs visible branch (line 299) ────────────
+
+describe("TiptapEditorInner — getEditorView returns non-null when visible", () => {
+  it("passes non-null view to useOutlineSync and useImageContextMenu when visible and editor exists", () => {
+    const mockView = {
+      state: {
+        tr: { replaceWith: vi.fn().mockReturnThis(), setMeta: vi.fn().mockReturnThis() },
+        doc: { content: { size: 10 } },
+      },
+      dispatch: vi.fn(),
+    };
+    const editor = createMockEditor();
+    mocks.useEditor.mockReturnValue(editor);
+    mocks.getTiptapEditorView.mockReturnValue(mockView);
+
+    render(<TiptapEditorInner hidden={false} />);
+
+    // useOutlineSync is called with a getEditorView function
+    expect(mocks.useOutlineSync).toHaveBeenCalledWith(expect.any(Function));
+
+    // Extract the getEditorView function and call it
+    const getEditorView = mocks.useOutlineSync.mock.calls[0][0] as () => unknown;
+    const result = getEditorView();
+
+    // When not hidden and editor exists, should return the view (not null)
+    expect(result).toBe(mockView);
+  });
+
+  it("getEditorView returns null when hidden even if editor exists", () => {
+    const mockView = {
+      state: {
+        tr: { setMeta: vi.fn().mockReturnThis(), replaceWith: vi.fn().mockReturnThis() },
+        doc: { content: { size: 10 } },
+      },
+      dispatch: vi.fn(),
+    };
+    const editor = createMockEditor();
+    mocks.useEditor.mockReturnValue(editor);
+    mocks.getTiptapEditorView.mockReturnValue(mockView);
+
+    render(<TiptapEditorInner hidden={true} />);
+
+    // Use the last call to useOutlineSync (React may call hooks multiple times)
+    const calls = mocks.useOutlineSync.mock.calls;
+    const getEditorView = calls[calls.length - 1][0] as () => unknown;
+    const result = getEditorView();
+
+    // When hidden, should return null (line 299: hidden ? null : getTiptapEditorView(editor))
+    expect(result).toBeNull();
+  });
+
+  it("getEditorView returns null when editor is null", () => {
+    mocks.useEditor.mockReturnValue(null);
+    mocks.getTiptapEditorView.mockReturnValue(null);
+
+    render(<TiptapEditorInner hidden={false} />);
+
+    const getEditorView = mocks.useOutlineSync.mock.calls[0][0] as () => unknown;
+    const result = getEditorView();
+
+    // When editor is null, getTiptapEditorView(null) returns null
+    expect(result).toBeNull();
+  });
+});
+
 // ── onUpdate — cancellation of existing pending flush ───────────────
 
 describe("TiptapEditorInner — onUpdate cancellation branches", () => {
@@ -1652,5 +1717,40 @@ describe("TiptapEditorInner — visibility transition cursorInfoRef lambda", () 
     // The lambda at line 424: () => cursorInfoRef.current
     expect(capturedGetCursor).not.toBeNull();
     expect(capturedGetCursor!()).toEqual(cursorValue);
+  });
+});
+
+// ── External content sync hidden guard (line 386) ────────────────────
+
+describe("TiptapEditorInner — external sync skips when hidden (line 386)", () => {
+  it("does not call parseMarkdown for external content changes while hidden", async () => {
+    const editor = createMockEditor();
+    const mockView = {
+      state: {
+        tr: { setMeta: vi.fn().mockReturnThis(), replaceWith: vi.fn().mockReturnThis() },
+        doc: { content: { size: 50 } },
+      },
+      dispatch: vi.fn(),
+    };
+
+    mocks.getTiptapEditorView.mockReturnValue(mockView);
+    mocks.parseMarkdown.mockReturnValue({ type: "doc", content: [] });
+    setupUseEditorWithCallbacks(editor);
+
+    const { rerender } = render(<TiptapEditorInner hidden={true} />);
+
+    await vi.waitFor(() => {
+      expect(mocks.parseMarkdown).toHaveBeenCalled();
+    });
+
+    vi.clearAllMocks();
+    mocks.getTiptapEditorView.mockReturnValue(mockView);
+    mocks.parseMarkdown.mockReturnValue({ type: "doc", content: [] });
+    mocks.useDocumentContent.mockReturnValue("# changed while hidden");
+
+    rerender(<TiptapEditorInner hidden={true} />);
+
+    // parseMarkdown should NOT be called for sync — hidden guard at line 385-386
+    expect(mocks.parseMarkdown).not.toHaveBeenCalled();
   });
 });

@@ -54,14 +54,18 @@ vi.mock("@/stores/settingsStore", () => ({
     }),
 }));
 
-vi.mock("@/stores/updateStore", () => ({
-  useUpdateStore: (sel: (s: unknown) => unknown) =>
-    sel({
-      status: mocks.updateStatus,
-      updateInfo: mocks.updateInfo,
-      dismiss: mocks.dismiss,
-    }),
-}));
+vi.mock("@/stores/updateStore", () => {
+  const storeData = () => ({
+    status: mocks.updateStatus,
+    updateInfo: mocks.updateInfo,
+    dismiss: mocks.dismiss,
+    downloadProgress: null,
+    error: null,
+  });
+  const useUpdateStore = (sel: (s: unknown) => unknown) => sel(storeData());
+  useUpdateStore.getState = storeData;
+  return { useUpdateStore };
+});
 
 vi.mock("@/stores/documentStore", () => ({
   useDocumentStore: {
@@ -340,5 +344,558 @@ describe("useUpdateChecker — retry on error", () => {
     // Hook ran without throwing — retry effect executed its cleanup
     unmount();
     expect(true).toBe(true);
+  });
+});
+
+// ── Helper to capture listen callbacks ────────────────────────────────────────
+type ListenCallback = (event: { payload?: unknown }) => void;
+function captureListeners() {
+  const listeners: Record<string, ListenCallback> = {};
+  mocks.listen.mockImplementation((event: string, cb: ListenCallback) => {
+    listeners[event] = cb;
+    return Promise.resolve(() => {});
+  });
+  return listeners;
+}
+
+describe("shouldCheckNow — unknown frequency fallback (line 69)", () => {
+  it("returns false for unknown frequency", () => {
+    expect(shouldCheckNow(true, "hourly", Date.now())).toBe(false);
+  });
+});
+
+describe("useUpdateChecker — auto-dismiss skipped version (lines 185-194)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.useFakeTimers();
+    mocks.updateStatus = "idle";
+    mocks.updateInfo = null;
+    mocks.skipVersion = undefined;
+    mocks.autoDownload = false;
+    mocks.autoCheckEnabled = false;
+    mocks.checkFrequency = "manual";
+    mocks.lastCheckTimestamp = null;
+    mocks.doCheckForUpdates.mockResolvedValue(undefined);
+    mocks.doDownloadAndInstall.mockResolvedValue(undefined);
+    mocks.listen.mockResolvedValue(() => {});
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("calls dismiss and clearPendingUpdate when available version matches skipVersion", () => {
+    mocks.updateStatus = "available";
+    mocks.updateInfo = { version: "1.2.3" };
+    mocks.skipVersion = "1.2.3";
+
+    const { unmount } = renderHook(() => useUpdateChecker());
+    expect(mocks.dismiss).toHaveBeenCalled();
+    expect(mocks.clearPendingUpdate).toHaveBeenCalled();
+    unmount();
+  });
+
+  it("does not dismiss when version does not match skipVersion", () => {
+    mocks.updateStatus = "available";
+    mocks.updateInfo = { version: "1.2.3" };
+    mocks.skipVersion = "1.0.0";
+
+    const { unmount } = renderHook(() => useUpdateChecker());
+    expect(mocks.dismiss).not.toHaveBeenCalled();
+    unmount();
+  });
+
+  it("does not dismiss when skipVersion is undefined", () => {
+    mocks.updateStatus = "available";
+    mocks.updateInfo = { version: "1.2.3" };
+    mocks.skipVersion = undefined;
+
+    const { unmount } = renderHook(() => useUpdateChecker());
+    expect(mocks.dismiss).not.toHaveBeenCalled();
+    unmount();
+  });
+});
+
+describe("useUpdateChecker — auto-download (lines 198-212)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.useFakeTimers();
+    mocks.updateStatus = "idle";
+    mocks.updateInfo = null;
+    mocks.skipVersion = undefined;
+    mocks.autoDownload = false;
+    mocks.autoCheckEnabled = false;
+    mocks.checkFrequency = "manual";
+    mocks.lastCheckTimestamp = null;
+    mocks.doCheckForUpdates.mockResolvedValue(undefined);
+    mocks.doDownloadAndInstall.mockResolvedValue(undefined);
+    mocks.listen.mockResolvedValue(() => {});
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("triggers auto-download when available with autoDownload enabled", () => {
+    mocks.updateStatus = "available";
+    mocks.updateInfo = { version: "2.0.0" };
+    mocks.autoDownload = true;
+
+    const { unmount } = renderHook(() => useUpdateChecker());
+    expect(mocks.doDownloadAndInstall).toHaveBeenCalled();
+    unmount();
+  });
+
+  it("does not auto-download when version matches skipVersion", () => {
+    mocks.updateStatus = "available";
+    mocks.updateInfo = { version: "2.0.0" };
+    mocks.autoDownload = true;
+    mocks.skipVersion = "2.0.0";
+
+    const { unmount } = renderHook(() => useUpdateChecker());
+    expect(mocks.doDownloadAndInstall).not.toHaveBeenCalled();
+    unmount();
+  });
+
+  it("does not auto-download when autoDownload is false", () => {
+    mocks.updateStatus = "available";
+    mocks.updateInfo = { version: "2.0.0" };
+    mocks.autoDownload = false;
+
+    const { unmount } = renderHook(() => useUpdateChecker());
+    expect(mocks.doDownloadAndInstall).not.toHaveBeenCalled();
+    unmount();
+  });
+
+  it("only auto-downloads once (hasAutoDownloaded guard)", () => {
+    mocks.updateStatus = "available";
+    mocks.updateInfo = { version: "2.0.0" };
+    mocks.autoDownload = true;
+
+    const { rerender, unmount } = renderHook(() => useUpdateChecker());
+    act(() => { rerender(); });
+    expect(mocks.doDownloadAndInstall).toHaveBeenCalledTimes(1);
+    unmount();
+  });
+
+  it("logs when auto-download fails", async () => {
+    mocks.updateStatus = "available";
+    mocks.updateInfo = { version: "2.0.0" };
+    mocks.autoDownload = true;
+    mocks.doDownloadAndInstall.mockRejectedValueOnce(new Error("download fail"));
+
+    const { unmount } = renderHook(() => useUpdateChecker());
+    await act(async () => { await Promise.resolve(); });
+    expect(mocks.updateCheckerLog).toHaveBeenCalledWith("Auto-download failed:", expect.any(Error));
+    unmount();
+  });
+});
+
+describe("useUpdateChecker — reset auto-download flag (lines 216-220)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.useFakeTimers();
+    mocks.updateStatus = "idle";
+    mocks.updateInfo = null;
+    mocks.skipVersion = undefined;
+    mocks.autoDownload = false;
+    mocks.autoCheckEnabled = false;
+    mocks.checkFrequency = "manual";
+    mocks.lastCheckTimestamp = null;
+    mocks.doCheckForUpdates.mockResolvedValue(undefined);
+    mocks.doDownloadAndInstall.mockResolvedValue(undefined);
+    mocks.listen.mockResolvedValue(() => {});
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("resets hasAutoDownloaded when status returns to idle", () => {
+    mocks.updateStatus = "available";
+    mocks.updateInfo = { version: "2.0.0" };
+    mocks.autoDownload = true;
+
+    const { rerender, unmount } = renderHook(() => useUpdateChecker());
+    expect(mocks.doDownloadAndInstall).toHaveBeenCalledTimes(1);
+
+    mocks.updateStatus = "idle";
+    mocks.updateInfo = null;
+    act(() => { rerender(); });
+
+    mocks.updateStatus = "available";
+    mocks.updateInfo = { version: "3.0.0" };
+    act(() => { rerender(); });
+
+    expect(mocks.doDownloadAndInstall).toHaveBeenCalledTimes(2);
+    unmount();
+  });
+});
+
+describe("useUpdateChecker — toast notifications (lines 117-142)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.useFakeTimers();
+    mocks.updateStatus = "idle";
+    mocks.updateInfo = null;
+    mocks.skipVersion = undefined;
+    mocks.autoDownload = false;
+    mocks.autoCheckEnabled = false;
+    mocks.checkFrequency = "manual";
+    mocks.lastCheckTimestamp = null;
+    mocks.doCheckForUpdates.mockResolvedValue(undefined);
+    mocks.doDownloadAndInstall.mockResolvedValue(undefined);
+    mocks.listen.mockResolvedValue(() => {});
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("shows ready toast when status transitions to ready with updateInfo", () => {
+    mocks.updateStatus = "downloading";
+    const { rerender, unmount } = renderHook(() => useUpdateChecker());
+
+    mocks.updateStatus = "ready";
+    mocks.updateInfo = { version: "2.0.0" };
+    act(() => { rerender(); });
+
+    expect(mocks.toast.success).toHaveBeenCalledWith("v2.0.0 ready to install", { duration: 5000 });
+    unmount();
+  });
+
+  it("does not show ready toast when updateInfo is null", () => {
+    mocks.updateStatus = "downloading";
+    const { rerender, unmount } = renderHook(() => useUpdateChecker());
+
+    mocks.updateStatus = "ready";
+    mocks.updateInfo = null;
+    act(() => { rerender(); });
+
+    expect(mocks.toast.success).not.toHaveBeenCalled();
+    unmount();
+  });
+
+  it("shows up-to-date toast for manual check via REQUEST_CHECK listener", () => {
+    const listeners = captureListeners();
+    mocks.updateStatus = "idle";
+    const { rerender, unmount } = renderHook(() => useUpdateChecker());
+
+    if (listeners["update:request-check"]) {
+      act(() => { listeners["update:request-check"]({}); });
+    }
+
+    mocks.updateStatus = "checking";
+    act(() => { rerender(); });
+
+    mocks.updateStatus = "up-to-date";
+    act(() => { rerender(); });
+
+    expect(mocks.toast.success).toHaveBeenCalledWith("You're up to date!", { duration: 3000 });
+    unmount();
+  });
+
+  it("does not show up-to-date toast for auto checks", () => {
+    mocks.updateStatus = "checking";
+    const { rerender, unmount } = renderHook(() => useUpdateChecker());
+
+    mocks.updateStatus = "up-to-date";
+    act(() => { rerender(); });
+
+    const upToDateCalls = mocks.toast.success.mock.calls.filter(
+      (c: unknown[]) => typeof c[0] === "string" && c[0].includes("up to date"),
+    );
+    expect(upToDateCalls.length).toBe(0);
+    unmount();
+  });
+
+  it("skips toast on initial mount (prevStatus is null)", () => {
+    mocks.updateStatus = "ready";
+    mocks.updateInfo = { version: "1.0.0" };
+
+    const { unmount } = renderHook(() => useUpdateChecker());
+    expect(mocks.toast.success).not.toHaveBeenCalled();
+    unmount();
+  });
+});
+
+describe("useUpdateChecker — event listeners (lines 222-316)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.useFakeTimers();
+    mocks.updateStatus = "idle";
+    mocks.updateInfo = null;
+    mocks.skipVersion = undefined;
+    mocks.autoDownload = false;
+    mocks.autoCheckEnabled = false;
+    mocks.checkFrequency = "manual";
+    mocks.lastCheckTimestamp = null;
+    mocks.doCheckForUpdates.mockResolvedValue(undefined);
+    mocks.doDownloadAndInstall.mockResolvedValue(undefined);
+    mocks.getAllDirtyDocuments.mockReturnValue([]);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("registers listeners for all 4 events on mount", () => {
+    const listeners = captureListeners();
+    const { unmount } = renderHook(() => useUpdateChecker());
+
+    expect(listeners["update:request-check"]).toBeDefined();
+    expect(listeners["update:request-download"]).toBeDefined();
+    expect(listeners["update:request-state"]).toBeDefined();
+    expect(listeners["update:request-restart"]).toBeDefined();
+    unmount();
+  });
+
+  it("REQUEST_CHECK listener calls doCheckForUpdates", async () => {
+    const listeners = captureListeners();
+    const { unmount } = renderHook(() => useUpdateChecker());
+
+    await act(async () => {
+      listeners["update:request-check"]({});
+      await Promise.resolve();
+    });
+
+    expect(mocks.doCheckForUpdates).toHaveBeenCalled();
+    unmount();
+  });
+
+  it("REQUEST_CHECK listener logs on failure", async () => {
+    mocks.doCheckForUpdates.mockRejectedValueOnce(new Error("check err"));
+    const listeners = captureListeners();
+    const { unmount } = renderHook(() => useUpdateChecker());
+
+    await act(async () => {
+      listeners["update:request-check"]({});
+      await Promise.resolve();
+    });
+
+    expect(mocks.updateCheckerLog).toHaveBeenCalledWith("Check request failed:", expect.any(Error));
+    unmount();
+  });
+
+  it("REQUEST_DOWNLOAD listener calls doDownloadAndInstall", async () => {
+    const listeners = captureListeners();
+    const { unmount } = renderHook(() => useUpdateChecker());
+
+    await act(async () => {
+      listeners["update:request-download"]({});
+      await Promise.resolve();
+    });
+
+    expect(mocks.doDownloadAndInstall).toHaveBeenCalled();
+    unmount();
+  });
+
+  it("REQUEST_DOWNLOAD listener logs on failure", async () => {
+    mocks.doDownloadAndInstall.mockRejectedValueOnce(new Error("dl err"));
+    const listeners = captureListeners();
+    const { unmount } = renderHook(() => useUpdateChecker());
+
+    await act(async () => {
+      listeners["update:request-download"]({});
+      await Promise.resolve();
+    });
+
+    expect(mocks.updateCheckerLog).toHaveBeenCalledWith("Download request failed:", expect.any(Error));
+    unmount();
+  });
+
+  it("REQUEST_STATE listener emits current update state", async () => {
+    const listeners = captureListeners();
+    const { unmount } = renderHook(() => useUpdateChecker());
+
+    await act(async () => {
+      listeners["update:request-state"]({});
+      await Promise.resolve();
+    });
+
+    expect(mocks.emit).toHaveBeenCalledWith("update:state-changed", expect.objectContaining({
+      status: mocks.updateStatus,
+    }));
+    unmount();
+  });
+
+  it("REQUEST_STATE listener logs on emit failure", async () => {
+    mocks.emit.mockRejectedValueOnce(new Error("emit err"));
+    const listeners = captureListeners();
+    const { unmount } = renderHook(() => useUpdateChecker());
+
+    await act(async () => {
+      listeners["update:request-state"]({});
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(mocks.updateCheckerLog).toHaveBeenCalledWith("Failed to emit state:", expect.any(Error));
+    unmount();
+  });
+
+  it("REQUEST_RESTART with no dirty docs calls restartWithHotExit directly", async () => {
+    mocks.getAllDirtyDocuments.mockReturnValue([]);
+    const listeners = captureListeners();
+    const { unmount } = renderHook(() => useUpdateChecker());
+
+    await act(async () => {
+      listeners["update:request-restart"]({});
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(mocks.restartWithHotExit).toHaveBeenCalled();
+    expect(mocks.ask).not.toHaveBeenCalled();
+    unmount();
+  });
+
+  it("REQUEST_RESTART with dirty docs and user confirms calls restartWithHotExit", async () => {
+    mocks.getAllDirtyDocuments.mockReturnValue([{ id: "tab-1" }]);
+    mocks.ask.mockResolvedValue(true);
+    const listeners = captureListeners();
+    const { unmount } = renderHook(() => useUpdateChecker());
+
+    await act(async () => {
+      listeners["update:request-restart"]({});
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(mocks.ask).toHaveBeenCalledWith(
+      expect.stringContaining("1 unsaved"),
+      expect.objectContaining({ title: "Unsaved Changes" }),
+    );
+    expect(mocks.restartWithHotExit).toHaveBeenCalled();
+    unmount();
+  });
+
+  it("REQUEST_RESTART emits cancel event when user declines", async () => {
+    mocks.getAllDirtyDocuments.mockReturnValue([{ id: "tab-1" }]);
+    mocks.ask.mockResolvedValue(false);
+    const listeners = captureListeners();
+    const { unmount } = renderHook(() => useUpdateChecker());
+
+    await act(async () => {
+      listeners["update:request-restart"]({});
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(mocks.emit).toHaveBeenCalledWith("update:restart-cancelled");
+    expect(mocks.restartWithHotExit).not.toHaveBeenCalled();
+    unmount();
+  });
+
+  it("REQUEST_RESTART logs error and emits cancel on failure", async () => {
+    mocks.getAllDirtyDocuments.mockImplementation(() => { throw new Error("store err"); });
+    const listeners = captureListeners();
+    const { unmount } = renderHook(() => useUpdateChecker());
+
+    await act(async () => {
+      listeners["update:request-restart"]({});
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(mocks.updateCheckerLog).toHaveBeenCalledWith("Restart request failed:", expect.any(Error));
+    expect(mocks.emit).toHaveBeenCalledWith("update:restart-cancelled");
+    unmount();
+  });
+
+  it("REQUEST_RESTART error handler logs if cancel emit also fails", async () => {
+    mocks.getAllDirtyDocuments.mockImplementation(() => { throw new Error("store err"); });
+    mocks.emit.mockRejectedValueOnce(new Error("emit fail"));
+    const listeners = captureListeners();
+    const { unmount } = renderHook(() => useUpdateChecker());
+
+    await act(async () => {
+      listeners["update:request-restart"]({});
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(mocks.updateCheckerLog).toHaveBeenCalledWith("Restart request failed:", expect.any(Error));
+    unmount();
+  });
+
+  it("calls safeUnlistenAsync on unmount for all listeners", () => {
+    captureListeners();
+    const { unmount } = renderHook(() => useUpdateChecker());
+    unmount();
+    expect(mocks.safeUnlistenAsync).toHaveBeenCalled();
+  });
+});
+
+describe("useUpdateChecker — startup check (lines 98-112)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.useFakeTimers();
+    mocks.updateStatus = "idle";
+    mocks.updateInfo = null;
+    mocks.skipVersion = undefined;
+    mocks.autoDownload = false;
+    mocks.autoCheckEnabled = true;
+    mocks.checkFrequency = "startup";
+    mocks.lastCheckTimestamp = null;
+    mocks.doCheckForUpdates.mockResolvedValue(undefined);
+    mocks.doDownloadAndInstall.mockResolvedValue(undefined);
+    mocks.listen.mockResolvedValue(() => {});
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("triggers startup check after 2s delay", () => {
+    const { unmount } = renderHook(() => useUpdateChecker());
+    expect(mocks.doCheckForUpdates).not.toHaveBeenCalled();
+    act(() => { vi.advanceTimersByTime(2000); });
+    expect(mocks.doCheckForUpdates).toHaveBeenCalledTimes(1);
+    unmount();
+  });
+
+  it("logs when startup check fails", async () => {
+    mocks.doCheckForUpdates.mockRejectedValueOnce(new Error("startup fail"));
+    const { unmount } = renderHook(() => useUpdateChecker());
+
+    await act(async () => {
+      vi.advanceTimersByTime(2000);
+      await Promise.resolve();
+    });
+
+    expect(mocks.updateCheckerLog).toHaveBeenCalledWith("Auto-check failed on startup:", expect.any(Error));
+    unmount();
+  });
+
+  it("cleans up startup timer on unmount before it fires", () => {
+    const { unmount } = renderHook(() => useUpdateChecker());
+    unmount();
+    act(() => { vi.advanceTimersByTime(5000); });
+    expect(mocks.doCheckForUpdates).not.toHaveBeenCalled();
+  });
+
+  it("does not check on startup when shouldCheckNow returns false", () => {
+    mocks.autoCheckEnabled = false;
+    mocks.checkFrequency = "manual";
+
+    const { unmount } = renderHook(() => useUpdateChecker());
+    act(() => { vi.advanceTimersByTime(5000); });
+    expect(mocks.doCheckForUpdates).not.toHaveBeenCalled();
+    unmount();
+  });
+
+  it("only checks once even with multiple rerenders (hasChecked guard)", () => {
+    const { rerender, unmount } = renderHook(() => useUpdateChecker());
+    act(() => { vi.advanceTimersByTime(2000); });
+    act(() => { rerender(); });
+    act(() => { vi.advanceTimersByTime(2000); });
+    expect(mocks.doCheckForUpdates).toHaveBeenCalledTimes(1);
+    unmount();
   });
 });

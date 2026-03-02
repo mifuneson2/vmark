@@ -610,4 +610,140 @@ describe("MathPopupView", () => {
       expect(dom.container.querySelector(".math-popup-btn-save")).not.toBeNull();
     });
   });
+
+  describe("Subscription — wasOpen guard (line 53)", () => {
+    it("does not re-show when popup was already open", async () => {
+      // Open the popup
+      emitStateChange({ isOpen: true, latex: "x^2", nodePos: 5, anchorRect });
+      await new Promise((r) => requestAnimationFrame(r));
+
+      const textarea = dom.container.querySelector(".math-popup-input") as HTMLTextAreaElement;
+      expect(textarea.value).toBe("x^2");
+
+      // Emit another state change while still open — wasOpen=true, so show() is skipped
+      vi.clearAllMocks();
+      emitStateChange({ isOpen: true, latex: "y^2", nodePos: 6, anchorRect });
+
+      // Textarea value should NOT change since show() was not called again
+      expect(textarea.value).toBe("x^2");
+    });
+  });
+
+  describe("Container already mounted to same host (line 118)", () => {
+    it("does not re-append container when already mounted to same host", async () => {
+      // Open once
+      emitStateChange({ isOpen: true, latex: "x", nodePos: 1, anchorRect });
+      await new Promise((r) => requestAnimationFrame(r));
+
+      // Close
+      emitStateChange({ isOpen: false, anchorRect: null });
+
+      // Re-open — container.parentElement should already be the host
+      emitStateChange({ isOpen: true, latex: "y", nodePos: 2, anchorRect });
+      await new Promise((r) => requestAnimationFrame(r));
+
+      const popupEl = dom.container.querySelector(".math-popup") as HTMLElement;
+      expect(popupEl).not.toBeNull();
+      expect(popupEl.style.display).toBe("flex");
+    });
+  });
+
+  describe("Show — viewport bounds fallback (line 133)", () => {
+    it("uses viewport bounds when no editor-container exists", async () => {
+      dom.container.className = "";
+
+      popup.destroy();
+      vi.clearAllMocks();
+      const newView = createMockView(dom.editorDom);
+      view = newView;
+      popup = new MathPopupView(view as unknown as ConstructorParameters<typeof MathPopupView>[0]);
+
+      emitStateChange({ isOpen: true, latex: "z", nodePos: 1, anchorRect });
+      await new Promise((r) => requestAnimationFrame(r));
+
+      const popupEl = document.querySelector(".math-popup") as HTMLElement;
+      expect(popupEl).not.toBeNull();
+      expect(popupEl.style.display).toBe("flex");
+
+      dom.container.className = "editor-container";
+    });
+  });
+
+  describe("renderPreview — loadKatex catch with non-Error (line 198)", () => {
+    it("handles non-Error rejection from loadKatex", async () => {
+      const { loadKatex } = await import("@/plugins/latex/katexLoader");
+      vi.mocked(loadKatex).mockRejectedValueOnce("string error");
+
+      emitStateChange({ isOpen: true, latex: "x^2", nodePos: 5, anchorRect });
+      await new Promise((r) => requestAnimationFrame(r));
+      await new Promise((r) => setTimeout(r, 20));
+
+      const error = dom.container.querySelector(".math-popup-error") as HTMLElement;
+      expect(error.textContent).toBe("LaTeX preview failed");
+    });
+  });
+
+  describe("Click outside — justOpened guard", () => {
+    it("does not close popup on click during justOpened window", async () => {
+      emitStateChange({ isOpen: true, latex: "x", nodePos: 1, anchorRect });
+
+      // Click outside BEFORE rAF clears justOpened
+      const outsideEl = document.createElement("div");
+      document.body.appendChild(outsideEl);
+
+      const mousedownEvent = new MouseEvent("mousedown", { bubbles: true });
+      Object.defineProperty(mousedownEvent, "target", { value: outsideEl });
+      document.dispatchEvent(mousedownEvent);
+
+      expect(mockClosePopup).not.toHaveBeenCalled();
+      outsideEl.remove();
+    });
+  });
+
+  describe("Click outside — not open (line 259)", () => {
+    it("does not close when store isOpen is false", async () => {
+      // Popup is never opened
+      const outsideEl = document.createElement("div");
+      document.body.appendChild(outsideEl);
+
+      const mousedownEvent = new MouseEvent("mousedown", { bubbles: true });
+      Object.defineProperty(mousedownEvent, "target", { value: outsideEl });
+      document.dispatchEvent(mousedownEvent);
+
+      expect(mockClosePopup).not.toHaveBeenCalled();
+      outsideEl.remove();
+    });
+  });
+
+  describe("IME guard in handleKeydown (line 211)", () => {
+    it("ignores IME events in textarea keydown", async () => {
+      const imeGuard = await import("@/utils/imeGuard");
+
+      emitStateChange({ isOpen: true, latex: "x", nodePos: 10, anchorRect });
+      await new Promise((r) => requestAnimationFrame(r));
+
+      vi.spyOn(imeGuard, "isImeKeyEvent" as never).mockReturnValueOnce(true as never);
+
+      const textarea = dom.container.querySelector(".math-popup-input") as HTMLTextAreaElement;
+      textarea.focus();
+
+      const event = new KeyboardEvent("keydown", { key: "Escape", bubbles: true });
+      textarea.dispatchEvent(event);
+
+      // Should NOT close — IME guard returned early
+      expect(mockClosePopup).not.toHaveBeenCalled();
+
+      vi.mocked(imeGuard.isImeKeyEvent as never).mockRestore?.();
+    });
+  });
+
+  describe("renderPreview — whitespace-only latex (line 176)", () => {
+    it("clears preview when latex is whitespace-only", async () => {
+      emitStateChange({ isOpen: true, latex: "   ", nodePos: 5, anchorRect });
+      await new Promise((r) => requestAnimationFrame(r));
+
+      const preview = dom.container.querySelector(".math-popup-preview") as HTMLElement;
+      expect(preview.textContent).toBe("");
+    });
+  });
 });

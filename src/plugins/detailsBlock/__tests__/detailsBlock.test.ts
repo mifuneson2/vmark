@@ -189,6 +189,43 @@ describe("detailsBlock renderHTML", () => {
 });
 
 // ---------------------------------------------------------------------------
+// createDetailsBlockNode — null when types missing
+// ---------------------------------------------------------------------------
+
+describe("createDetailsBlockNode returns null for missing types", () => {
+  it("insertDetailsBlock returns false when schema lacks required node types", () => {
+    // Create a schema without detailsBlock/detailsSummary
+    const { Schema: PmSchema } = require("@tiptap/pm/model");
+    const bareSchema = new PmSchema({
+      nodes: {
+        doc: { content: "paragraph+" },
+        paragraph: { group: "block", content: "text*" },
+        text: { inline: true },
+      },
+    });
+
+    const doc = bareSchema.node("doc", null, [
+      bareSchema.node("paragraph", null, [bareSchema.text("test")]),
+    ]);
+    const state = EditorState.create({ doc });
+
+    // createDetailsBlockNode accesses schema.nodes.detailsBlock etc.
+    // When those are undefined, it returns null, and the command returns false.
+    const commandFn = detailsBlockExtension.config.addCommands!.call({
+      name: "detailsBlock", options: {}, storage: {}, editor: {},
+    } as never);
+    const insertCmd = commandFn.insertDetailsBlock;
+
+    const result = insertCmd()({
+      state, dispatch: undefined, tr: state.tr,
+      chain: () => ({}) as never, can: () => ({}) as never,
+      commands: {} as never, editor: {} as never, view: {} as never,
+    } as never);
+    expect(result).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // insertDetailsBlock command
 // ---------------------------------------------------------------------------
 
@@ -211,6 +248,35 @@ describe("insertDetailsBlock command", () => {
       commands: {} as never, editor: {} as never, view: {} as never,
     } as never);
     expect(canRun).toBe(true);
+  });
+
+  it("returns false when createDetailsBlockNode returns null (missing types in schema)", () => {
+    // Use a schema without paragraph type to make createDetailsBlockNode return null
+    const { Schema: PmSchema } = require("@tiptap/pm/model");
+    const bareSchema = new PmSchema({
+      nodes: {
+        doc: { content: "block+" },
+        paragraph: { group: "block", content: "text*" },
+        text: { inline: true },
+      },
+    });
+    const doc = bareSchema.node("doc", null, [
+      bareSchema.node("paragraph", null, [bareSchema.text("test")]),
+    ]);
+    const state = EditorState.create({ doc });
+
+    const commandFn = detailsBlockExtension.config.addCommands!.call({
+      name: "detailsBlock", options: {}, storage: {}, editor: {},
+    } as never);
+    const insertCmd = commandFn.insertDetailsBlock;
+
+    // With dispatch provided, should still return false
+    const result = insertCmd()({
+      state, dispatch: vi.fn(), tr: state.tr,
+      chain: () => ({}) as never, can: () => ({}) as never,
+      commands: {} as never, editor: {} as never, view: {} as never,
+    } as never);
+    expect(result).toBe(false);
   });
 
   it("dispatches transaction when dispatch is provided", () => {
@@ -279,6 +345,46 @@ describe("detailsBlock addInputRules", () => {
     } as never);
     expect(rules).toBeDefined();
     expect(rules!.length).toBe(1);
+  });
+
+  it("input rule handler returns null when createDetailsBlockNode returns null", () => {
+    const addInputRules = detailsBlockExtension.config.addInputRules;
+    const rules = addInputRules!.call({
+      name: "detailsBlock", options: {}, storage: {}, editor: {},
+    } as never);
+    const rule = rules![0];
+    const handler = (rule as unknown as { handler: Function }).handler;
+
+    // Create a state with a schema that lacks detailsBlock/detailsSummary
+    const { Schema: PmSchema } = require("@tiptap/pm/model");
+    const bareSchema = new PmSchema({
+      nodes: {
+        doc: { content: "paragraph+" },
+        paragraph: { group: "block", content: "text*" },
+        text: { inline: true },
+      },
+    });
+    const doc = bareSchema.node("doc", null, [
+      bareSchema.node("paragraph", null, [bareSchema.text(":::details")]),
+    ]);
+    const state = EditorState.create({ doc });
+
+    const mockInsertContentAt = vi.fn();
+    const mockSetTextSelection = vi.fn();
+
+    const result = handler({
+      state,
+      range: { from: 1, to: 11 },
+      match: [":::details"],
+      commands: {
+        insertContentAt: mockInsertContentAt,
+        setTextSelection: mockSetTextSelection,
+      },
+    });
+
+    expect(result).toBeNull();
+    // Commands should NOT be called since createDetailsBlockNode returns null
+    expect(mockInsertContentAt).not.toHaveBeenCalled();
   });
 
   it("input rule handler invokes commands to insert details block (lines 120-130)", () => {

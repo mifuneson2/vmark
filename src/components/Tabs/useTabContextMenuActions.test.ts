@@ -723,6 +723,36 @@ describe("useTabContextMenuActions", () => {
       expect(mocks.writeText).not.toHaveBeenCalled();
     });
 
+    it("separator action is callable and does nothing (line 285, fn 28)", () => {
+      const { items } = renderActions();
+      const sep = findItem(items, "separator-1");
+      expect(sep).toBeDefined();
+      expect(sep!.separator).toBe(true);
+      // Call the no-op action — exercises fn 28 (line 285)
+      expect(() => sep!.action()).not.toThrow();
+    });
+
+    it("handleMoveToNewWindow passes workspaceRoot ?? null when workspaceRoot is undefined (branch 9, line 134)", async () => {
+      const tabs = makeTabs(2);
+      const onClose = vi.fn();
+      const { items } = renderActions({
+        tab: tabs[0],
+        tabs,
+        workspaceRoot: null,
+        onClose,
+      });
+      await findItem(items, "moveToNewWindow")!.action();
+      // Verify invoke was called and the transferData has workspaceRoot: null
+      expect(mocks.invoke).toHaveBeenCalledWith(
+        "detach_tab_to_new_window",
+        expect.objectContaining({
+          data: expect.objectContaining({
+            workspaceRoot: null,
+          }),
+        })
+      );
+    });
+
     it("handleMoveToNewWindow logs warn when close_window invoke fails", async () => {
       mocks.getTabsByWindow.mockReturnValue([]);
       mocks.getCurrentWebviewWindow.mockReturnValue({ label: "doc-1" });

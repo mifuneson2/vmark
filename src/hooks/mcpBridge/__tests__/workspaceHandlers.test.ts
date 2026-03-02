@@ -629,4 +629,223 @@ describe("workspaceHandlers", () => {
       (origWorkspace.useWorkspaceStore as unknown as Record<string, unknown>).getState = origGetState;
     });
   });
+
+  describe("error catch branches — non-Error thrown objects", () => {
+    it("handleWindowsList returns String(error) for non-Error throws (line 49)", async () => {
+      // Override tabStore to throw a non-Error
+      const origTabStore = await import("@/stores/tabStore");
+      const origGetState = origTabStore.useTabStore.getState;
+      (origTabStore.useTabStore as unknown as Record<string, unknown>).getState = () => {
+        throw "string error";
+      };
+
+      await handleWindowsList("req-str-err-1");
+
+      expect(mockRespond).toHaveBeenCalledWith({
+        id: "req-str-err-1",
+        success: false,
+        error: "string error",
+      });
+
+      (origTabStore.useTabStore as unknown as Record<string, unknown>).getState = origGetState;
+    });
+
+    it("handleWindowsGetFocused returns String(error) for non-Error throws (line 64)", async () => {
+      // Make respond throw on the first call to trigger catch
+      mockRespond.mockImplementationOnce(() => { throw "respond error"; });
+
+      await handleWindowsGetFocused("req-str-err-2");
+
+      // Second call is the error response
+      const call = mockRespond.mock.calls[1][0];
+      expect(call.success).toBe(false);
+      expect(call.error).toBe("respond error");
+    });
+
+    it("handleWindowsFocus returns String(error) for non-Error throws (line 93)", async () => {
+      // getCurrentWindow().setFocus throws a non-Error
+      const origGetCurrentWindow = await import("@tauri-apps/api/window");
+      const origFn = origGetCurrentWindow.getCurrentWindow;
+      (origGetCurrentWindow as unknown as Record<string, unknown>).getCurrentWindow = () => ({
+        setFocus: () => Promise.reject("focus error"),
+      });
+
+      await handleWindowsFocus("req-str-err-3", { windowId: "main" });
+
+      const call = mockRespond.mock.calls[0][0];
+      expect(call.success).toBe(false);
+      expect(call.error).toBe("focus error");
+
+      (origGetCurrentWindow as unknown as Record<string, unknown>).getCurrentWindow = origFn;
+    });
+
+    it("handleWorkspaceNewDocument returns String(error) for non-Error throws (line 116)", async () => {
+      mockTabStoreState.createTab.mockImplementationOnce(() => { throw "create error"; });
+
+      await handleWorkspaceNewDocument("req-str-err-4");
+
+      const call = mockRespond.mock.calls[0][0];
+      expect(call.success).toBe(false);
+      expect(call.error).toBe("create error");
+    });
+
+    it("handleWorkspaceOpenDocument returns String(error) for non-Error throws (line 150)", async () => {
+      const origFs = await import("@tauri-apps/plugin-fs");
+      const origReadTextFile = origFs.readTextFile;
+      (origFs as unknown as Record<string, unknown>).readTextFile = () => Promise.reject("read error");
+
+      await handleWorkspaceOpenDocument("req-str-err-5", { path: "/test.md" });
+
+      const call = mockRespond.mock.calls[0][0];
+      expect(call.success).toBe(false);
+      expect(call.error).toBe("read error");
+
+      (origFs as unknown as Record<string, unknown>).readTextFile = origReadTextFile;
+    });
+
+    it("handleWorkspaceSaveDocument returns String(error) for non-Error throws (line 185)", async () => {
+      mockDocStoreState.getDocument.mockReturnValue({
+        filePath: "/test.md",
+        isDirty: true,
+        content: "# Content",
+      });
+      const origFs = await import("@tauri-apps/plugin-fs");
+      const origWriteTextFile = origFs.writeTextFile;
+      (origFs as unknown as Record<string, unknown>).writeTextFile = () => Promise.reject("write error");
+
+      await handleWorkspaceSaveDocument("req-str-err-6");
+
+      const call = mockRespond.mock.calls[0][0];
+      expect(call.success).toBe(false);
+      expect(call.error).toBe("write error");
+
+      (origFs as unknown as Record<string, unknown>).writeTextFile = origWriteTextFile;
+    });
+
+    it("handleWorkspaceCloseWindow returns String(error) for non-Error throws (line 211)", async () => {
+      mockTabStoreState.closeTab.mockImplementationOnce(() => { throw 42; });
+
+      await handleWorkspaceCloseWindow("req-str-err-7", {});
+
+      const call = mockRespond.mock.calls[0][0];
+      expect(call.success).toBe(false);
+      expect(call.error).toBe("42");
+    });
+
+    it("handleWorkspaceSaveDocumentAs returns String(error) for non-Error throws (line 257)", async () => {
+      mockDocStoreState.getDocument.mockReturnValue({
+        filePath: "/test.md",
+        isDirty: true,
+        content: "# Content",
+      });
+      const origFs = await import("@tauri-apps/plugin-fs");
+      const origWriteTextFile = origFs.writeTextFile;
+      (origFs as unknown as Record<string, unknown>).writeTextFile = () => Promise.reject("save-as error");
+
+      await handleWorkspaceSaveDocumentAs("req-str-err-8", { path: "/new.md" });
+
+      const call = mockRespond.mock.calls[0][0];
+      expect(call.success).toBe(false);
+      expect(call.error).toBe("save-as error");
+
+      (origFs as unknown as Record<string, unknown>).writeTextFile = origWriteTextFile;
+    });
+
+    it("handleWorkspaceGetDocumentInfo returns String(error) for non-Error throws (line 308)", async () => {
+      mockTabStoreState.activeTabId = { main: "tab-1" };
+      mockDocStoreState.getDocument.mockImplementationOnce(() => { throw "doc info error"; });
+
+      await handleWorkspaceGetDocumentInfo("req-str-err-9", {});
+
+      const call = mockRespond.mock.calls[0][0];
+      expect(call.success).toBe(false);
+      expect(call.error).toBe("doc info error");
+    });
+
+    it("handleWorkspaceListRecentFiles returns String(error) for non-Error (line 331)", async () => {
+      const origRecentFiles = await import("@/stores/recentFilesStore");
+      const origGetState = origRecentFiles.useRecentFilesStore.getState;
+      (origRecentFiles.useRecentFilesStore as unknown as Record<string, unknown>).getState = () => {
+        throw 123;
+      };
+
+      await handleWorkspaceListRecentFiles("req-str-err-10");
+
+      const call = mockRespond.mock.calls[0][0];
+      expect(call.success).toBe(false);
+      expect(call.error).toBe("123");
+
+      (origRecentFiles.useRecentFilesStore as unknown as Record<string, unknown>).getState = origGetState;
+    });
+
+    it("handleWorkspaceGetInfo returns String(error) for non-Error (line 365)", async () => {
+      const origWorkspace = await import("@/stores/workspaceStore");
+      const origGetState = origWorkspace.useWorkspaceStore.getState;
+      (origWorkspace.useWorkspaceStore as unknown as Record<string, unknown>).getState = () => {
+        throw false;
+      };
+
+      await handleWorkspaceGetInfo("req-str-err-11");
+
+      const call = mockRespond.mock.calls[0][0];
+      expect(call.success).toBe(false);
+      expect(call.error).toBe("false");
+
+      (origWorkspace.useWorkspaceStore as unknown as Record<string, unknown>).getState = origGetState;
+    });
+
+    it("handleWorkspaceReloadDocument returns String(error) for non-Error (line 413)", async () => {
+      mockDocStoreState.getDocument.mockReturnValue({
+        filePath: "/test.md",
+        isDirty: false,
+      });
+      const origReload = await import("@/utils/reloadFromDisk");
+      const origFn = origReload.reloadTabFromDisk;
+      (origReload as unknown as Record<string, unknown>).reloadTabFromDisk = () => Promise.reject("reload error");
+
+      await handleWorkspaceReloadDocument("req-str-err-12", {});
+
+      const call = mockRespond.mock.calls[0][0];
+      expect(call.success).toBe(false);
+      expect(call.error).toBe("reload error");
+
+      (origReload as unknown as Record<string, unknown>).reloadTabFromDisk = origFn;
+    });
+  });
+
+  describe("handleWindowsList — getFileName returns empty string (line 38 fallback)", () => {
+    it("returns Untitled when getFileName returns empty string for filePath", async () => {
+      mockDocStoreState.getDocument.mockReturnValue({
+        filePath: "/",
+        isDirty: false,
+      });
+
+      await handleWindowsList("req-empty-fn");
+
+      const call = mockRespond.mock.calls[0][0];
+      expect(call.success).toBe(true);
+      // getFileName("/") returns "" → fallback to "Untitled"
+      expect(call.data[0].title).toBe("Untitled");
+    });
+  });
+
+  describe("handleWorkspaceGetDocumentInfo — no tab found (lines 297-299 fallbacks)", () => {
+    it("returns defaults when doc and tab are null/undefined", async () => {
+      mockGetEditor.mockReturnValue({
+        state: {
+          doc: { textContent: "hello" },
+        },
+      });
+      mockDocStoreState.getDocument.mockReturnValue(null);
+      mockTabStoreState.tabs = { main: [] };
+
+      await handleWorkspaceGetDocumentInfo("req-no-tab", {});
+
+      const call = mockRespond.mock.calls[0][0];
+      expect(call.success).toBe(true);
+      expect(call.data.filePath).toBeNull();
+      expect(call.data.isDirty).toBe(false);
+      expect(call.data.title).toBe("Untitled");
+    });
+  });
 });
