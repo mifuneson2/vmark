@@ -41,9 +41,10 @@ export function getParentProcessName(
       return result || undefined;
     } else if (plat === 'win32') {
       // Use PowerShell — wmic is deprecated on Windows 11+
+      // Pass PID via $args[0] to avoid string interpolation (#280)
       const result = execFileSync('powershell', [
         '-NoProfile', '-Command',
-        `(Get-Process -Id ${targetPid}).ProcessName`,
+        '(Get-Process -Id $args[0]).ProcessName', '--', String(targetPid),
       ], { encoding: 'utf8', timeout: 500 }).trim();
       return result || undefined;
     }

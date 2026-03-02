@@ -352,7 +352,7 @@ describe("TiptapTableContextMenu", () => {
     });
 
     it("does not respond to clicks when not visible", async () => {
-      // Don't show the menu
+      // Don't show the menu — it starts hidden
       const outsideEl = document.createElement("div");
       document.body.appendChild(outsideEl);
 
@@ -360,8 +360,14 @@ describe("TiptapTableContextMenu", () => {
       Object.defineProperty(mousedownEvent, "target", { value: outsideEl });
       document.dispatchEvent(mousedownEvent);
 
-      // No error should occur
-      expect(true).toBe(true);
+      // Menu container may or may not exist; if it does, it should be hidden
+      const container = document.querySelector(".table-context-menu") as HTMLElement | null;
+      if (container) {
+        expect(container.style.display).toBe("none");
+      } else {
+        // No container means no menu was ever created — correct behavior
+        expect(container).toBeNull();
+      }
     });
   });
 

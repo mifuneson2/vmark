@@ -224,11 +224,5 @@ describe("undo stack behavior", () => {
     expect(matches).toBe(false);
   });
 
-  it("addToHistory should be false for expansion dispatches", () => {
-    // The extension sets addToHistory: false on all expansion transactions.
-    // We verify this by checking the code expectation, since we can't
-    // easily test TipTap transaction metadata without a full editor.
-    // This is verified through code review of tiptap.ts.
-    expect(true).toBe(true);
-  });
+  it.todo("addToHistory should be false for expansion dispatches");
 });

@@ -1589,12 +1589,7 @@ describe("Advanced Features (COULD Have) - P2-P3 Priority", () => {
       expect(_testDoc.childCount).toBe(3);
     });
 
-    it("should maintain column alignment during typing", () => {
-      // P3 feature
-      // All cursors stay in same column
-      // Complex with variable-width fonts
-      expect(true).toBe(true); // Placeholder
-    });
+    it.todo("should maintain column alignment during typing");
   });
 
   describe("14. Skip Occurrence (P3 - Future)", () => {
@@ -1628,11 +1623,7 @@ describe("Advanced Features (COULD Have) - P2-P3 Priority", () => {
       // Type replacement → preview at all cursors
     });
 
-    it("should allow deselecting individual matches", () => {
-      // P3 feature
-      // Cmd+K Cmd+D to skip specific matches
-      expect(true).toBe(true); // Placeholder
-    });
+    it.todo("should allow deselecting individual matches");
   });
 });
 
@@ -1772,11 +1763,7 @@ describe("Edge Cases & Corner Cases", () => {
     });
 
     // TC-MC-201
-    it("TC-MC-201: should collapse multi-cursor on Tab in table", () => {
-      // Tab navigates to next cell
-      // Multi-cursor should collapse first
-      expect(true).toBe(true); // Placeholder
-    });
+    it.todo("TC-MC-201: should collapse multi-cursor on Tab in table");
   });
 
   describe("IME Composition", () => {
@@ -1952,20 +1939,9 @@ describe("Integration & Compatibility", () => {
 
   describe("Theme Compatibility", () => {
     // TC-MC-400, TC-MC-401, TC-MC-402
-    it("TC-MC-400: should support light theme rendering", () => {
-      // Visual test - cursor colors use tokens
-      expect(true).toBe(true); // Placeholder
-    });
-
-    it("TC-MC-401: should support dark theme rendering", () => {
-      // Visual test - cursor colors use dark tokens
-      expect(true).toBe(true); // Placeholder
-    });
-
-    it("TC-MC-402: should handle theme switch gracefully", () => {
-      // No rendering glitches during switch
-      expect(true).toBe(true); // Placeholder
-    });
+    it.todo("TC-MC-400: should support light theme rendering");
+    it.todo("TC-MC-401: should support dark theme rendering");
+    it.todo("TC-MC-402: should handle theme switch gracefully");
   });
 
   describe("Auto-Pair Integration", () => {

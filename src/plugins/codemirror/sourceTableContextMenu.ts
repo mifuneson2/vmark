@@ -15,7 +15,7 @@
  * @module plugins/codemirror/sourceTableContextMenu
  */
 
-import { EditorView } from "@codemirror/view";
+import { EditorView, ViewPlugin } from "@codemirror/view";
 import { toast } from "sonner";
 import { icons } from "@/utils/icons";
 import { getPopupHost, toHostCoords } from "@/plugins/sourcePopup";
@@ -266,39 +266,53 @@ class SourceTableContextMenuView {
 }
 
 /**
- * Context menu event handler for tables.
+ * ViewPlugin that owns the table context menu lifecycle.
+ * Using ViewPlugin.fromClass ensures destroy() is called when the
+ * editor view is recreated (e.g., mode switching), preventing
+ * leaked document-level event listeners (#283).
  */
-export function createTableContextMenuHandler() {
-  let contextMenu: SourceTableContextMenuView | null = null;
+const tableContextMenuPlugin = ViewPlugin.fromClass(
+  class {
+    contextMenu: SourceTableContextMenuView | null = null;
 
-  return EditorView.domEventHandlers({
-    contextmenu(event, view) {
-      const pos = view.posAtCoords({ x: event.clientX, y: event.clientY });
-      if (pos === null) return false;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    constructor(_view: EditorView) {}
 
-      // Move cursor to click position
-      view.dispatch({
-        selection: { anchor: pos },
-      });
+    destroy() {
+      this.contextMenu?.destroy();
+      this.contextMenu = null;
+    }
+  },
+  {
+    eventHandlers: {
+      contextmenu(event: MouseEvent, view: EditorView) {
+        const pos = view.posAtCoords({ x: event.clientX, y: event.clientY });
+        if (pos === null) return false;
 
-      // Check if inside table
-      const tableInfo = getSourceTableInfo(view);
-      if (!tableInfo) return false;
+        // Move cursor to click position
+        view.dispatch({
+          selection: { anchor: pos },
+        });
 
-      event.preventDefault();
+        // Check if inside table
+        const tableInfo = getSourceTableInfo(view);
+        if (!tableInfo) return false;
 
-      // Create context menu if not exists, or recreate if previous was destroyed
-      if (!contextMenu) {
-        contextMenu = new SourceTableContextMenuView(view);
-      }
+        event.preventDefault();
 
-      contextMenu.show(event.clientX, event.clientY, tableInfo);
-      return true;
+        // Create context menu if not exists
+        if (!this.contextMenu) {
+          this.contextMenu = new SourceTableContextMenuView(view);
+        }
+
+        this.contextMenu.show(event.clientX, event.clientY, tableInfo);
+        return true;
+      },
     },
-  });
-}
+  }
+);
 
 /**
  * All extensions for source table context menu.
  */
-export const sourceTableContextMenuExtensions = [createTableContextMenuHandler()];
+export const sourceTableContextMenuExtensions = [tableContextMenuPlugin];

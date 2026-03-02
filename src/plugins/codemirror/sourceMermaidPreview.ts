@@ -39,20 +39,36 @@ function findDiagramBlockAtCursor(
   const doc = view.state.doc;
   const currentLine = doc.lineAt(pos);
 
-  // Scan upward to find code fence start
+  // Scan upward to find the opening code fence.
+  // Must pair fences correctly: skip closing fences that belong to
+  // inner blocks so we don't misidentify a close as an open (#277).
   let fenceStart: { line: number; from: number } | null = null;
   let language = "";
+  let fenceChar = "";
+  let closeFencesSkipped = 0;
 
   for (let i = currentLine.number; i >= 1; i--) {
     const line = doc.line(i);
     const text = line.text.trimStart();
 
-    // Check for opening fence
-    const openMatch = text.match(/^(`{3,}|~{3,})(\w*)/);
-    if (openMatch) {
-      fenceStart = { line: i, from: line.from };
-      language = openMatch[2].toLowerCase();
-      break;
+    const fenceMatch = text.match(/^(`{3,}|~{3,})(\w*)/);
+    if (fenceMatch) {
+      const hasLang = fenceMatch[2].length > 0;
+      const isCloseOnly = !hasLang && /^(`{3,}|~{3,})\s*$/.test(text);
+
+      if (isCloseOnly) {
+        // This is a closing fence for a block above — skip it and its pair
+        closeFencesSkipped++;
+      } else if (closeFencesSkipped > 0) {
+        // This opening fence pairs with a skipped closing fence
+        closeFencesSkipped--;
+      } else {
+        // Found our opening fence
+        fenceStart = { line: i, from: line.from };
+        language = fenceMatch[2].toLowerCase();
+        fenceChar = fenceMatch[1][0]; // "`" or "~"
+        break;
+      }
     }
   }
 
@@ -60,8 +76,11 @@ function findDiagramBlockAtCursor(
     return null;
   }
 
-  // Scan downward to find code fence end
+  // Scan downward to find code fence end.
+  // Only accept a closing fence that uses the same character as the
+  // opening fence, per CommonMark spec (#278).
   let fenceEnd: { line: number; to: number } | null = null;
+  const closingRegex = new RegExp(`^${fenceChar === "`" ? "`" : "~"}{3,}\\s*$`);
 
   for (let i = currentLine.number; i <= doc.lines; i++) {
     const line = doc.line(i);
@@ -70,8 +89,8 @@ function findDiagramBlockAtCursor(
     // Skip the opening fence line
     if (i === fenceStart.line) continue;
 
-    // Check for closing fence
-    if (/^(`{3,}|~{3,})\s*$/.test(text)) {
+    // Check for closing fence of the same type
+    if (closingRegex.test(text)) {
       fenceEnd = { line: i, to: line.to };
       break;
     }

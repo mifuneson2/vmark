@@ -502,6 +502,18 @@ async function main(): Promise<void> {
   process.on('SIGTERM', shutdown);
 }
 
+// Catch unhandled async rejections (e.g., reconnection timers, MCP transport) (#279)
+process.on('unhandledRejection', (reason) => {
+  console.error('[VMark MCP] Unhandled rejection:', reason);
+  // Don't exit — let reconnection recover if possible
+});
+
+// Catch uncaught synchronous exceptions
+process.on('uncaughtException', (error) => {
+  console.error('[VMark MCP] Uncaught exception:', error);
+  process.exit(1);
+});
+
 // Only run main() if not doing health check (health check exits via process.exit)
 if (!process.argv.includes('--health-check')) {
   main().catch((error) => {
