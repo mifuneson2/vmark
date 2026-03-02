@@ -64,43 +64,47 @@ onMounted(async () => {
 
 <template>
   <div v-if="stats && stats.total && stats.total.pings > 0" class="user-stats">
-    <div class="stats-grid">
-      <div class="stat-header">
-        <span class="header-spacer"></span>
-        <span class="header-label">Today</span>
-        <span class="header-label">This Week</span>
-        <span class="header-label">This Month</span>
-        <span class="header-label">All Time</span>
-      </div>
-      <div class="stat-row">
-        <span class="row-label">Update Pings</span>
-        <span class="stat-sub">{{ stats.today.pings }}</span>
-        <span class="stat-sub">{{ stats.week.pings }}</span>
-        <span class="stat-sub">{{ stats.month.pings }}</span>
-        <span class="stat-sub">{{ stats.total.pings }}</span>
-      </div>
-      <div class="stat-row">
-        <span class="row-label">Unique IPs</span>
-        <span class="stat-number">{{ stats.today.ips }}</span>
-        <span class="stat-number">{{ stats.week.ips }}</span>
-        <span class="stat-number">{{ stats.month.ips }}</span>
-        <span class="stat-number">{{ stats.total.ips }}</span>
+    <div class="table-wrapper">
+      <div class="stats-grid">
+        <div class="stat-header">
+          <span class="header-spacer"></span>
+          <span class="header-label">Today</span>
+          <span class="header-label">This Week</span>
+          <span class="header-label">This Month</span>
+          <span class="header-label">All Time</span>
+        </div>
+        <div class="stat-row">
+          <span class="row-label">Update Pings</span>
+          <span class="stat-sub">{{ stats.today.pings }}</span>
+          <span class="stat-sub">{{ stats.week.pings }}</span>
+          <span class="stat-sub">{{ stats.month.pings }}</span>
+          <span class="stat-sub">{{ stats.total.pings }}</span>
+        </div>
+        <div class="stat-row">
+          <span class="row-label">Unique IPs</span>
+          <span class="stat-number">{{ stats.today.ips }}</span>
+          <span class="stat-number">{{ stats.week.ips }}</span>
+          <span class="stat-number">{{ stats.month.ips }}</span>
+          <span class="stat-number">{{ stats.total.ips }}</span>
+        </div>
       </div>
     </div>
 
-    <div v-if="hasPlatforms || hasVersions" class="details-grid">
-      <template v-if="hasPlatforms">
-        <span class="details-header">Platforms</span>
+    <div v-if="hasPlatforms || hasVersions" class="table-wrapper">
+      <div class="details-grid">
+        <span class="details-header" v-if="hasPlatforms">Platforms</span>
         <span class="details-header" v-if="hasVersions">Versions</span>
         <template v-for="(row, i) in detailRows" :key="i">
-          <span class="details-label">{{ row.platform?.label ?? '' }}</span>
-          <span class="details-value">{{ row.platform?.count ?? '' }}</span>
+          <template v-if="hasPlatforms">
+            <span class="details-label">{{ row.platform?.label ?? '' }}</span>
+            <span class="details-value">{{ row.platform?.count ?? '' }}</span>
+          </template>
           <template v-if="hasVersions">
             <span class="details-label">{{ row.version?.label ?? '' }}</span>
             <span class="details-value">{{ row.version?.count ?? '' }}</span>
           </template>
         </template>
-      </template>
+      </div>
     </div>
 
     <p class="stats-note">
@@ -113,15 +117,20 @@ onMounted(async () => {
 <style scoped>
 .user-stats {
   margin: 1.5rem 0;
-  text-align: center;
 }
 
+.table-wrapper {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1.25rem;
+}
+
+/* Main stats table */
 .stats-grid {
-  display: inline-grid;
+  display: grid;
   grid-template-columns: auto auto auto auto auto;
   gap: 0.25rem 1.5rem;
   justify-items: center;
-  margin: 0 auto;
 }
 
 .stat-header,
@@ -163,12 +172,12 @@ onMounted(async () => {
   padding: 0.35rem 0;
 }
 
+/* Details table (platforms + versions) */
 .details-grid {
-  display: inline-grid;
+  display: grid;
   grid-template-columns: auto auto auto auto;
   gap: 0.15rem 1.5rem;
   justify-items: center;
-  margin: 1.25rem auto 0;
 }
 
 .details-header {
@@ -200,7 +209,7 @@ onMounted(async () => {
   text-align: center;
   font-size: 0.8rem;
   color: var(--vp-c-text-3);
-  margin-top: 0.75rem;
+  margin-top: 0;
 }
 
 .stats-note a {
