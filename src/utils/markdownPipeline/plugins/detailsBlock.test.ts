@@ -435,6 +435,43 @@ Content.
       expect(result.children[0].type).toBe("details");
     });
 
+    it("handles html node with undefined value in transformDetailsBlocks (line 102, 109, 114)", () => {
+      // Directly construct a tree with html nodes that have undefined value
+      // to exercise the ?? '' fallback branches
+      const processor = unified()
+        .use(remarkParse)
+        .use(remarkGfm)
+        .use(remarkDetailsBlock);
+
+      const tree = processor.parse("placeholder");
+      // Replace children with html nodes that have undefined value
+      (tree as Root).children = [
+        { type: "html", value: undefined as unknown as string } as any,
+      ];
+      const result = processor.runSync(tree) as Root;
+      // The node with undefined value should not crash — ?? '' makes it empty string
+      // isDetailsOpen('') returns false, so it's pushed as-is
+      expect(result.children[0].type).toBe("html");
+    });
+
+    it("handles inner html node with undefined value during multi-block parsing (line 122)", () => {
+      // Exercise the next.value ?? '' branch inside the multi-block inner loop
+      const processor = unified()
+        .use(remarkParse)
+        .use(remarkGfm)
+        .use(remarkDetailsBlock);
+
+      const tree = processor.parse("placeholder");
+      // Construct a multi-block details with an inner html node that has undefined value
+      (tree as Root).children = [
+        { type: "html", value: "<details>" } as any,
+        { type: "html", value: undefined as unknown as string } as any,
+        { type: "html", value: "</details>" } as any,
+      ];
+      const result = processor.runSync(tree) as Root;
+      expect(result.children[0].type).toBe("details");
+    });
+
     it("detailsHandler — round-trip serialization exercises lines 256-272", () => {
       // Parse then serialize to exercise the detailsHandler toMarkdown extension
       const md = `<details>

@@ -1281,6 +1281,80 @@ describe("buildEditorKeymapBindings — inner callback coverage", () => {
   });
 });
 
+describe("buildEditorKeymapBindings — isMacPlatform branch", () => {
+  it("does NOT register Mod-y when isMacPlatform() returns true (covers Mac branch)", async () => {
+    // Mock isMacPlatform to return true
+    const shortcutMatchModule = await import("@/utils/shortcutMatch");
+    const spy = vi.spyOn(shortcutMatchModule, "isMacPlatform").mockReturnValue(true);
+
+    const bindings = buildEditorKeymapBindings();
+    expect(bindings["Mod-y"]).toBeUndefined();
+
+    spy.mockRestore();
+  });
+
+  it("registers Mod-y when isMacPlatform() returns false", async () => {
+    const shortcutMatchModule = await import("@/utils/shortcutMatch");
+    const spy = vi.spyOn(shortcutMatchModule, "isMacPlatform").mockReturnValue(false);
+
+    const bindings = buildEditorKeymapBindings();
+    expect(bindings["Mod-y"]).toBeTypeOf("function");
+
+    spy.mockRestore();
+  });
+});
+
+describe("buildEditorKeymapBindings — transformToggleCase with custom key", () => {
+  afterEach(resetShortcuts);
+
+  function makeMockViewForToggle() {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { Schema } = require("@tiptap/pm/model");
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { EditorState } = require("@tiptap/pm/state");
+    const schema = new Schema({
+      nodes: {
+        doc: { content: "paragraph+" },
+        paragraph: { content: "text*" },
+        text: { inline: true },
+      },
+    });
+    const doc = schema.node("doc", null, [
+      schema.node("paragraph", null, [schema.text("hello")]),
+    ]);
+    const state = EditorState.create({ doc, schema });
+    return {
+      state,
+      dispatch: vi.fn(),
+      focus: vi.fn(),
+      composing: false,
+      dom: document.createElement("div"),
+    };
+  }
+
+  it("transformToggleCase returns false when view is undefined (covers !view true branch)", () => {
+    // The default key is empty, so we must set a custom key to register the binding
+    useShortcutsStore.setState({ customBindings: { transformToggleCase: "Alt-Mod-t" } });
+    const bindings = buildEditorKeymapBindings();
+    expect(bindings["Alt-Mod-t"]).toBeTypeOf("function");
+
+    // Call without view — guardProseMirrorCommand passes (composing check returns false for undefined view)
+    // then the inner function hits if (!view) return false
+    const result = bindings["Alt-Mod-t"]({} as never, undefined, undefined);
+    expect(result).toBe(false);
+  });
+
+  it("transformToggleCase calls doWysiwygTransformToggleCase when view is provided", () => {
+    useShortcutsStore.setState({ customBindings: { transformToggleCase: "Alt-Mod-t" } });
+    const bindings = buildEditorKeymapBindings();
+    const mockView = makeMockViewForToggle();
+
+    // doWysiwygTransformToggleCase returns false when nothing is selected
+    const result = bindings["Alt-Mod-t"](mockView.state as never, vi.fn(), mockView as never);
+    expect(result).toBe(false);
+  });
+});
+
 describe("buildEditorKeymapBindings — direct inner body coverage", () => {
   // These tests call the raw inner arrow functions directly, bypassing guardProseMirrorCommand,
   // to ensure V8 coverage tracks the function bodies at lines 62-63 and 309-310.

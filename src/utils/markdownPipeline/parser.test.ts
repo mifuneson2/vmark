@@ -1237,3 +1237,107 @@ describe("parser — hasNestedEmptyListItem returns false (line 481)", () => {
     expect(list.type).toBe("list");
   });
 });
+
+// ---------------------------------------------------------------------------
+// Additional branch coverage: fenced code block at EOF without trailing newline
+// Covers Branch 7/8 (lines 94-95): lineEnd === markdown.length path
+// ---------------------------------------------------------------------------
+
+describe("preprocessEscapedMarkers — fenced code block at EOF without trailing newline", () => {
+  it("handles fenced code block opening at end of input with no trailing newline", () => {
+    // When markdown ends with a fenced code block opener and no trailing newline,
+    // lineEnd === markdown.length, so `lineEnd < markdown.length` is false.
+    // This exercises the else branch of the conditional at line 94-95.
+    const input = "some text\n\n```";
+    const result = parseMarkdownToMdast(input);
+    expect(result.type).toBe("root");
+    // The ``` at end becomes a code block (or paragraph depending on parser)
+    expect(result.children.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("handles fenced code block closing at end of input with no trailing newline", () => {
+    // Fenced block that closes at the very last line with no newline after
+    const input = "```\ncode here\n```";
+    const result = parseMarkdownToMdast(input);
+    const codeBlock = result.children[0] as import("mdast").Code;
+    expect(codeBlock.type).toBe("code");
+    expect(codeBlock.value).toBe("code here");
+  });
+
+  it("handles fenced block content line at end of input with no trailing newline", () => {
+    // Fenced block where the last content line has no trailing newline
+    // (unclosed fenced block at EOF)
+    const input = "```\ncode without close";
+    const result = parseMarkdownToMdast(input);
+    expect(result.children.length).toBeGreaterThanOrEqual(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Coverage: isEmptyListItem returning false at line 495 during normalization
+// Needs: wasNormalized=true + nested list with both empty AND non-empty items
+// ---------------------------------------------------------------------------
+
+describe("isEmptyListItem — mixed empty and non-empty nested items during normalization", () => {
+  it("exercises isEmptyListItem returning false for non-empty items in normalized list", () => {
+    // Bare marker "  -" triggers normalization (wasNormalized=true).
+    // The nested list has both an empty item ("  -") and a non-empty item ("  - content").
+    // hasNestedEmptyListItem iterates all items, calling isEmptyListItem on each.
+    // The "content" item has children.length===1, type==="paragraph", but text is non-empty,
+    // so isEmptyListItem returns false (line 495). The empty item returns true (line 485 or 489).
+    const input = "- parent\n  -\n  - content\n";
+    const result = parseMarkdownToMdast(input);
+    const list = result.children[0] as any;
+    expect(list.type).toBe("list");
+    const parentItem = list.children[0];
+    const nested = parentItem.children.find((c: any) => c.type === "list");
+    expect(nested).toBeDefined();
+    // Nested list should have 2 items: one empty, one with content
+    expect(nested.children.length).toBe(2);
+    // The non-empty item should have a paragraph with actual text
+    const contentItem = nested.children[1];
+    expect(contentItem.children.length).toBe(1);
+    expect(contentItem.children[0].type).toBe("paragraph");
+    const textNode = contentItem.children[0].children[0];
+    expect(textNode.type).toBe("text");
+    expect(textNode.value.trim()).toBe("content");
+  });
+
+  it("exercises isEmptyListItem paragraph branch with para.children.length check", () => {
+    // Multiple bare markers mixed with content items in a nested list
+    // Ensures isEmptyListItem evaluates the paragraph children branch
+    const input = "- top\n  -\n  - real item\n  -\n";
+    const result = parseMarkdownToMdast(input);
+    const list = result.children[0] as any;
+    expect(list.type).toBe("list");
+    const topItem = list.children[0];
+    const nested = topItem.children.find((c: any) => c.type === "list");
+    expect(nested).toBeDefined();
+    // Should have 3 items: empty, content, empty
+    expect(nested.children.length).toBe(3);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Coverage: fixNormalizationSpread — list.spread stays true when child is spread
+// Branch 63 (lines 464-466): anyChildSpread=true, so list.spread is NOT reset
+// ---------------------------------------------------------------------------
+
+describe("fixNormalizationSpread — list.spread preserved when child is genuinely spread", () => {
+  it("does not reset list.spread when a child listItem is genuinely spread", () => {
+    // Need: wasNormalized=true (bare marker in one item) AND a genuinely spread
+    // list item (blank line between paragraphs) in a DIFFERENT item.
+    // The bare marker triggers normalization; the spread item has no nested empty
+    // list items, so hasNestedEmptyListItem returns false and spread stays true.
+    // At the list level, anyChildSpread=true prevents list.spread reset.
+    const input = "- item a\n  -\n\n- para one\n\n  para two\n";
+    const result = parseMarkdownToMdast(input);
+    const list = result.children[0] as any;
+    expect(list.type).toBe("list");
+    // The second item should be genuinely spread (two paragraphs)
+    const secondItem = list.children[1];
+    expect(secondItem.spread).toBe(true);
+    // The list itself should remain spread since at least one child is spread
+    expect(list.spread).toBe(true);
+  });
+});

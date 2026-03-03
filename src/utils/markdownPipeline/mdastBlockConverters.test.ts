@@ -1652,4 +1652,322 @@ describe("mdastBlockConverters", () => {
       expect(result!.attrs.start).toBe(1);
     });
   });
+
+  describe("convertParagraph — image url undefined (line 88 ?? fallback)", () => {
+    it("falls through video/audio checks when image url is undefined", () => {
+      // Schema with block_video and block_audio but NOT block_image
+      // so we can verify the url ?? "" fallback path without hitting convertImage
+      const schemaNoBlockImage = new Schema({
+        nodes: {
+          doc: { content: "block+" },
+          paragraph: {
+            content: "inline*",
+            group: "block",
+            attrs: { sourceLine: { default: null } },
+          },
+          block_video: {
+            attrs: {
+              src: { default: "" }, title: { default: "" },
+              controls: { default: true }, preload: { default: "metadata" },
+              sourceLine: { default: null },
+            },
+            group: "block",
+            atom: true,
+          },
+          block_audio: {
+            attrs: {
+              src: { default: "" }, title: { default: "" },
+              controls: { default: true }, preload: { default: "metadata" },
+              sourceLine: { default: null },
+            },
+            group: "block",
+            atom: true,
+          },
+          text: { group: "inline" },
+        },
+      });
+      const ctx = createContext(schemaNoBlockImage);
+      const node: Paragraph = {
+        type: "paragraph",
+        children: [
+          { type: "image", url: undefined as unknown as string, alt: "pic", title: null },
+        ],
+      };
+      const result = convertParagraph(ctx, node, []);
+      expect(result).not.toBeNull();
+      // url ?? "" is "" which has neither video nor audio extension
+      // no block_image in schema → falls through to normal paragraph
+      expect(result!.type.name).toBe("paragraph");
+    });
+  });
+
+  describe("convertParagraph — no block_image in schema (line 114 guard)", () => {
+    const noBlockImageSchema = new Schema({
+      nodes: {
+        doc: { content: "block+" },
+        paragraph: {
+          content: "inline*",
+          group: "block",
+          attrs: { sourceLine: { default: null } },
+        },
+        image: {
+          attrs: { src: {}, alt: { default: null }, title: { default: null } },
+          inline: true,
+          group: "inline",
+        },
+        text: { group: "inline" },
+      },
+    });
+
+    it("falls through to normal paragraph when block_image not in schema", () => {
+      const ctx = createContext(noBlockImageSchema);
+      const node: Paragraph = {
+        type: "paragraph",
+        children: [
+          { type: "image", url: "photo.png", alt: "pic", title: null },
+        ],
+      };
+      const result = convertParagraph(ctx, node, []);
+      expect(result).not.toBeNull();
+      // No block_image, block_video, or block_audio → normal paragraph
+      expect(result!.type.name).toBe("paragraph");
+    });
+  });
+
+  describe("convertParagraph — inline HTML value undefined (line 129 ?? fallback)", () => {
+    const mediaSchema = new Schema({
+      nodes: {
+        doc: { content: "block+" },
+        paragraph: {
+          content: "inline*",
+          group: "block",
+          attrs: { sourceLine: { default: null } },
+        },
+        block_video: {
+          attrs: {
+            src: { default: "" }, title: { default: "" }, poster: { default: "" },
+            controls: { default: true }, preload: { default: "metadata" },
+            sourceLine: { default: null },
+          },
+          group: "block",
+          atom: true,
+        },
+        text: { group: "inline" },
+      },
+    });
+
+    it("handles inline HTML child with undefined value", () => {
+      const ctx = createContext(mediaSchema);
+      const node: Paragraph = {
+        type: "paragraph",
+        children: [
+          { type: "html", value: undefined as unknown as string },
+        ],
+      };
+      const result = convertParagraph(ctx, node, []);
+      expect(result).not.toBeNull();
+      // value ?? "" is "" which doesn't match video/audio → normal paragraph
+      expect(result!.type.name).toBe("paragraph");
+    });
+  });
+
+  describe("convertHeading — child without value property (line 147)", () => {
+    it("produces empty string for non-text heading children", () => {
+      const ctx = createContext();
+      const node: Heading = {
+        type: "heading",
+        depth: 2,
+        children: [
+          { type: "text", value: "Hello " },
+          { type: "emphasis", children: [{ type: "text", value: "world" }] } as any,
+        ],
+      };
+      const result = convertHeading(ctx, node, []);
+      expect(result).not.toBeNull();
+      expect(result!.type.name).toBe("heading");
+      // emphasis child doesn't have "value", so produces "" in headingText
+    });
+  });
+
+  describe("convertListItem — paragraph not in schema (line 206 guard)", () => {
+    it("returns listItem with empty children when paragraph is missing", () => {
+      const noParagraphSchema = new Schema({
+        nodes: {
+          doc: { content: "block+" },
+          listItem: {
+            attrs: { checked: { default: null }, sourceLine: { default: null } },
+            content: "text*",
+            group: "block",
+          },
+          text: {},
+        },
+      });
+      const ctx = createContext(noParagraphSchema);
+      const node: ListItem = {
+        type: "listItem",
+        children: [],
+      };
+      const result = convertListItem(ctx, node, []);
+      expect(result).not.toBeNull();
+      // children.length === 0 and no paragraph type → children stays empty array
+      // But the function creates the node with empty children
+    });
+  });
+
+  describe("convertTable — no paragraphType (line 246 guard)", () => {
+    const noParagraphTableSchema = new Schema({
+      nodes: {
+        doc: { content: "block+" },
+        table: { content: "tableRow+", group: "block" },
+        tableRow: { content: "tableCell+" },
+        tableCell: {
+          content: "text*",
+          attrs: { sourceLine: { default: null } },
+        },
+        text: {},
+      },
+    });
+
+    it("passes inline children directly when paragraph not in schema", () => {
+      const ctx = createContext(noParagraphTableSchema);
+      const node: Table = {
+        type: "table",
+        children: [
+          {
+            type: "tableRow",
+            children: [
+              { type: "tableCell", children: [{ type: "text", value: "cell" }] },
+            ],
+          },
+        ],
+      };
+      const result = convertTable(ctx, node, []);
+      expect(result).not.toBeNull();
+      expect(result!.type.name).toBe("table");
+    });
+  });
+
+  describe("tryPromoteMediaHtml — no block_audio in schema (line 411 guard)", () => {
+    const noAudioSchema = new Schema({
+      nodes: {
+        doc: { content: "block+" },
+        paragraph: { content: "inline*", group: "block" },
+        html_block: {
+          attrs: { value: { default: "" }, sourceLine: { default: null } },
+          group: "block",
+          atom: true,
+        },
+        text: { group: "inline" },
+      },
+    });
+
+    it("returns null for audio tag when block_audio not in schema", () => {
+      const ctx = createContext(noAudioSchema);
+      const node: Html = {
+        type: "html",
+        value: '<audio src="song.mp3" controls></audio>',
+      };
+      const result = convertHtml(ctx, node, false);
+      expect(result).not.toBeNull();
+      // Falls through audio promotion (no block_audio), lands on html_block
+      expect(result!.type.name).toBe("html_block");
+    });
+  });
+
+  describe("tryPromoteMediaHtml — iframe width/height NaN fallback (lines 420-421)", () => {
+    const mediaSchema = new Schema({
+      nodes: {
+        doc: { content: "block+" },
+        paragraph: { content: "inline*", group: "block" },
+        video_embed: {
+          attrs: {
+            provider: { default: "" }, videoId: { default: "" },
+            width: { default: 560 }, height: { default: 315 },
+            sourceLine: { default: null },
+          },
+          group: "block",
+          atom: true,
+        },
+        html_block: {
+          attrs: { value: { default: "" }, sourceLine: { default: null } },
+          group: "block",
+          atom: true,
+        },
+        text: { group: "inline" },
+      },
+    });
+
+    it("defaults width/height to 560/315 when parseInt returns NaN", () => {
+      const ctx = createContext(mediaSchema);
+      const node: Html = {
+        type: "html",
+        value: '<iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ" width="abc" height="xyz"></iframe>',
+      };
+      const result = convertHtml(ctx, node, false);
+      expect(result).not.toBeNull();
+      expect(result!.type.name).toBe("video_embed");
+      expect(result!.attrs.width).toBe(560);
+      expect(result!.attrs.height).toBe(315);
+    });
+  });
+
+  describe("stripAlertMarker — paragraph.children nullish (line 489)", () => {
+    it("returns null when paragraph has undefined children", () => {
+      const node: Blockquote = {
+        type: "blockquote",
+        children: [
+          { type: "paragraph", children: undefined as any },
+        ],
+      };
+      const result = convertAlertBlockquote(context, node, []);
+      // paragraph.children is undefined → [...undefined] will use ?? []
+      // First child is undefined → returns null
+      expect(result).toBeNull();
+    });
+  });
+
+  describe("convertTable — headerType fallback when tableHeader missing (line 230)", () => {
+    const noHeaderSchema = new Schema({
+      nodes: {
+        doc: { content: "block+" },
+        paragraph: {
+          content: "inline*",
+          group: "block",
+          attrs: { sourceLine: { default: null } },
+        },
+        table: {
+          content: "tableRow+",
+          group: "block",
+          attrs: { sourceLine: { default: null } },
+        },
+        tableRow: {
+          content: "tableCell+",
+          attrs: { sourceLine: { default: null } },
+        },
+        tableCell: {
+          content: "paragraph+",
+          attrs: { sourceLine: { default: null } },
+        },
+        text: { group: "inline" },
+      },
+    });
+
+    it("uses tableCell as headerType when tableHeader not in schema", () => {
+      const ctx = createContext(noHeaderSchema);
+      const node: Table = {
+        type: "table",
+        children: [
+          {
+            type: "tableRow",
+            children: [
+              { type: "tableCell", children: [{ type: "text", value: "header" }] },
+            ],
+          },
+        ],
+      };
+      const result = convertTable(ctx, node, []);
+      expect(result).not.toBeNull();
+      expect(result!.type.name).toBe("table");
+    });
+  });
 });
