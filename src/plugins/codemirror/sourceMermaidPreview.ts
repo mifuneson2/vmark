@@ -104,6 +104,7 @@ function findDiagramBlockAtCursor(
   // Verify cursor is actually inside the block (not on fence lines)
   if (currentLine.number <= fenceStart.line || currentLine.number >= fenceEnd.line) {
     // Cursor is on fence line - still show preview if within range
+    /* v8 ignore next -- @preserve Defensive guard: pos is always within [fenceStart.from, fenceEnd.to] when the cursor is on a fence line; the out-of-range case requires a cursor position that cannot exist on those lines */
     if (pos < fenceStart.from || pos > fenceEnd.to) {
       return null;
     }
@@ -183,6 +184,7 @@ class SourceDiagramPreviewPlugin {
   }
 
   private showPreview(content: string, language: string) {
+    /* v8 ignore next -- @preserve showPreview is only called after this.currentBlock is assigned (line 177); the null guard protects against future refactors */
     if (!this.currentBlock) return;
 
     const preview = getMermaidPreviewView();

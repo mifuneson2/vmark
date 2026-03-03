@@ -208,6 +208,32 @@ describe("extractTiptapContext", () => {
       expect(ctx.inBlockquote).toBeDefined();
       expect(ctx.inBlockquote?.depth).toBe(2);
     });
+
+    it("counts depth=1 when blockquote is inside a list item (non-blockquote ancestors at lower depths)", () => {
+      // Structure: doc > bulletList > listItem > paragraph + blockquote > paragraph
+      // listItem schema requires "paragraph block*" so we use: listItem(p(""), blockquote(p("...")))
+      // When the outer loop traverses depths looking for blockquote, it finds it at depth 4:
+      //   depth 0: doc
+      //   depth 1: bulletList
+      //   depth 2: listItem
+      //   depth 3: blockquote (detected here)
+      //   depth 4: paragraph
+      // Inner loop: dd=1 (bulletList → false branch), dd=2 (listItem → false), dd=3 (blockquote → true)
+      // Result: depth=1
+      const document = doc(
+        bulletList(listItem(p(""), blockquote(p("bq in list"))))
+      );
+      // Navigate into the blockquote paragraph content
+      // pos: doc(1) > bulletList(1) > listItem(1) > p("") = 2 chars (open+close), blockquote(1) > p(1) > text
+      // Total: 1 + 1 + 1 + 2 + 1 + 1 + 1 = let's resolve from end of "bq in list"
+      // Rough position inside "bq in list" text — try pos 10
+      const state = createState(document, 10);
+
+      const ctx = extractTiptapContext(state);
+
+      expect(ctx.inBlockquote).toBeDefined();
+      expect(ctx.inBlockquote?.depth).toBe(1);
+    });
   });
 
   describe("selection detection", () => {

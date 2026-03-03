@@ -1520,6 +1520,15 @@ describe("limitConsecutivePunctuation — limit=2 branch (line 630)", () => {
   });
 });
 
+describe("limitConsecutivePunctuation — limit > 2 falls through both branches (line 630 else-if false)", () => {
+  it("leaves text unchanged when limit is 3 (neither 1 nor 2)", () => {
+    // limit=3 passes the `if (limit === 1)` check (false) and `else if (limit === 2)` check (false),
+    // so no replacement occurs — text is returned as-is.
+    expect(limitConsecutivePunctuation("好！！！！", 3)).toBe("好！！！！");
+    expect(limitConsecutivePunctuation("好？？？", 3)).toBe("好？？？");
+  });
+});
+
 describe("normalizeFullwidthPunctuation — surrogate pair neighbors (lines 84-88, 106-111)", () => {
   it("handles surrogate pair CJK characters as left neighbor", () => {
     // U+20000 (𠀀) is CJK Unified Ideographs Extension B — uses surrogate pair

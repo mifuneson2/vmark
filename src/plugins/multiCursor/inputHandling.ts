@@ -233,7 +233,7 @@ export function handleMultiCursorArrow(
     const anchorPos = backwardFlags?.[i] ? origRange.$to.pos : origRange.$from.pos;
     const headPos = range.$from.pos === anchorPos ? range.$to.pos
       : range.$to.pos === anchorPos ? range.$from.pos
-      : (dir < 0 ? range.$from.pos : range.$to.pos);
+      : /* v8 ignore next -- @preserve defensive fallback: SelectionRange always has anchor at from or to */ (dir < 0 ? range.$from.pos : range.$to.pos);
     return anchorPos > headPos;
   });
 

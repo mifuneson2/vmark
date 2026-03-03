@@ -44,6 +44,7 @@ function getListInfo(view: EditorView): ListInfo | null {
         }
       }
 
+      /* v8 ignore next -- @preserve Defensive guard: itemIndex stays -1 only if no listItem ancestor exists between cursor and list, which cannot occur in a well-formed document */
       if (itemIndex === -1) return null;
 
       const itemCount = node.childCount;
@@ -72,6 +73,7 @@ function isAtStartOfListItem(view: EditorView, info: ListInfo): boolean {
 
   // Get the first text position in this list item
   const itemNode = state.doc.nodeAt(info.itemPos);
+  /* v8 ignore next -- @preserve Defensive guard: itemPos is derived from $from.before(d) which always points to a valid node */
   if (!itemNode) return false;
 
   // Check if cursor is at the very beginning of the first paragraph in the item
@@ -89,6 +91,7 @@ function isAtEndOfListItem(view: EditorView, info: ListInfo): boolean {
   const { $from } = state.selection;
 
   const itemNode = state.doc.nodeAt(info.itemPos);
+  /* v8 ignore next -- @preserve Defensive guard: itemPos is derived from $from.before(d) which always points to a valid node */
   if (!itemNode) return false;
 
   // Check if cursor is at the end of the item
@@ -159,6 +162,7 @@ export function escapeListDown(view: EditorView): boolean {
 
   // Only handle when list is last block
   const docSize = view.state.doc.content.size;
+  /* v8 ignore next -- @preserve Defensive guard: listNode is always set when getListInfo returns non-null (see line 53) */
   if (!info.listNode) return false;
   if (!isListLastBlock(info.listPos, info.listNode.nodeSize, docSize)) return false;
 

@@ -478,5 +478,65 @@ describe("handleMultiCursorHorizontal", () => {
       const tr = handleMultiCursorHorizontal(state, "ArrowRight", false, "word");
       expect(tr).not.toBeNull();
     });
+
+    it("newBackward returns false for collapsed result range (line 100: from === to)", () => {
+      // When extending a selection such that head meets anchor, range collapses
+      // This tests: range.$from.pos === range.$to.pos → return false (line 100)
+      // Use a tiny doc with cursor at pos 1; extend right to end — then extend from pos 2 back to 1
+      // The collapsed case: start with cursor range (from===to), extend moves it to a non-collapsed range
+      // To get collapse: we need the head to land on the anchor position.
+      // Anchor at pos 3 (from=3, backward=false). Extend right produces from=3,to=4 (non-collapsed).
+      // Instead: backward selection, anchor=$to=2, head=$from=1; extend RIGHT moves head right to 2=anchorPos
+      // → range becomes from=2, to=2 (collapsed)
+      const doc = schema.node("doc", null, [
+        schema.node("paragraph", null, [schema.text("ab")]),
+      ]);
+      const baseState = EditorState.create({ doc, schema, plugins: [multiCursorPlugin()] });
+      // Backward: $from=1, $to=2, backward=[true] → anchor=$to=2, head=$from=1
+      const selRanges = [new SelectionRange(doc.resolve(1), doc.resolve(2))];
+      const multiSel = new MultiSelection(selRanges, 0, [true]);
+      const state = baseState.apply(baseState.tr.setSelection(multiSel));
+
+      // Extend right: head at pos 1, moves to pos 2 = anchorPos → collapses to from=2, to=2
+      const tr = handleMultiCursorHorizontal(state, "ArrowRight", true, "char");
+      expect(tr).not.toBeNull();
+      if (tr) {
+        const newState = state.apply(tr);
+        const ms = newState.selection as MultiSelection;
+        // Collapsed range → backward[0] should be false (line 100 returns false)
+        expect(ms.backward[0]).toBe(false);
+      }
+    });
+
+    it("newBackward uses $to.pos as headPos when anchor is at $from (branch 20/1 and 21/0)", () => {
+      // Forward selection: anchor=$from, head=$to. After extend right, new range has:
+      //   $from = anchorPos (anchor didn't move), $to = new head pos
+      // So range.$from.pos === anchorPos → branch 20/0 fires (headPos = $to.pos)
+      // To hit branch 20/1: need $from ≠ anchorPos, i.e., backward=true where anchor=$to
+      // With backward=true, anchorPos = origRange.$to.pos
+      // After extend left: new range $from moves left, $to stays at anchor
+      // → $from ≠ anchorPos AND $to = anchorPos → branch 21/0 fires
+      const state = createMultiState(
+        "hello world",
+        [{ from: 3, to: 7 }],
+        0,
+        [true] // backward: anchor=$to=7, head=$from=3
+      );
+
+      // Extend right: head at $from=3, moves right to 4; new range = {from:3,to:7} still, wait...
+      // Actually moveRangeHorizontally with backward=true: headPos = range.$from.pos = 3
+      // Moving right: targetPos = 4; extend=true: anchorPos = range.$to.pos = 7
+      // new from = min(7,4)=4, new to = max(7,4)=7 → {from:4, to:7}
+      // In newBackward: range.$from.pos=4 ≠ anchorPos=7 (branch 20/1), range.$to.pos=7=anchorPos (branch 21/0)
+      // headPos = range.$from.pos = 4, anchorPos=7 > 4 → backward = true
+      const tr = handleMultiCursorHorizontal(state, "ArrowRight", true, "char");
+      expect(tr).not.toBeNull();
+      if (tr) {
+        const newState = state.apply(tr);
+        const ms = newState.selection as MultiSelection;
+        // backward selection remains (anchor > head)
+        expect(ms.backward[0]).toBe(true);
+      }
+    });
   });
 });
