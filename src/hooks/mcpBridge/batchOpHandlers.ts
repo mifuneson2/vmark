@@ -221,9 +221,9 @@ export async function handleTableBatchModify(
   args: Record<string, unknown>
 ): Promise<void> {
   try {
-    const baseRevision = args.baseRevision as string;
+    const baseRevision = typeof args.baseRevision === "string" ? args.baseRevision : "";
     const target = args.target as TableTarget;
-    const operations = args.operations as TableOperation[];
+    const operations = Array.isArray(args.operations) ? (args.operations as TableOperation[]) : [];
     const mode = (args.mode as OperationMode) ?? "apply";
 
     // Validate revision
@@ -461,9 +461,9 @@ export async function handleListBatchModify(
   args: Record<string, unknown>
 ): Promise<void> {
   try {
-    const baseRevision = args.baseRevision as string;
+    const baseRevision = typeof args.baseRevision === "string" ? args.baseRevision : "";
     const target = args.target as ListTarget;
-    const operations = args.operations as ListOperation[];
+    const operations = Array.isArray(args.operations) ? (args.operations as ListOperation[]) : [];
     const mode = (args.mode as OperationMode) ?? "apply";
 
     // Validate revision

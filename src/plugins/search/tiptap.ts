@@ -10,6 +10,8 @@
  *
  * Key decisions:
  *   - Decorations are rebuilt on doc/query change, not on every transaction
+ *   - setMatches() is deferred via queueMicrotask to avoid side-effects in apply()
+ *   - Store subscription uses field-by-field equality (not JSON.stringify)
  *   - Replace operations use imeGuard to avoid conflicts with IME composition
  *   - Regex mode catches invalid patterns gracefully (shows 0 matches, no error)
  *
@@ -131,7 +133,12 @@ export const searchExtension = Extension.create({
                 state.useRegex
               );
 
-              useSearchStore.getState().setMatches(matches.length, matches.length > 0 ? 0 : -1);
+              // Defer store update out of ProseMirror's apply() to avoid side-effects during state computation
+              const matchCount = matches.length;
+              const initialIndex = matchCount > 0 ? 0 : -1;
+              queueMicrotask(() => {
+                useSearchStore.getState().setMatches(matchCount, initialIndex);
+              });
             }
 
             const currentIndex = useSearchStore.getState().currentIndex;
@@ -254,7 +261,14 @@ export const searchExtension = Extension.create({
               isOpen: state.isOpen,
             };
 
-            if (JSON.stringify(currentState) !== JSON.stringify(prevState)) {
+            if (
+              currentState.query !== prevState.query ||
+              currentState.caseSensitive !== prevState.caseSensitive ||
+              currentState.wholeWord !== prevState.wholeWord ||
+              currentState.useRegex !== prevState.useRegex ||
+              currentState.currentIndex !== prevState.currentIndex ||
+              currentState.isOpen !== prevState.isOpen
+            ) {
               prevState = currentState;
               runOrQueueProseMirrorAction(editorView, () => editorView.dispatch(editorView.state.tr));
               requestAnimationFrame(scrollToMatch);

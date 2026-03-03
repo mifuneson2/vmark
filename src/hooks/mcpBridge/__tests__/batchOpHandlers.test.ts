@@ -2899,4 +2899,73 @@ describe("batchOpHandlers", () => {
       expect(editor.state.tr.replaceSelection).not.toHaveBeenCalled();
     });
   });
+
+  // -------------------------------------------------------------------------
+  // Type-safe argument narrowing (#285)
+  // -------------------------------------------------------------------------
+
+  describe("type-safe argument narrowing", () => {
+    it("table: treats non-string baseRevision as empty string", async () => {
+      // When baseRevision is not a string, should pass empty string to validator
+      mockGetEditor.mockReturnValue({ state: { doc: { descendants: vi.fn() } } });
+
+      await handleTableBatchModify("req-type-1", {
+        baseRevision: 123, // wrong type
+        target: { tableIndex: 0 },
+        operations: [{ action: "add_row", at: 0, cells: [] }],
+      });
+
+      // validateBaseRevision should have been called with ""
+      expect(mockValidateBaseRevision).toHaveBeenCalledWith("");
+    });
+
+    it("table: treats non-array operations as empty array", async () => {
+      mockGetEditor.mockReturnValue({ state: { doc: { descendants: vi.fn() } } });
+
+      await handleTableBatchModify("req-type-2", {
+        baseRevision: "rev-1",
+        target: { tableIndex: 0 },
+        operations: "not-an-array",
+      });
+
+      // Should fail with "At least one operation is required" since [] is empty
+      expect(mockRespond).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: "req-type-2",
+          success: false,
+          error: "At least one operation is required",
+        })
+      );
+    });
+
+    it("list: treats non-string baseRevision as empty string", async () => {
+      mockGetEditor.mockReturnValue({ state: { doc: { descendants: vi.fn() } } });
+
+      await handleListBatchModify("req-type-3", {
+        baseRevision: undefined,
+        target: { listIndex: 0 },
+        operations: [{ action: "add_item", at: 0, text: "test" }],
+      });
+
+      expect(mockValidateBaseRevision).toHaveBeenCalledWith("");
+    });
+
+    it("list: treats non-array operations as empty array", async () => {
+      mockGetEditor.mockReturnValue({ state: { doc: { descendants: vi.fn() } } });
+
+      await handleListBatchModify("req-type-4", {
+        baseRevision: "rev-1",
+        target: { listIndex: 0 },
+        operations: null,
+      });
+
+      expect(mockRespond).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: "req-type-4",
+          success: false,
+          error: "At least one operation is required",
+        })
+      );
+    });
+  });
 });

@@ -467,8 +467,12 @@ pub fn restore_session_multi_window(
                     "[HotExit] Failed to create window {}: {}",
                     label, e
                 );
-                // State was stored but window creation failed — harmless.
-                // The unused state entry will be ignored.
+                // Remove from expected_labels so other windows can complete restore
+                // without being blocked by a window that was never created.
+                let pending = get_pending_restore_state();
+                let mut state = lock_pending_restore(&pending);
+                state.expected_labels.remove(label);
+                state.window_states.remove(label);
             }
         }
     }

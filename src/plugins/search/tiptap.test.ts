@@ -53,6 +53,9 @@ vi.mock("@/stores/searchStore", () => ({
 
 import { searchExtension } from "./tiptap";
 
+/** Flush pending microtasks (used because setMatches is deferred via queueMicrotask) */
+const flushMicrotasks = () => new Promise<void>((r) => queueMicrotask(r));
+
 // Minimal schema
 const schema = new Schema({
   nodes: {
@@ -445,7 +448,7 @@ describe("search plugin integration", () => {
     expect(pluginState.decorationSet).toBe(DecorationSet.empty);
   });
 
-  it("finds matches when search is open and query is set", () => {
+  it("finds matches when search is open and query is set", async () => {
     const plugin = getPlugin();
     const doc = createDoc(["hello world hello"]);
 
@@ -457,7 +460,8 @@ describe("search plugin integration", () => {
     const _nextState = state.apply(state.tr);
     const _pluginState = plugin.getState(_nextState);
 
-    // setMatches should have been called with 2 matches
+    // setMatches is deferred via queueMicrotask
+    await flushMicrotasks();
     expect(mockSearchState.setMatches).toHaveBeenCalledWith(2, 0);
   });
 
@@ -527,7 +531,7 @@ describe("search plugin integration", () => {
     expect(pluginState.decorationSet.find().length).toBe(0);
   });
 
-  it("handles case-sensitive search via plugin", () => {
+  it("handles case-sensitive search via plugin", async () => {
     const plugin = getPlugin();
     const doc = createDoc(["Hello HELLO hello"]);
 
@@ -538,11 +542,12 @@ describe("search plugin integration", () => {
     const state = EditorState.create({ doc, schema, plugins: [plugin] });
     const _nextState = state.apply(state.tr);
 
+    await flushMicrotasks();
     // Only "hello" (lowercase) matches
     expect(mockSearchState.setMatches).toHaveBeenCalledWith(1, 0);
   });
 
-  it("handles whole word search via plugin", () => {
+  it("handles whole word search via plugin", async () => {
     const plugin = getPlugin();
     const doc = createDoc(["hello helloworld hello"]);
 
@@ -553,11 +558,12 @@ describe("search plugin integration", () => {
     const state = EditorState.create({ doc, schema, plugins: [plugin] });
     const _nextState = state.apply(state.tr);
 
+    await flushMicrotasks();
     // "hello" as whole word appears twice, "helloworld" is excluded
     expect(mockSearchState.setMatches).toHaveBeenCalledWith(2, 0);
   });
 
-  it("handles regex search via plugin", () => {
+  it("handles regex search via plugin", async () => {
     const plugin = getPlugin();
     const doc = createDoc(["hello hallo hullo"]);
 
@@ -568,10 +574,11 @@ describe("search plugin integration", () => {
     const state = EditorState.create({ doc, schema, plugins: [plugin] });
     const _nextState = state.apply(state.tr);
 
+    await flushMicrotasks();
     expect(mockSearchState.setMatches).toHaveBeenCalledWith(3, 0);
   });
 
-  it("handles invalid regex gracefully (returns 0 matches)", () => {
+  it("handles invalid regex gracefully (returns 0 matches)", async () => {
     const plugin = getPlugin();
     const doc = createDoc(["hello world"]);
 
@@ -582,10 +589,11 @@ describe("search plugin integration", () => {
     const state = EditorState.create({ doc, schema, plugins: [plugin] });
     const _nextState = state.apply(state.tr);
 
+    await flushMicrotasks();
     expect(mockSearchState.setMatches).toHaveBeenCalledWith(0, -1);
   });
 
-  it("finds matches across multiple paragraphs", () => {
+  it("finds matches across multiple paragraphs", async () => {
     const plugin = getPlugin();
     const doc = createDoc(["hello", "world", "hello world"]);
 
@@ -595,10 +603,11 @@ describe("search plugin integration", () => {
     const state = EditorState.create({ doc, schema, plugins: [plugin] });
     const _nextState = state.apply(state.tr);
 
+    await flushMicrotasks();
     expect(mockSearchState.setMatches).toHaveBeenCalledWith(2, 0);
   });
 
-  it("returns no matches for empty document", () => {
+  it("returns no matches for empty document", async () => {
     const plugin = getPlugin();
     const doc = schema.node("doc", null, [
       schema.node("paragraph", null, []),
@@ -610,10 +619,11 @@ describe("search plugin integration", () => {
     const state = EditorState.create({ doc, schema, plugins: [plugin] });
     const _nextState = state.apply(state.tr);
 
+    await flushMicrotasks();
     expect(mockSearchState.setMatches).toHaveBeenCalledWith(0, -1);
   });
 
-  it("escapes special regex chars in non-regex mode", () => {
+  it("escapes special regex chars in non-regex mode", async () => {
     const plugin = getPlugin();
     const doc = createDoc(["hello.world hello world"]);
 
@@ -624,11 +634,12 @@ describe("search plugin integration", () => {
     const state = EditorState.create({ doc, schema, plugins: [plugin] });
     const _nextState = state.apply(state.tr);
 
+    await flushMicrotasks();
     // In non-regex mode, "." is escaped — only matches literal "hello.world"
     expect(mockSearchState.setMatches).toHaveBeenCalledWith(1, 0);
   });
 
-  it("rebuilds decorations on doc change", () => {
+  it("rebuilds decorations on doc change", async () => {
     const plugin = getPlugin();
     const doc = createDoc(["hello world"]);
 
@@ -644,6 +655,7 @@ describe("search plugin integration", () => {
     const _state3 = state2.apply(tr);
     const _pluginState = plugin.getState(_state3);
 
+    await flushMicrotasks();
     // Should have found more matches after the insert
     expect(mockSearchState.setMatches).toHaveBeenLastCalledWith(2, 0);
   });
@@ -675,7 +687,7 @@ describe("search plugin integration", () => {
     expect(decorations).toBe(DecorationSet.empty);
   });
 
-  it("does not rebuild decorations when nothing changed", () => {
+  it("does not rebuild decorations when nothing changed", async () => {
     const plugin = getPlugin();
     const doc = createDoc(["hello world"]);
 
@@ -686,10 +698,12 @@ describe("search plugin integration", () => {
     const state = EditorState.create({ doc, schema, plugins: [plugin] });
     // First apply triggers query detection
     const state2 = state.apply(state.tr);
+    await flushMicrotasks();
     mockSearchState.setMatches.mockClear();
 
     // Second apply with no changes
     const state3 = state2.apply(state2.tr);
+    await flushMicrotasks();
     // setMatches should NOT be called again (no queryChanged, no docChanged)
     expect(mockSearchState.setMatches).not.toHaveBeenCalled();
     // But decorations should be preserved
@@ -743,7 +757,7 @@ describe("search plugin integration", () => {
     expect(pluginState.decorationSet.find().length).toBe(0);
   });
 
-  it("handles query change from non-empty to empty", () => {
+  it("handles query change from non-empty to empty", async () => {
     const plugin = getPlugin();
     const doc = createDoc(["hello world"]);
 
@@ -752,16 +766,18 @@ describe("search plugin integration", () => {
 
     const state = EditorState.create({ doc, schema, plugins: [plugin] });
     const state2 = state.apply(state.tr);
+    await flushMicrotasks();
     expect(mockSearchState.setMatches).toHaveBeenCalledWith(1, 0);
 
     // Clear query
     mockSearchState.query = "";
     mockSearchState.setMatches.mockClear();
     const _state3 = state2.apply(state2.tr);
+    await flushMicrotasks();
     expect(mockSearchState.setMatches).toHaveBeenCalledWith(0, -1);
   });
 
-  it("handles zero-length regex match by advancing lastIndex", () => {
+  it("handles zero-length regex match by advancing lastIndex", async () => {
     const plugin = getPlugin();
     const doc = createDoc(["abc"]);
 
@@ -771,6 +787,7 @@ describe("search plugin integration", () => {
 
     const state = EditorState.create({ doc, schema, plugins: [plugin] });
     const _state2 = state.apply(state.tr);
+    await flushMicrotasks();
     // Should find matches without infinite loop
     expect(mockSearchState.setMatches).toHaveBeenCalled();
     const matchCount = mockSearchState.setMatches.mock.calls[0][0];
