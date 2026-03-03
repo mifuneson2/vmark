@@ -238,6 +238,109 @@ $$`;
     });
   });
 
+  describe("unnecessary escape stripping", () => {
+    it("does not escape dollar signs in plain text", () => {
+      const input = "Price is $100";
+      const mdast = parseMarkdownToMdast(input);
+      const output = serializeMdastToMarkdown(mdast).trim();
+      expect(output).toBe(input);
+    });
+
+    it("does not escape square brackets in plain text", () => {
+      const input = "Use [brackets] here";
+      const mdast = parseMarkdownToMdast(input);
+      const output = serializeMdastToMarkdown(mdast).trim();
+      expect(output).toBe(input);
+    });
+
+    it("does not escape lone asterisks", () => {
+      const input = "Use * star";
+      const mdast = parseMarkdownToMdast(input);
+      const output = serializeMdastToMarkdown(mdast).trim();
+      expect(output).toBe(input);
+    });
+
+    it("does not escape lone underscores", () => {
+      const input = "Use _ underscore";
+      const mdast = parseMarkdownToMdast(input);
+      const output = serializeMdastToMarkdown(mdast).trim();
+      expect(output).toBe(input);
+    });
+
+    it("does not escape lone backticks", () => {
+      const input = "Use ` backtick";
+      const mdast = parseMarkdownToMdast(input);
+      const output = serializeMdastToMarkdown(mdast).trim();
+      expect(output).toBe(input);
+    });
+
+    it("preserves real emphasis markup", () => {
+      const input = "**bold** and *italic*";
+      const mdast = parseMarkdownToMdast(input);
+      const output = serializeMdastToMarkdown(mdast).trim();
+      expect(output).toBe(input);
+    });
+
+    it("preserves real links", () => {
+      const input = "[link](https://example.com)";
+      const mdast = parseMarkdownToMdast(input);
+      const output = serializeMdastToMarkdown(mdast).trim();
+      expect(output).toBe(input);
+    });
+
+    it("preserves inline math with dollar signs", () => {
+      const input = "Equation: $E = mc^2$";
+      const mdast = parseMarkdownToMdast(input);
+      const output = serializeMdastToMarkdown(mdast).trim();
+      expect(output).toBe(input);
+    });
+
+    it("handles CJK text with dollar signs", () => {
+      const input = "CJK $100 价格";
+      const mdast = parseMarkdownToMdast(input);
+      const output = serializeMdastToMarkdown(mdast).trim();
+      expect(output).toBe(input);
+    });
+
+    it("handles CJK text with square brackets", () => {
+      const input = "CJK [注释] test";
+      const mdast = parseMarkdownToMdast(input);
+      const output = serializeMdastToMarkdown(mdast).trim();
+      expect(output).toBe(input);
+    });
+
+    it("handles inline code (backticks are structural, not escaped)", () => {
+      const input = "a `backtick` here";
+      const mdast = parseMarkdownToMdast(input);
+      const output = serializeMdastToMarkdown(mdast).trim();
+      expect(output).toBe(input);
+    });
+
+    it("handles pipes in plain text", () => {
+      const input = "a | b | c";
+      const mdast = parseMarkdownToMdast(input);
+      const output = serializeMdastToMarkdown(mdast).trim();
+      expect(output).toBe(input);
+    });
+
+    it("preserves escape for * at start of line (would create list)", () => {
+      // Input with escaped * at line start — parser creates plain text node
+      const input = "\\* not a list";
+      const mdast = parseMarkdownToMdast(input);
+      const output = serializeMdastToMarkdown(mdast).trim();
+      // Must keep escape to avoid creating an unordered list marker
+      expect(output).toBe("\\* not a list");
+    });
+
+    it("strips * escape mid-line but preserves at start", () => {
+      const input = "text \\* more";
+      const mdast = parseMarkdownToMdast(input);
+      const output = serializeMdastToMarkdown(mdast).trim();
+      // Mid-line * should be unescaped
+      expect(output).toBe("text * more");
+    });
+  });
+
   describe("nested structures round-trip", () => {
     it("round-trips blockquote with paragraph", () => {
       const input = "> quoted text";

@@ -123,6 +123,37 @@ function createSerializer(_options: MarkdownPipelineOptions = {}) {
 }
 
 /**
+ * Strip unnecessary backslash escapes added by remark-stringify.
+ *
+ * remark-stringify defensively escapes characters like $, [, *, _, `
+ * in text nodes to prevent them from being parsed as markdown syntax.
+ * Since these characters were already in plain text (not markup) in the
+ * MDAST, the escapes are redundant and visually noisy.
+ *
+ * We only strip escapes that are safe — block-level triggers at line
+ * start (#, -, *, >, +) are preserved to avoid creating headings/lists.
+ */
+const SAFE_UNESCAPE_RE = /\\([[\]$`_*!])/g;
+
+/** Characters that create block-level syntax at start of line. */
+const BLOCK_START_CHARS = new Set(["#", "-", "*", ">", "+"]);
+
+function stripUnnecessaryEscapes(markdown: string): string {
+  return markdown.replace(SAFE_UNESCAPE_RE, (match, char: string, offset: number) => {
+    // Find start of current line
+    const lineStart = markdown.lastIndexOf("\n", offset - 1) + 1;
+    const beforeOnLine = markdown.slice(lineStart, offset).trimStart();
+
+    // At start of line: keep escape for block-trigger characters
+    if (beforeOnLine === "" && BLOCK_START_CHARS.has(char)) {
+      return match;
+    }
+
+    return char;
+  });
+}
+
+/**
  * Serialize MDAST to markdown text.
  *
  * @param mdast - The MDAST root node to serialize
@@ -143,6 +174,9 @@ export function serializeMdastToMarkdown(
   // mdast-util-to-markdown encodes spaces as &#x20; when they appear
   // before/after line breaks, but this is unnecessary for our use case.
   result = result.replace(/&#x20;/g, " ");
+
+  // Strip unnecessary backslash escapes added by remark-stringify
+  result = stripUnnecessaryEscapes(result);
 
   if (options.hardBreakStyle === "twoSpaces") {
     return result.replace(/\\(\r?\n)/g, "  $1");
