@@ -166,6 +166,7 @@ export function handleSmartLinkShortcut(view: EditorView): boolean {
     if (linkMark) {
       // Find the link's range
       const markRange = findMarkRange($from.pos, linkMark, $from.start(), $from.parent);
+      /* v8 ignore next -- @preserve else branch: markRange always found when cursor is in a link */
       if (markRange) {
         const href = linkMark.attrs.href || "";
 

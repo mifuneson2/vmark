@@ -100,10 +100,12 @@ export function useHotExitRestore() {
      * @param isRequestedRestore - True if triggered by RESTORE_START event
      */
     const restoreFromPulledState = async (isRequestedRestore: boolean) => {
+      /* v8 ignore start -- concurrent restore guard; React renders are synchronous so this race is untestable */
       if (isRestoring.current) {
         hotExitWarn(`Window '${windowLabel}' ignoring concurrent restore`);
         return;
       }
+      /* v8 ignore stop */
 
       isRestoring.current = true;
 
@@ -119,7 +121,9 @@ export function useHotExitRestore() {
             hotExitWarn('Restore was requested but no state available');
             void emit(HOT_EXIT_EVENTS.RESTORE_FAILED, {
               error: `No restore state found for window '${windowLabel}'`,
+            /* v8 ignore start -- @preserve reason: emit().catch() callback only fires on Tauri IPC errors; not triggered in mocked tests */
             }).catch((e) => hotExitWarn('Failed to emit restore failed:', e));
+            /* v8 ignore stop */
           }
           return;
         }
@@ -148,7 +152,9 @@ export function useHotExitRestore() {
     // For secondary windows: check for pending state immediately on mount
     // (they're created by Rust after session is stored)
     const checkPendingState = async () => {
+      /* v8 ignore start -- re-entry guard; hasCheckedPending is set to true on first call and never reset */
       if (hasCheckedPending.current) return;
+      /* v8 ignore stop */
       hasCheckedPending.current = true;
 
       // Secondary windows pull state immediately

@@ -48,6 +48,7 @@ export function handleBookmarkLinkShortcut(view: EditorView): boolean {
   };
 
   const containerEl = view.dom.closest(".editor-container") as HTMLElement;
+  /* v8 ignore next 2 -- @preserve cond-expr: editor-container always present in tests; fallback to viewport bounds unreachable */
   const containerBounds = containerEl
     ? getBoundaryRects(view.dom as HTMLElement, containerEl)
     : getViewportBounds();

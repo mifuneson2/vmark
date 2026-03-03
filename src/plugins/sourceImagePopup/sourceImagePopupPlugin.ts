@@ -108,7 +108,9 @@ function extractImageData(
 export function createSourceImagePopupPlugin() {
   return createSourcePopupPlugin({
     store: useMediaPopupStore,
+    /* v8 ignore start -- @preserve createView callback only runs inside live CodeMirror; not exercised in unit tests */
     createView: (view, store) => new SourceImagePopupView(view, store),
+    /* v8 ignore stop */
     detectTrigger: detectImageTrigger,
     detectTriggerAtPos: (view, pos) => {
       const image = findImageAtPos(view, pos);
@@ -116,9 +118,11 @@ export function createSourceImagePopupPlugin() {
       return { from: image.from, to: image.to };
     },
     extractData: extractImageData,
+    /* v8 ignore start -- @preserve reason: onOpen callback only fires on live editor click; not exercised in unit tests */
     onOpen: () => {
       hideImagePreview();
     },
+    /* v8 ignore stop */
     triggerOnClick: true,
     triggerOnHover: false,
   });

@@ -32,7 +32,9 @@ export function useCrashRecoveryStartup(): void {
   const hasRun = useRef(false);
 
   useEffect(() => {
+    /* v8 ignore start -- re-entry guard; React StrictMode double-mount makes this hard to test in isolation */
     if (hasRun.current) return;
+    /* v8 ignore stop */
     hasRun.current = true;
 
     void runCrashRecovery(windowLabel);

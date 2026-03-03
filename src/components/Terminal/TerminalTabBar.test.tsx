@@ -65,4 +65,51 @@ describe("TerminalTabBar", () => {
     fireEvent.click(screen.getByTitle("Restart"));
     expect(onRestart).toHaveBeenCalled();
   });
+
+  it("displays first character for custom-named sessions", () => {
+    const session = useTerminalSessionStore.getState().createSession()!;
+    useTerminalSessionStore.getState().renameSession(session.id, "My Shell");
+    render(<TerminalTabBar onClose={onClose} onRestart={onRestart} />);
+    expect(screen.getByText("M")).toBeInTheDocument();
+  });
+
+  it("displays '?' for empty-label sessions", () => {
+    const session = useTerminalSessionStore.getState().createSession()!;
+    useTerminalSessionStore.getState().renameSession(session.id, "");
+    render(<TerminalTabBar onClose={onClose} onRestart={onRestart} />);
+    expect(screen.getByText("?")).toBeInTheDocument();
+  });
+
+  it("applies horizontal class when orientation is horizontal", () => {
+    useTerminalSessionStore.getState().createSession();
+    const { container } = render(
+      <TerminalTabBar onClose={onClose} onRestart={onRestart} orientation="horizontal" />,
+    );
+    expect(container.querySelector(".terminal-tab-bar--horizontal")).toBeTruthy();
+  });
+
+  it("does not apply horizontal class for vertical orientation (default)", () => {
+    useTerminalSessionStore.getState().createSession();
+    const { container } = render(
+      <TerminalTabBar onClose={onClose} onRestart={onRestart} />,
+    );
+    expect(container.querySelector(".terminal-tab-bar--horizontal")).toBeFalsy();
+  });
+
+  it("applies dead class to dead sessions", () => {
+    const session = useTerminalSessionStore.getState().createSession()!;
+    useTerminalSessionStore.getState().markSessionDead(session.id);
+    const { container } = render(
+      <TerminalTabBar onClose={onClose} onRestart={onRestart} />,
+    );
+    expect(container.querySelector(".terminal-tab-dead")).toBeTruthy();
+  });
+
+  it("applies active class to active session", () => {
+    useTerminalSessionStore.getState().createSession();
+    const { container } = render(
+      <TerminalTabBar onClose={onClose} onRestart={onRestart} />,
+    );
+    expect(container.querySelector(".terminal-tab-active")).toBeTruthy();
+  });
 });

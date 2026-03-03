@@ -65,6 +65,16 @@ describe("latexErrorParser", () => {
         expect(result.hint).toContain("\\foo");
       });
 
+      it("returns generic 'Unknown command' hint when error contains no command name (lines 63, 120)", () => {
+        // The error message contains "Unknown macro" but no \command pattern,
+        // so extractUnknownCommand returns null → cmdName is null (line 63)
+        // and the null branch of the ternary fires (line 120).
+        const error = new Error("Unknown macro:");
+        const result = parseLatexError(error, "\\someexpr");
+        expect(result.message).toBe("Invalid LaTeX syntax");
+        expect(result.hint).toBe("Unknown command");
+      });
+
       it("suggests correct syntax for frac", () => {
         const error = new Error("Unknown macro: \\frac");
         const result = parseLatexError(error, "\\frac x y");

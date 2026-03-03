@@ -70,7 +70,9 @@ export function findAllOccurrences(
     if (!node.isText) return;
     if (pos > rangeTo || pos + node.nodeSize < rangeFrom) return;
 
+    /* v8 ignore start -- @preserve text nodes always have text; empty string fallback is defensive */
     const text = node.text || "";
+    /* v8 ignore stop */
     let index = text.indexOf(searchText);
 
     while (index !== -1) {

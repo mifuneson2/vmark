@@ -27,6 +27,7 @@ function shouldPreserveTwoSpaceBreaks(): boolean {
     const hardBreakStyleOnSave = useSettingsStore.getState().markdown.hardBreakStyleOnSave;
     return resolveHardBreakStyle(doc?.hardBreakStyle ?? "unknown", hardBreakStyleOnSave) === "twoSpaces";
   } catch {
+    /* v8 ignore next -- @preserve catch only fires if Tauri/store APIs throw; mocked in tests */
     return false;
   }
 }

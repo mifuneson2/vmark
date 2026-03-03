@@ -8,6 +8,7 @@ import {
   buildEmbedUrl,
   detectProviderFromIframeSrc,
   getProviderConfig,
+  extractVideoIdFromSrc,
   type VideoProvider,
 } from "../videoProviderRegistry";
 
@@ -75,6 +76,14 @@ describe("parseVideoUrl", () => {
     it("rejects look-alike vimeo domains", () => {
       expect(parseVideoUrl("https://notvimeo.com/123456789")).toBeNull();
     });
+
+    it("rejects vimeo.com with non-numeric ID", () => {
+      expect(parseVideoUrl("https://vimeo.com/myproject")).toBeNull();
+    });
+
+    it("rejects player.vimeo.com without valid video path", () => {
+      expect(parseVideoUrl("https://player.vimeo.com/settings/123")).toBeNull();
+    });
   });
 
   describe("Bilibili URLs", () => {
@@ -108,6 +117,15 @@ describe("parseVideoUrl", () => {
 
     it("rejects bilibili non-video paths", () => {
       expect(parseVideoUrl("https://www.bilibili.com/anime/1234")).toBeNull();
+    });
+
+    it("rejects player.bilibili.com with invalid bvid", () => {
+      // bvid that doesn't match BV + 10 alphanumeric chars
+      expect(parseVideoUrl("https://player.bilibili.com/player.html?bvid=INVALID")).toBeNull();
+    });
+
+    it("rejects player.bilibili.com with missing bvid param", () => {
+      expect(parseVideoUrl("https://player.bilibili.com/player.html?aid=123")).toBeNull();
     });
   });
 
@@ -224,5 +242,33 @@ describe("getProviderConfig", () => {
 
   it("returns undefined for unknown provider", () => {
     expect(getProviderConfig("unknown" as VideoProvider)).toBeUndefined();
+  });
+});
+
+describe("extractVideoIdFromSrc", () => {
+  it("extracts YouTube video ID from embed src", () => {
+    expect(
+      extractVideoIdFromSrc("youtube", "https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ")
+    ).toBe("dQw4w9WgXcQ");
+  });
+
+  it("extracts Vimeo video ID from player src", () => {
+    expect(
+      extractVideoIdFromSrc("vimeo", "https://player.vimeo.com/video/123456789")
+    ).toBe("123456789");
+  });
+
+  it("extracts Bilibili video ID from player src", () => {
+    expect(
+      extractVideoIdFromSrc("bilibili", "https://player.bilibili.com/player.html?bvid=BV1xx411c7mD")
+    ).toBe("BV1xx411c7mD");
+  });
+
+  it("returns null for unknown provider", () => {
+    expect(extractVideoIdFromSrc("unknown" as VideoProvider, "https://example.com")).toBeNull();
+  });
+
+  it("returns null when src does not match provider", () => {
+    expect(extractVideoIdFromSrc("youtube", "https://example.com/video/123")).toBeNull();
   });
 });

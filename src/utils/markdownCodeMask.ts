@@ -81,6 +81,7 @@ export function buildCodeMask(markdown: string): Uint8Array {
 
     // Inside fenced block but not at line start (shouldn't normally happen
     // because we advance by full lines above, but safety net)
+    /* v8 ignore next -- @preserve safety net for mid-line characters inside fenced block; loop advances by full lines */
     if (inFencedCodeBlock) {
       mask[i] = 1;
       i += 1;

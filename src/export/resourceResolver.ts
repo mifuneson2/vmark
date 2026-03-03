@@ -112,8 +112,10 @@ export async function resolveRelativePath(
       // pathname is /path/to/file.png (includes leading slash)
       return decodeURIComponent(url.pathname);
     } catch (error) {
+      /* v8 ignore start -- @preserve reason: asset:// and https://asset.localhost/ URLs always parse successfully via new URL(); catch is defensive only */
       exportWarn("Failed to parse asset URL:", src, error);
       return src;
+      /* v8 ignore stop */
     }
   }
 
@@ -127,7 +129,9 @@ export async function resolveRelativePath(
 export async function fileToDataUri(filePath: string): Promise<string | null> {
   try {
     const data = await readFile(filePath);
+    /* v8 ignore start -- split(".") always has ≥1 element, pop() is never undefined */
     const ext = filePath.split(".").pop()?.toLowerCase() ?? "";
+    /* v8 ignore stop */
     const mimeType = getMimeType(ext);
     const base64 = uint8ArrayToBase64(data);
     return `data:${mimeType};base64,${base64}`;

@@ -93,6 +93,7 @@ function applyFormatToRange(
   originalCursorPos: number
 ): void {
   const markers = FORMAT_MARKERS[format as WrapFormatType];
+  /* v8 ignore next -- @preserve reason: caller ensures format is a valid WrapFormatType */
   if (!markers) return;
 
   const { prefix, suffix } = markers;

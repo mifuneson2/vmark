@@ -11,7 +11,8 @@ export default defineConfig({
     include: ["src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}"],
     coverage: {
       provider: "v8",
-      reporter: ["text", "json", "html"],
+      clean: false,
+      reporter: ["text", "json", "json-summary", "html"],
       exclude: [
         "node_modules/",
         "src/test/",
@@ -22,10 +23,10 @@ export default defineConfig({
         "src/assets/**",
       ],
       thresholds: {
-        statements: 43,
-        branches: 37,
-        functions: 50,
-        lines: 44,
+        statements: 100,
+        branches: 99.87,
+        functions: 100,
+        lines: 100,
       },
     },
   },

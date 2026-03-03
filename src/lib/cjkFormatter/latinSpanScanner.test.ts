@@ -387,5 +387,13 @@ describe("latinSpanScanner", () => {
       expect(spans[0].start).toBe(2);
       expect(spans[0].text).toBe(",English");
     });
+
+    test("ignores trailing whitespace-only latin chars at end of text", () => {
+      // A span ending at end-of-text that is pure whitespace should be skipped
+      const text = "中文  "; // CJK followed by spaces
+      const spans = scanLatinSpans(text);
+      // Trailing spaces are latin-span chars but trim() to empty, so not added
+      expect(spans).toHaveLength(0);
+    });
   });
 });

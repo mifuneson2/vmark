@@ -79,6 +79,18 @@ describe("selectionHandlers", () => {
         error: "No active editor",
       });
     });
+
+    it("handles non-Error throw in catch (String coercion branch)", async () => {
+      mockGetEditor.mockImplementation(() => { throw "string error"; });
+
+      await handleSelectionGet("req-3b");
+
+      expect(mockRespond).toHaveBeenCalledWith({
+        id: "req-3b",
+        success: false,
+        error: "string error",
+      });
+    });
   });
 
   describe("handleSelectionSet", () => {
@@ -109,6 +121,18 @@ describe("selectionHandlers", () => {
         id: "req-5",
         success: false,
         error: "No active editor",
+      });
+    });
+
+    it("handles non-Error throw in catch (String coercion branch)", async () => {
+      mockGetEditor.mockImplementation(() => { throw 42; });
+
+      await handleSelectionSet("req-5b", { from: 0, to: 5 });
+
+      expect(mockRespond).toHaveBeenCalledWith({
+        id: "req-5b",
+        success: false,
+        error: "42",
       });
     });
   });

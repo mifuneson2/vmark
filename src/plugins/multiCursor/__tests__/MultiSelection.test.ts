@@ -278,5 +278,137 @@ describe("MultiSelection", () => {
 
       expect(multiSel.ranges).toHaveLength(1);
     });
+
+    it("throws for empty ranges array", () => {
+      expect(() => new MultiSelection([], 0)).toThrow(
+        "MultiSelection requires at least one range"
+      );
+    });
+  });
+
+  describe("eq edge cases", () => {
+    it("returns false for different primaryIndex", () => {
+      const state = createState("hello world");
+      const doc = state.doc;
+
+      const $pos1 = doc.resolve(1);
+      const $pos2 = doc.resolve(7);
+
+      const ranges = [
+        new SelectionRange($pos1, $pos1),
+        new SelectionRange($pos2, $pos2),
+      ];
+
+      const sel1 = new MultiSelection(ranges, 0);
+      const sel2 = new MultiSelection(ranges, 1);
+
+      expect(sel1.eq(sel2)).toBe(false);
+    });
+
+    it("returns false when backward flags differ", () => {
+      const state = createState("hello world");
+      const doc = state.doc;
+
+      const $from = doc.resolve(1);
+      const $to = doc.resolve(6);
+
+      const ranges = [new SelectionRange($from, $to)];
+
+      const sel1 = new MultiSelection(ranges, 0, [false]);
+      const sel2 = new MultiSelection(ranges, 0, [true]);
+
+      expect(sel1.eq(sel2)).toBe(false);
+    });
+  });
+
+  describe("content", () => {
+    it("returns content of primary selection range", () => {
+      const state = createState("hello world");
+      const doc = state.doc;
+
+      const $from = doc.resolve(1);
+      const $to = doc.resolve(6);
+
+      const ranges = [new SelectionRange($from, $to)];
+      const multiSel = new MultiSelection(ranges, 0);
+
+      const content = multiSel.content();
+      expect(content).toBeDefined();
+    });
+  });
+
+  describe("getTextContent", () => {
+    it("concatenates text from all ranges with newlines", () => {
+      const state = createState("hello world");
+      const doc = state.doc;
+
+      const $from1 = doc.resolve(1);
+      const $to1 = doc.resolve(6);
+      const $from2 = doc.resolve(7);
+      const $to2 = doc.resolve(12);
+
+      const ranges = [
+        new SelectionRange($from1, $to1),
+        new SelectionRange($from2, $to2),
+      ];
+      const multiSel = new MultiSelection(ranges, 0);
+
+      expect(multiSel.getTextContent(doc)).toBe("hello\nworld");
+    });
+
+    it("returns empty lines for collapsed cursors", () => {
+      const state = createState("hello world");
+      const doc = state.doc;
+
+      const $pos1 = doc.resolve(1);
+      const $pos2 = doc.resolve(7);
+
+      const ranges = [
+        new SelectionRange($pos1, $pos1),
+        new SelectionRange($pos2, $pos2),
+      ];
+      const multiSel = new MultiSelection(ranges, 0);
+
+      expect(multiSel.getTextContent(doc)).toBe("\n");
+    });
+  });
+
+  describe("toJSON / fromJSON with backward ranges", () => {
+    it("serializes and deserializes backward ranges", () => {
+      const state = createState("hello world");
+      const doc = state.doc;
+
+      const $from = doc.resolve(1);
+      const $to = doc.resolve(6);
+
+      const ranges = [new SelectionRange($from, $to)];
+      const original = new MultiSelection(ranges, 0, [true]); // backward
+
+      const json = original.toJSON();
+      // With backward flag, anchor should be > head
+      expect(json.ranges[0].anchor).toBe(6);
+      expect(json.ranges[0].head).toBe(1);
+
+      const restored = MultiSelection.fromJSON(doc, json);
+      expect(restored.backward[0]).toBe(true);
+    });
+  });
+
+  describe("map with backward flags", () => {
+    it("preserves backward flags through mapping", () => {
+      const state = createState("hello world");
+      const doc = state.doc;
+
+      const $from = doc.resolve(1);
+      const $to = doc.resolve(6);
+
+      const ranges = [new SelectionRange($from, $to)];
+      const multiSel = new MultiSelection(ranges, 0, [true]);
+
+      const tr = state.tr.insertText("XX", 8, 8);
+      const mapped = multiSel.map(tr.doc, tr.mapping) as MultiSelection;
+
+      expect(mapped.backward[0]).toBe(true);
+    });
   });
 });

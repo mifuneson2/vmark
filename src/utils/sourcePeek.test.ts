@@ -18,6 +18,7 @@ import { AlignedTableCell, AlignedTableHeader } from "@/components/Editor/aligne
 import {
   createSourcePeekSlice,
   getSourcePeekRange,
+  getExpandedSourcePeekRange,
   serializeSourcePeekRange,
   applySourcePeekMarkdown,
 } from "./sourcePeek";
@@ -138,6 +139,111 @@ describe("sourcePeek helpers", () => {
     // Should fall back to selection from/to
     expect(range.from).toBe(0);
     expect(range.to).toBe(doc.content.size);
+  });
+});
+
+describe("getExpandedSourcePeekRange", () => {
+  it("returns node selection bounds for block node selections", () => {
+    const schema = createSchema();
+    const blockImage = schema.nodes.block_image.create({ src: "img.png", alt: "", title: "" });
+    const doc = schema.nodes.doc.create(null, [blockImage]);
+    const selection = NodeSelection.create(doc, 0);
+    const state = EditorState.create({ doc, selection });
+
+    const range = getExpandedSourcePeekRange(state);
+    expect(range).toEqual({ from: selection.from, to: selection.to });
+  });
+
+  it("expands to compound block ancestor for table", () => {
+    const schema = createSchema();
+    const md = "| A | B |\n| --- | --- |\n| 1 | 2 |";
+    const doc = parseMarkdown(schema, md);
+    // Position inside the table content
+    const selection = TextSelection.create(doc, 4);
+    const state = EditorState.create({ doc, selection });
+
+    const range = getExpandedSourcePeekRange(state);
+    // Range should include the entire table
+    expect(range.from).toBe(0);
+    expect(range.to).toBe(doc.content.size);
+  });
+
+  it("expands to compound block ancestor for bullet list", () => {
+    const schema = createSchema();
+    const md = "- item 1\n- item 2";
+    const doc = parseMarkdown(schema, md);
+    const selection = TextSelection.create(doc, 3);
+    const state = EditorState.create({ doc, selection });
+
+    const range = getExpandedSourcePeekRange(state);
+    // Should include the entire list
+    expect(range.from).toBe(0);
+    expect(range.to).toBe(doc.content.size);
+  });
+
+  it("returns depth-1 range for non-compound block", () => {
+    const schema = createSchema();
+    const md = "Just a paragraph";
+    const doc = parseMarkdown(schema, md);
+    const selection = TextSelection.create(doc, 3);
+    const state = EditorState.create({ doc, selection });
+
+    const range = getExpandedSourcePeekRange(state);
+    expect(range.from).toBe(0);
+    expect(range.to).toBe(doc.content.size);
+  });
+
+  it("handles shallow selection (depth < 1)", () => {
+    const schema = createSchema();
+    const doc = parseMarkdown(schema, "Test");
+    const state = EditorState.create({
+      doc,
+      selection: TextSelection.create(doc, 0, doc.content.size),
+    });
+
+    const range = getExpandedSourcePeekRange(state);
+    expect(range.from).toBe(0);
+    expect(range.to).toBe(doc.content.size);
+  });
+});
+
+describe("sourcePeek - createDocFromSlice edge case", () => {
+  it("handles slice where docType.create throws", () => {
+    const schema = createSchema();
+    // Creating a slice from invalid markdown should still work via fallback
+    const slice = createSourcePeekSlice(schema, "# Valid heading");
+    expect(slice.content.childCount).toBeGreaterThan(0);
+  });
+
+  it("ensureBlockContent wraps inline fragment in paragraph (line 37)", () => {
+    const schema = createSchema();
+    // Create a slice from plain inline text — the parser may wrap it already,
+    // but we verify the output has block content regardless
+    const slice = createSourcePeekSlice(schema, "just text");
+    expect(slice.content.childCount).toBeGreaterThan(0);
+    expect(slice.content.firstChild?.isBlock).toBe(true);
+  });
+});
+
+describe("sourcePeek - ensureBlockContent with inline slice (line 36)", () => {
+  it("wraps inline fragment in paragraph when doc.slice produces inline content", () => {
+    // doc.slice with openStart/openEnd can produce fragments with inline nodes.
+    // When from/to land inside a paragraph at inline positions with depth >= 1,
+    // serializeSourcePeekRange calls createDocFromSlice which calls ensureBlockContent.
+    // A slice taken within a paragraph (doc.slice(2, 4) on "hello") has inline (text) content.
+    const schema = createSchema();
+    const doc = parseMarkdown(schema, "hello");
+    // Slice inside the paragraph — contains inline text, not a block
+    const inlineSlice = doc.slice(2, 4);
+    // The slice content's first child is a text node (inline)
+    expect(inlineSlice.content.firstChild?.isBlock).toBe(false);
+
+    // serializeSourcePeekRange on a range that produces an inline slice
+    const state = EditorState.create({ doc, selection: TextSelection.create(doc, 2, 4) });
+    // Range.from/to span inside the paragraph content — the slice is inline
+    const markdown = serializeSourcePeekRange(state, { from: 2, to: 4 });
+    // Should not throw; result should contain the text "el"
+    expect(typeof markdown).toBe("string");
   });
 });
 

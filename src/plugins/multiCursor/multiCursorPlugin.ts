@@ -147,11 +147,13 @@ export function multiCursorPlugin(): Plugin<MultiCursorPluginState> {
         }
 
         const tr = handleMultiCursorInput(state, text, { isComposing: view.composing });
+        /* v8 ignore start -- @preserve handleMultiCursorInput always returns a tr for MultiSelection; null branch is defensive */
         if (tr) {
           view.dispatch(tr);
           return true;
         }
         return false;
+        /* v8 ignore stop */
       },
 
       /**
@@ -197,12 +199,14 @@ export function multiCursorPlugin(): Plugin<MultiCursorPluginState> {
         const text = event.clipboardData?.getData("text/plain") ?? "";
         if (!text) return false;
         const tr = handleMultiCursorPaste(state, text);
+        /* v8 ignore start -- @preserve handleMultiCursorPaste always returns a tr for MultiSelection with text; null branch is defensive */
         if (tr) {
           view.dispatch(tr);
           event.preventDefault();
           return true;
         }
         return false;
+        /* v8 ignore stop */
       },
       handleDOMEvents: {
         copy(view, event) {
@@ -222,10 +226,12 @@ export function multiCursorPlugin(): Plugin<MultiCursorPluginState> {
             return false;
           }
           const text = getMultiCursorClipboardText(state);
+          /* v8 ignore next -- @preserve empty text (all cursors collapsed) still proceeds to cut transaction */
           if (text) {
             event.clipboardData?.setData("text/plain", text);
           }
           const tr = handleMultiCursorCut(state);
+          /* v8 ignore next -- @preserve tr is null only when all ranges are collapsed; handleMultiCursorCut returns null is tested separately */
           if (tr) {
             event.preventDefault();
             view.dispatch(tr);

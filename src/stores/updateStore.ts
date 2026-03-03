@@ -99,6 +99,7 @@ export const useUpdateStore = create<UpdateState & UpdateActions>()((set) => ({
 }));
 
 // Dev helper: expose store for testing update UI
+/* v8 ignore next 3 -- @preserve false branch is production-only; tests always run in DEV mode */
 if (import.meta.env.DEV) {
   (window as unknown as { __updateStore: typeof useUpdateStore }).
     __updateStore = useUpdateStore;

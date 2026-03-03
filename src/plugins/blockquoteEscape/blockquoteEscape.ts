@@ -62,6 +62,7 @@ function isAtEndOfBlockquote(view: EditorView, info: BlockquoteInfo): boolean {
   const { state } = view;
   const { $from } = state.selection;
 
+  /* v8 ignore next -- @preserve defensive guard: blockquoteNode always present when getBlockquoteInfo returns non-null */
   if (!info.blockquoteNode) return false;
   const blockquoteEnd = info.blockquotePos + info.blockquoteNode.nodeSize - 1;
 
@@ -124,6 +125,7 @@ export function escapeBlockquoteDown(view: EditorView): boolean {
 
   // Only handle when blockquote is last block
   const docSize = view.state.doc.content.size;
+  /* v8 ignore next -- @preserve defensive guard: blockquoteNode always present when getBlockquoteInfo returns non-null */
   if (!info.blockquoteNode) return false;
   if (!isBlockquoteLastBlock(info.blockquotePos, info.blockquoteNode.nodeSize, docSize)) return false;
 

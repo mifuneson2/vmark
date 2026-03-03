@@ -101,5 +101,7 @@ export async function browseAndReplaceMedia(
     }
   });
 
+  /* v8 ignore start -- @preserve dialog.open() always returns boolean; undefined is defensive */
   return ran ?? false;
+  /* v8 ignore stop */
 }

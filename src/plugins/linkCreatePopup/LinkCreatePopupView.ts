@@ -179,6 +179,7 @@ export class LinkCreatePopupView {
 
   private show(state: ReturnType<typeof useLinkCreatePopupStore.getState>) {
     const { anchorRect, showTextInput, text } = state;
+    /* v8 ignore next -- @preserve reason: show() is only called from the subscribe handler when state.anchorRect is truthy; this guard can never be false in practice */
     if (!anchorRect) return;
 
     // Rebuild container based on whether we need text input
@@ -252,6 +253,7 @@ export class LinkCreatePopupView {
   }
 
   private handleTextInput = () => {
+    /* v8 ignore next -- @preserve reason: handler is bound to this.textInput's 'input' event, so textInput is always non-null when this handler fires */
     if (this.textInput) {
       useLinkCreatePopupStore.getState().setText(this.textInput.value);
     }

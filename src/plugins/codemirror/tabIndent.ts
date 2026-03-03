@@ -79,6 +79,7 @@ export const shiftTabIndentFallbackKeymap: KeyBinding = guardCodeMirrorKeyBindin
     for (const range of state.selection.ranges) {
       const line = state.doc.lineAt(range.from);
       const textBefore = state.doc.sliceString(line.from, range.from);
+      /* v8 ignore next -- @preserve null-coalesce: regex always matches (zero or more spaces), nullish branch unreachable */
       const leadingSpaces = textBefore.match(/^[ ]*/)?.[0].length ?? 0;
       if (leadingSpaces === 0) continue;
 

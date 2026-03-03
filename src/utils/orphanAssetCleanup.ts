@@ -57,6 +57,7 @@ export function extractImageReferences(content: string): Set<string> {
   while ((match = imageRegex.exec(content)) !== null) {
     // Group 1 is angle-bracket path, Group 2 is regular path
     const path = match[1] || match[2];
+    /* v8 ignore next -- @preserve regex alternation guarantees one group always captures */
     if (!path) continue;
     // Normalize path: remove leading ./ if present, decode URL encoding
     let normalized = path.startsWith("./") ? path.slice(2) : path;

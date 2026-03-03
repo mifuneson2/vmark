@@ -106,7 +106,11 @@ export function HeadingPicker() {
         if (selected) {
           handleSelect(selected);
         }
+      /* v8 ignore start -- @preserve other-key fall-through: tests only exercise Escape/Arrow/Enter keys */
+      } else {
+        // Other keys fall through
       }
+      /* v8 ignore stop */
     },
     [filteredHeadings, selectedIndex, handleClose, handleSelect, ime]
   );

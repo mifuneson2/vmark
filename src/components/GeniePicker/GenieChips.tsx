@@ -31,6 +31,7 @@ export function GenieChips({ genies, onSelect }: GenieChipsProps) {
         const genie = genies.find(
           (g) => g.metadata.name === action.genieName
         );
+        /* v8 ignore next -- @preserve defensive guard: available was pre-filtered so genie always exists */
         if (!genie) return null;
         return (
           <button

@@ -92,6 +92,7 @@ export function listSmartOutdent(view: EditorView): boolean {
     const line = state.doc.line(lineNum);
     if (isListLine(line.text)) {
       hasListLine = true;
+      /* v8 ignore next -- @preserve match("^[ ]+") always matches (returns array), so optional chain is never undefined */
       const leadingSpaces = line.text.match(/^[ ]*/)?.[0].length ?? 0;
       if (leadingSpaces > 0) {
         const spacesToRemove = Math.min(leadingSpaces, tabSize);

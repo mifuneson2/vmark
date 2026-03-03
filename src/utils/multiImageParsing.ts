@@ -130,6 +130,7 @@ export function parseMultiplePaths(text: string): ParsedPaths {
 
     return {
       paths,
+      /* v8 ignore next -- paths always has >1 entries in the newline-split branch; "single" fallback is unreachable */
       format: paths.length > 1 ? "newline" : "single",
     };
   }

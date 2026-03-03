@@ -208,6 +208,32 @@ describe("extractTiptapContext", () => {
       expect(ctx.inBlockquote).toBeDefined();
       expect(ctx.inBlockquote?.depth).toBe(2);
     });
+
+    it("counts depth=1 when blockquote is inside a list item (non-blockquote ancestors at lower depths)", () => {
+      // Structure: doc > bulletList > listItem > paragraph + blockquote > paragraph
+      // listItem schema requires "paragraph block*" so we use: listItem(p(""), blockquote(p("...")))
+      // When the outer loop traverses depths looking for blockquote, it finds it at depth 4:
+      //   depth 0: doc
+      //   depth 1: bulletList
+      //   depth 2: listItem
+      //   depth 3: blockquote (detected here)
+      //   depth 4: paragraph
+      // Inner loop: dd=1 (bulletList → false branch), dd=2 (listItem → false), dd=3 (blockquote → true)
+      // Result: depth=1
+      const document = doc(
+        bulletList(listItem(p(""), blockquote(p("bq in list"))))
+      );
+      // Navigate into the blockquote paragraph content
+      // pos: doc(1) > bulletList(1) > listItem(1) > p("") = 2 chars (open+close), blockquote(1) > p(1) > text
+      // Total: 1 + 1 + 1 + 2 + 1 + 1 + 1 = let's resolve from end of "bq in list"
+      // Rough position inside "bq in list" text — try pos 10
+      const state = createState(document, 10);
+
+      const ctx = extractTiptapContext(state);
+
+      expect(ctx.inBlockquote).toBeDefined();
+      expect(ctx.inBlockquote?.depth).toBe(1);
+    });
   });
 
   describe("selection detection", () => {
@@ -329,6 +355,71 @@ describe("extractTiptapContext", () => {
       const ctx = extractTiptapContext(state);
 
       expect(ctx.contextMode).toBe("insert");
+    });
+  });
+
+  describe("fallback values for node attrs", () => {
+    it("uses empty string fallback when codeBlock language is falsy (line 59)", () => {
+      // codeBlock with language="" — the || "" fallback triggers
+      const document = doc(codeBlock("", "code here"));
+      const state = createState(document, 2);
+
+      const ctx = extractTiptapContext(state);
+
+      expect(ctx.inCodeBlock).toBeDefined();
+      expect(ctx.inCodeBlock?.language).toBe("");
+    });
+
+    it("uses fallback level 1 when heading level is falsy (line 115)", () => {
+      // Create a heading with level=0 (falsy) to trigger `|| 1` fallback
+      const h = testSchema.node("heading", { level: 0 }, [testSchema.text("Title")]);
+      const document = doc(h);
+      const state = createState(document, 2);
+
+      const ctx = extractTiptapContext(state);
+
+      expect(ctx.inHeading).toBeDefined();
+      expect(ctx.inHeading?.level).toBe(1);
+    });
+
+    it("handles table with zero cols when row has no children (line 69-70)", () => {
+      // A table with 0 rows is not valid in the schema, but we test a 1x1 table
+      // and position the cursor so $from.depth relative to table triggers fallback
+      const document = doc(
+        table(
+          tableRow(tableCell(p("only cell")))
+        )
+      );
+      const state = createState(document, 5);
+
+      const ctx = extractTiptapContext(state);
+
+      expect(ctx.inTable).toBeDefined();
+      expect(ctx.inTable?.totalRows).toBe(1);
+      expect(ctx.inTable?.totalCols).toBe(1);
+    });
+  });
+
+  describe("word detection skipped in special contexts", () => {
+    it("skips word detection when cursor is in a link (line 133)", () => {
+      const document = doc(p("before ", linkedText("link text", "https://example.com"), " after"));
+      const state = createState(document, 11); // Inside the link
+
+      const ctx = extractTiptapContext(state);
+
+      // inLink should be detected, inWord should NOT be set
+      expect(ctx.inLink).toBeDefined();
+      expect(ctx.inWord).toBeUndefined();
+    });
+
+    it("skips word detection when cursor is in formatted text (line 133)", () => {
+      const document = doc(p("before ", boldText("bold text"), " after"));
+      const state = createState(document, 11); // Inside bold
+
+      const ctx = extractTiptapContext(state);
+
+      expect(ctx.inFormattedRange).toBeDefined();
+      expect(ctx.inWord).toBeUndefined();
     });
   });
 });

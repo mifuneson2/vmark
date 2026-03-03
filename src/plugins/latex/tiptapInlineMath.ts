@@ -35,6 +35,8 @@ export const mathInlineExtension = Node.create({
   },
 
   addNodeView() {
+    /* v8 ignore start -- @preserve reason: addNodeView factory callback only runs in live Tiptap editor; not exercised in unit tests */
     return ({ node, view, getPos }) => new MathInlineNodeView(node as PMNode, view, getPos);
+    /* v8 ignore stop */
   },
 });

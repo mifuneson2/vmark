@@ -177,6 +177,7 @@ function filterAllowedStyles(html: string): string {
 
   const elements = container.querySelectorAll<HTMLElement>("[style]");
   elements.forEach((element) => {
+    /* v8 ignore next -- @preserve querySelectorAll("[style]") only matches elements that have the attribute */
     const style = element.getAttribute("style") ?? "";
     const sanitizedStyle = sanitizeStyleAttribute(style);
     if (!sanitizedStyle) {
@@ -414,5 +415,6 @@ export function escapeHtml(text: string): string {
     '"': "&quot;",
     "'": "&#39;",
   };
+  /* v8 ignore next -- @preserve regex only matches chars that are keys in htmlEscapes */
   return text.replace(/[&<>"']/g, (char) => htmlEscapes[char] || char);
 }

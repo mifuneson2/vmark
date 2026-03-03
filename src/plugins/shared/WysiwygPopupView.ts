@@ -164,6 +164,7 @@ export abstract class WysiwygPopupView<TState extends PopupStoreBase> {
   private handleClickOutside(e: MouseEvent): void {
     if (this.justOpened) return;
     const state = this.store.getState();
+    /* v8 ignore next -- @preserve defensive guard; listener is removed on hide so isOpen is always true here */
     if (!state.isOpen) return;
     if (!this.container.contains(e.target as Node)) {
       this.closePopup();
@@ -171,6 +172,7 @@ export abstract class WysiwygPopupView<TState extends PopupStoreBase> {
   }
 
   private handleScroll(): void {
+    /* v8 ignore next -- @preserve defensive guard; listener is removed on hide so store is always open here */
     if (this.store.getState().isOpen) {
       this.closePopup();
     }

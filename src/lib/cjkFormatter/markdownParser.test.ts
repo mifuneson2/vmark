@@ -199,6 +199,23 @@ describe("findProtectedRegions", () => {
       const indentedRegion = regions.find((r) => r.type === "indented_code");
       expect(indentedRegion).toBeUndefined();
     });
+
+    it("detects indented code block at end of file", () => {
+      // Line 251: indented block extends to text.length when file ends with indented code
+      const text = "text\n\n    code line\n    more code";
+      const regions = findProtectedRegions(text);
+      const indentedRegion = regions.find((r) => r.type === "indented_code");
+      expect(indentedRegion).toBeDefined();
+      expect(indentedRegion!.end).toBe(text.length);
+    });
+
+    it("detects tab-indented code block at end of file", () => {
+      const text = "text\n\n\tcode line\n\tmore code";
+      const regions = findProtectedRegions(text);
+      const indentedRegion = regions.find((r) => r.type === "indented_code");
+      expect(indentedRegion).toBeDefined();
+      expect(indentedRegion!.end).toBe(text.length);
+    });
   });
 });
 
@@ -223,6 +240,46 @@ describe("extractFormattableSegments", () => {
   });
 });
 
+describe("patterns inside already-protected regions are skipped", () => {
+  it("skips image syntax inside inline code (line 107)", () => {
+    const text = "text `![alt](url)` more";
+    const regions = findProtectedRegions(text);
+    // Only the inline_code region should be found, not an image region
+    expect(regions.filter((r) => r.type === "image")).toHaveLength(0);
+    expect(regions.filter((r) => r.type === "inline_code")).toHaveLength(1);
+  });
+
+  it("skips link URL inside inline code (line 134)", () => {
+    const text = "text `[click](http://x.com)` more";
+    const regions = findProtectedRegions(text);
+    expect(regions.filter((r) => r.type === "link_url")).toHaveLength(0);
+  });
+
+  it("skips HTML tags inside inline code (line 146)", () => {
+    const text = "text `<div>hello</div>` more";
+    const regions = findProtectedRegions(text);
+    expect(regions.filter((r) => r.type === "html_tag")).toHaveLength(0);
+  });
+
+  it("skips wiki links inside inline code (line 159)", () => {
+    const text = "text `[[page]]` more";
+    const regions = findProtectedRegions(text);
+    expect(regions.filter((r) => r.type === "wiki_link")).toHaveLength(0);
+  });
+
+  it("skips footnote defs inside fenced code (line 183)", () => {
+    const text = "text\n```\n[^1]: inside code\n```\nmore";
+    const regions = findProtectedRegions(text);
+    expect(regions.filter((r) => r.type === "footnote_def")).toHaveLength(0);
+  });
+
+  it("skips math block inside fenced code (line 196)", () => {
+    const text = "text\n```\n$$x^2$$\n```\nmore";
+    const regions = findProtectedRegions(text);
+    expect(regions.filter((r) => r.type === "math_block")).toHaveLength(0);
+  });
+});
+
 describe("reconstructText", () => {
   it("reconstructs text with formatted segments", () => {
     const original = "text `code` more";
@@ -237,5 +294,25 @@ describe("reconstructText", () => {
 
     const result = reconstructText(original, formattedSegments, regions);
     expect(result).toBe("TEXT `code` MORE");
+  });
+});
+
+describe("findProtectedRegions — inline math inside another region", () => {
+  it("skips inline math that appears inside a code span", () => {
+    // The $x$ inside backticks should be treated as code, not math_inline
+    const text = "`$x$`";
+    const regions = findProtectedRegions(text);
+    // Should have an inline_code region but no math_inline region
+    const mathRegions = regions.filter((r) => r.type === "math_inline");
+    expect(mathRegions).toHaveLength(0);
+    const codeRegions = regions.filter((r) => r.type === "inline_code");
+    expect(codeRegions.length).toBeGreaterThan(0);
+  });
+
+  it("skips inline math that appears inside a fenced code block", () => {
+    const text = "```\n$x$\n```";
+    const regions = findProtectedRegions(text);
+    const mathRegions = regions.filter((r) => r.type === "math_inline");
+    expect(mathRegions).toHaveLength(0);
   });
 });

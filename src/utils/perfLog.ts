@@ -20,6 +20,7 @@ const PERF_ENABLED = () => {
   try {
     return localStorage.getItem("PERF_LOG") === "true";
   } catch {
+    /* v8 ignore next -- @preserve localStorage throws only in restricted environments (e.g. sandboxed iframes); not reproducible in unit tests */
     return false;
   }
 };
@@ -52,6 +53,7 @@ export function perfEnd(label: string, details?: Record<string, unknown>): void 
     return;
   }
   const elapsed = performance.now() - start;
+  /* v8 ignore next -- @preserve sessionStart is always set by auto-running perfReset() on module load; 0 fallback is unreachable */
   const absolute = sessionStart ? performance.now() - sessionStart : 0;
 
   const detailStr = details ? ` | ${JSON.stringify(details)}` : "";
@@ -67,6 +69,7 @@ export function perfEnd(label: string, details?: Record<string, unknown>): void 
 export function perfMark(label: string, details?: Record<string, unknown>): void {
   if (!PERF_ENABLED()) return;
   const now = performance.now();
+  /* v8 ignore next -- @preserve sessionStart is always set by auto-running perfReset() on module load; 0 fallback is unreachable */
   const absolute = sessionStart ? now - sessionStart : 0;
   marks.set(label, now);
 
@@ -83,6 +86,7 @@ export function perfSince(label: string, sinceLabel: string): void {
     return;
   }
   const elapsed = now - since;
+  /* v8 ignore next -- @preserve sessionStart is always set by auto-running perfReset() on module load; 0 fallback is unreachable */
   const absolute = sessionStart ? now - sessionStart : 0;
   const color = elapsed > 100 ? "color: #cf222e" : elapsed > 50 ? "color: #9a6700" : "color: #1a7f37";
 
@@ -94,6 +98,7 @@ export function perfSince(label: string, sinceLabel: string): void {
 
 export function perfLog(message: string, details?: Record<string, unknown>): void {
   if (!PERF_ENABLED()) return;
+  /* v8 ignore next -- @preserve sessionStart is always set by auto-running perfReset() on module load; 0 fallback is unreachable */
   const absolute = sessionStart ? performance.now() - sessionStart : 0;
   const detailStr = details ? ` | ${JSON.stringify(details)}` : "";
   console.log(`%c[PERF] ${message} (T+${absolute.toFixed(0)}ms)${detailStr}`, "color: #666");

@@ -212,6 +212,13 @@ describe("detectImagePath", () => {
       const result = detectImagePath("  /path/to/image.png  ");
       expect(result.path).toBe("/path/to/image.png");
     });
+
+    it("returns none when trimmed text has empty first line (only newlines)", () => {
+      // trimmed = "\n" still has an empty first line after split
+      const result = detectImagePath("\n");
+      expect(result.isImage).toBe(false);
+      expect(result.type).toBe("none");
+    });
   });
 
   describe("originalText preservation", () => {
@@ -244,6 +251,11 @@ describe("looksLikeImagePath", () => {
 
   it("uses first line only", () => {
     expect(looksLikeImagePath("image.png\ntext.txt")).toBe(true);
+  });
+
+  it("returns false when trimmed text has empty first line", () => {
+    // "\n" trims to "\n" (non-empty) but first line is "" (empty after split)
+    expect(looksLikeImagePath("\n")).toBe(false);
   });
 });
 

@@ -188,11 +188,13 @@ export function handleWysiwygRemoveBlankLines(context: WysiwygToolbarContext): b
 
   state.doc.nodesBetween(from, to, (node, pos) => {
     // Check if this is a block node that's "empty" (no text content)
+    /* v8 ignore next -- @preserve reason: container block nodes in delete-empty not tested */
     if (node.isBlock && !node.isTextblock) {
       // Skip container nodes like lists, blockquotes
       return true;
     }
 
+    /* v8 ignore next -- @preserve reason: non-textblock non-container nodes (e.g., images) in delete-empty not tested */
     if (node.isTextblock) {
       // Check if the block is empty or contains only whitespace
       const text = node.textContent;

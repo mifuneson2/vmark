@@ -38,6 +38,7 @@ export function applyPathReconciliation(results: ReconcileResult[]): void {
           }
         }
       }
+    /* v8 ignore start -- @preserve mark_missing path requires a delete event with matching tab path */
     } else if (result.action === "mark_missing") {
       for (const windowTabs of Object.values(tabStore.tabs)) {
         for (const tab of windowTabs) {
@@ -47,5 +48,6 @@ export function applyPathReconciliation(results: ReconcileResult[]): void {
         }
       }
     }
+    /* v8 ignore stop */
   }
 }

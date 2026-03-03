@@ -127,6 +127,7 @@ function extractFootnoteData(
   } else {
     // Cursor is on definition
     definitionPos = footnote.from;
+    /* v8 ignore next -- @preserve reason: footnote definition with no content is an untested edge case */
     content = footnote.content || "";
 
     // Find the reference

@@ -96,4 +96,87 @@ describe("recentFilesStore", () => {
       expect(useRecentFilesStore.getState().files).toHaveLength(0);
     });
   });
+
+  describe("syncToNativeMenu", () => {
+    it("calls invoke with current files list", async () => {
+      const { invoke } = await import("@tauri-apps/api/core");
+
+      useRecentFilesStore.getState().addFile("/a.md");
+      useRecentFilesStore.getState().addFile("/b.md");
+
+      (invoke as ReturnType<typeof vi.fn>).mockClear();
+      useRecentFilesStore.getState().syncToNativeMenu();
+
+      // syncToNativeMenu calls updateNativeMenu which calls invoke
+      expect(invoke).toHaveBeenCalledWith(
+        "update_recent_files",
+        expect.objectContaining({ files: ["/b.md", "/a.md"] })
+      );
+    });
+
+    it("handles empty file list", async () => {
+      const { invoke } = await import("@tauri-apps/api/core");
+
+      (invoke as ReturnType<typeof vi.fn>).mockClear();
+      useRecentFilesStore.getState().syncToNativeMenu();
+
+      expect(invoke).toHaveBeenCalledWith(
+        "update_recent_files",
+        expect.objectContaining({ files: [] })
+      );
+    });
+  });
+
+  describe("addFile calls native functions", () => {
+    it("calls invoke for native menu update and dock registration", async () => {
+      const { invoke } = await import("@tauri-apps/api/core");
+
+      (invoke as ReturnType<typeof vi.fn>).mockClear();
+      useRecentFilesStore.getState().addFile("/new-file.md");
+
+      expect(invoke).toHaveBeenCalledWith(
+        "update_recent_files",
+        expect.objectContaining({ files: ["/new-file.md"] })
+      );
+      expect(invoke).toHaveBeenCalledWith(
+        "register_dock_recent",
+        expect.objectContaining({ path: "/new-file.md" })
+      );
+    });
+  });
+
+  describe("updateNativeMenu error handling", () => {
+    it("handles invoke rejection gracefully", async () => {
+      const { invoke } = await import("@tauri-apps/api/core");
+      const { recentWarn } = await import("@/utils/debug");
+
+      vi.mocked(invoke).mockRejectedValueOnce(new Error("native error"));
+      useRecentFilesStore.getState().addFile("/fail.md");
+
+      // Wait for the async updateNativeMenu to settle
+      await vi.waitFor(() => {
+        expect(recentWarn).toHaveBeenCalledWith(
+          "Failed to update recent files native menu:",
+          expect.any(Error)
+        );
+      });
+    });
+  });
+
+  describe("removeFile calls native menu update", () => {
+    it("syncs native menu after removal", async () => {
+      const { invoke } = await import("@tauri-apps/api/core");
+
+      useRecentFilesStore.getState().addFile("/a.md");
+      useRecentFilesStore.getState().addFile("/b.md");
+
+      (invoke as ReturnType<typeof vi.fn>).mockClear();
+      useRecentFilesStore.getState().removeFile("/a.md");
+
+      expect(invoke).toHaveBeenCalledWith(
+        "update_recent_files",
+        expect.objectContaining({ files: ["/b.md"] })
+      );
+    });
+  });
 });

@@ -233,11 +233,13 @@ export function convertTable(context: PmToMdastContext, node: PMNode): Table {
 
       if (rowIndex === 0) {
         const alignment = normalizeAlignment(cell.attrs.alignment);
+        /* v8 ignore start -- align grows monotonically with cellIndex; else branch structurally unreachable */
         if (align.length <= cellIndex) {
           align = [...align, alignment];
         } else {
           align[cellIndex] = alignment;
         }
+        /* v8 ignore stop */
       }
     });
 

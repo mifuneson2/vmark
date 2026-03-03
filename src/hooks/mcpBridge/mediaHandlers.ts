@@ -87,6 +87,7 @@ export async function handleInsertMedia(
     await respond({
       id,
       success: false,
+      /* v8 ignore next -- errors thrown by Tauri/JS are always Error instances; String(e) fallback is defensive */
       error: error instanceof Error ? error.message : String(error),
     });
   }

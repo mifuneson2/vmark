@@ -198,5 +198,56 @@ describe("genieHandlers", () => {
 
       dispatchSpy.mockRestore();
     });
+
+    it("returns error for non-string geniePath", async () => {
+      await handleGeniesInvoke("req-10", { geniePath: 123 });
+
+      expect(mockRespond).toHaveBeenCalledWith({
+        id: "req-10",
+        success: false,
+        error: "geniePath is required and must be a string",
+      });
+    });
+  });
+
+  describe("non-Error thrown values (String(error) branch)", () => {
+    it("handleGeniesList handles non-Error thrown value", async () => {
+      mockInvoke.mockRejectedValue("raw string error");
+
+      await handleGeniesList("req-str-1");
+
+      expect(mockRespond).toHaveBeenCalledWith({
+        id: "req-str-1",
+        success: false,
+        error: "raw string error",
+      });
+    });
+
+    it("handleGeniesRead handles non-Error thrown value", async () => {
+      mockInvoke.mockRejectedValue(42);
+
+      await handleGeniesRead("req-str-2", { path: "/genies/test.md" });
+
+      expect(mockRespond).toHaveBeenCalledWith({
+        id: "req-str-2",
+        success: false,
+        error: "42",
+      });
+    });
+
+    it("handleGeniesInvoke handles non-Error thrown value", async () => {
+      mockInvoke.mockRejectedValue("invoke error");
+
+      await handleGeniesInvoke("req-str-3", {
+        geniePath: "/genies/test.md",
+        scope: "selection",
+      });
+
+      expect(mockRespond).toHaveBeenCalledWith({
+        id: "req-str-3",
+        success: false,
+        error: "invoke error",
+      });
+    });
   });
 });

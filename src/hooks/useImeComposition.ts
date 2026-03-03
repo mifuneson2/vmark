@@ -20,10 +20,12 @@
 import { useCallback, useMemo, useRef } from "react";
 import { IME_GRACE_PERIOD_MS } from "@/utils/imeGuard";
 
+/* v8 ignore start -- Date.now() fallback is only reached in environments without performance API */
 const nowMs = () =>
   typeof performance !== "undefined" && typeof performance.now === "function"
     ? performance.now()
     : Date.now();
+/* v8 ignore stop */
 
 export interface ImeCompositionResult {
   /** True only while actively composing (between compositionstart and compositionend). */

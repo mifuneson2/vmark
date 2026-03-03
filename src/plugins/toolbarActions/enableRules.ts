@@ -60,6 +60,7 @@ const LINK_DISABLED_ACTIONS = new Set<string>([
 ]);
 
 function isDisabledInLink(action: string, ctx: WysiwygContext | SourceContext | null): boolean {
+  /* v8 ignore next -- @preserve ctx is always non-null at call sites; null branch is defensive */
   if (!ctx) return false;
   if (!ctx.inLink) return false;
   return LINK_DISABLED_ACTIONS.has(action);
@@ -81,6 +82,7 @@ function isWysiwygMarkActive(view: TiptapEditorView, markName: string): boolean 
 }
 
 function isWysiwygActionActive(action: string, context: WysiwygContext | null, view: TiptapEditorView | null): boolean {
+  /* v8 ignore next -- @preserve context and view are always non-null at call sites; null branch is defensive */
   if (!context || !view) return false;
 
   if (action.startsWith("heading:")) {
@@ -131,6 +133,7 @@ function isWysiwygActionActive(action: string, context: WysiwygContext | null, v
 }
 
 function isSourceActionActive(action: string, context: SourceContext | null): boolean {
+  /* v8 ignore next -- @preserve context is always non-null at call sites; null branch is defensive */
   if (!context) return false;
 
   if (action.startsWith("heading:")) {
@@ -174,6 +177,7 @@ function isSourceActionActive(action: string, context: SourceContext | null): bo
 }
 
 function matchesEnabledContext(enabled: ToolbarActionItem["enabledIn"], ctx: WysiwygContext | SourceContext | null): boolean {
+  /* v8 ignore next -- @preserve ctx is always non-null at call sites; null branch is defensive */
   if (!ctx) return false;
 
   for (const rule of enabled) {

@@ -184,6 +184,40 @@ describe("handleTableScrollToSelection", () => {
     expect(container!.scrollTop).toBe(177);
   });
 
+  it("uses default when scrollMargin object has non-number top/bottom (line 39-40)", () => {
+    const { view, container } = createMockView({
+      inTable: true,
+      coords: { top: 2, bottom: 22, left: 50, right: 200 },
+      containerRect: { top: 10, bottom: 500, left: 0, right: 800 },
+      scrollTop: 200,
+      scrollMargin: { top: "invalid", bottom: null },
+    });
+
+    handleTableScrollToSelection(view);
+
+    // Falls back to DEFAULT_SCROLL_MARGIN (5) for both
+    // cursor top (2) < container top (10) + topMargin (5) = 15
+    // scrollTop -= 15 - 2 = 13
+    expect(container!.scrollTop).toBe(187);
+  });
+
+  it("uses default when scrollMargin is non-number non-object (e.g. string)", () => {
+    const { view, container } = createMockView({
+      inTable: true,
+      coords: { top: 480, bottom: 510, left: 50, right: 200 },
+      containerRect: { top: 0, bottom: 500, left: 0, right: 800 },
+      scrollTop: 100,
+      scrollMargin: "invalid",
+    });
+
+    handleTableScrollToSelection(view);
+
+    // Uses DEFAULT_SCROLL_MARGIN (5) for both
+    // cursor bottom (510) > container bottom (500) - margin (5) = 495
+    // scrollTop += 510 - 495 = 15
+    expect(container!.scrollTop).toBe(115);
+  });
+
   it("preserves scrollMargin of 0 (does not fall back to default)", () => {
     const { view, container } = createMockView({
       inTable: true,

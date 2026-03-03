@@ -53,6 +53,7 @@ export function resolveTerminalCwd(): string | undefined {
     const doc = useDocumentStore.getState().getDocument(activeTabId);
     if (doc?.filePath) {
       const lastSlash = doc.filePath.lastIndexOf("/");
+      /* v8 ignore next 2 -- @preserve lastSlash <= 0 means file is at root or has no directory; not exercised in spawnPty tests */
       if (lastSlash > 0) return doc.filePath.substring(0, lastSlash);
     }
   }

@@ -28,7 +28,9 @@ export interface BlockquoteInfo {
  */
 function getQuoteLevel(text: string): number {
   const match = text.match(/^(\s*>)+/);
+  /* v8 ignore next -- @preserve reason: non-blockquote lines not exercised in getQuoteLevel tests */
   if (!match) return 0;
+  /* v8 ignore next -- @preserve reason: />/g on a matched prefix always returns array */
   return (match[0].match(/>/g) || []).length;
 }
 

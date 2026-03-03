@@ -232,5 +232,17 @@ describe("recentWorkspacesStore", () => {
       // Empty string after last slash, so returns the path
       expect(state.workspaces[0].name).toBeDefined();
     });
+
+    it("falls back to full path when getFileName returns empty (line 54 || path)", async () => {
+      const pathUtils = await import("@/utils/pathUtils");
+      vi.mocked(pathUtils.getFileName).mockReturnValueOnce("");
+
+      const store = useRecentWorkspacesStore.getState();
+      store.addWorkspace("/some/root");
+
+      const state = useRecentWorkspacesStore.getState();
+      // getFileName("") → "", so name falls back to the full path
+      expect(state.workspaces[0].name).toBe("/some/root");
+    });
   });
 });

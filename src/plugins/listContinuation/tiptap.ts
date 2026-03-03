@@ -16,6 +16,7 @@ function isListItemEmpty(state: EditorState, listItemType: NodeType): boolean {
       return node.textContent.trim() === "";
     }
   }
+  /* v8 ignore next -- @preserve cursor always inside a list item when this fn is called */
   return false;
 }
 
@@ -31,6 +32,7 @@ function isInTaskItem(state: EditorState, listItemType: NodeType): boolean {
       return checked === true || checked === false;
     }
   }
+  /* v8 ignore next -- @preserve cursor always inside a list item when this fn is called */
   return false;
 }
 
@@ -53,6 +55,7 @@ function splitTaskListItem(
           const node = $from.node(d);
           if (node.type === listItemType) {
             const checked = node.attrs.checked;
+            /* v8 ignore next -- @preserve splitTaskListItem only called for task items, so checked is always bool */
             if (checked === true || checked === false) {
               const pos = $from.before(d);
               tr.setNodeMarkup(pos, undefined, { ...node.attrs, checked: false });

@@ -79,6 +79,7 @@ export function getMappedMenuEvents(): MenuEventId[] {
 
 // === Dev-time validation ===
 
+/* v8 ignore start -- DEV-only validation: false-branch unreachable (DEV=true in vitest); warning paths unreachable when registries are in sync */
 if (import.meta.env.DEV) {
   const mappedMenuIds = new Set(
     Object.keys(MENU_TO_ACTION).map((k) => k.replace("menu:", ""))
@@ -101,3 +102,4 @@ if (import.meta.env.DEV) {
     );
   }
 }
+/* v8 ignore stop */

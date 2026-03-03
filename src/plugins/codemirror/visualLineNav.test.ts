@@ -208,6 +208,17 @@ describe("smartHomeSelect with EditorView", () => {
     expect(sel.head).toBe(2); // First non-whitespace
   });
 
+  it("does nothing when target equals head (line 80, no dispatch)", () => {
+    // Both anchor and head at first non-whitespace of non-indented line
+    // head === firstNonWhitespacePos AND head === line.from => targetPos = firstNonWhitespacePos = 0
+    // Since targetPos === head, no dispatch
+    const view = createViewWithSelection("hello", 0, 0);
+    smartHomeSelect(view);
+    const sel = view.state.selection.main;
+    expect(sel.anchor).toBe(0);
+    expect(sel.head).toBe(0);
+  });
+
   it("handles extending to line start", () => {
     const view = createViewWithSelection("  hello", 0, 2); // Selection from start to first non-ws
     smartHomeSelect(view);

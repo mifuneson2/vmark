@@ -229,5 +229,251 @@ describe("tabHandlers", () => {
       expect(call.data.tabId).toBe("tab-reopened");
       expect(call.data.filePath).toBe("/reopened.md");
     });
+
+    it("reopens a closed tab without file path (untitled)", async () => {
+      mockTabStoreState.reopenClosedTab.mockReturnValue({
+        id: "tab-untitled",
+        filePath: null,
+        title: "Untitled",
+      });
+
+      await handleTabsReopenClosed("req-16", {});
+
+      expect(mockDocStoreState.initDocument).toHaveBeenCalledWith("tab-untitled", "", null);
+      const call = mockRespond.mock.calls[0][0];
+      expect(call.success).toBe(true);
+      expect(call.data.tabId).toBe("tab-untitled");
+    });
+
+    it("handles file read failure for reopened tab", async () => {
+      const { readTextFile } = await import("@tauri-apps/plugin-fs");
+      vi.mocked(readTextFile).mockRejectedValueOnce(new Error("file deleted"));
+      mockTabStoreState.reopenClosedTab.mockReturnValue({
+        id: "tab-deleted",
+        filePath: "/deleted.md",
+        title: "Deleted",
+      });
+
+      await handleTabsReopenClosed("req-17", {});
+
+      // Should init with empty content since file was deleted
+      expect(mockDocStoreState.initDocument).toHaveBeenCalledWith("tab-deleted", "", "/deleted.md");
+      const call = mockRespond.mock.calls[0][0];
+      expect(call.success).toBe(true);
+    });
+  });
+
+  describe("handleTabsCreate — error path (line 148)", () => {
+    it("returns error when createTab throws", async () => {
+      mockTabStoreState.createTab.mockImplementationOnce(() => {
+        throw new Error("create failed");
+      });
+
+      await handleTabsCreate("req-err-create", {});
+
+      expect(mockRespond).toHaveBeenCalledWith({
+        id: "req-err-create",
+        success: false,
+        error: "create failed",
+      });
+    });
+  });
+
+  describe("handleTabsReopenClosed — error path (line 252)", () => {
+    it("returns error when reopenClosedTab throws", async () => {
+      mockTabStoreState.reopenClosedTab.mockImplementationOnce(() => {
+        throw new Error("reopen failed");
+      });
+
+      await handleTabsReopenClosed("req-err-reopen", {});
+
+      expect(mockRespond).toHaveBeenCalledWith({
+        id: "req-err-reopen",
+        success: false,
+        error: "reopen failed",
+      });
+    });
+  });
+
+  describe("handleTabsList — error path", () => {
+    it("returns error on exception", async () => {
+      // Force tabs getter to throw
+      const origTabs = mockTabStoreState.tabs;
+      Object.defineProperty(mockTabStoreState, "tabs", {
+        get: () => { throw new Error("store error"); },
+        configurable: true,
+      });
+
+      await handleTabsList("req-err", {});
+
+      expect(mockRespond).toHaveBeenCalledWith({
+        id: "req-err",
+        success: false,
+        error: "store error",
+      });
+
+      // Restore
+      Object.defineProperty(mockTabStoreState, "tabs", {
+        value: origTabs,
+        writable: true,
+        configurable: true,
+      });
+    });
+
+    it("handles non-Error thrown value (String(error) branch)", async () => {
+      const origTabs = mockTabStoreState.tabs;
+      Object.defineProperty(mockTabStoreState, "tabs", {
+        get: () => { throw "string throw"; },
+        configurable: true,
+      });
+
+      await handleTabsList("req-err-ne", {});
+
+      expect(mockRespond).toHaveBeenCalledWith({
+        id: "req-err-ne",
+        success: false,
+        error: "string throw",
+      });
+
+      Object.defineProperty(mockTabStoreState, "tabs", {
+        value: origTabs,
+        writable: true,
+        configurable: true,
+      });
+    });
+  });
+
+  describe("handleTabsSwitch — non-Error catch branch", () => {
+    it("handles non-Error thrown value", async () => {
+      mockTabStoreState.setActiveTab.mockImplementationOnce(() => {
+        throw 42;
+      });
+
+      await handleTabsSwitch("req-ne-sw", { tabId: "tab-1" });
+
+      expect(mockRespond).toHaveBeenCalledWith({
+        id: "req-ne-sw",
+        success: false,
+        error: "42",
+      });
+    });
+  });
+
+  describe("handleTabsClose — non-Error catch branch", () => {
+    it("handles non-Error thrown value", async () => {
+      mockTabStoreState.closeTab.mockImplementationOnce(() => {
+        throw null;      });
+
+      await handleTabsClose("req-ne-cl", { tabId: "tab-1" });
+
+      expect(mockRespond).toHaveBeenCalledWith({
+        id: "req-ne-cl",
+        success: false,
+        error: "null",
+      });
+    });
+  });
+
+  describe("handleTabsCreate — non-Error catch branch", () => {
+    it("handles non-Error thrown value", async () => {
+      mockTabStoreState.createTab.mockImplementationOnce(() => {
+        throw false;      });
+
+      await handleTabsCreate("req-ne-cr", {});
+
+      expect(mockRespond).toHaveBeenCalledWith({
+        id: "req-ne-cr",
+        success: false,
+        error: "false",
+      });
+    });
+  });
+
+  describe("handleTabsGetInfo — non-Error catch branch", () => {
+    it("handles non-Error thrown value", async () => {
+      const origTabs = mockTabStoreState.tabs;
+      Object.defineProperty(mockTabStoreState, "tabs", {
+        get: () => { throw "info error"; },        configurable: true,
+      });
+
+      await handleTabsGetInfo("req-ne-gi", { tabId: "tab-1" });
+
+      expect(mockRespond).toHaveBeenCalledWith({
+        id: "req-ne-gi",
+        success: false,
+        error: "info error",
+      });
+
+      Object.defineProperty(mockTabStoreState, "tabs", {
+        value: origTabs,
+        writable: true,
+        configurable: true,
+      });
+    });
+  });
+
+  describe("handleTabsReopenClosed — non-Error catch branch", () => {
+    it("handles non-Error thrown value", async () => {
+      mockTabStoreState.reopenClosedTab.mockImplementationOnce(() => {
+        throw 0;      });
+
+      await handleTabsReopenClosed("req-ne-ro", {});
+
+      expect(mockRespond).toHaveBeenCalledWith({
+        id: "req-ne-ro",
+        success: false,
+        error: "0",
+      });
+    });
+  });
+
+  describe("handleTabsSwitch — unknown windowId uses ?? [] fallback (line 81)", () => {
+    it("returns error for unknown windowId (tabs[windowId] is undefined)", async () => {
+      // resolveWindowId returns the windowId as-is; "unknown-window" has no tabs entry
+      await handleTabsSwitch("req-sw-unk", { tabId: "tab-1", windowId: "unknown-window" });
+
+      expect(mockRespond).toHaveBeenCalledWith({
+        id: "req-sw-unk",
+        success: false,
+        error: "Tab not found: tab-1",
+      });
+    });
+  });
+
+  describe("handleTabsGetInfo — unknown windowId uses ?? [] fallback (line 175)", () => {
+    it("returns error for unknown windowId (tabs[windowId] is undefined)", async () => {
+      // tabId is provided, resolveWindowId returns "unknown-window", tabs["unknown-window"] is undefined
+      await handleTabsGetInfo("req-gi-unk", { tabId: "tab-1", windowId: "unknown-window" });
+
+      expect(mockRespond).toHaveBeenCalledWith({
+        id: "req-gi-unk",
+        success: false,
+        error: "Tab not found: tab-1",
+      });
+    });
+  });
+
+  describe("handleTabsList — isDirty fallback to false", () => {
+    it("returns isDirty false when document is not found", async () => {
+      mockDocStoreState.getDocument.mockReturnValueOnce(null);
+
+      await handleTabsList("req-dirty-null", {});
+
+      const call = mockRespond.mock.calls[0][0];
+      expect(call.success).toBe(true);
+      expect(call.data[0].isDirty).toBe(false);
+    });
+  });
+
+  describe("handleTabsGetInfo — isDirty fallback to false", () => {
+    it("returns isDirty false when document is not found", async () => {
+      mockDocStoreState.getDocument.mockReturnValueOnce(null);
+
+      await handleTabsGetInfo("req-info-nodoc", { tabId: "tab-1" });
+
+      const call = mockRespond.mock.calls[0][0];
+      expect(call.success).toBe(true);
+      expect(call.data.isDirty).toBe(false);
+    });
   });
 });

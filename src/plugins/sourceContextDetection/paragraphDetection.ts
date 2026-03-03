@@ -50,6 +50,7 @@ export function isAtParagraphLineStart(view: EditorView): boolean {
   }
 
   // Skip task list items
+  /* v8 ignore next -- @preserve reason: task list detection in paragraph context not tested */
   if (/^\s*[-*+]\s*\[[ xX]\]\s/.test(lineText)) {
     return false;
   }

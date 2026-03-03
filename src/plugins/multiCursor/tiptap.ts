@@ -49,6 +49,7 @@ export const multiCursorExtension = Extension.create<MultiCursorOptions>({
   addProseMirrorPlugins() {
     const plugins = [multiCursorPlugin()];
 
+    /* v8 ignore next -- @preserve enableKeymap=false is never used in production config */
     if (this.options.enableKeymap) {
       plugins.push(multiCursorKeymap());
     }

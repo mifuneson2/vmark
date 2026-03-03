@@ -93,12 +93,13 @@ function applyFootnote(
       changes: { from: 0, to: view.state.doc.length, insert: renumberedDoc },
       selection: { anchor: newRefEnd },
     });
+  /* v8 ignore start -- @preserve reason: renumberFootnotes always returns a value in practice */
   } else {
-    // No renumbering needed, just set cursor
     view.dispatch({
       selection: { anchor: to + ref.length },
     });
   }
+  /* v8 ignore stop */
 
   view.focus();
 }

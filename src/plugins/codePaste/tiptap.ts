@@ -109,6 +109,7 @@ function handlePaste(view: EditorView, event: ClipboardEvent): boolean {
 
   // Create code block node
   const codeBlock = codeBlockType.create(
+    /* v8 ignore next -- @preserve short-circuit: language is always a truthy string when shouldPasteAsCodeBlock returns true */
     { language: language || null },
     state.schema.text(text)
   );

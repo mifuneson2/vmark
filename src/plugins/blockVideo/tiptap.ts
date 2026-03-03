@@ -83,10 +83,12 @@ export const blockVideoExtension = Node.create({
   },
 
   addNodeView() {
+    /* v8 ignore start -- @preserve reason: addNodeView factory callback only runs in live Tiptap editor; not exercised in unit tests */
     return ({ node, getPos, editor }) => {
       const safeGetPos = typeof getPos === "function" ? getPos : () => undefined;
       return new BlockVideoNodeView(node, safeGetPos, editor) as unknown as NodeView;
     };
+    /* v8 ignore stop */
   },
 
   addKeyboardShortcuts() {

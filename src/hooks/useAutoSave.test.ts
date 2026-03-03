@@ -31,6 +31,10 @@ vi.mock("@/utils/saveToPath", () => ({
   saveToPath: vi.fn(),
 }));
 
+vi.mock("@/utils/reentryGuard", () => ({
+  isOperationInProgress: vi.fn(() => false),
+}));
+
 vi.mock("@/utils/debug", () => ({
   autoSaveLog: vi.fn(),
 }));
@@ -240,5 +244,95 @@ describe("useAutoSave", () => {
       expect.any(String),
       "auto"
     );
+  });
+
+  it("skips when manual save is in progress", async () => {
+    const { isOperationInProgress } = await import("@/utils/reentryGuard");
+    vi.mocked(isOperationInProgress).mockReturnValue(true);
+
+    renderHook(() => useAutoSave());
+
+    await act(async () => {
+      vi.advanceTimersByTime(1000);
+    });
+
+    expect(saveToPath).not.toHaveBeenCalled();
+
+    vi.mocked(isOperationInProgress).mockReturnValue(false);
+  });
+
+  it("skips when document does not exist for a tab", async () => {
+    vi.mocked(useDocumentStore.getState).mockReturnValue({
+      getDocument: vi.fn().mockReturnValue(null),
+    } as unknown as ReturnType<typeof useDocumentStore.getState>);
+
+    renderHook(() => useAutoSave());
+
+    await act(async () => {
+      vi.advanceTimersByTime(1000);
+    });
+
+    expect(saveToPath).not.toHaveBeenCalled();
+  });
+
+  it("handles save failure without crashing", async () => {
+    vi.mocked(saveToPath).mockResolvedValue(false);
+
+    renderHook(() => useAutoSave());
+
+    await act(async () => {
+      vi.advanceTimersByTime(1000);
+    });
+
+    // Save was called but returned false — should not crash
+    expect(saveToPath).toHaveBeenCalled();
+  });
+
+  it("saves multiple dirty tabs in the same window", async () => {
+    vi.mocked(useTabStore.getState).mockReturnValue({
+      activeTabId: { main: "tab-1" },
+      tabs: { main: [{ id: "tab-1" }, { id: "tab-2" }] },
+    } as unknown as ReturnType<typeof useTabStore.getState>);
+
+    const getDocMock = vi.fn((tabId: string) => {
+      if (tabId === "tab-1") {
+        return { isDirty: true, filePath: "/tmp/doc1.md", content: "Content 1", isMissing: false };
+      }
+      if (tabId === "tab-2") {
+        return { isDirty: true, filePath: "/tmp/doc2.md", content: "Content 2", isMissing: false };
+      }
+      return null;
+    });
+
+    vi.mocked(useDocumentStore.getState).mockReturnValue({
+      getDocument: getDocMock,
+    } as unknown as ReturnType<typeof useDocumentStore.getState>);
+
+    vi.mocked(saveToPath).mockResolvedValue(true);
+
+    renderHook(() => useAutoSave());
+
+    await act(async () => {
+      vi.advanceTimersByTime(1000);
+    });
+
+    expect(saveToPath).toHaveBeenCalledTimes(2);
+    expect(saveToPath).toHaveBeenCalledWith("tab-1", "/tmp/doc1.md", "Content 1", "auto");
+    expect(saveToPath).toHaveBeenCalledWith("tab-2", "/tmp/doc2.md", "Content 2", "auto");
+  });
+
+  it("handles window with no tabs entry (undefined)", async () => {
+    vi.mocked(useTabStore.getState).mockReturnValue({
+      activeTabId: { main: null },
+      tabs: {},
+    } as unknown as ReturnType<typeof useTabStore.getState>);
+
+    renderHook(() => useAutoSave());
+
+    await act(async () => {
+      vi.advanceTimersByTime(1000);
+    });
+
+    expect(saveToPath).not.toHaveBeenCalled();
   });
 });

@@ -127,9 +127,11 @@ export function detectImagePath(text: string): ImagePathResult {
 
   // Only use first line (for multi-line clipboard content)
   const firstLine = trimmed.split("\n")[0].trim();
+  /* v8 ignore start -- firstLine is always truthy when trimmed is non-empty; defensive guard */
   if (!firstLine) {
     return { isImage: false, type: "none", path: "", needsCopy: false, originalText: text };
   }
+  /* v8 ignore stop */
 
   // Check for data: image URL (always valid, no extension check needed)
   if (isDataImageUrl(firstLine)) {
@@ -230,7 +232,9 @@ export function looksLikeImagePath(text: string): boolean {
   if (!trimmed) return false;
 
   const firstLine = trimmed.split("\n")[0].trim();
+  /* v8 ignore start -- firstLine is always truthy when trimmed is non-empty; defensive guard */
   if (!firstLine) return false;
+  /* v8 ignore stop */
 
   // Data URL
   if (firstLine.startsWith("data:image/")) return true;

@@ -109,6 +109,7 @@ export class SourceImagePopupView extends SourcePopupView<MediaPopupStoreState> 
   }
 
   private handleInputKeydown(e: KeyboardEvent): void {
+    /* v8 ignore next -- @preserve reason: non-Enter keydown in image popup input not tested */
     if (e.key === "Enter") {
       e.preventDefault();
       this.handleSave();

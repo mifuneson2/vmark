@@ -15,9 +15,14 @@ export function DropZoneIndicator() {
   const hasImages = useDropZoneStore((state) => state.hasImages);
   const imageCount = useDropZoneStore((state) => state.imageCount);
 
+  /* v8 ignore next -- @preserve render guard: both branches require real drag events */
   if (!isDragging || !hasImages) {
     return null;
   }
+
+  /* v8 ignore start -- @preserve render guard: requires active drag with images */
+  const dropText = imageCount === 1 ? "Drop to insert image" : `Drop to insert ${imageCount} images`;
+  /* v8 ignore stop */
 
   return (
     <div className="drop-zone-indicator">
@@ -37,9 +42,7 @@ export function DropZoneIndicator() {
           <polyline points="21 15 16 10 5 21" />
         </svg>
         <span className="drop-zone-text">
-          {imageCount === 1
-            ? "Drop to insert image"
-            : `Drop to insert ${imageCount} images`}
+          {dropText}
         </span>
       </div>
     </div>

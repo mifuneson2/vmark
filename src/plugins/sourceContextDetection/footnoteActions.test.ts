@@ -61,6 +61,45 @@ describe("footnoteActions", () => {
       expect(refs[1].label).toBe("3");
     });
 
+    it("ignores references in tilde-fenced code blocks (line 51 — fenceChar tilde)", () => {
+      const doc = "text [^1]\n\n~~~\n[^2] inside tilde fence\n~~~\n\nmore [^3]";
+      const refs = parseReferences(doc);
+      expect(refs).toHaveLength(2);
+      expect(refs[0].label).toBe("1");
+      expect(refs[1].label).toBe("3");
+    });
+
+    it("ignores references in indented code at document start (line 72 — i === 0)", () => {
+      const doc = "    [^1] indented at start\n\ntext [^2]";
+      const refs = parseReferences(doc);
+      expect(refs).toHaveLength(1);
+      expect(refs[0].label).toBe("2");
+    });
+
+    it("ignores references inside unclosed fenced block (lines 96-98)", () => {
+      const doc = "text [^1]\n\n```\n[^2] inside unclosed fence";
+      const refs = parseReferences(doc);
+      expect(refs).toHaveLength(1);
+      expect(refs[0].label).toBe("1");
+    });
+
+    it("does not close fence when closing marker uses different char (line 62)", () => {
+      // Open with backticks, encounter tildes — should NOT close the fence
+      const doc = "text [^1]\n\n```\n[^2] still in fence\n~~~\n[^3] also in fence\n```\n\nmore [^4]";
+      const refs = parseReferences(doc);
+      expect(refs).toHaveLength(2);
+      expect(refs[0].label).toBe("1");
+      expect(refs[1].label).toBe("4");
+    });
+
+    it("ignores references in tab-indented code block (line 70)", () => {
+      const doc = "text [^1]\n\n\t[^2] tab-indented code\n\nmore [^3]";
+      const refs = parseReferences(doc);
+      expect(refs).toHaveLength(2);
+      expect(refs[0].label).toBe("1");
+      expect(refs[1].label).toBe("3");
+    });
+
     it("handles empty document", () => {
       expect(parseReferences("")).toHaveLength(0);
     });
@@ -296,6 +335,21 @@ describe("footnoteActions", () => {
       expect(renumberFootnotes("Just text without footnotes")).toBeNull();
     });
 
+    it("filters out references whose positions fall inside a removed definition (adjustPosition returns -1)", () => {
+      // [^2] reference appears inside the body of [^1]'s definition.
+      // When renumbering removes [^1]'s definition block, the position of the
+      // inline [^2] reference falls inside the removed range, so adjustPosition
+      // returns -1 and the ref is filtered out before the replacement pass.
+      // The document still renumbers correctly because [^2] is the only
+      // top-level reference and its definition becomes [^1].
+      const doc = "[^1]: Some text [^2] here\n\n[^2]: Def two";
+      const result = renumberFootnotes(doc);
+      // [^2] is the only reference outside definitions, so it becomes [^1]
+      expect(result).not.toBeNull();
+      expect(result).toContain("[^1]: Def two");
+      expect(result).not.toContain("[^2]:");
+    });
+
     it("handles single footnote", () => {
       const doc = "Text [^5]\n\n[^5]: Definition";
       const result = renumberFootnotes(doc);
@@ -348,6 +402,11 @@ describe("footnoteActions", () => {
 
     it("returns null for empty document", () => {
       expect(cleanupOrphanedDefinitions("")).toBeNull();
+    });
+
+    it("returns null for non-empty document with no definitions (line 412)", () => {
+      // defs.length === 0 path: doc has content and refs but no definitions at all
+      expect(cleanupOrphanedDefinitions("Just text without definitions")).toBeNull();
     });
 
     it("handles all definitions being orphans", () => {

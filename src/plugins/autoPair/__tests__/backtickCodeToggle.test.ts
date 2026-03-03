@@ -160,4 +160,5 @@ describe("backtick code mark toggle (WYSIWYG)", () => {
 
     expect(handled).toBe(false);
   });
+
 });

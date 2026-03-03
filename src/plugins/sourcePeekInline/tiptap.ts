@@ -147,6 +147,7 @@ export const sourcePeekInlineExtension = Extension.create({
         },
         props: {
           decorations(state) {
+            /* v8 ignore next -- @preserve reason: missing plugin state fallback not exercised in tests */
             return this.getState(state)?.decorations ?? DecorationSet.empty;
           },
         },

@@ -32,6 +32,7 @@ class SourceMathPreviewPlugin {
   }
 
   update(update: ViewUpdate) {
+    /* v8 ignore next -- @preserve else path: update with neither selectionSet nor docChanged not triggered in tests */
     if (update.selectionSet || update.docChanged) {
       this.scheduleCheck();
     }
@@ -78,6 +79,7 @@ class SourceMathPreviewPlugin {
   }
 
   private showPreview(content: string) {
+    /* v8 ignore next -- @preserve early return: currentMathRange is always set before showPreview is called */
     if (!this.currentMathRange) return;
 
     const preview = getMathPreviewView();

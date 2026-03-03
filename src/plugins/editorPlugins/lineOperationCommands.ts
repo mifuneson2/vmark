@@ -26,6 +26,7 @@ function getBlockRange(state: EditorState): { from: number; to: number; node: Re
   for (let depth = $from.depth; depth > 0; depth--) {
     const node = $from.node(depth);
     // Stop at block-level nodes like paragraph, heading, etc.
+    /* v8 ignore next -- @preserve false branch unreachable: $from.depth always starts at a textblock (paragraph/heading), which matches immediately before reaching any wrapper node */
     if (node.isBlock && !node.type.name.match(/^(bulletList|orderedList|blockquote|doc)$/)) {
       const from = $from.before(depth);
       const to = $from.after(depth);
@@ -47,12 +48,14 @@ export function doWysiwygMoveLineUp(view: EditorView): boolean {
   const prevBlockStart = $from.before($from.depth) - 1;
   const $prevFrom = state.doc.resolve(prevBlockStart);
   const prevBlock = $prevFrom.nodeBefore;
+  /* v8 ignore next -- @preserve structurally unreachable: index > 0 guarantees a previous sibling exists */
   if (!prevBlock) return false;
 
   const prevBlockFrom = prevBlockStart - prevBlock.nodeSize;
 
   // Swap blocks: delete current, insert before previous
   const currentNode = state.doc.nodeAt(blockRange.from);
+  /* v8 ignore next -- @preserve structurally unreachable: getBlockRange already verified a block node exists at blockRange.from */
   if (!currentNode) return false;
 
   const tr = state.tr;
@@ -75,12 +78,15 @@ export function doWysiwygMoveLineDown(view: EditorView): boolean {
   const parentNode = $to.node($to.depth - 1);
   if ($to.index($to.depth - 1) >= parentNode.childCount - 1) return false; // Already at bottom
 
+  /* v8 ignore next -- @preserve nodeAfter is guaranteed non-null by the childCount guard above, so ?? 0 is unreachable */
   const nextBlockEnd = blockRange.to + ($to.nodeAfter?.nodeSize ?? 0);
   const nextBlock = $to.nodeAfter;
+  /* v8 ignore next -- @preserve structurally unreachable: the childCount guard above guarantees a next sibling exists */
   if (!nextBlock) return false;
 
   // Swap blocks: delete next, insert before current
   const currentNode = state.doc.nodeAt(blockRange.from);
+  /* v8 ignore next -- @preserve structurally unreachable: getBlockRange already verified a block node exists at blockRange.from */
   if (!currentNode) return false;
 
   const tr = state.tr;
@@ -100,6 +106,7 @@ export function doWysiwygDuplicateLine(view: EditorView): boolean {
   if (!blockRange) return false;
 
   const currentNode = state.doc.nodeAt(blockRange.from);
+  /* v8 ignore next -- @preserve structurally unreachable: getBlockRange already verified a block node exists at blockRange.from */
   if (!currentNode) return false;
 
   // Insert a copy after the current block

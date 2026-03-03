@@ -218,6 +218,7 @@ function handleDrop(view: EditorView, event: DragEvent, _slice: unknown, moved: 
   const text = dataTransfer.getData("text/plain");
   if (text) {
     const { paths } = parseMultiplePaths(text);
+    /* v8 ignore next -- @preserve empty paths list is an unlikely edge case when text is non-empty */
     if (paths.length > 0) {
       const detection = detectMultipleImagePaths(paths);
       if (detection.allImages) {

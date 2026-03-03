@@ -125,6 +125,81 @@ describe("renderPreview", () => {
       expect(svgEl).not.toBeNull();
       expect(token).toBe(1); // Token incremented for async render
     });
+
+    it("shows error for null markmap result", async () => {
+      const ctx = createContext({ currentLanguage: "markmap" });
+      vi.mocked(renderMarkmapToElement).mockResolvedValue(null as never);
+
+      renderPreview("# Hello", ctx);
+
+      await vi.waitFor(() => {
+        expect(ctx.error.textContent).toBe("Invalid markmap syntax");
+      });
+      expect(ctx.preview.classList.contains("mermaid-preview-error-state")).toBe(true);
+    });
+
+    it("shows error on markmap render failure", async () => {
+      const ctx = createContext({ currentLanguage: "markmap" });
+      vi.mocked(renderMarkmapToElement).mockRejectedValue(new Error("markmap failed"));
+
+      renderPreview("# Hello", ctx);
+
+      await vi.waitFor(() => {
+        expect(ctx.error.textContent).toBe("Preview failed");
+      });
+      expect(ctx.preview.classList.contains("mermaid-preview-error-state")).toBe(true);
+    });
+
+    it("discards stale markmap render", async () => {
+      let liveToken = 0;
+      const ctx = createContext({
+        currentLanguage: "markmap",
+        getCurrentToken: () => liveToken,
+      });
+      vi.mocked(renderMarkmapToElement).mockResolvedValue({} as never);
+
+      const token = renderPreview("# Hello", ctx);
+      liveToken = token;
+
+      // Simulate newer render (token advanced)
+      liveToken = token + 1;
+
+      await vi.waitFor(() => {
+        // Stale render should not update error text
+        expect(ctx.error.textContent).toBe("");
+      });
+    });
+
+    it("discards stale markmap error", async () => {
+      let liveToken = 0;
+      const ctx = createContext({
+        currentLanguage: "markmap",
+        getCurrentToken: () => liveToken,
+      });
+      vi.mocked(renderMarkmapToElement).mockRejectedValue(new Error("fail"));
+
+      const token = renderPreview("# Hello", ctx);
+      liveToken = token;
+
+      // Advance token so the error callback is stale
+      liveToken = token + 1;
+
+      await vi.waitFor(() => {
+        // Should not set "Preview failed" because it's stale
+        expect(ctx.error.textContent).toBe("");
+      });
+    });
+
+    it("shows error on markmap render with non-Error rejection", async () => {
+      const ctx = createContext({ currentLanguage: "markmap" });
+      vi.mocked(renderMarkmapToElement).mockRejectedValue("string error");
+
+      renderPreview("# Hello", ctx);
+
+      await vi.waitFor(() => {
+        expect(ctx.error.textContent).toBe("Preview failed");
+      });
+    });
   });
 
   describe("Mermaid language", () => {
@@ -178,6 +253,35 @@ describe("renderPreview", () => {
 
       await vi.waitFor(() => {
         expect(ctx.error.textContent).toBe("Preview failed");
+      });
+    });
+
+    it("shows error on mermaid render failure with non-Error object", async () => {
+      const ctx = createContext();
+      vi.mocked(renderMermaid).mockRejectedValue("string error");
+
+      renderPreview("graph TD; A-->B", ctx);
+
+      await vi.waitFor(() => {
+        expect(ctx.error.textContent).toBe("Preview failed");
+      });
+    });
+
+    it("discards stale mermaid error", async () => {
+      let liveToken = 0;
+      const ctx = createContext({
+        getCurrentToken: () => liveToken,
+      });
+      vi.mocked(renderMermaid).mockRejectedValue(new Error("fail"));
+
+      const token = renderPreview("graph TD; A-->B", ctx);
+      liveToken = token;
+
+      // Advance token
+      liveToken = token + 1;
+
+      await vi.waitFor(() => {
+        expect(ctx.error.textContent).toBe("");
       });
     });
 

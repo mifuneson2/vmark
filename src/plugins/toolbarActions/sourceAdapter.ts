@@ -354,6 +354,7 @@ function handleInsertMarkmap(view: EditorView): boolean {
 }
 
 function handleListAction(view: EditorView, action: string): boolean {
+  /* v8 ignore next -- @preserve applyMultiSelectionListAction early-return is exercised via multiSelection tests */
   if (applyMultiSelectionListAction(view, action)) return true;
   const info = getListItemInfo(view);
 
@@ -378,6 +379,7 @@ function handleListAction(view: EditorView, action: string): boolean {
       case "removeList":
         removeList(view, info);
         return true;
+      /* v8 ignore next -- @preserve defensive default; all valid list actions are enumerated above */
       default:
         return false;
     }
@@ -396,6 +398,7 @@ function handleListAction(view: EditorView, action: string): boolean {
     case "removeList":
       // These only make sense when already in a list
       return false;
+    /* v8 ignore next -- @preserve defensive default; all valid actions handled above */
     default:
       return false;
   }
@@ -416,6 +419,7 @@ function handleBlockquoteAction(view: EditorView, action: string): boolean {
     case "removeBlockquote":
       removeBlockquote(view, info);
       return true;
+    /* v8 ignore next -- @preserve defensive default; all valid blockquote actions are enumerated above */
     default:
       return false;
   }

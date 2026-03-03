@@ -41,4 +41,24 @@ describe("getTableAnchorForLine", () => {
     const anchor = getTableAnchorForLine(lines, 0, 3);
     expect(anchor).toBeUndefined();
   });
+
+  it("returns undefined when cellRanges is empty (line 127: all pipes are escaped)", () => {
+    // A line that passes isTableRowLine (contains \|) but when parsed by
+    // getTableCellRanges all pipes are escaped — so separators.length === 0 → [].
+    // findTableHeaderLineIndex must return non-null for the line to reach line 127.
+    // We use a real table header above, and the data row has only escaped pipes.
+    // Actually findTableHeaderLineIndex uses isTableRowLine which checks /\|/,
+    // and escaped pipes show up as \| in the string which still matches /\|/.
+    // The separator line must be a real separator. The data line can have escaped pipes.
+    const lines = [
+      "| h1 | h2 |",     // index 0 — header with real pipes
+      "| --- | --- |",   // index 1 — separator
+      "\\|escaped\\|",   // index 2 — all pipes escaped → cellRanges empty
+    ];
+    // lineIndex=2: findTableHeaderLineIndex checks lineIndex-1=separator → finds header at 0
+    // isTableSeparatorLine(lines[2]) = false (passes the guard)
+    // getTableCellRanges("\\|escaped\\|") → all \ before | → no separators → returns []
+    const anchor = getTableAnchorForLine(lines, 2, 1);
+    expect(anchor).toBeUndefined();
+  });
 });

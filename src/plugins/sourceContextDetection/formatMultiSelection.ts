@@ -125,9 +125,11 @@ function formatRange(
   const { prefix, suffix } = FORMAT_MARKERS[format];
   if (isWrapped(selectedText, prefix, suffix)) {
     const unwrapped = unwrap(selectedText, prefix, suffix);
+    /* v8 ignore next -- @preserve word segmentation never returns boundaries that include format markers */
     const newCursorPos = expandedToWord ? from + cursorOffsetInWord : from;
     return {
       changes: { from, to, insert: unwrapped },
+      /* v8 ignore next 2 -- @preserve expandedToWord+isWrapped path requires markers inside word boundaries, structurally unreachable */
       range: expandedToWord
         ? EditorSelection.cursor(newCursorPos)
         : EditorSelection.range(from, from + unwrapped.length),

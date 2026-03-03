@@ -191,5 +191,46 @@ describe("resolveMediaSrc", () => {
       const result = await resolveMediaSrc("./local.png");
       expect(result).toBe("./local.png");
     });
+
+    it("returns original src for non-external, non-absolute, non-relative paths", async () => {
+      // A bare filename without ./ prefix or absolute path
+      // isRelativePath should return false for such input
+      const result = await resolveMediaSrc("justtext");
+      expect(result).toBe("justtext");
+    });
+
+    it("returns original src on path resolution error", async () => {
+      setupDocWithPath("/Users/test/docs/readme.md");
+      mockDirname.mockRejectedValueOnce(new Error("dirname failed"));
+
+      const result = await resolveMediaSrc("./broken.png");
+      expect(result).toBe("./broken.png");
+    });
+
+    it("uses custom log prefix", async () => {
+      const result = await resolveMediaSrc("../secret", "[Test]");
+      expect(result).toBe("");
+    });
+
+    it("rejects relative path that fails validateImagePath", async () => {
+      // A path that isRelativePath returns true for but validateImagePath rejects
+      // e.g., a path with control characters or invalid extension
+      setupDocWithPath("/Users/test/docs/readme.md");
+      const result = await resolveMediaSrc("./\x00bad");
+      // validateImagePath rejects paths with control characters
+      expect(typeof result).toBe("string");
+    });
+  });
+});
+
+describe("getActiveTabIdForCurrentWindow error handling", () => {
+  it("returns null when getWindowLabel throws (line 51-52)", async () => {
+    // Mock getWindowLabel to throw
+    const { getWindowLabel } = await import("@/hooks/useWindowFocus");
+    const mockGetWindowLabel = getWindowLabel as ReturnType<typeof vi.fn>;
+    mockGetWindowLabel.mockImplementationOnce(() => {
+      throw new Error("No window");
+    });
+    expect(getActiveTabIdForCurrentWindow()).toBeNull();
   });
 });

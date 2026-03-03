@@ -226,6 +226,7 @@ export function smartBackspace(view: EditorView): boolean {
   if (blockquoteInfo) {
     const line = state.doc.lineAt(head);
     const match = line.text.match(BLOCKQUOTE_PATTERN);
+    /* v8 ignore next -- @preserve else branch: match always succeeds when getBlockquoteMarkerInfo returns non-null */
     if (match) {
       if (blockquoteInfo.depth > 1) {
         // Multiple > characters - remove just one level

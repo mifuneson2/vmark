@@ -192,5 +192,61 @@ describe("useSettingsSync cross-window sync", () => {
       expect(useSettingsStore.getState().general.tabSize).toBe(4);
       expect(useSettingsStore.getState().markdown.autoPairEnabled).toBe(false);
     });
+
+    it("syncs update settings", () => {
+      const newUpdate = {
+        ...useSettingsStore.getState().update,
+        autoCheckEnabled: false,
+      };
+
+      handleSettingsStorageEvent(createStorageEvent({ update: newUpdate }));
+
+      expect(useSettingsStore.getState().update.autoCheckEnabled).toBe(false);
+    });
+
+    it("does not call setState when no values changed", () => {
+      // Send the exact current values — no update should occur
+      const spy = vi.spyOn(useSettingsStore, "setState");
+      const currentAppearance = useSettingsStore.getState().appearance;
+
+      handleSettingsStorageEvent(
+        createStorageEvent({ appearance: currentAppearance })
+      );
+
+      expect(spy).not.toHaveBeenCalled();
+      spy.mockRestore();
+    });
+
+    it("skips groups not present in the incoming event", () => {
+      const spy = vi.spyOn(useSettingsStore, "setState");
+
+      // Send an event with an empty state object — no groups to sync
+      handleSettingsStorageEvent(
+        createStorageEvent({})
+      );
+
+      expect(spy).not.toHaveBeenCalled();
+      spy.mockRestore();
+    });
+  });
+});
+
+describe("useSettingsSync hook", () => {
+  it("adds and removes storage event listener", async () => {
+    const { renderHook } = await import("@testing-library/react");
+    const addSpy = vi.spyOn(window, "addEventListener");
+    const removeSpy = vi.spyOn(window, "removeEventListener");
+
+    const { useSettingsSync } = await import("./useSettingsSync");
+    const { unmount } = renderHook(() => useSettingsSync());
+
+    expect(addSpy).toHaveBeenCalledWith("storage", expect.any(Function));
+
+    unmount();
+
+    expect(removeSpy).toHaveBeenCalledWith("storage", expect.any(Function));
+
+    addSpy.mockRestore();
+    removeSpy.mockRestore();
   });
 });

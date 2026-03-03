@@ -418,4 +418,289 @@ describe("SourcePopupView", () => {
 
     expect(document.body.contains(popup.testContainer)).toBe(false);
   });
+
+  it("mounts popup inside editor-container when available", () => {
+    const popup = new TestPopupView(mockView, mockStore);
+    const anchorRect = { top: 100, left: 50, bottom: 120, right: 100 };
+
+    emitStateChange({ isOpen: true, anchorRect });
+
+    // Popup should be mounted inside editor-container (via closest)
+    expect(container.contains(popup.testContainer)).toBe(true);
+    // Should use absolute positioning inside container
+    expect(popup.testContainer.style.position).toBe("absolute");
+
+    popup.destroy();
+  });
+
+  it("falls back to document.body when no editor-container", () => {
+    // Remove editor-container class so closest returns null
+    const editorDom = document.createElement("div");
+    editorDom.getBoundingClientRect = () => createMockRect();
+    document.body.appendChild(editorDom);
+
+    const contentDOM = document.createElement("div");
+    contentDOM.contentEditable = "true";
+    editorDom.appendChild(contentDOM);
+
+    const viewNoContainer = {
+      dom: editorDom,
+      contentDOM,
+      coordsAtPos: () => ({ top: 100, left: 50, bottom: 120, right: 100 }),
+      focus: vi.fn(),
+    } as unknown as EditorView;
+
+    const popup = new TestPopupView(viewNoContainer, mockStore);
+    emitStateChange({ isOpen: true, anchorRect: { top: 100, left: 50, bottom: 120, right: 100 } });
+
+    // Should use fixed positioning when mounted to body
+    expect(popup.testContainer.style.position).toBe("fixed");
+
+    popup.destroy();
+  });
+
+  it("justOpened guard prevents immediate click-outside close", () => {
+    const closePopupFn = vi.fn();
+    const storeWithClose = {
+      ...mockStore,
+      getState: () => ({
+        ...currentState,
+        isOpen: true,
+        closePopup: closePopupFn,
+      }),
+    };
+
+    const popup = new TestPopupView(mockView, storeWithClose as typeof mockStore);
+
+    emitStateChange({ isOpen: true, anchorRect: { top: 100, left: 50, bottom: 120, right: 100 } });
+
+    // Click outside immediately (before rAF clears justOpened flag)
+    const outsideEl = document.createElement("div");
+    document.body.appendChild(outsideEl);
+    const mousedownEvent = new MouseEvent("mousedown", { bubbles: true });
+    Object.defineProperty(mousedownEvent, "target", { value: outsideEl });
+    document.dispatchEvent(mousedownEvent);
+
+    // Should NOT close because justOpened is still true
+    expect(closePopupFn).not.toHaveBeenCalled();
+
+    popup.destroy();
+  });
+
+  it("handleScroll closes popup when open", () => {
+    const closePopupFn = vi.fn();
+    const storeWithClose = {
+      ...mockStore,
+      getState: () => ({
+        ...currentState,
+        isOpen: true,
+        closePopup: closePopupFn,
+      }),
+    };
+
+    const popup = new TestPopupView(mockView, storeWithClose as typeof mockStore);
+
+    emitStateChange({ isOpen: true, anchorRect: { top: 100, left: 50, bottom: 120, right: 100 } });
+
+    // Simulate scroll on the editor container
+    const scrollEvent = new Event("scroll", { bubbles: true });
+    container.dispatchEvent(scrollEvent);
+
+    expect(closePopupFn).toHaveBeenCalled();
+
+    popup.destroy();
+  });
+
+  it("Escape key is ignored for IME composition events", () => {
+    const closePopupFn = vi.fn();
+    const storeWithClose = {
+      ...mockStore,
+      getState: () => ({
+        ...currentState,
+        isOpen: true,
+        closePopup: closePopupFn,
+      }),
+    };
+
+    const popup = new TestPopupView(mockView, storeWithClose as typeof mockStore);
+    emitStateChange({ isOpen: true, anchorRect: { top: 100, left: 50, bottom: 120, right: 100 } });
+
+    // Simulate IME composition event (isComposing: true)
+    const imeEvent = new KeyboardEvent("keydown", {
+      key: "Escape",
+      isComposing: true,
+      bubbles: true,
+    });
+    document.dispatchEvent(imeEvent);
+
+    expect(closePopupFn).not.toHaveBeenCalled();
+
+    popup.destroy();
+  });
+
+  it("click inside popup container does not close it", () => {
+    const closePopupFn = vi.fn();
+    const storeWithClose = {
+      ...mockStore,
+      getState: () => ({
+        ...currentState,
+        isOpen: true,
+        closePopup: closePopupFn,
+      }),
+    };
+
+    const popup = new TestPopupView(mockView, storeWithClose as typeof mockStore);
+    emitStateChange({ isOpen: true, anchorRect: { top: 100, left: 50, bottom: 120, right: 100 } });
+
+    // Clear justOpened by triggering rAF
+    // Since jsdom doesn't run rAF automatically, dispatch a second state to settle
+    // We need to wait for the rAF callback
+    vi.spyOn(window, "requestAnimationFrame").mockImplementation((cb) => { cb(0); return 0; });
+
+    // Re-emit to trigger another show which will now have justOpened cleared by rAF mock
+    emitStateChange({ isOpen: false, anchorRect: null });
+    emitStateChange({ isOpen: true, anchorRect: { top: 100, left: 50, bottom: 120, right: 100 } });
+    closePopupFn.mockClear();
+
+    // Click inside popup container
+    const insideEl = document.createElement("span");
+    popup.testContainer.appendChild(insideEl);
+    const mousedownEvent = new MouseEvent("mousedown", { bubbles: true });
+    Object.defineProperty(mousedownEvent, "target", { value: insideEl });
+    document.dispatchEvent(mousedownEvent);
+
+    expect(closePopupFn).not.toHaveBeenCalled();
+
+    vi.restoreAllMocks();
+    popup.destroy();
+  });
+
+  it("handleClickOutside does nothing when store says not open", () => {
+    const closePopupFn = vi.fn();
+    const storeWithClose = {
+      ...mockStore,
+      getState: () => ({
+        ...currentState,
+        isOpen: false,
+        closePopup: closePopupFn,
+      }),
+    };
+
+    const popup = new TestPopupView(mockView, storeWithClose as typeof mockStore);
+    emitStateChange({ isOpen: true, anchorRect: { top: 100, left: 50, bottom: 120, right: 100 } });
+
+    // Mock rAF to clear justOpened
+    vi.spyOn(window, "requestAnimationFrame").mockImplementation((cb) => { cb(0); return 0; });
+    emitStateChange({ isOpen: false, anchorRect: null });
+    emitStateChange({ isOpen: true, anchorRect: { top: 100, left: 50, bottom: 120, right: 100 } });
+    closePopupFn.mockClear();
+
+    // Store says not open, click outside should not call closePopup
+    const outsideEl = document.createElement("div");
+    document.body.appendChild(outsideEl);
+    const mousedownEvent = new MouseEvent("mousedown", { bubbles: true });
+    Object.defineProperty(mousedownEvent, "target", { value: outsideEl });
+    document.dispatchEvent(mousedownEvent);
+
+    expect(closePopupFn).not.toHaveBeenCalled();
+
+    vi.restoreAllMocks();
+    popup.destroy();
+  });
+
+  it("closePopup does nothing when store has no closePopup function", () => {
+    const storeNoClose = {
+      ...mockStore,
+      getState: () => ({
+        ...currentState,
+        isOpen: true,
+        // closePopup is undefined
+      }),
+    };
+
+    const popup = new TestPopupView(mockView, storeNoClose as typeof mockStore);
+    emitStateChange({ isOpen: true, anchorRect: { top: 100, left: 50, bottom: 120, right: 100 } });
+
+    // Dispatch Escape - should not throw even without closePopup
+    const escEvent = new KeyboardEvent("keydown", { key: "Escape", bubbles: true });
+    expect(() => document.dispatchEvent(escEvent)).not.toThrow();
+
+    popup.destroy();
+  });
+
+  it("does not re-show when already open (wasOpen guard)", () => {
+    const popup = new TestPopupView(mockView, mockStore);
+    const anchorRect = { top: 100, left: 50, bottom: 120, right: 100 };
+
+    emitStateChange({ isOpen: true, anchorRect });
+    expect(popup.showCalled).toBe(true);
+    popup.showCalled = false; // Reset
+
+    // Emit same state again - should NOT call onShow again
+    emitStateChange({ isOpen: true, anchorRect });
+    expect(popup.showCalled).toBe(false);
+
+    popup.destroy();
+  });
+
+  it("does not re-hide when already closed (wasOpen guard)", () => {
+    const popup = new TestPopupView(mockView, mockStore);
+
+    // Emit closed state twice - should not call onHide
+    emitStateChange({ isOpen: false, anchorRect: null });
+    expect(popup.hideCalled).toBe(false);
+
+    popup.destroy();
+  });
+
+  it("hides popup when state becomes isOpen but no anchorRect", () => {
+    const popup = new TestPopupView(mockView, mockStore);
+    const anchorRect = { top: 100, left: 50, bottom: 120, right: 100 };
+
+    // Open
+    emitStateChange({ isOpen: true, anchorRect });
+    expect(popup.showCalled).toBe(true);
+
+    // Emit isOpen=true but anchorRect=null -> should hide
+    emitStateChange({ isOpen: true, anchorRect: null });
+    expect(popup.hideCalled).toBe(true);
+
+    popup.destroy();
+  });
+
+  it("hide removes event listeners and sets display none", () => {
+    const popup = new TestPopupView(mockView, mockStore);
+    const anchorRect = { top: 100, left: 50, bottom: 120, right: 100 };
+
+    emitStateChange({ isOpen: true, anchorRect });
+    expect(popup.testContainer.style.display).toBe("flex");
+
+    emitStateChange({ isOpen: false, anchorRect: null });
+    expect(popup.testContainer.style.display).toBe("none");
+
+    popup.destroy();
+  });
+
+  it("destroy removes all event listeners even when popup was open", () => {
+    const closePopupFn = vi.fn();
+    const storeWithClose = {
+      ...mockStore,
+      getState: () => ({
+        ...currentState,
+        isOpen: true,
+        closePopup: closePopupFn,
+      }),
+    };
+
+    const popup = new TestPopupView(mockView, storeWithClose as typeof mockStore);
+    emitStateChange({ isOpen: true, anchorRect: { top: 100, left: 50, bottom: 120, right: 100 } });
+
+    popup.destroy();
+
+    // After destroy, Escape should not trigger closePopup
+    closePopupFn.mockClear();
+    const escEvent = new KeyboardEvent("keydown", { key: "Escape", bubbles: true });
+    document.dispatchEvent(escEvent);
+    expect(closePopupFn).not.toHaveBeenCalled();
+  });
 });

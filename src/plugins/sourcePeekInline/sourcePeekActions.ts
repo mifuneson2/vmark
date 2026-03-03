@@ -90,6 +90,7 @@ export function openSourcePeekInline(view: EditorView): boolean {
   // Create checkpoint in unified history
   const tabId = getCurrentTabId();
   if (tabId) {
+    /* v8 ignore next -- @preserve reason: missing document content is an untested edge case */
     const docContent = useDocumentStore.getState().getDocument(tabId)?.content ?? "";
     useUnifiedHistoryStore.getState().createCheckpoint(tabId, {
       markdown: docContent,

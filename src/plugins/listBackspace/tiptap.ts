@@ -28,6 +28,7 @@ function handleListBackspace(
   if (!state.selection.empty) return false;
 
   const listItemType = findListItemType(state.schema);
+  /* v8 ignore next -- @preserve defensive: schema always includes listItem in VMark */
   if (!listItemType) return false;
 
   // Check if cursor is inside a list item

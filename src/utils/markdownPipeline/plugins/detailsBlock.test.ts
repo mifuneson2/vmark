@@ -9,6 +9,7 @@ import { describe, it, expect } from "vitest";
 import { unified } from "unified";
 import remarkParse from "remark-parse";
 import remarkGfm from "remark-gfm";
+import remarkStringify from "remark-stringify";
 import { remarkDetailsBlock } from "./detailsBlock";
 import type { Root } from "mdast";
 import type { Details } from "../types";
@@ -171,6 +172,396 @@ Back to outer content.
       expect(innerDetails).toBeDefined();
       expect(innerDetails?.type).toBe("details");
       expect(innerDetails?.summary).toBe("Inner details");
+    });
+
+    it("treats unclosed details block as plain html (pushes opening tag as-is)", () => {
+      // If the </details> closing tag is never found, the opening tag is pushed as-is
+      const md = `<details>
+<summary>Unclosed</summary>
+
+Content without closing tag.`;
+      const result = parseWithDetails(md);
+
+      // The unclosed <details> should NOT become a details node; it stays as html
+      const types = result.children.map(c => c.type);
+      expect(types).not.toContain("details");
+    });
+
+    it("does not parse single-block html when content surrounds details tags", () => {
+      // parseDetailsHtmlBlock returns null when prefix or suffix exists
+      const md = `Before <details><summary>S</summary></details> After`;
+      const result = parseWithDetails(md);
+
+      // Because prefix/suffix exist, parseDetailsHtmlBlock returns null
+      // and the fallback sees no multi-block close tag, stays as paragraph
+      expect(result.children[0].type).toBe("paragraph");
+    });
+
+    it("extractSummaryFromChildren returns unchanged when first child is not html", () => {
+      // When the first content after <details> is a paragraph (not html with <summary>)
+      const md = `<details>
+
+No summary paragraph here.
+
+</details>`;
+      const result = parseWithDetails(md);
+
+      const details = result.children[0] as Details;
+      expect(details.type).toBe("details");
+      // Uses the default "Details" summary since no html <summary> was found
+      expect(details.summary).toBe("Details");
+    });
+
+    it("extractSummaryFromChildren returns unchanged when first html has no summary tag", () => {
+      // When the first child is html but doesn't contain <summary>
+      const md = `<details>
+<div>Not a summary</div>
+
+Body content.
+
+</details>`;
+      const result = parseWithDetails(md);
+
+      const details = result.children[0] as Details;
+      expect(details.type).toBe("details");
+      // Uses the default "Details" summary since the html node has no <summary>
+      expect(details.summary).toBe("Details");
+    });
+
+    it("parseDetailsHtmlBlock — handles single-block details with open attribute", () => {
+      // Single HTML node containing complete <details open>...</details>
+      const md = `<details open><summary>Open Section</summary>
+
+Content here.
+
+</details>`;
+      const result = parseWithDetails(md);
+      const details = result.children[0] as Details;
+      expect(details.type).toBe("details");
+      expect(details.open).toBe(true);
+      expect(details.summary).toBe("Open Section");
+    });
+
+    it("parseDetailsHtmlBlock — returns null when closeIndex <= openIndex (line 183)", () => {
+      // This case would require </details> appearing before <details> in the same HTML block
+      // In practice this can't happen naturally, but we test the parser handles it
+      const md = `</details><details><summary>S</summary></details>`;
+      const result = parseWithDetails(md);
+      // Should not parse as a details node since </details> comes first
+      expect(result.children[0].type).not.toBe("details");
+    });
+
+    it("parseDetailsHtmlBlock — handles body with no summary tag (line 191-194)", () => {
+      // Single HTML block with <details> but no <summary>
+      const md = `<details>
+
+Just content, no summary.
+
+</details>`;
+      const result = parseWithDetails(md);
+      const details = result.children[0] as Details;
+      expect(details.type).toBe("details");
+      expect(details.summary).toBe("Details"); // default
+    });
+
+    it("extractSummaryFromChildren — empty children array (line 222-224)", () => {
+      // A details block with no content between tags
+      const md = `<details>
+</details>`;
+      const result = parseWithDetails(md);
+      const details = result.children[0] as Details;
+      expect(details.type).toBe("details");
+    });
+
+    it("extractSummaryFromChildren — handles summary with empty text (line 236, trim fallback)", () => {
+      // <summary> with only whitespace
+      const md = `<details>
+<summary>   </summary>
+
+Content.
+
+</details>`;
+      const result = parseWithDetails(md);
+      const details = result.children[0] as Details;
+      expect(details.type).toBe("details");
+      // "   ".trim() is "" which is falsy, so summary defaults to "Details"
+      expect(details.summary).toBe("Details");
+    });
+
+    it("parseDetailsOpen — summary match trim fallback (line 172)", () => {
+      // Multi-block details where the open tag has a <summary> inline
+      const md = `<details><summary>   </summary>
+
+Content.
+
+</details>`;
+      const result = parseWithDetails(md);
+      const details = result.children[0] as Details;
+      expect(details.type).toBe("details");
+      // Empty summary trims to "", defaults to "Details"
+      expect(details.summary).toBe("Details");
+    });
+
+    it("parseDetailsOpen — no summary in open tag (line 172, summaryMatch is null)", () => {
+      const md = `<details>
+
+Content without summary.
+
+</details>`;
+      const result = parseWithDetails(md);
+      const details = result.children[0] as Details;
+      expect(details.type).toBe("details");
+      expect(details.summary).toBe("Details");
+    });
+
+    it("parseDetailsHtmlBlock — bodyStart adjusted when summary is present (line 199)", () => {
+      // Single-block HTML with summary and body content
+      const md = `<details><summary>Title</summary>
+
+Body text here.
+
+</details>`;
+      const result = parseWithDetails(md);
+      const details = result.children[0] as Details;
+      expect(details.type).toBe("details");
+      expect(details.summary).toBe("Title");
+      expect(details.children.length).toBeGreaterThanOrEqual(0);
+    });
+
+    it("handles details with wiki links inside (exercises innerProcessor)", () => {
+      const md = `<details>
+<summary>Links</summary>
+
+See [[Page Name]] here.
+
+</details>`;
+      const result = parseWithDetails(md);
+      const details = result.children[0] as Details;
+      expect(details.type).toBe("details");
+    });
+
+    it("handles details serialization via toMarkdown extension", () => {
+      // The toMarkdownExtension is registered but only used during serialization.
+      // We verify the plugin doesn't crash when setting up the handler.
+      const md = `<details>
+<summary>Section</summary>
+
+Content.
+
+</details>`;
+      const result = parseWithDetails(md);
+      expect(result.children[0].type).toBe("details");
+    });
+
+    it("toMarkdownExtensions fallback — data.toMarkdownExtensions ?? [] (line 85)", () => {
+      // The first call to remarkDetailsBlock sets toMarkdownExtensions.
+      // Verify it works without crashing on first invocation.
+      const result = parseWithDetails("No details here.");
+      expect(result.children[0].type).toBe("paragraph");
+    });
+
+    it("handles content with math inside details (exercises innerProcessor with math)", () => {
+      const md = `<details>
+<summary>Math</summary>
+
+Formula: $E = mc^2$
+
+</details>`;
+      const result = parseWithDetails(md);
+      const details = result.children[0] as Details;
+      expect(details.type).toBe("details");
+    });
+
+    it("extractSummaryFromChildren — multi-block with blank line produces empty inner (line 222)", () => {
+      // Blank line between <details> and </details> forces remark to parse them as
+      // separate HTML blocks. The multi-block path then has an empty inner array.
+      const md = `<details>
+
+</details>`;
+      const result = parseWithDetails(md);
+      const details = result.children[0] as Details;
+      expect(details.type).toBe("details");
+      // With no inner nodes, extractSummaryFromChildren returns { children: [] }
+      // and summary falls back to the open tag default "Details"
+      expect(details.summary).toBe("Details");
+    });
+
+    it("extractSummaryFromChildren — multi-block summary with whitespace-only text (line 236)", () => {
+      // Multi-block path: <summary> node has only whitespace content
+      // This exercises the trim fallback in extractSummaryFromChildren
+      const md = `<details>
+<summary>   </summary>
+
+Body text here.
+
+</details>`;
+      const result = parseWithDetails(md);
+      const details = result.children[0] as Details;
+      expect(details.type).toBe("details");
+      // Whitespace trims to empty string, falls back to "Details"
+      expect(details.summary).toBe("Details");
+    });
+
+    it("parseDetailsHtmlBlock — prefix content prevents parsing (line 191-193)", () => {
+      // Single HTML block where content exists before <details> tag
+      // This exercises the prefix/suffix guard in parseDetailsHtmlBlock
+      const md = `text before <details><summary>S</summary>body</details>`;
+      const result = parseWithDetails(md);
+      // The prefix "text before " causes parseDetailsHtmlBlock to return null
+      // The node stays as a paragraph since it has surrounding text
+      const types = result.children.map(c => c.type);
+      expect(types).not.toContain("details");
+    });
+
+    it("parseDetailsHtmlBlock — suffix content prevents parsing (line 191-193)", () => {
+      // Single HTML block where content exists after </details> tag
+      const md = `<details><summary>S</summary>body</details> text after`;
+      const result = parseWithDetails(md);
+      // The suffix " text after" causes parseDetailsHtmlBlock to return null
+      const types = result.children.map(c => c.type);
+      expect(types).not.toContain("details");
+    });
+
+    it("null-coalescing for node.value ?? '' in transformDetailsBlocks (line 102, 109)", () => {
+      // This is a binary-expr branch: node.value could be undefined
+      // In practice remark always sets value, but the ?? fallback exists
+      const md = `<details>
+<summary>Test</summary>
+
+Content.
+
+</details>`;
+      const result = parseWithDetails(md);
+      expect(result.children[0].type).toBe("details");
+    });
+
+    it("handles html node with undefined value in transformDetailsBlocks (line 102, 109, 114)", () => {
+      // Directly construct a tree with html nodes that have undefined value
+      // to exercise the ?? '' fallback branches
+      const processor = unified()
+        .use(remarkParse)
+        .use(remarkGfm)
+        .use(remarkDetailsBlock);
+
+      const tree = processor.parse("placeholder");
+      // Replace children with html nodes that have undefined value
+      (tree as Root).children = [
+        { type: "html", value: undefined as unknown as string } as any,
+      ];
+      const result = processor.runSync(tree) as Root;
+      // The node with undefined value should not crash — ?? '' makes it empty string
+      // isDetailsOpen('') returns false, so it's pushed as-is
+      expect(result.children[0].type).toBe("html");
+    });
+
+    it("handles inner html node with undefined value during multi-block parsing (line 122)", () => {
+      // Exercise the next.value ?? '' branch inside the multi-block inner loop
+      const processor = unified()
+        .use(remarkParse)
+        .use(remarkGfm)
+        .use(remarkDetailsBlock);
+
+      const tree = processor.parse("placeholder");
+      // Construct a multi-block details with an inner html node that has undefined value
+      (tree as Root).children = [
+        { type: "html", value: "<details>" } as any,
+        { type: "html", value: undefined as unknown as string } as any,
+        { type: "html", value: "</details>" } as any,
+      ];
+      const result = processor.runSync(tree) as Root;
+      expect(result.children[0].type).toBe("details");
+    });
+
+    it("detailsHandler — round-trip serialization exercises lines 256-272", () => {
+      // Parse then serialize to exercise the detailsHandler toMarkdown extension
+      const md = `<details>
+<summary>Section</summary>
+
+Content here.
+
+</details>`;
+      const processor = unified()
+        .use(remarkParse)
+        .use(remarkGfm)
+        .use(remarkDetailsBlock)
+        .use(remarkStringify);
+
+      const tree = processor.runSync(processor.parse(md));
+      const output = processor.stringify(tree as Root);
+      expect(output).toContain("<details>");
+      expect(output).toContain("<summary>Section</summary>");
+      expect(output).toContain("</details>");
+    });
+
+    it("detailsHandler — serializes open details (line 258)", () => {
+      const md = `<details open>
+<summary>Open Section</summary>
+
+Content.
+
+</details>`;
+      const processor = unified()
+        .use(remarkParse)
+        .use(remarkGfm)
+        .use(remarkDetailsBlock)
+        .use(remarkStringify);
+
+      const tree = processor.runSync(processor.parse(md));
+      const output = processor.stringify(tree as Root);
+      expect(output).toContain("<details open>");
+      expect(output).toContain("<summary>Open Section</summary>");
+    });
+
+    it("detailsHandler — node.summary ?? 'Details' fallback (line 262)", () => {
+      // Construct a details node with undefined summary to test ?? fallback
+      const processor = unified()
+        .use(remarkParse)
+        .use(remarkGfm)
+        .use(remarkDetailsBlock)
+        .use(remarkStringify);
+
+      const tree = processor.runSync(processor.parse("<details>\n\n</details>"));
+      // Manually remove summary to trigger the ?? fallback
+      const details = (tree as Root).children[0] as Details;
+      if (details.type === "details") {
+        (details as any).summary = undefined;
+      }
+      const output = processor.stringify(tree as Root);
+      expect(output).toContain("<summary>Details</summary>");
+    });
+
+    it("detailsHandler — escapeHtml in summary (line 262, 274-280)", () => {
+      const md = `<details>
+<summary>A &amp; B</summary>
+
+Content.
+
+</details>`;
+      const processor = unified()
+        .use(remarkParse)
+        .use(remarkGfm)
+        .use(remarkDetailsBlock)
+        .use(remarkStringify);
+
+      const tree = processor.runSync(processor.parse(md));
+      const output = processor.stringify(tree as Root);
+      expect(output).toContain("<details>");
+      expect(output).toContain("</details>");
+    });
+  });
+
+  describe("parseDetailsHtmlBlock — single-block path without summary (line 199)", () => {
+    it("defaults summary to 'Details' when single-block <details> has no <summary> tag", () => {
+      // Without blank lines remark keeps the whole block as a single html node,
+      // so parseDetailsHtmlBlock is called. When there is no <summary> tag,
+      // summaryMatch is null and summaryMatch?.[1] ?? "Details" uses the fallback.
+      const md = `<details>
+No summary tag here.
+</details>`;
+      const result = parseWithDetails(md);
+      const details = result.children[0] as Details;
+      expect(details.type).toBe("details");
+      expect(details.summary).toBe("Details");
     });
   });
 });

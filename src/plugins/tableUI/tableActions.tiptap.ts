@@ -78,12 +78,14 @@ export function getTableInfo(view: EditorView): TableInfo | null {
   const colIndex = $pos.depth > tableDepth + 1 ? $pos.index(tableDepth + 1) : 0;
 
   const numRows = tableNode.childCount;
+  /* v8 ignore next -- @preserve defensive guard; PM schema "tableRow+" enforces numRows >= 1 */
   const numCols = numRows > 0 ? tableNode.child(0).childCount : 0;
 
   return { tableNode, tablePos, rowIndex, colIndex, numRows, numCols };
 }
 
 function getCellPosition(table: Node, tablePos: number, rowIndex: number, colIndex: number): number | null {
+  /* v8 ignore next -- @preserve defensive guard; getTableInfo always returns valid rowIndex */
   if (rowIndex < 0 || rowIndex >= table.childCount) return null;
 
   let pos = tablePos + 1;
@@ -92,6 +94,7 @@ function getCellPosition(table: Node, tablePos: number, rowIndex: number, colInd
   }
 
   const row = table.child(rowIndex);
+  /* v8 ignore next -- @preserve defensive guard; getTableInfo always returns valid colIndex */
   if (colIndex < 0 || colIndex >= row.childCount) return null;
 
   pos += 1;
@@ -183,6 +186,7 @@ export function alignColumn(view: EditorView, alignment: TableAlignment, allColu
     const tr = state.tr.replaceWith(tablePos, tablePos + tableNode.nodeSize, newTable);
 
     const cursorPos = getCellPosition(newTable, tablePos, rowIndex, colIndex);
+    /* v8 ignore next -- @preserve defensive null-check; getCellPosition only returns null for invalid indices which getTableInfo prevents */
     if (cursorPos !== null) {
       setSelectionNear(view, tr, cursorPos);
     }
@@ -281,6 +285,7 @@ export function formatTable(view: EditorView): boolean {
     const tr = state.tr.replaceWith(tablePos, tablePos + tableNode.nodeSize, newTable);
 
     const cursorPos = getCellPosition(newTable, tablePos, rowIndex, colIndex);
+    /* v8 ignore next -- @preserve defensive null-check; getCellPosition only returns null for invalid indices which getTableInfo prevents */
     if (cursorPos !== null) {
       setSelectionNear(view, tr, cursorPos);
     }

@@ -64,7 +64,9 @@ function matchesShiftedSymbol(event: KeyboardEvent, token: string): boolean {
   const normalized = normalizeKeyToken(token);
   if (normalized === "/" && event.key === "?") return true;
   if (normalized === "=" && event.key === "+") return true;
+  /* v8 ignore start -- "-" can't appear as key token (it's the separator), so this branch is unreachable via matchesShortcutEvent */
   if (normalized === "-" && event.key === "_") return true;
+  /* v8 ignore stop */
   if (normalized === "." && event.key === ">") return true;
   return false;
 }

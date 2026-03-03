@@ -81,15 +81,18 @@ export class MathInlineNodeView implements NodeView {
    * Called by the store when user clicks another inline math.
    */
   private forceExit = () => {
+    /* v8 ignore next -- @preserve forceExit no-op guard; isEditing false means already exited */
     if (!this.isEditing) return;
 
     // Commit changes if any
+    /* v8 ignore start -- @preserve else branch: inputDom always exists when isEditing is true */
     if (this.inputDom) {
       const newLatex = this.inputDom.value;
       if (newLatex !== this.currentLatex) {
         this.commitChanges(newLatex);
       }
     }
+    /* v8 ignore stop */
 
     // Exit edit mode without repositioning cursor
     this.exitEditMode();
@@ -125,13 +128,14 @@ export class MathInlineNodeView implements NodeView {
     // Register with the global store - this will force-exit any other editing math
     useInlineMathEditingStore.getState().startEditing(pos, {
       forceExit: this.forceExit,
-      getNodePos: () => this.getPos?.(),
+      getNodePos: /* v8 ignore next -- @preserve getNodePos callback only invoked from store; covered indirectly */ () => this.getPos?.(),
     });
 
     this.isEditing = true;
 
     // Get entry direction from the inlineNodeEditing plugin state
     let enteredFromRight = false;
+    /* v8 ignore next -- @preserve editorView null only during teardown; always set in normal usage */
     if (this.editorView) {
       const pluginState = inlineNodeEditingKey.getState(this.editorView.state);
       if (pluginState?.entryDirection === "right") {
@@ -280,6 +284,7 @@ export class MathInlineNodeView implements NodeView {
     } else if (e.key === "Escape") {
       e.preventDefault();
       // Revert to original value
+      /* v8 ignore next -- @preserve inputDom always set when in edit mode; null branch is defensive */
       if (this.inputDom) {
         this.inputDom.value = this.currentLatex;
       }

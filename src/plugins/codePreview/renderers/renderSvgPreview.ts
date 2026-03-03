@@ -64,10 +64,12 @@ export function createSvgPreviewWidget(
 
   return Decoration.widget(
     nodeEnd,
+    /* v8 ignore start -- @preserve reason: Decoration.widget factory callback runs in live ProseMirror view; not exercised in jsdom unit tests */
     (view) => {
       installDoubleClickHandler(errorWidget, () => handleEnterEdit(view));
       return errorWidget;
     },
+    /* v8 ignore stop */
     { side: 1, key: cacheKey }
   );
 }

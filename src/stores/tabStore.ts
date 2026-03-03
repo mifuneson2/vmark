@@ -237,6 +237,7 @@ export const useTabStore = create<TabState & TabActions>((set, get) => ({
 
       let newActiveId = state.activeTabId[windowLabel];
       if (newActiveId && !keptTabs.find((t) => t.id === newActiveId)) {
+        /* v8 ignore next -- @preserve keptTabs always has at least the pivot tab; || null is structurally unreachable */
         newActiveId = keptTabs[keptTabs.length - 1]?.id || null;
       }
 

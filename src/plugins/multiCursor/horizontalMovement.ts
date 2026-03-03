@@ -98,6 +98,7 @@ export function handleMultiCursorHorizontal(
   // Derive updated backward flags: compare original anchor to new head
   const newBackward = nextRanges.map((range, i) => {
     if (range.$from.pos === range.$to.pos) return false;
+    /* v8 ignore next -- @preserve defensive guard: non-extend always produces collapsed ranges caught above */
     if (!extend) return false;
     // Anchor stays fixed during extend; compute from original range
     const origRange = selection.ranges[i];
@@ -105,7 +106,7 @@ export function handleMultiCursorHorizontal(
     // Head moved to new position; it's whichever end of new range isn't the anchor
     const headPos = range.$from.pos === anchorPos ? range.$to.pos
       : range.$to.pos === anchorPos ? range.$from.pos
-      : (dir < 0 ? range.$from.pos : range.$to.pos);
+      : /* v8 ignore next -- @preserve defensive fallback: SelectionRange always has anchor at from or to */ (dir < 0 ? range.$from.pos : range.$to.pos);
     return anchorPos > headPos;
   });
 

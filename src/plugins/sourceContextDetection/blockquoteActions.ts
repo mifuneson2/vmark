@@ -48,6 +48,7 @@ export function toggleBlockquote(view: EditorView): void {
     // Remove blockquote prefix from all lines
     for (const line of lines) {
       const match = line.text.match(BLOCKQUOTE_PATTERN);
+      /* v8 ignore next -- @preserve reason: allAreBlockquotes guarantees match always exists */
       if (match) {
         const newText = match[1] + match[2];
         changes.push({ from: line.from, to: line.to, insert: newText });
@@ -69,6 +70,7 @@ export function toggleBlockquote(view: EditorView): void {
         }
         // Preserve leading whitespace
         const leadingMatch = line.text.match(/^(\s*)/);
+        /* v8 ignore next -- @preserve reason: /^(\s*)/ always matches, never null */
         const indent = leadingMatch ? leadingMatch[1] : "";
         const content = line.text.slice(indent.length);
         return `${indent}> ${content}`;

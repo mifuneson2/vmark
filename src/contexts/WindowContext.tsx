@@ -99,6 +99,7 @@ async function removeTransferredTabData(label: string, tabId: string): Promise<v
   if (remaining.length === 0 && label !== "main") {
     const win = getCurrentWebviewWindow();
     await invoke("close_window", { label: win.label }).catch((error: unknown) => {
+      /* v8 ignore next -- @preserve String(error) fallback: invoke errors are always Error instances */
       windowCloseWarn("Failed to close window:", error instanceof Error ? error.message : String(error));
     });
   }
@@ -265,6 +266,7 @@ export function WindowProvider({ children }: WindowProviderProps) {
                 } catch (error) {
                   console.error("[WindowContext] Failed to load file:", path, error);
                   useDocumentStore.getState().initDocument(tabId, "", null);
+                  /* v8 ignore next -- @preserve ?? path fallback: pop() only returns undefined for empty arrays */
                   const filename = path.split("/").pop() ?? path;
                   toast.error(`Failed to open ${filename}`);
                 }
@@ -284,6 +286,7 @@ export function WindowProvider({ children }: WindowProviderProps) {
                   console.error("[WindowContext] Failed to load file:", filePath, error);
                   // Initialize with empty content if file can't be read
                   useDocumentStore.getState().initDocument(tabId, "", null);
+                  /* v8 ignore next -- @preserve ?? filePath fallback: pop() only returns undefined for empty arrays */
                   const filename = filePath.split("/").pop() ?? filePath;
                   toast.error(`Failed to open ${filename}`);
                 }
@@ -314,12 +317,14 @@ export function WindowProvider({ children }: WindowProviderProps) {
       }
     };
 
+    /* v8 ignore start -- @preserve reason: .catch() callback on init() only fires on unhandled init errors; not triggered in controlled tests */
     init().catch((e) => {
       console.error("[WindowContext] Unhandled init error:", e);
       setIsReady(true);
       const errorWindow = getCurrentWebviewWindow();
       setTimeout(() => errorWindow.emit("ready", errorWindow.label), READY_EVENT_DELAY_MS);
     });
+    /* v8 ignore stop */
   }, []);
 
   useEffect(() => {

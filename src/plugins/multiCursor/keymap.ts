@@ -32,7 +32,7 @@ type Command = (
 /**
  * Wrap a state-only transaction command into a ProseMirror command.
  */
-function wrapCommand(
+export function wrapCommand(
   fn: (state: EditorState) => Transaction | null
 ): Command {
   return (state, dispatch) => {
@@ -48,7 +48,7 @@ function wrapCommand(
 /**
  * Wrap a command that requires the EditorView into a ProseMirror command.
  */
-function wrapViewCommand(
+export function wrapViewCommand(
   fn: (state: EditorState, view: EditorView) => Transaction | null
 ): Command {
   return (state, dispatch, view) => {

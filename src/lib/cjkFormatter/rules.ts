@@ -84,6 +84,7 @@ function getLeftNeighbor(text: string, pos: number): string {
       if (code >= 0xdc00 && code <= 0xdfff && i - 1 >= 0) {
         const prev = text[i - 1];
         const prevCode = prev.charCodeAt(0);
+        /* v8 ignore next -- @preserve Defensive guard: stranded low surrogate without a preceding high surrogate is malformed UTF-16 that cannot occur in well-formed JS strings */
         if (prevCode >= 0xd800 && prevCode <= 0xdbff) {
           return prev + ch;
         }
@@ -106,6 +107,7 @@ function getRightNeighbor(text: string, pos: number): string {
       if (code >= 0xd800 && code <= 0xdbff && i + 1 < text.length) {
         const next = text[i + 1];
         const nextCode = next.charCodeAt(0);
+        /* v8 ignore next -- @preserve Defensive guard: stranded high surrogate without a following low surrogate is malformed UTF-16 that cannot occur in well-formed JS strings */
         if (nextCode >= 0xdc00 && nextCode <= 0xdfff) {
           return ch + next;
         }
@@ -197,6 +199,7 @@ export function normalizeFullwidthAlphanumeric(text: string): string {
  */
 function isPartOfEllipsis(text: string, pos: number): boolean {
   // Check if this period is part of "..." or surrounded by other periods
+  /* v8 ignore next -- @preserve Always called after confirming char === ".", so the false branch of this guard is unreachable in practice */
   if (text[pos] !== ".") return false;
 
   const before = pos > 0 ? text[pos - 1] : "";

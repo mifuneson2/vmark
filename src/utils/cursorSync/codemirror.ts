@@ -35,7 +35,9 @@ import { getTableAnchorForLine, restoreTableColumnFromAnchor } from "./table";
  */
 function getCodeBlockAnchor(lines: string[], lineIndex: number, column: number): BlockAnchor | undefined {
   const fenceStart = findCodeFenceStartLine(lines, lineIndex);
+  /* v8 ignore start -- null branch: caller only invokes this when lineIndex is inside a code block */
   if (fenceStart === null) return undefined;
+  /* v8 ignore stop */
 
   // Line within code block (0-based, first content line is 0)
   // fenceStart is the ``` line, so content starts at fenceStart + 1
@@ -188,11 +190,13 @@ export function restoreCursorInCodeMirror(view: EditorView, cursorInfo: CursorIn
       if (restoreCursorInCodeBlockSource(view, sourceLine, blockAnchor)) {
         return;
       }
+    /* v8 ignore start -- "table" block anchor kind is set by getTableAnchor, only reached when sourceLine is inside a table */
     } else if (blockAnchor.kind === "table") {
       if (restoreCursorInTableSource(view, sourceLine, blockAnchor)) {
         return;
       }
     }
+    /* v8 ignore stop */
   }
 
   // Fall back to generic restoration

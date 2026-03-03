@@ -76,6 +76,7 @@ export function TerminalContextMenu({
 
   // Adjust position to keep in viewport (useLayoutEffect to avoid flicker)
   useLayoutEffect(() => {
+    /* v8 ignore next -- @preserve menuRef guard: ref is always set before layout effect runs */
     if (!menuRef.current) return;
     const menu = menuRef.current;
     const rect = menu.getBoundingClientRect();

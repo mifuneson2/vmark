@@ -6,6 +6,18 @@
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+// Polyfill PointerEvent for jsdom
+class PointerEventPolyfill extends MouseEvent {
+  readonly pointerId: number;
+  constructor(type: string, params: PointerEventInit & EventInit = {}) {
+    super(type, params);
+    this.pointerId = (params as Record<string, unknown>).pointerId as number ?? 0;
+  }
+}
+if (typeof globalThis.PointerEvent === "undefined") {
+  (globalThis as Record<string, unknown>).PointerEvent = PointerEventPolyfill;
+}
+
 // Mock Panzoom
 const mockPanzoomInstance = {
   zoomWithWheel: vi.fn(),
@@ -106,5 +118,142 @@ describe("setupMermaidPanZoom", () => {
     const svg = container.querySelector("svg")!;
     expect(svg.querySelector("g.panzoom-target")).toBeNull();
     expect(svg.querySelector("rect")).not.toBeNull();
+  });
+
+  it("returns null when container already has panzoom-enabled class", () => {
+    const container = createContainer();
+    container.classList.add("panzoom-enabled");
+    const result = setupMermaidPanZoom(container);
+    expect(result).toBeNull();
+  });
+
+  it("Cmd+wheel triggers zoomWithWheel", () => {
+    const container = createContainer();
+    setupMermaidPanZoom(container);
+
+    const event = new WheelEvent("wheel", { metaKey: true, cancelable: true });
+    container.dispatchEvent(event);
+
+    expect(mockPanzoomInstance.zoomWithWheel).toHaveBeenCalledWith(event, { animate: false });
+  });
+
+  it("Ctrl+wheel triggers zoomWithWheel", () => {
+    const container = createContainer();
+    setupMermaidPanZoom(container);
+
+    const event = new WheelEvent("wheel", { ctrlKey: true, cancelable: true });
+    container.dispatchEvent(event);
+
+    expect(mockPanzoomInstance.zoomWithWheel).toHaveBeenCalledWith(event, { animate: false });
+  });
+
+  it("plain wheel does not trigger zoomWithWheel", () => {
+    const container = createContainer();
+    setupMermaidPanZoom(container);
+
+    const event = new WheelEvent("wheel", { cancelable: true });
+    container.dispatchEvent(event);
+
+    expect(mockPanzoomInstance.zoomWithWheel).not.toHaveBeenCalled();
+  });
+
+  it("left-click pointerdown calls panzoom handleDown", () => {
+    const container = createContainer();
+    setupMermaidPanZoom(container);
+
+    const event = new PointerEvent("pointerdown", { button: 0, bubbles: true });
+    container.dispatchEvent(event);
+
+    expect(mockPanzoomInstance.handleDown).toHaveBeenCalled();
+  });
+
+  it("non-left-click pointerdown does not call handleDown", () => {
+    const container = createContainer();
+    setupMermaidPanZoom(container);
+
+    const event = new PointerEvent("pointerdown", { button: 2, bubbles: true });
+    container.dispatchEvent(event);
+
+    expect(mockPanzoomInstance.handleDown).not.toHaveBeenCalled();
+  });
+
+  it("pointerdown on reset button does not call handleDown", () => {
+    const container = createContainer();
+    document.body.appendChild(container);
+    setupMermaidPanZoom(container);
+
+    const resetBtn = container.querySelector(".mermaid-panzoom-reset") as HTMLElement;
+    const event = new PointerEvent("pointerdown", { button: 0, bubbles: true });
+    resetBtn.dispatchEvent(event);
+
+    expect(mockPanzoomInstance.handleDown).not.toHaveBeenCalled();
+    container.remove();
+  });
+
+  it("pointerdown on export button does not call handleDown", () => {
+    const container = createContainer();
+    document.body.appendChild(container);
+    setupMermaidPanZoom(container);
+
+    // Add an export button (simulates diagramExport placing one)
+    const exportBtn = document.createElement("button");
+    exportBtn.className = "mermaid-export-btn";
+    container.appendChild(exportBtn);
+
+    const event = new PointerEvent("pointerdown", { button: 0, bubbles: true });
+    exportBtn.dispatchEvent(event);
+
+    expect(mockPanzoomInstance.handleDown).not.toHaveBeenCalled();
+    container.remove();
+  });
+
+  it("pointermove calls panzoom handleMove", () => {
+    const container = createContainer();
+    setupMermaidPanZoom(container);
+
+    const event = new PointerEvent("pointermove", { bubbles: true });
+    document.dispatchEvent(event);
+
+    expect(mockPanzoomInstance.handleMove).toHaveBeenCalled();
+  });
+
+  it("pointerup calls panzoom handleUp", () => {
+    const container = createContainer();
+    setupMermaidPanZoom(container);
+
+    const event = new PointerEvent("pointerup", { bubbles: true });
+    document.dispatchEvent(event);
+
+    expect(mockPanzoomInstance.handleUp).toHaveBeenCalled();
+  });
+
+  it("reset button click calls panzoom reset", () => {
+    const container = createContainer();
+    document.body.appendChild(container);
+    setupMermaidPanZoom(container);
+
+    const resetBtn = container.querySelector(".mermaid-panzoom-reset") as HTMLElement;
+    resetBtn.click();
+
+    expect(mockPanzoomInstance.reset).toHaveBeenCalledWith({ animate: true });
+    container.remove();
+  });
+
+  it("destroy without reset button does not throw", () => {
+    const container = createContainer();
+    const instance = setupMermaidPanZoom(container, { showResetButton: false })!;
+    expect(() => instance.destroy()).not.toThrow();
+    expect(mockPanzoomInstance.destroy).toHaveBeenCalled();
+  });
+
+  it("destroy calls panzoom.destroy and removes class", () => {
+    const container = createContainer();
+    const instance = setupMermaidPanZoom(container)!;
+
+    mockPanzoomInstance.destroy.mockClear();
+    instance.destroy();
+
+    expect(mockPanzoomInstance.destroy).toHaveBeenCalled();
+    expect(container.classList.contains("panzoom-enabled")).toBe(false);
   });
 });

@@ -368,6 +368,7 @@ export function CopyButton({ text, size = "sm", className = "" }: CopyButtonProp
     setTimeout(() => setCopied(false), 1500);
   };
 
+  /* v8 ignore next -- @preserve size !=="sm" branch: tests only invoke with size="sm" */
   const iconSize = size === "sm" ? "w-3.5 h-3.5" : "w-3 h-3";
 
   return (

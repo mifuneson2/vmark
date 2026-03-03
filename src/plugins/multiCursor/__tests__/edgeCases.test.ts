@@ -13,7 +13,16 @@ import {
   handleMultiCursorBackspace,
   handleMultiCursorDelete,
 } from "../inputHandling";
-import { createMultiCursorState } from "./testHelpers";
+import { createDoc, createMultiCursorState } from "./testHelpers";
+
+describe("createDoc helper", () => {
+  it("creates an empty paragraph when text is empty string", () => {
+    const doc = createDoc("");
+    expect(doc.childCount).toBe(1);
+    expect(doc.firstChild!.type.name).toBe("paragraph");
+    expect(doc.firstChild!.content.size).toBe(0);
+  });
+});
 
 describe("edgeCases", () => {
   describe("adjacent cursors merge after edit", () => {

@@ -118,4 +118,27 @@ describe("resolveDefaultSaveFolder", () => {
     // Should fall through to saved tab folder
     expect(result).toBe("/docs");
   });
+
+  it("falls back to fallbackDirectory when workspace mode but no root and no valid saved paths", () => {
+    const result = resolveDefaultSaveFolder({
+      isWorkspaceMode: true,
+      workspaceRoot: null,
+      savedFilePaths: [], // No saved paths
+      fallbackDirectory: "/Users/test/Documents",
+    });
+
+    expect(result).toBe("/Users/test/Documents");
+  });
+
+  it("skips saved paths that have no directory and falls back", () => {
+    const result = resolveDefaultSaveFolder({
+      isWorkspaceMode: true,
+      workspaceRoot: null,
+      savedFilePaths: ["file.md"], // No directory component
+      fallbackDirectory: "/Users/test",
+    });
+
+    // getDirectory("file.md") returns null, so falls through to fallback
+    expect(result).toBe("/Users/test");
+  });
 });

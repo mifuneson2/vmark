@@ -237,6 +237,34 @@ describe("cursorHandlers - block detection", () => {
     });
   });
 
+  describe("ancestor attrs branch coverage (line 49 of testUtils)", () => {
+    it("handles ancestor with explicit attrs object (non-nullish attrs path in node())", async () => {
+      // Provides ancestors[n].attrs explicitly (not undefined) so the `?? {}` fallback
+      // is NOT taken — covers the non-nullish branch of `ancestors[ancestorIndex].attrs ?? {}`.
+      const listItemNode = createMockNode("Item with attrs", "paragraph");
+      const blocks = [listItemNode];
+      const parentNode = createMockParentNode(blocks);
+      const $pos = createMock$Pos({
+        parent: listItemNode,
+        depth: 3,
+        blockIndex: 0,
+        parentNode,
+        ancestors: [
+          { name: "orderedList", attrs: { order: 1 } }, // explicit attrs → attrs ?? {} returns attrs
+          { name: "listItem", attrs: {} },              // explicit empty attrs
+        ],
+      });
+      const editor = createMockEditor({ from: 10, $pos, doc: parentNode });
+
+      vi.mocked(getEditor).mockReturnValue(editor as never);
+
+      await handleCursorGetContext("req-attrs-branch", {});
+
+      const call = vi.mocked(respond).mock.calls[0][0] as { data: { block: { inList: string } } };
+      expect(call.data.block.inList).toBe("ordered");
+    });
+  });
+
   describe("nested container detection", () => {
     it("detects multiple containers (list inside blockquote)", async () => {
       const listItemNode = createMockNode("Quoted list item", "paragraph");

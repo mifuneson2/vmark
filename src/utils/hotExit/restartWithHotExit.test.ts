@@ -244,4 +244,39 @@ describe('checkAndRestoreSession', () => {
 
     await restorePromise;
   });
+
+  it('handleResolve guard: firing failed after complete is a no-op (line 242 return branch)', async () => {
+    // Covers the `if (resolved) return;` true branch in handleResolve
+    const mockSession = {
+      version: 2,
+      timestamp: Date.now() / 1000,
+      vmark_version: '0.3.30',
+      windows: [{ window_label: 'main', is_main_window: true, tabs: [] }],
+    };
+
+    mockInvoke
+      .mockResolvedValueOnce(mockSession)
+      .mockResolvedValueOnce(undefined)
+      .mockResolvedValueOnce(undefined);
+
+    const restorePromise = checkAndRestoreSession();
+
+    await new Promise(resolve => setTimeout(resolve, 50));
+
+    // Fire COMPLETE first — sets resolved = true
+    const completeHandler = eventListeners.get(HOT_EXIT_EVENTS.RESTORE_COMPLETE);
+    if (completeHandler) {
+      completeHandler({ payload: {} });
+    }
+
+    // Fire FAILED after — handleResolve hits `if (resolved) return;` (line 242)
+    const failedHandler = eventListeners.get(HOT_EXIT_EVENTS.RESTORE_FAILED);
+    if (failedHandler) {
+      failedHandler({ payload: { error: 'late noise' } });
+    }
+
+    const result = await restorePromise;
+    // Result is still true (first resolve wins)
+    expect(result).toBe(true);
+  });
 });

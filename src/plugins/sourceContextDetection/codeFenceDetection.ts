@@ -96,6 +96,7 @@ export function getCodeFenceInfo(view: EditorView): CodeFenceInfo | null {
 
   // Parse the opening line for language
   const openMatch = openingLine.text.match(FENCE_OPEN_PATTERN);
+  /* v8 ignore next -- @preserve reason: openingLine was found via same pattern, re-match always succeeds */
   if (!openMatch) return null;
 
   const indentLength = indent.length;
@@ -129,6 +130,7 @@ function isOpeningFence(
   const line = doc.line(lineNum);
   const match = line.text.match(FENCE_OPEN_PATTERN);
 
+  /* v8 ignore next -- @preserve reason: called only after pattern confirmed present */
   if (!match) return false;
 
   // If line has language identifier, it's definitely an opening

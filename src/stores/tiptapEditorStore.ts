@@ -43,6 +43,7 @@ export const useTiptapEditorStore = create<TiptapEditorState & TiptapEditorActio
   ...initialState,
 
   setEditor: (editor) => {
+    /* v8 ignore next -- @preserve null path for editor cleared on unmount */
     set({ editor, editorView: editor ? editor.view : null });
   },
 

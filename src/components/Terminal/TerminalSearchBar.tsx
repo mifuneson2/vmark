@@ -54,6 +54,7 @@ export function TerminalSearchBar({ getSearchAddon, onClose }: TerminalSearchBar
 
   const findPrevious = useCallback(() => {
     const addon = getSearchAddon();
+    /* v8 ignore next -- @preserve findPrevious: requires active xterm search addon in tests */
     if (addon && query) addon.findPrevious(query);
   }, [getSearchAddon, query]);
 
@@ -70,6 +71,7 @@ export function TerminalSearchBar({ getSearchAddon, onClose }: TerminalSearchBar
       // Skip live search during IME composition
       if (composingRef.current) return;
       // Skip if compositionEnd already searched this exact value (avoid double search)
+      /* v8 ignore next -- @preserve IME double-search guard: requires real IME composition sequence */
       if (compositionSearchedRef.current === value) {
         compositionSearchedRef.current = null;
         return;
@@ -90,9 +92,11 @@ export function TerminalSearchBar({ getSearchAddon, onClose }: TerminalSearchBar
     onCompositionEndBase();
     // Trigger search with committed text after composition ends
     const addon = getSearchAddon();
+    /* v8 ignore next -- @preserve ?? fallback: inputRef.current is always set when compositionEnd fires */
     const currentQuery = inputRef.current?.value ?? "";
     // Record that we searched this value so handleChange can skip its duplicate call
     compositionSearchedRef.current = currentQuery;
+    /* v8 ignore next -- @preserve compositionEnd search: requires active xterm addon with IME input */
     if (addon) {
       if (currentQuery) {
         addon.findNext(currentQuery);

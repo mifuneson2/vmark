@@ -79,6 +79,10 @@ describe("paths", () => {
     it("handles root path", () => {
       expect(getFileName("/")).toBe("");
     });
+
+    it("returns empty for empty path input", () => {
+      expect(getFileName("")).toBe("");
+    });
   });
 
   describe("getParentDir", () => {
@@ -102,6 +106,11 @@ describe("paths", () => {
 
     it("handles trailing slash", () => {
       expect(getParentDir("/Users/test/")).toBe("/Users");
+    });
+
+    it("returns empty for path with single segment at root (e.g. /file.md)", () => {
+      // lastSlash === 0 means the only slash is at the start: /file.md
+      expect(getParentDir("/file.md")).toBe("");
     });
   });
 
@@ -134,6 +143,12 @@ describe("paths", () => {
       expect(getRelativePath("/Users/root/", "/Users/root/file.md")).toBe(
         "file.md"
       );
+    });
+
+    it("returns empty string when root equals target (exact match)", () => {
+      // When root === target, relative slice is "" (no leading slash),
+      // so line 107 `return relative || ""` is hit.
+      expect(getRelativePath("/Users/root", "/Users/root")).toBe("");
     });
   });
 
@@ -189,6 +204,10 @@ describe("paths", () => {
 
     it("filters empty segments", () => {
       expect(pathSegments("/Users//test/")).toEqual(["Users", "test"]);
+    });
+
+    it("returns empty array for empty string", () => {
+      expect(pathSegments("")).toEqual([]);
     });
   });
 

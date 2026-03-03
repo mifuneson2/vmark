@@ -84,6 +84,7 @@ export interface PairingResult {
  */
 function isApostrophe(text: string, pos: number): boolean {
   const char = text[pos];
+  /* v8 ignore next 3 -- @preserve structurally unreachable: isApostrophe is only called in tokenizeQuotes when type==="single", guaranteeing char is one of the three single-quote variants */
   if (char !== "'" && char !== CURLY_SINGLE_CLOSE && char !== CURLY_SINGLE_OPEN) {
     return false;
   }
@@ -97,6 +98,9 @@ function isApostrophe(text: string, pos: number): boolean {
   }
 
   // Letter + ' + s (possessive): Xiaolai's
+  // Note: this block is structurally unreachable — if after==="s", the letter+'+letter check above
+  // already returns true (since "s" passes /[a-zA-Z]/).
+  /* v8 ignore next 5 -- @preserve unreachable: when after==="s", the letter+letter contraction branch (line 95) fires first; "s" always matches /[a-zA-Z]/ */
   if (/[a-zA-Z]/.test(before) && after.toLowerCase() === "s") {
     // Check if followed by word boundary
     const afterS = pos + 2 < text.length ? text[pos + 2] : "";
@@ -314,9 +318,10 @@ export function tokenizeQuotes(text: string): QuoteToken[] {
     const role = classifyQuote(text, i, type, doubleStack, singleStack);
 
     // Update stacks for classification of subsequent quotes
+    // (classifyQuote only returns "open" or "close" — no other role reaches here)
     if (role === "open") {
       (type === "double" ? doubleStack : singleStack).push(i);
-    } else if (role === "close") {
+    } else {
       const stack = type === "double" ? doubleStack : singleStack;
       if (stack.length > 0) {
         stack.pop();
@@ -346,9 +351,10 @@ export function pairQuotes(text: string, tokens: QuoteToken[]): PairingResult {
 
     const stack = token.type === "double" ? doubleStack : singleStack;
 
+    // (tokens here only have "open" or "close" roles after apostrophe/prime filtering)
     if (token.role === "open") {
       stack.push(token);
-    } else if (token.role === "close") {
+    } else {
       if (stack.length > 0) {
         const opener = stack.pop()!;
 

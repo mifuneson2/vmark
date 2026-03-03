@@ -57,9 +57,11 @@ export function useTabShortcuts() {
         e.preventDefault();
         const activeTabId = useTabStore.getState().activeTabId[windowLabel];
         if (activeTabId) {
+          /* v8 ignore start -- @preserve .catch() callback only fires on unexpected tab-close errors; not triggered in mocked tests */
           closeTabWithDirtyCheck(windowLabel, activeTabId).catch((error) => {
             console.error("[TabShortcuts] Cmd+W tab close failed:", error);
           });
+          /* v8 ignore stop */
         }
         return;
       }

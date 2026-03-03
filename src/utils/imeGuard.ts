@@ -39,6 +39,7 @@ const codeMirrorQueue = new WeakMap<CodeMirrorView, Array<() => void>>();
 const proseMirrorCompositionEndAt = new WeakMap<ProseMirrorView, number>();
 const codeMirrorCompositionEndAt = new WeakMap<CodeMirrorView, number>();
 
+/* v8 ignore next 3 -- @preserve Date.now() fallback for environments without performance API */
 const nowMs = () =>
   typeof performance !== "undefined" && typeof performance.now === "function"
     ? performance.now()

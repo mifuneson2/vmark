@@ -88,9 +88,11 @@ export class BlockVideoNodeView implements NodeView {
     const rect = this.video.getBoundingClientRect();
     useMediaPopupStore.getState().openPopup({
       mediaSrc: this.originalSrc,
+      /* v8 ignore next -- video.title is always set from node attrs; "" fallback unreachable */
       mediaTitle: this.video.title ?? "",
       mediaNodePos: pos,
       mediaNodeType: "block_video",
+      /* v8 ignore next -- video.poster is always set from node attrs; "" fallback unreachable */
       mediaPoster: String(this.video.poster ?? ""),
       anchorRect: {
         top: rect.top,
@@ -162,7 +164,9 @@ export class BlockVideoNodeView implements NodeView {
     this.video.preload = (node.attrs.preload ?? "metadata") as "" | "none" | "auto" | "metadata";
     this.video.poster = String(node.attrs.poster ?? "");
 
+    /* v8 ignore start -- node.attrs.src is always set by schema; "" fallback unreachable */
     const newSrc = String(node.attrs.src ?? "");
+    /* v8 ignore stop */
     if (this.originalSrc !== newSrc) {
       this.originalSrc = newSrc;
       this.updateSrc(newSrc);

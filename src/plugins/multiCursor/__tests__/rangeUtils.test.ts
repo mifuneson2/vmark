@@ -187,5 +187,39 @@ describe("rangeUtils", () => {
       expect(result.ranges[2].$from.pos).toBe(10);
       expect(result.primaryIndex).toBe(1); // original primary at pos 5
     });
+
+    it("returns empty ranges and primaryIndex 0 when input is empty (line 155)", () => {
+      const state = createState("hello");
+      const doc = state.doc;
+
+      const result = normalizeRangesWithPrimary([], doc, 0);
+
+      expect(result.ranges).toHaveLength(0);
+      expect(result.primaryIndex).toBe(0);
+    });
+
+    it("falls back to primaryIndex 0 when primary is merged away (line 169)", () => {
+      // When overlapping ranges are merged, the original primary range may cease to exist.
+      // normalizeRangesWithPrimary with merge=true merges overlapping ranges;
+      // if the primary was absorbed into another range, primaryMatch = -1 → fallback to 0.
+      const state = createState("hello world");
+      const doc = state.doc;
+
+      // Three overlapping ranges: [1-5], [3-8], [6-10]
+      // With merge=true, [1-5] and [3-8] merge to [1-8], which merges with [6-10] to [1-10].
+      // Original primary = index 1 (range [3-8], from=3, to=8).
+      // After merge, the merged range is [1-10], not [3-8]. findIndex returns -1 for exact match.
+      const ranges = [
+        new SelectionRange(doc.resolve(1), doc.resolve(5)),
+        new SelectionRange(doc.resolve(3), doc.resolve(8)),  // primary
+        new SelectionRange(doc.resolve(6), doc.resolve(10)),
+      ];
+
+      const result = normalizeRangesWithPrimary(ranges, doc, 1, true);
+
+      // The primary [3-8] was merged into [1-10], exact match fails → primaryIndex falls back to 0
+      expect(result.ranges).toHaveLength(1);
+      expect(result.primaryIndex).toBe(0);
+    });
   });
 });

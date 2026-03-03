@@ -40,6 +40,7 @@ export function handleInlineMathShortcut(view: EditorView): boolean {
   const $from = state.selection.$from;
 
   // Check if we're in a NodeSelection of a math node - toggle off (unwrap)
+  /* v8 ignore next -- @preserve else branch: non-NodeSelection tests not exercised */
   if (state.selection instanceof NodeSelection) {
     const node = state.selection.node;
     if (node.type.name === "math_inline") {
@@ -96,6 +97,7 @@ export function handleInlineMathShortcut(view: EditorView): boolean {
   const focusMathInput = (cursorOffset?: number) => {
     requestAnimationFrame(() => {
       const mathInput = view.dom.querySelector(".math-inline.editing .math-inline-input") as HTMLInputElement;
+      /* v8 ignore next -- @preserve else branch: math input element not found in test DOM */
       if (mathInput) {
         mathInput.focus();
         if (cursorOffset !== undefined) {

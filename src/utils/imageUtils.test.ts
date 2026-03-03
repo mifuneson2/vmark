@@ -131,6 +131,12 @@ describe("imageUtils", () => {
       // This is expected behavior - caller should provide proper filenames
       expect(result).toMatch(/^noextension-\d+-[a-z0-9]{4}\.noextension$/);
     });
+
+    it("falls back to png extension for empty filename (line 49)", () => {
+      const result = generateUniqueFilename("");
+      // Empty string: pop() returns "", which is falsy, so || "png" kicks in
+      expect(result).toMatch(/\.png$/);
+    });
   });
 
   describe("buildAssetRelativePath", () => {

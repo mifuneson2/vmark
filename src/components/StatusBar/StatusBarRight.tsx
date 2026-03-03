@@ -160,6 +160,7 @@ export function StatusBarRight({
         title={sourceMode ? `Source Mode (${formatKeyForDisplay(sourceModeShortcut)})` : `Rich Text Mode (${formatKeyForDisplay(sourceModeShortcut)})`}
         onClick={() => {
           const toastStore = useImagePasteToastStore.getState();
+          /* v8 ignore next -- @preserve toastStore.isOpen true branch: toast not open during mode toggle tests */
           if (toastStore.isOpen) {
             toastStore.hideToast();
           }

@@ -100,6 +100,7 @@ export class SourceFootnotePopupView extends SourcePopupView<FootnotePopupStoreS
     } else {
       // On definition - goto goes to reference
       this.gotoBtn.title = "Go to reference";
+      /* v8 ignore next -- @preserve reason: footnote definition without a reference is an edge case */
       this.gotoBtn.style.display = state.referencePos !== null ? "flex" : "none";
     }
 

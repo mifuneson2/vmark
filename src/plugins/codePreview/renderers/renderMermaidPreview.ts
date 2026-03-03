@@ -51,6 +51,7 @@ export function createMermaidPreviewWidget(
 
   return Decoration.widget(
     nodeEnd,
+    /* v8 ignore start -- @preserve reason: Decoration.widget factory callback runs in live ProseMirror view; not exercised in jsdom unit tests */
     (view) => {
       installDoubleClickHandler(placeholder, () => handleEnterEdit(view));
       renderMermaid(content).then((svg) => {
@@ -71,6 +72,7 @@ export function createMermaidPreviewWidget(
       });
       return placeholder;
     },
+    /* v8 ignore stop */
     { side: 1, key: cacheKey }
   );
 }

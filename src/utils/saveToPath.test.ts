@@ -221,6 +221,63 @@ describe("saveToPath", () => {
     });
   });
 
+  describe("doc null/undefined handling (line 50)", () => {
+    it("uses 'unknown' lineEnding when getDocument returns null", async () => {
+      vi.mocked(invoke).mockResolvedValue(undefined);
+      mockGetDocument.mockReturnValue(null);
+
+      const result = await saveToPath("tab-1", "/tmp/doc.md", "Hello", "manual");
+
+      expect(result).toBe(true);
+      // With doc=null, lineEnding is "unknown" → resolveLineEndingOnSave gives "lf" by default
+      expect(mockSetLineMetadata).toHaveBeenCalledWith("tab-1", expect.any(Object));
+    });
+
+    it("uses 'unknown' hardBreakStyle when getDocument returns null", async () => {
+      vi.mocked(invoke).mockResolvedValue(undefined);
+      mockGetDocument.mockReturnValue(null);
+
+      const result = await saveToPath("tab-1", "/tmp/doc.md", "content", "auto");
+
+      expect(result).toBe(true);
+      expect(mockMarkAutoSaved).toHaveBeenCalled();
+    });
+  });
+
+  describe("non-Error thrown value on write failure (line 69)", () => {
+    it("converts non-Error string to string error message", async () => {
+      vi.mocked(invoke).mockRejectedValue("disk full");
+      const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+
+      const result = await saveToPath("tab-1", "/tmp/doc.md", "content", "manual");
+
+      expect(result).toBe(false);
+      consoleError.mockRestore();
+    });
+
+    it("converts non-Error object to string error message", async () => {
+      vi.mocked(invoke).mockRejectedValue({ code: 13, msg: "permission denied" });
+      const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+
+      const result = await saveToPath("tab-1", "/tmp/doc.md", "content", "manual");
+
+      expect(result).toBe(false);
+      consoleError.mockRestore();
+    });
+  });
+
+  describe("history snapshot failure (line 105)", () => {
+    it("still returns true when createSnapshot throws", async () => {
+      vi.mocked(invoke).mockResolvedValue(undefined);
+      vi.mocked(createSnapshot).mockRejectedValueOnce(new Error("snapshot failed"));
+
+      const result = await saveToPath("tab-1", "/tmp/doc.md", "content", "manual");
+
+      expect(result).toBe(true);
+      expect(createSnapshot).toHaveBeenCalled();
+    });
+  });
+
   describe("pending save handling", () => {
     it("registers pending save before write", async () => {
       vi.mocked(invoke).mockResolvedValue(undefined);

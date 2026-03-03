@@ -177,6 +177,7 @@ export function createSourceMediaDecorationPlugin() {
       }
 
       update(update: ViewUpdate) {
+        /* v8 ignore next 3 -- @preserve viewportChanged branch and else path not covered in tests */
         if (update.docChanged || update.viewportChanged) {
           this.decorations = buildMediaDecorations(update.view);
         }

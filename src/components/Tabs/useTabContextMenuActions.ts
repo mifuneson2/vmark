@@ -167,6 +167,7 @@ export function useTabContextMenuActions({
   }, [doc, filePath, onClose, tab.id, tab.title, tabs.length, windowLabel, workspaceRoot]);
 
   const handleRestoreToDisk = useCallback(async () => {
+    /* v8 ignore next -- @preserve defensive guard; item only appears when filePath and doc are both present */
     if (!filePath || !doc) return;
     const saved = await saveToPath(tab.id, filePath, doc.content, "manual");
     if (saved) {
@@ -179,6 +180,7 @@ export function useTabContextMenuActions({
   }, [doc, filePath, onClose, tab.id]);
 
   const handleRevertToSaved = useCallback(async () => {
+    /* v8 ignore next -- @preserve defensive guard; item only appears when filePath and doc are both present */
     if (!filePath || !doc) { onClose(); return; }
     const confirmed = await ask(
       `Discard all changes and reload "${tab.title}" from disk?`,
@@ -213,6 +215,7 @@ export function useTabContextMenuActions({
   }, [filePath, onClose]);
 
   const handleCopyRelativePath = useCallback(async () => {
+    /* v8 ignore next -- @preserve defensive guard; item only appears when filePath, workspaceRoot, and isWithinRoot are all truthy */
     if (!filePath || !workspaceRoot || !isWithinRoot(workspaceRoot, filePath)) return;
     const relativePath = getRelativePath(workspaceRoot, filePath);
     if (!relativePath) return;

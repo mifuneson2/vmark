@@ -62,4 +62,27 @@ describe("linebreaks helpers", () => {
       ["```", "code  ", "code\\", "```", "text\\"].join("\n")
     );
   });
+
+  it("skips non-fence lines inside a fenced block when normalizing (inFence=true path)", () => {
+    // Lines inside fence reach `if (inFence) continue` with inFence=true
+    const input = ["```", "inside content", "```", "outside  "].join("\n");
+    expect(normalizeHardBreaks(input, "backslash")).toBe(
+      ["```", "inside content", "```", "outside\\"].join("\n")
+    );
+  });
+
+  it("ignores mismatched fence type inside a fenced block when normalizing", () => {
+    // Opening ``` but encountering ~~~ inside — fenceChar mismatch → else-if false branch
+    // The ~~~ does NOT close the ``` block; trailing spaces inside block are NOT converted
+    const input = ["```", "~~~", "inside  ", "```", "outside  "].join("\n");
+    expect(normalizeHardBreaks(input, "backslash")).toBe(
+      ["```", "~~~", "inside  ", "```", "outside\\"].join("\n")
+    );
+  });
+
+  it("does not convert whitespace-only lines with trailing spaces to backslash", () => {
+    // "    \n" line: trailing spaces but before.trim() === "" → false branch of trim check
+    const input = "    \nnext";
+    expect(normalizeHardBreaks(input, "backslash")).toBe("    \nnext");
+  });
 });

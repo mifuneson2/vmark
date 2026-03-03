@@ -99,7 +99,9 @@ function extractWikiLinkData(
 export function createSourceWikiLinkPopupPlugin() {
   return createSourcePopupPlugin({
     store: useWikiLinkPopupStore,
+    /* v8 ignore start -- @preserve createView callback only runs inside live CodeMirror; not exercised in unit tests */
     createView: (view, store) => new SourceWikiLinkPopupView(view, store),
+    /* v8 ignore stop */
     detectTrigger: detectWikiLinkTrigger,
     detectTriggerAtPos: (view, pos) => {
       const wikiLink = findWikiLinkAtPos(view, pos);

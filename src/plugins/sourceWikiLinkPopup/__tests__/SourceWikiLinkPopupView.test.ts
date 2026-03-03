@@ -353,6 +353,295 @@ describe("SourceWikiLinkPopupView", () => {
     });
   });
 
+  describe("Browse functionality", () => {
+    beforeEach(async () => {
+      emitStateChange({
+        isOpen: true,
+        target: "TestPage",
+        nodePos: 10,
+        anchorRect,
+      });
+      await new Promise((r) => requestAnimationFrame(r));
+    });
+
+    it("browse button opens file dialog", async () => {
+      const { open: dialogOpen } = await import("@tauri-apps/plugin-dialog");
+      const browseBtn = document.querySelector('button[title="Browse for file"]') as HTMLElement;
+      browseBtn.click();
+
+      expect(dialogOpen).toHaveBeenCalledWith(
+        expect.objectContaining({
+          filters: expect.arrayContaining([
+            expect.objectContaining({ name: "Markdown" }),
+          ]),
+          multiple: false,
+        })
+      );
+    });
+
+    it("browse sets target when file selected", async () => {
+      const { open: dialogOpen } = await import("@tauri-apps/plugin-dialog");
+      vi.mocked(dialogOpen).mockResolvedValueOnce("/workspace/docs/notes.md");
+
+      const browseBtn = document.querySelector('button[title="Browse for file"]') as HTMLElement;
+      browseBtn.click();
+
+      await new Promise((r) => setTimeout(r, 10));
+
+      // pathToWikiTarget converts: /workspace/docs/notes.md -> docs/notes
+      expect(mockUpdateTarget).toHaveBeenCalledWith("docs/notes");
+    });
+
+    it("browse does nothing when dialog is cancelled (null)", async () => {
+      const { open: dialogOpen } = await import("@tauri-apps/plugin-dialog");
+      vi.mocked(dialogOpen).mockResolvedValueOnce(null);
+
+      const browseBtn = document.querySelector('button[title="Browse for file"]') as HTMLElement;
+      browseBtn.click();
+
+      await new Promise((r) => setTimeout(r, 10));
+
+      expect(mockUpdateTarget).not.toHaveBeenCalled();
+    });
+
+    it("browse does nothing when dialog returns array", async () => {
+      const { open: dialogOpen } = await import("@tauri-apps/plugin-dialog");
+      vi.mocked(dialogOpen).mockResolvedValueOnce(["/file1.md", "/file2.md"] as unknown as string);
+
+      const browseBtn = document.querySelector('button[title="Browse for file"]') as HTMLElement;
+      browseBtn.click();
+
+      await new Promise((r) => setTimeout(r, 10));
+
+      expect(mockUpdateTarget).not.toHaveBeenCalled();
+    });
+
+    it("browse handles dialog error gracefully", async () => {
+      const { open: dialogOpen } = await import("@tauri-apps/plugin-dialog");
+      vi.mocked(dialogOpen).mockRejectedValueOnce(new Error("dialog failed"));
+
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+      const browseBtn = document.querySelector('button[title="Browse for file"]') as HTMLElement;
+      browseBtn.click();
+
+      await new Promise((r) => setTimeout(r, 10));
+
+      expect(consoleSpy).toHaveBeenCalledWith(
+        "[SourceWikiLinkPopup] Browse failed:",
+        expect.any(Error)
+      );
+
+      consoleSpy.mockRestore();
+    });
+
+    it("browse converts path relative to workspace root", async () => {
+      const { open: dialogOpen } = await import("@tauri-apps/plugin-dialog");
+      vi.mocked(dialogOpen).mockResolvedValueOnce("/workspace/sub/page.md");
+
+      const browseBtn = document.querySelector('button[title="Browse for file"]') as HTMLElement;
+      browseBtn.click();
+
+      await new Promise((r) => setTimeout(r, 10));
+
+      // Should strip workspace prefix and .md extension
+      expect(mockUpdateTarget).toHaveBeenCalledWith("sub/page");
+    });
+
+    it("browse keeps path when not under workspace root", async () => {
+      const { open: dialogOpen } = await import("@tauri-apps/plugin-dialog");
+      vi.mocked(dialogOpen).mockResolvedValueOnce("/other/path/doc.md");
+
+      const browseBtn = document.querySelector('button[title="Browse for file"]') as HTMLElement;
+      browseBtn.click();
+
+      await new Promise((r) => setTimeout(r, 10));
+
+      // Path is not under /workspace, so keeps full path minus .md
+      expect(mockUpdateTarget).toHaveBeenCalledWith("/other/path/doc");
+    });
+
+    it("browse updates open button state after selection", async () => {
+      // Start with empty target
+      emitStateChange({ isOpen: false, anchorRect: null });
+      emitStateChange({
+        isOpen: true,
+        target: "",
+        nodePos: 10,
+        anchorRect,
+      });
+      await new Promise((r) => requestAnimationFrame(r));
+
+      const openBtn = document.querySelector(".source-wiki-link-popup-btn-open") as HTMLButtonElement;
+      expect(openBtn.disabled).toBe(true);
+
+      const { open: dialogOpen } = await import("@tauri-apps/plugin-dialog");
+      vi.mocked(dialogOpen).mockResolvedValueOnce("/workspace/newpage.md");
+
+      const browseBtn = document.querySelector('button[title="Browse for file"]') as HTMLElement;
+      browseBtn.click();
+
+      await new Promise((r) => setTimeout(r, 10));
+
+      expect(openBtn.disabled).toBe(false);
+    });
+  });
+
+  describe("DOM structure", () => {
+    beforeEach(async () => {
+      emitStateChange({
+        isOpen: true,
+        target: "TestPage",
+        nodePos: 10,
+        anchorRect,
+      });
+      await new Promise((r) => requestAnimationFrame(r));
+    });
+
+    it("has correct class name", () => {
+      const popupEl = document.querySelector(".source-wiki-link-popup");
+      expect(popupEl).not.toBeNull();
+    });
+
+    it("has target input with placeholder", () => {
+      const input = document.querySelector(".source-wiki-link-popup-target") as HTMLInputElement;
+      expect(input).not.toBeNull();
+      expect(input.type).toBe("text");
+      expect(input.placeholder).toBe("Target page...");
+    });
+
+    it("has all action buttons", () => {
+      const browseBtn = document.querySelector('button[title="Browse for file"]');
+      const openBtn = document.querySelector(".source-wiki-link-popup-btn-open");
+      const copyBtn = document.querySelector('button[title="Copy target"]');
+      const deleteBtn = document.querySelector(".source-wiki-link-popup-btn-delete");
+
+      expect(browseBtn).not.toBeNull();
+      expect(openBtn).not.toBeNull();
+      expect(copyBtn).not.toBeNull();
+      expect(deleteBtn).not.toBeNull();
+    });
+
+    it("has target row wrapping input and buttons", () => {
+      const row = document.querySelector(".source-wiki-link-popup-row");
+      expect(row).not.toBeNull();
+      expect(row!.children.length).toBe(5); // input + 4 buttons
+    });
+  });
+
+  describe("pathToWikiTarget edge cases", () => {
+    it("returns full path when workspaceRoot is null (line 25 if branch)", async () => {
+      const { useWorkspaceStore } = await import("@/stores/workspaceStore");
+      vi.spyOn(useWorkspaceStore, "getState").mockReturnValue({ rootPath: null } as ReturnType<typeof useWorkspaceStore.getState>);
+
+      const { open: dialogOpen } = await import("@tauri-apps/plugin-dialog");
+      vi.mocked(dialogOpen).mockResolvedValueOnce("/some/path/page.md");
+
+      emitStateChange({ isOpen: true, target: "", nodePos: 10, anchorRect });
+      await new Promise((r) => requestAnimationFrame(r));
+
+      const browseBtn = document.querySelector('button[title="Browse for file"]') as HTMLElement;
+      browseBtn.click();
+
+      await new Promise((r) => setTimeout(r, 20));
+
+      // With null rootPath, pathToWikiTarget returns the full path as-is
+      expect(mockUpdateTarget).toHaveBeenCalledWith("/some/path/page.md");
+
+      vi.mocked(useWorkspaceStore.getState).mockRestore?.();
+    });
+
+    it("does not strip prefix when path does not start with workspaceRoot (line 31 else branch)", async () => {
+      const { open: dialogOpen } = await import("@tauri-apps/plugin-dialog");
+      // Path that does NOT start with /workspace
+      vi.mocked(dialogOpen).mockResolvedValueOnce("/other/location/page.md");
+
+      emitStateChange({ isOpen: true, target: "", nodePos: 10, anchorRect });
+      await new Promise((r) => requestAnimationFrame(r));
+
+      const browseBtn = document.querySelector('button[title="Browse for file"]') as HTMLElement;
+      browseBtn.click();
+
+      await new Promise((r) => setTimeout(r, 20));
+
+      // Path is NOT under /workspace, so relative stays as the full path (minus .md)
+      expect(mockUpdateTarget).toHaveBeenCalledWith("/other/location/page");
+    });
+
+    it("handles workspaceRoot ending with slash — relative does not start with / (line 31 false branch)", async () => {
+      const { useWorkspaceStore } = await import("@/stores/workspaceStore");
+      vi.spyOn(useWorkspaceStore, "getState").mockReturnValue({ rootPath: "/workspace/" } as ReturnType<typeof useWorkspaceStore.getState>);
+
+      const { open: dialogOpen } = await import("@tauri-apps/plugin-dialog");
+      // After slicing "/workspace/" from "/workspace/page.md" → "page.md" (no leading /)
+      vi.mocked(dialogOpen).mockResolvedValueOnce("/workspace/page.md");
+
+      emitStateChange({ isOpen: true, target: "", nodePos: 10, anchorRect });
+      await new Promise((r) => requestAnimationFrame(r));
+
+      const browseBtn = document.querySelector('button[title="Browse for file"]') as HTMLElement;
+      browseBtn.click();
+
+      await new Promise((r) => setTimeout(r, 20));
+
+      // relative = "page.md", doesn't start with "/" → false branch → .md stripped → "page"
+      expect(mockUpdateTarget).toHaveBeenCalledWith("page");
+
+      vi.mocked(useWorkspaceStore.getState).mockRestore?.();
+    });
+
+    it("does not strip .md when path does not end with .md (line 37 else branch)", async () => {
+      const { open: dialogOpen } = await import("@tauri-apps/plugin-dialog");
+      // File without .md extension
+      vi.mocked(dialogOpen).mockResolvedValueOnce("/workspace/image.png");
+
+      emitStateChange({ isOpen: true, target: "", nodePos: 10, anchorRect });
+      await new Promise((r) => requestAnimationFrame(r));
+
+      const browseBtn = document.querySelector('button[title="Browse for file"]') as HTMLElement;
+      browseBtn.click();
+
+      await new Promise((r) => setTimeout(r, 20));
+
+      // No .md extension → kept as-is after stripping workspace prefix
+      expect(mockUpdateTarget).toHaveBeenCalledWith("image.png");
+    });
+  });
+
+  describe("handleInputKeydown — non-Enter key (line 138 else branch)", () => {
+    it("does nothing for keys other than Enter in the input keydown handler", async () => {
+      emitStateChange({ isOpen: true, target: "TestPage", nodePos: 10, anchorRect });
+      await new Promise((r) => requestAnimationFrame(r));
+
+      const input = document.querySelector(".source-wiki-link-popup-target") as HTMLInputElement;
+
+      // Press a regular key — should NOT trigger save
+      const event = new KeyboardEvent("keydown", { key: "a", bubbles: true });
+      input.dispatchEvent(event);
+
+      expect(saveWikiLinkChanges).not.toHaveBeenCalled();
+      expect(mockClosePopup).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("Save with whitespace-only target", () => {
+    it("treats whitespace-only target as empty and removes wiki link", async () => {
+      emitStateChange({
+        isOpen: true,
+        target: "   ",
+        nodePos: 10,
+        anchorRect,
+      });
+      await new Promise((r) => requestAnimationFrame(r));
+
+      const input = document.querySelector(".source-wiki-link-popup-target") as HTMLInputElement;
+      const event = new KeyboardEvent("keydown", { key: "Enter", bubbles: true });
+      input.dispatchEvent(event);
+
+      expect(removeWikiLink).toHaveBeenCalledWith(view);
+    });
+  });
+
   describe("Cleanup", () => {
     it("clears input on hide", async () => {
       emitStateChange({

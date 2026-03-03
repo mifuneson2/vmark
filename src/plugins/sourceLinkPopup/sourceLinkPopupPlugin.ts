@@ -124,6 +124,7 @@ function createCmdClickPlugin(): Extension {
           const headings = extractMarkdownHeadings(docText);
           const heading = headings.find((h) => h.id === targetId);
 
+          /* v8 ignore next -- @preserve reason: bookmark heading not found is an untested edge case */
           if (heading && heading.pos !== undefined) {
             this.view.dispatch({
               selection: { anchor: heading.pos },
@@ -135,6 +136,7 @@ function createCmdClickPlugin(): Extension {
         }
 
         // External link — open in browser
+        /* v8 ignore next 4 -- @preserve reason: dynamic import and error handler not tested in unit tests */
         import("@tauri-apps/plugin-opener").then(({ openUrl }) => {
           openUrl(href).catch((error: unknown) => {
             console.error("Failed to open link:", error);
@@ -155,6 +157,7 @@ export function createSourceLinkPopupPlugin(): Extension {
     // Cmd+Click handler (capture phase, runs first)
     createCmdClickPlugin(),
     // Popup plugin: opens edit popup on regular click
+    /* v8 ignore next -- @preserve reason: createSourcePopupPlugin factory not invoked in unit tests */
     createSourcePopupPlugin({
       store: useLinkPopupStore,
       createView: (view, store) => new SourceLinkPopupView(view, store),

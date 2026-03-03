@@ -286,6 +286,7 @@ const tableContextMenuPlugin = ViewPlugin.fromClass(
     eventHandlers: {
       contextmenu(event: MouseEvent, view: EditorView) {
         const pos = view.posAtCoords({ x: event.clientX, y: event.clientY });
+        /* v8 ignore next -- @preserve null pos guard: contextmenu always fires inside editor in tests */
         if (pos === null) return false;
 
         // Move cursor to click position

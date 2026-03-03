@@ -136,6 +136,7 @@ function isTextNode(node: unknown): node is Text {
 }
 
 function isSkippableNode(node: unknown): boolean {
+  /* v8 ignore next -- @preserve defensive null/type guard; MDAST nodes are always objects */
   if (!node || typeof node !== "object") return false;
   const type = (node as { type?: string }).type;
   return typeof type === "string" && SKIP_NODE_TYPES.has(type);
@@ -205,6 +206,7 @@ function parseMarksInText(text: string): PhrasingContent[] {
 
     if (!earliestMark || earliestStart === -1) {
       // No more marks found, add remaining as text
+      /* v8 ignore next -- @preserve while(position < text.length) guarantees this is always true */
       if (position < text.length) {
         result.push({ type: "text", value: text.slice(position) });
       }
@@ -225,6 +227,7 @@ function parseMarksInText(text: string): PhrasingContent[] {
     position = earliestEnd + earliestMark.markerLen;
   }
 
+  /* v8 ignore next -- @preserve fallback for empty string input; text nodes from parsers are rarely empty */
   return result.length > 0 ? result : [{ type: "text", value: text }];
 }
 

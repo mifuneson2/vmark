@@ -126,6 +126,7 @@ export const useGeniesStore = create<GeniesState & GeniesActions>()(
           });
         } catch (e) {
           geniesLog("Failed to load genies:", e);
+          /* v8 ignore next -- @preserve false branch: stale load error, newer load already set loading=false */
           if (thisLoadId === _loadId) {
             set({ loading: false });
           }

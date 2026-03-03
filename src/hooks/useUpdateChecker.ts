@@ -152,6 +152,7 @@ export function useUpdateChecker() {
     }
 
     // Retry on error if we haven't exceeded max retries
+    /* v8 ignore next -- @preserve prevStatusRef is updated by the toast effect (declared first) before this effect reads it, so prevStatus === "checking" is unreachable when status === "error" */
     if (status === "error" && prevStatus === "checking" && autoCheckEnabled) {
       if (retryCount.current < MAX_RETRIES) {
         // Exponential backoff: 5s, 10s, 20s
@@ -174,6 +175,7 @@ export function useUpdateChecker() {
 
     // Cleanup timer on unmount or status change
     return () => {
+      /* v8 ignore next -- @preserve defensive guard: retryTimerRef.current may be null if no retry was scheduled */
       if (retryTimerRef.current) {
         clearTimeout(retryTimerRef.current);
         retryTimerRef.current = null;

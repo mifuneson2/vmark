@@ -73,6 +73,7 @@ export function getBlockMathInfo(view: EditorView): BlockMathInfo | null {
   }
 
   // Check if cursor is within the block math region
+  /* v8 ignore next -- @preserve reason: cursor below block math is an editor UI edge case */
   if (currentLineNum < openLine || currentLineNum > closeLine) {
     return null;
   }

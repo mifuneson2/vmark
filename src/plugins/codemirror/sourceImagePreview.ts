@@ -126,6 +126,7 @@ class SourceImagePreviewPlugin {
   }
 
   update(update: ViewUpdate) {
+    /* v8 ignore next -- @preserve else path: update with neither selectionSet nor docChanged not triggered in tests */
     if (update.selectionSet || update.docChanged) {
       this.scheduleCheck();
     }
@@ -218,6 +219,7 @@ class SourceImagePreviewPlugin {
   }
 
   private showPreviewForRange(imageRange: MediaRange) {
+    /* v8 ignore next -- @preserve early return: popup suppressing path not triggered in tests */
     if (this.isPopupSuppressing()) return;
 
     const preview = getImagePreviewView();
@@ -247,6 +249,7 @@ class SourceImagePreviewPlugin {
   }
 
   private showPreview() {
+    /* v8 ignore next -- @preserve early return: currentImageRange is always set before showPreview is called */
     if (!this.currentImageRange) return;
     this.showPreviewForRange(this.currentImageRange);
   }

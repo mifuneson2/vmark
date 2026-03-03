@@ -92,6 +92,7 @@ function evictIfNeeded(): void {
     }
   }
 
+  /* v8 ignore next -- @preserve oldestKey is always set when cache.size >= MAX_CACHE_SIZE */
   if (oldestKey) {
     mdastCache.delete(oldestKey);
   }

@@ -233,6 +233,7 @@ export class ImagePreviewView {
     });
 
     // Convert to host-relative coordinates if mounted inside editor container
+    /* v8 ignore next -- @preserve defensive null guard: host is null only if updatePosition is called before show() */
     const host = this.host ?? document.body;
     if (host !== document.body) {
       const hostPos = toHostCoordsForDom(host, { top, left });
@@ -307,7 +308,7 @@ export class ImagePreviewView {
       })
       .catch((error: unknown) => {
         if (currentToken !== this.resolveToken) return;
-        renderWarn("Image path resolution failed:", error instanceof Error ? error.message : String(error));
+        renderWarn("Image path resolution failed:", error instanceof Error ? error.message : /* v8 ignore next -- @preserve non-Error rejection is rare */ String(error));
         this.showError("Path resolution failed");
       });
   }

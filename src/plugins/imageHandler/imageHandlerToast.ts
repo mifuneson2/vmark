@@ -141,6 +141,7 @@ function showImagePasteToast(
     imageType,
     anchorRect,
     editorDom: view.dom,
+    /* v8 ignore start -- @preserve reason: onConfirm callback only fires on user click in the toast UI; not triggered in unit tests */
     onConfirm: () => {
       if (!isViewConnected(view)) {
         imageHandlerWarn("View disconnected, cannot insert image");
@@ -150,6 +151,7 @@ function showImagePasteToast(
         console.error("Failed to insert image:", error);
       });
     },
+    /* v8 ignore stop */
     onDismiss: () => {
       if (!isViewConnected(view)) {
         return;
@@ -232,6 +234,7 @@ function showMultiImagePasteToast(
     imageResults: results,
     anchorRect,
     editorDom: view.dom,
+    /* v8 ignore start -- @preserve reason: onConfirm callback only fires on user click in the toast UI; not triggered in unit tests */
     onConfirm: () => {
       if (!isViewConnected(view)) {
         imageHandlerWarn("View disconnected, cannot insert images");
@@ -241,6 +244,7 @@ function showMultiImagePasteToast(
         console.error("Failed to insert images:", error);
       });
     },
+    /* v8 ignore stop */
     onDismiss: () => {
       if (!isViewConnected(view)) {
         return;

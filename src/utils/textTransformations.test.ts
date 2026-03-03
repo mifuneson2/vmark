@@ -17,6 +17,7 @@ import {
   sortLinesAscending,
   sortLinesDescending,
   getLinesInRange,
+  getLineBoundaries,
 } from "./textTransformations";
 
 describe("Case Transformations", () => {
@@ -243,6 +244,97 @@ describe("Line Operations", () => {
       const text = "apple\nbanana\ncherry";
       const result = sortLinesDescending(text, 0, 19);
       expect(result.newText).toBe("cherry\nbanana\napple");
+    });
+
+    it("handles single line (no-op)", () => {
+      const text = "only line";
+      const result = sortLinesDescending(text, 0, 8);
+      expect(result.newText).toBe("only line");
+    });
+  });
+
+  describe("getLineBoundaries", () => {
+    it("returns boundaries for first line", () => {
+      const text = "first\nsecond\nthird";
+      const result = getLineBoundaries(text, 2);
+      expect(result).toEqual({ lineStart: 0, lineEnd: 5, lineText: "first" });
+    });
+
+    it("returns boundaries for middle line", () => {
+      const text = "first\nsecond\nthird";
+      const result = getLineBoundaries(text, 8);
+      expect(result).toEqual({ lineStart: 6, lineEnd: 12, lineText: "second" });
+    });
+
+    it("returns boundaries for last line", () => {
+      const text = "first\nsecond\nthird";
+      const result = getLineBoundaries(text, 15);
+      expect(result).toEqual({ lineStart: 13, lineEnd: 18, lineText: "third" });
+    });
+
+    it("handles single line text", () => {
+      const text = "only line";
+      const result = getLineBoundaries(text, 4);
+      expect(result).toEqual({ lineStart: 0, lineEnd: 9, lineText: "only line" });
+    });
+  });
+
+  describe("getLinesInRange - edge cases", () => {
+    it("handles 'to' exactly at lineEnd+1 (newline boundary)", () => {
+      const text = "line1\nline2\nline3";
+      // lineEnd of line1 is 4, lineEnd+1 is 5
+      // to=5 triggers the newline boundary case: to === lineEnd + 1
+      const result = getLinesInRange(text, 0, 5);
+      expect(result.startLine).toBe(0);
+      expect(result.endLine).toBe(0);
+      expect(result.lines).toEqual(["line1"]);
+    });
+
+    it("handles 'to' at newline boundary for two-line text", () => {
+      // Two lines: "ab\ncd". lines=["ab","cd"]. "ab".length=2, lineEnd=2, lineEnd+1=3.
+      // to=3 triggers: to(3) === lineEnd(2)+1(3) AND i(0) < lines.length-1(1) => endLine=0.
+      // Fallback: to(3) > fullEnd(2) => endLine overwritten to 1.
+      // The newline branch at lines 138-141 IS executed (coverage hit).
+      const text = "ab\ncd";
+      const result = getLinesInRange(text, 0, 3);
+      // Fallback overrides, so endLine=1 and fullEnd=text.length
+      expect(result.startLine).toBe(0);
+      expect(result.endLine).toBe(1);
+      expect(result.fullEnd).toBe(text.length);
+    });
+
+    it("handles 'to' beyond all lines", () => {
+      const text = "line1\nline2";
+      // 'to' beyond the document length
+      const result = getLinesInRange(text, 0, 100);
+      expect(result.endLine).toBe(1);
+      expect(result.fullEnd).toBe(text.length);
+    });
+  });
+
+  describe("joinLines - edge cases", () => {
+    it("returns unchanged text when single line at end of document", () => {
+      const text = "first\nlast";
+      // Cursor in "last" — no next line to join
+      const result = joinLines(text, 6, 9);
+      expect(result.newText).toBe(text);
+      expect(result.newFrom).toBe(6);
+      expect(result.newTo).toBe(9);
+    });
+  });
+
+  describe("deleteLines - edge cases", () => {
+    it("deletes first line (includes newline after)", () => {
+      const text = "first\nsecond\nthird";
+      const result = deleteLines(text, 0, 4);
+      expect(result.newText).toBe("second\nthird");
+    });
+
+    it("handles deleting all text", () => {
+      const text = "only";
+      const result = deleteLines(text, 0, 3);
+      expect(result.newText).toBe("");
+      expect(result.newCursor).toBe(0);
     });
   });
 });

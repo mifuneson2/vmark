@@ -65,6 +65,7 @@ function clearCheckedAttribute(editor: TiptapEditor): void {
 function removeTaskList(editor: TiptapEditor): void {
   const { view } = editor;
   const listItemType = editor.state.schema.nodes.listItem;
+  /* v8 ignore next -- @preserve reason: schema always defines listItem in Tiptap setup */
   if (!listItemType) return;
 
   const maxLifts = 10;

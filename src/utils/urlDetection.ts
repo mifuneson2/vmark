@@ -155,6 +155,7 @@ export function detectAndNormalizeUrl(
 
   // Only use the first line (for multi-line clipboard content)
   const firstLine = trimmed.split("\n")[0].trim();
+  /* v8 ignore next -- @preserve structurally unreachable: trimmed.split("\n")[0] is non-empty after !trimmed guard */
   if (!firstLine) {
     return { isUrl: false, normalizedUrl: null, originalText: text };
   }

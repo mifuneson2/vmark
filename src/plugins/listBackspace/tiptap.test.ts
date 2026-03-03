@@ -181,4 +181,31 @@ describe("listBackspaceExtension", () => {
       editor.destroy();
     });
   });
+
+  describe("ordered list backspace", () => {
+    it("lifts ordered list item to paragraph on Backspace", () => {
+      const editor = createEditor(
+        "<ol><li>First</li><li>Second</li></ol>"
+      );
+
+      const doc = editor.state.doc;
+      let secondItemStart = 0;
+      doc.descendants((node, pos) => {
+        if (node.isText && node.text === "Second") {
+          secondItemStart = pos;
+          return false;
+        }
+      });
+      editor.commands.setTextSelection(secondItemStart);
+
+      editor.commands.keyboardShortcut("Backspace");
+
+      const html = editor.getHTML();
+      expect(html).toContain("First");
+      expect(html).toContain("Second");
+      expect(html).toMatch(/<p>Second<\/p>/);
+
+      editor.destroy();
+    });
+  });
 });

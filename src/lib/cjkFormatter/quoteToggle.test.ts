@@ -378,3 +378,12 @@ describe("computeQuoteToggle", () => {
     });
   });
 });
+
+describe("detectQuoteStyle — fallback", () => {
+  it("returns 'straight' for unknown characters not in the map", () => {
+    // A regular letter is not in CHAR_TO_STYLE, so fallback to 'straight'
+    expect(detectQuoteStyle("a")).toBe("straight");
+    expect(detectQuoteStyle("Z")).toBe("straight");
+    expect(detectQuoteStyle("!")).toBe("straight");
+  });
+});

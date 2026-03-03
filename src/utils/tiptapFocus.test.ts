@@ -322,6 +322,189 @@ describe("scheduleTiptapFocusAndRestore", () => {
     expect(scrollTop).toBe(0);
   });
 
+  it("scrolls to top when scroll container uses overflow: scroll (not auto)", () => {
+    const focus = vi.fn();
+    const dispatch = vi.fn();
+    let scrollTop = 200;
+    const scrollContainer = {
+      get scrollTop() { return scrollTop; },
+      set scrollTop(val: number) { scrollTop = val; },
+      style: { overflowY: "scroll" },
+      parentElement: null,
+    };
+    const view = {
+      dom: {
+        isConnected: true,
+        parentElement: scrollContainer,
+        style: { overflowY: "visible" },
+      },
+      focus,
+      dispatch,
+      state: {
+        doc: { content: { size: 10 } },
+        tr: { setSelection: vi.fn().mockReturnThis() },
+      },
+    } as unknown as EditorView;
+
+    const editor = { isDestroyed: false, view } as TiptapEditor;
+    const restoreCursor = vi.fn();
+    const getCursorInfo = vi.fn().mockReturnValue(null);
+
+    const raf = vi.fn((cb: FrameRequestCallback) => { cb(0); return 1; });
+    const originalRaf = globalThis.requestAnimationFrame;
+    globalThis.requestAnimationFrame = raf;
+
+    scheduleTiptapFocusAndRestore(editor, getCursorInfo, restoreCursor);
+
+    globalThis.requestAnimationFrame = originalRaf;
+
+    expect(scrollTop).toBe(0);
+  });
+
+  it("falls back to parentElement when getComputedStyle throws (line 38-40)", () => {
+    const focus = vi.fn();
+    const dispatch = vi.fn();
+    let scrollTop = 150;
+    const parentEl = {
+      get scrollTop() { return scrollTop; },
+      set scrollTop(val: number) { scrollTop = val; },
+    };
+    const view = {
+      dom: {
+        isConnected: true,
+        parentElement: parentEl,
+        // getComputedStyle will throw because this element lacks style info
+      },
+      focus,
+      dispatch,
+      state: {
+        doc: { content: { size: 10 } },
+        tr: { setSelection: vi.fn().mockReturnThis() },
+      },
+    } as unknown as EditorView;
+
+    const editor = { isDestroyed: false, view } as TiptapEditor;
+    const restoreCursor = vi.fn();
+    const getCursorInfo = vi.fn().mockReturnValue(null);
+
+    // Mock getComputedStyle to throw
+    const origGetComputedStyle = globalThis.getComputedStyle;
+    globalThis.getComputedStyle = vi.fn(() => { throw new Error("mock error"); });
+
+    const raf = vi.fn((cb: FrameRequestCallback) => { cb(0); return 1; });
+    const originalRaf = globalThis.requestAnimationFrame;
+    globalThis.requestAnimationFrame = raf;
+
+    scheduleTiptapFocusAndRestore(editor, getCursorInfo, restoreCursor);
+
+    globalThis.requestAnimationFrame = originalRaf;
+    globalThis.getComputedStyle = origGetComputedStyle;
+
+    // getComputedStyle threw, so getScrollContainer breaks out and returns parentElement
+    // parentElement is set, so scrollTop should be set to 0
+    expect(scrollTop).toBe(0);
+  });
+
+  it("walks ancestors without overflow and falls back to parentElement (line 42)", () => {
+    // This test exercises line 42: `el = el.parentElement` — the loop advances
+    // when getComputedStyle succeeds but overflowY is neither "auto" nor "scroll".
+    // We mock getComputedStyle to return "visible" for all elements so the loop
+    // walks the full ancestor chain before returning parentElement.
+    const focus = vi.fn();
+    const dispatch = vi.fn();
+    let scrollTop = 200;
+    const grandparent = {
+      get scrollTop() { return scrollTop; },
+      set scrollTop(val: number) { scrollTop = val; },
+      parentElement: null,
+    };
+    const parent = {
+      parentElement: grandparent,
+    };
+    const domEl = {
+      isConnected: true,
+      parentElement: parent,
+    };
+    const view = {
+      dom: domEl,
+      focus,
+      dispatch,
+      state: {
+        doc: { content: { size: 10 } },
+        tr: { setSelection: vi.fn().mockReturnThis() },
+      },
+    } as unknown as EditorView;
+
+    const editor = { isDestroyed: false, view } as TiptapEditor;
+    const restoreCursor = vi.fn();
+    const getCursorInfo = vi.fn().mockReturnValue(null);
+
+    // Mock getComputedStyle to return overflowY="visible" for all elements
+    // so the while loop advances via `el = el.parentElement` (line 42) each time
+    // without finding a scroll container, then exits when el becomes null.
+    const origGetComputedStyle = globalThis.getComputedStyle;
+    globalThis.getComputedStyle = vi.fn(() => ({ overflowY: "visible" } as CSSStyleDeclaration));
+
+    const raf = vi.fn((cb: FrameRequestCallback) => { cb(0); return 1; });
+    const originalRaf = globalThis.requestAnimationFrame;
+    globalThis.requestAnimationFrame = raf;
+
+    scheduleTiptapFocusAndRestore(editor, getCursorInfo, restoreCursor);
+
+    globalThis.requestAnimationFrame = originalRaf;
+    globalThis.getComputedStyle = origGetComputedStyle;
+
+    // Loop walked all ancestors via line 42, returned view.dom.parentElement.
+    // Focus should have been called (fresh load path).
+    expect(focus).toHaveBeenCalledTimes(1);
+  });
+
+  it("returns the editor DOM element itself as scroll container when it has overflowY=auto (line 35)", () => {
+    // Covers the `return el` branch in getScrollContainer when getComputedStyle
+    // returns overflowY === "auto" for view.dom itself (the very first while iteration).
+    const focus = vi.fn();
+    const dispatch = vi.fn();
+    let scrollTop = 500;
+    const editorDom = {
+      isConnected: true,
+      get scrollTop() { return scrollTop; },
+      set scrollTop(val: number) { scrollTop = val; },
+      parentElement: null,
+    };
+    const view = {
+      dom: editorDom,
+      focus,
+      dispatch,
+      state: {
+        doc: { content: { size: 10 } },
+        tr: { setSelection: vi.fn().mockReturnThis() },
+      },
+    } as unknown as EditorView;
+
+    const editor = { isDestroyed: false, view } as TiptapEditor;
+    const restoreCursor = vi.fn();
+    const getCursorInfo = vi.fn().mockReturnValue(null); // fresh load path
+
+    // Mock getComputedStyle so it reports overflowY=auto for editorDom specifically
+    const origGetComputedStyle = globalThis.getComputedStyle;
+    globalThis.getComputedStyle = vi.fn((el: Element) => {
+      if (el === editorDom) return { overflowY: "auto" } as CSSStyleDeclaration;
+      return origGetComputedStyle(el);
+    });
+
+    const raf = vi.fn((cb: FrameRequestCallback) => { cb(0); return 1; });
+    const originalRaf = globalThis.requestAnimationFrame;
+    globalThis.requestAnimationFrame = raf;
+
+    scheduleTiptapFocusAndRestore(editor, getCursorInfo, restoreCursor);
+
+    globalThis.requestAnimationFrame = originalRaf;
+    globalThis.getComputedStyle = origGetComputedStyle;
+
+    // view.dom itself was identified as scroll container and scrollTop was set to 0
+    expect(scrollTop).toBe(0);
+  });
+
   it("handles setSelection throwing an error gracefully", () => {
     const focus = vi.fn();
     const dispatch = vi.fn();

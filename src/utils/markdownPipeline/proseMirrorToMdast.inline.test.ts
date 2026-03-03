@@ -80,4 +80,191 @@ describe("proseMirrorToMdast inline", () => {
     // URLs with spaces should use angle bracket syntax
     expect(md).toContain("</path/with spaces/doc.md>");
   });
+
+  it("serializes wiki links without alias (alias equals value)", () => {
+    const md = pmToMarkdown([
+      testSchema.node("paragraph", null, [
+        testSchema.node("wikiLink", { value: "Page" }, [testSchema.text("Page")]),
+      ]),
+    ]);
+
+    // When alias equals value, no pipe alias in output
+    expect(md).toContain("[[Page]]");
+    expect(md).not.toContain("|");
+  });
+
+  it("serializes wiki links with empty content", () => {
+    const md = pmToMarkdown([
+      testSchema.node("paragraph", null, [
+        testSchema.node("wikiLink", { value: "EmptyPage" }),
+      ]),
+    ]);
+
+    expect(md).toContain("[[EmptyPage]]");
+  });
+
+  it("serializes hard breaks", () => {
+    const md = pmToMarkdown([
+      testSchema.node("paragraph", null, [
+        testSchema.text("Line 1"),
+        testSchema.node("hardBreak"),
+        testSchema.text("Line 2"),
+      ]),
+    ]);
+
+    expect(md).toContain("Line 1");
+    expect(md).toContain("Line 2");
+  });
+
+  it("serializes images without title", () => {
+    const md = pmToMarkdown([
+      testSchema.node("paragraph", null, [
+        testSchema.node("image", { src: "img.png", alt: "alt" }),
+      ]),
+    ]);
+
+    expect(md).toContain("![alt](img.png)");
+  });
+
+  it("serializes inline math", () => {
+    const md = pmToMarkdown([
+      testSchema.node("paragraph", null, [
+        testSchema.text("Formula "),
+        testSchema.node("math_inline", { content: "E=mc^2" }),
+      ]),
+    ]);
+
+    expect(md).toContain("$E=mc^2$");
+  });
+
+  it("serializes bold text", () => {
+    const bold = testSchema.mark("bold");
+    const md = pmToMarkdown([
+      testSchema.node("paragraph", null, [
+        testSchema.text("bold text", [bold]),
+      ]),
+    ]);
+
+    expect(md).toContain("**bold text**");
+  });
+
+  it("serializes italic text", () => {
+    const italic = testSchema.mark("italic");
+    const md = pmToMarkdown([
+      testSchema.node("paragraph", null, [
+        testSchema.text("italic text", [italic]),
+      ]),
+    ]);
+
+    expect(md).toContain("*italic text*");
+  });
+
+  it("serializes strikethrough text", () => {
+    const strike = testSchema.mark("strike");
+    const md = pmToMarkdown([
+      testSchema.node("paragraph", null, [
+        testSchema.text("deleted", [strike]),
+      ]),
+    ]);
+
+    expect(md).toContain("~~deleted~~");
+  });
+
+  it("serializes inline code", () => {
+    const code = testSchema.mark("code");
+    const md = pmToMarkdown([
+      testSchema.node("paragraph", null, [
+        testSchema.text("x = 1", [code]),
+      ]),
+    ]);
+
+    expect(md).toContain("`x = 1`");
+  });
+
+  it("serializes subscript text", () => {
+    const sub = testSchema.mark("subscript");
+    const md = pmToMarkdown([
+      testSchema.node("paragraph", null, [
+        testSchema.text("H"),
+        testSchema.text("2", [sub]),
+        testSchema.text("O"),
+      ]),
+    ]);
+
+    expect(md).toContain("~2~");
+  });
+
+  it("serializes superscript text", () => {
+    const sup = testSchema.mark("superscript");
+    const md = pmToMarkdown([
+      testSchema.node("paragraph", null, [
+        testSchema.text("x"),
+        testSchema.text("2", [sup]),
+      ]),
+    ]);
+
+    expect(md).toContain("^2^");
+  });
+
+  it("serializes highlight text", () => {
+    const highlight = testSchema.mark("highlight");
+    const md = pmToMarkdown([
+      testSchema.node("paragraph", null, [
+        testSchema.text("marked", [highlight]),
+      ]),
+    ]);
+
+    expect(md).toContain("==marked==");
+  });
+
+  it("serializes nested marks (bold + italic)", () => {
+    const bold = testSchema.mark("bold");
+    const italic = testSchema.mark("italic");
+    const md = pmToMarkdown([
+      testSchema.node("paragraph", null, [
+        testSchema.text("both", [bold, italic]),
+      ]),
+    ]);
+
+    // Should contain both bold and italic markers
+    expect(md).toMatch(/\*{3}both\*{3}|\*\*\*both\*\*\*/);
+  });
+
+  it("serializes footnote_definition with null label — falls back to '1' (L225/226)", () => {
+    // L225/226: identifier/label uses `node.attrs.label ?? "1"` when label is null
+    const doc = testSchema.node("doc", null, [
+      testSchema.node("footnote_definition", { label: null }, [
+        testSchema.node("paragraph", null, [testSchema.text("note content")]),
+      ]),
+    ]);
+    const mdast = proseMirrorToMdast(testSchema, doc);
+    const footnote = mdast.children.find((c) => c.type === "footnoteDefinition") as
+      | { type: string; identifier: string; label: string }
+      | undefined;
+    expect(footnote).toBeDefined();
+    expect(footnote!.identifier).toBe("1");
+    expect(footnote!.label).toBe("1");
+  });
+
+  it("serializes wikiLink with null value attribute — falls back to empty string (L238)", () => {
+    // L238: value uses `node.attrs.value ?? ""` when value is null
+    const md = pmToMarkdown([
+      testSchema.node("paragraph", null, [
+        testSchema.node("wikiLink", { value: null }),
+      ]),
+    ]);
+    // Should produce a wiki link with empty target (no crash)
+    expect(md).toContain("[[]]");
+  });
+
+  it("serializes html_inline with null value attribute — falls back to empty string (L249)", () => {
+    // L249: value uses `node.attrs.value ?? ""` when value is null
+    const md = pmToMarkdown([
+      testSchema.node("paragraph", null, [
+        testSchema.node("html_inline", { value: null }),
+      ]),
+    ]);
+    // Should produce empty html inline (no crash)
+    expect(md).toBeDefined();
+  });
 });

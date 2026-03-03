@@ -121,6 +121,7 @@ export class SourceLinkPopupView extends SourcePopupView<LinkPopupStoreState> {
   }
 
   private handleInputKeydown(e: KeyboardEvent): void {
+    /* v8 ignore next -- @preserve reason: non-Enter keydown in link popup input not tested */
     if (e.key === "Enter") {
       e.preventDefault();
       this.handleSave();

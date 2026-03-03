@@ -54,28 +54,18 @@ export function waitForRestoreComplete(timeoutMs = 10000): Promise<boolean> {
   }
 
   return new Promise<boolean>((resolve) => {
-    let resolved = false;
-
-    // Set up timeout
+    // Set up timeout — fires if restore takes too long.
+    // If waiterCallback hasn't been called yet, remove it from pendingWaiters.
     const timeoutId = setTimeout(() => {
-      if (!resolved) {
-        resolved = true;
-        // Remove this waiter from pending list
-        const index = pendingWaiters.indexOf(waiterCallback);
-        if (index !== -1) {
-          pendingWaiters.splice(index, 1);
-        }
-        resolve(false); // Timed out
-      }
+      const index = pendingWaiters.indexOf(waiterCallback);
+      pendingWaiters.splice(index, 1); // index is always valid: waiter is only removed here or in waiterCallback (which clears this timeout)
+      resolve(false); // Timed out
     }, timeoutMs);
 
-    // Callback to be called when restore completes
+    // Callback invoked when restore completes (only called once via notifyRestoreComplete)
     const waiterCallback = () => {
-      if (!resolved) {
-        resolved = true;
-        clearTimeout(timeoutId);
-        resolve(true);
-      }
+      clearTimeout(timeoutId);
+      resolve(true);
     };
 
     // Add to pending waiters
@@ -93,10 +83,7 @@ export function notifyRestoreComplete(): void {
 
   // Resolve all pending waiters
   while (pendingWaiters.length > 0) {
-    const waiter = pendingWaiters.shift();
-    if (waiter) {
-      waiter();
-    }
+    (pendingWaiters.shift() as () => void)();
   }
 }
 

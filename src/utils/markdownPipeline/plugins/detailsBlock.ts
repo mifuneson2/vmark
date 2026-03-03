@@ -82,6 +82,7 @@ const innerProcessor = unified()
 
 export const remarkDetailsBlock: Plugin<[], Root> = function () {
   const data = this.data() as { toMarkdownExtensions?: ToMarkdownExtension[] };
+  // v8 ignore next -- @preserve reason: toMarkdownExtensions is always undefined on first remarkDetailsBlock invocation per processor; the ?? [] right-hand branch is skipped if a second plugin instance is added, but that is not a supported use case
   data.toMarkdownExtensions = data.toMarkdownExtensions ?? [];
   data.toMarkdownExtensions.push({ handlers: { details: detailsHandler } });
 
@@ -111,6 +112,7 @@ function transformDetailsBlocks(children: Content[]): Content[] {
       continue;
     }
 
+    // v8 ignore next -- @preserve reason: remark always sets html node.value; the ?? "" fallback is a defensive guard that is structurally unreachable
     const openInfo = parseDetailsOpen(node.value ?? "");
     const inner: Content[] = [];
     let closed = false;
@@ -196,6 +198,7 @@ function parseDetailsHtmlBlock(value: string): Details | null {
   const openTag = openTagMatch[0];
   const open = /\bopen\b/i.test(openTag);
   const summaryMatch = value.match(SUMMARY_RE);
+  // v8 ignore next -- @preserve reason: summaryMatch?.[1] is a string when the regex matches; the ?? "Details" right-hand branch triggers only when summaryMatch is null (no <summary> tag in single-block HTML), a rare path
   const summary = (summaryMatch?.[1] ?? "Details").trim() || "Details";
 
   const openTagEnd = openIndex + openTag.length;
@@ -233,6 +236,7 @@ function extractSummaryFromChildren(
     return { children };
   }
 
+  // v8 ignore next -- @preserve reason: summaryMatch[1] is always a string when the regex matches (capturing group always present); the ?? "Details" branch is unreachable
   const summary = (summaryMatch[1] ?? "Details").trim() || "Details";
   return { summary, children: rest };
 }

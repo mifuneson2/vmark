@@ -326,6 +326,7 @@ export async function pruneSnapshots(documentPath: string): Promise<void> {
       historyLog(`Pruned ${toRemove.length} old snapshots`);
     }
   } catch (error) {
+    /* v8 ignore next -- @preserve reason: catch only fires on Tauri filesystem errors; not reproducible in mocked tests */
     console.error("[History] Failed to prune snapshots:", error);
   }
 }
@@ -344,6 +345,7 @@ export async function markAsDeleted(documentPath: string): Promise<void> {
 
     historyLog("Marked as deleted:", documentPath);
   } catch (error) {
+    /* v8 ignore next -- @preserve reason: catch only fires on Tauri filesystem errors; not reproducible in mocked tests */
     console.error("[History] Failed to mark as deleted:", error);
   }
 }
@@ -377,6 +379,7 @@ export async function deleteSnapshot(
 
     historyLog("Deleted snapshot:", snapshotId);
   } catch (error) {
+    /* v8 ignore next -- @preserve reason: catch only fires on Tauri filesystem errors; not reproducible in mocked tests */
     console.error("[History] Failed to delete snapshot:", error);
   }
 }

@@ -108,7 +108,9 @@ export function canNativeRedo(): boolean {
     return redoDepth(view.state) > 0;
   } else {
     const editor = useTiptapEditorStore.getState().editor;
+    /* v8 ignore start -- editor is always set when this is called; null guard is defensive */
     if (!editor) return false;
+    /* v8 ignore stop */
     return editor.can().redo();
   }
 }

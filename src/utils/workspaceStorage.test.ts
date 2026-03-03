@@ -127,6 +127,31 @@ describe("windowScopedStorage", () => {
   it("returns null for non-existent key", () => {
     expect(windowScopedStorage.getItem("ignored")).toBeNull();
   });
+
+  it("swallows QuotaExceededError on setItem", () => {
+    // Simulate QuotaExceededError
+    const originalSetItem = Storage.prototype.setItem;
+    Storage.prototype.setItem = () => {
+      const error = new DOMException("quota exceeded", "QuotaExceededError");
+      throw error;
+    };
+
+    // Should not throw
+    expect(() => windowScopedStorage.setItem("ignored", "data")).not.toThrow();
+
+    Storage.prototype.setItem = originalSetItem;
+  });
+
+  it("rethrows non-quota errors on setItem", () => {
+    const originalSetItem = Storage.prototype.setItem;
+    Storage.prototype.setItem = () => {
+      throw new Error("some other error");
+    };
+
+    expect(() => windowScopedStorage.setItem("ignored", "data")).toThrow("some other error");
+
+    Storage.prototype.setItem = originalSetItem;
+  });
 });
 
 describe("findActiveWorkspaceLabel", () => {
@@ -201,5 +226,86 @@ describe("findActiveWorkspaceLabel", () => {
       JSON.stringify({ state: { isWorkspaceMode: true, rootPath: null, config: {} } })
     );
     expect(findActiveWorkspaceLabel()).toBeNull();
+  });
+});
+
+describe("findActiveWorkspaceLabel — additional branch coverage", () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it("skips null keys returned by localStorage.key(i) (line 123 !key branch)", () => {
+    // Add a valid workspace entry to ensure iteration happens
+    localStorage.setItem(
+      "vmark-workspace:main",
+      JSON.stringify({ state: { isWorkspaceMode: true, rootPath: "/ws", config: {} } })
+    );
+
+    // Monkey-patch localStorage.key to return null for index 0, real key for index 1
+    const originalKey = Storage.prototype.key;
+    let keyCallCount = 0;
+    Storage.prototype.key = function (index: number) {
+      // On even calls return null to exercise the !key branch
+      if (keyCallCount++ % 2 === 0 && index === 0) return null;
+      return originalKey.call(this, index);
+    };
+
+    // Should not throw and should still find the active workspace via later iterations
+    expect(() => findActiveWorkspaceLabel()).not.toThrow();
+
+    Storage.prototype.key = originalKey;
+  });
+
+  it("skips entries where getItem returns empty string (line 130 !raw branch)", () => {
+    // Set up a key that matches the prefix/label filter but has empty value
+    localStorage.setItem("vmark-workspace:main", "");
+
+    // Should not throw — empty raw value is skipped
+    const result = findActiveWorkspaceLabel();
+    expect(result).toBeNull();
+  });
+
+  it("skips entries where getItem returns null (line 130 !raw branch)", () => {
+    // Simulate a key existing but getItem returning null
+    // We can achieve this by adding any key that matches the prefix pattern
+    // then patching getItem to return null for that key
+    const originalGetItem = Storage.prototype.getItem;
+    Storage.prototype.getItem = function (_key: string) {
+      return null;
+    };
+    // Manually simulate localStorage.length > 0 and a matching key
+    // by restoring getItem only for key() calls
+    Storage.prototype.getItem = originalGetItem;
+
+    localStorage.setItem(
+      "vmark-workspace:doc-1",
+      JSON.stringify({ state: { isWorkspaceMode: true, rootPath: "/ws", config: {} } })
+    );
+
+    const patchedGetItem = Storage.prototype.getItem;
+    Storage.prototype.getItem = function (key: string) {
+      if (key === "vmark-workspace:doc-1") return null;
+      return patchedGetItem.call(this, key);
+    };
+
+    const result = findActiveWorkspaceLabel();
+    expect(result).toBeNull();
+
+    Storage.prototype.getItem = patchedGetItem;
+  });
+});
+
+describe("migrateWorkspaceStorage error handling", () => {
+  it("swallows errors and does not throw (line 86)", () => {
+    // Simulate localStorage.getItem throwing
+    const originalGetItem = Storage.prototype.getItem;
+    Storage.prototype.getItem = () => {
+      throw new Error("localStorage unavailable");
+    };
+
+    // Should not throw
+    expect(() => migrateWorkspaceStorage()).not.toThrow();
+
+    Storage.prototype.getItem = originalGetItem;
   });
 });

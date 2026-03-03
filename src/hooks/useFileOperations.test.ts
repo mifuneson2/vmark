@@ -4,12 +4,14 @@
  * @module hooks/useFileOperations.test
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { renderHook } from "@testing-library/react";
 
 // Hoist mocks to avoid "Cannot access before initialization" errors
 const {
   mockInvoke, mockClose, mockCloseTab, mockDetachTab, mockReadTextFile,
   mockInitDocument, mockSetLineMetadata, mockAddFile,
   mockCreateTab, mockSetActiveTab,
+  mockUseFileShortcuts,
 } = vi.hoisted(() => ({
   mockInvoke: vi.fn(() => Promise.resolve()),
   mockClose: vi.fn(() => Promise.resolve()),
@@ -21,6 +23,7 @@ const {
   mockAddFile: vi.fn(),
   mockCreateTab: vi.fn(() => "new-tab-id"),
   mockSetActiveTab: vi.fn(),
+  mockUseFileShortcuts: vi.fn(),
 }));
 
 vi.mock("@tauri-apps/api/webviewWindow", () => ({
@@ -93,7 +96,15 @@ vi.mock("@/hooks/useReplaceableTab", () => ({
   findExistingTabForPath: vi.fn(() => null),
 }));
 
-import { moveTabToNewWorkspaceWindow, openFileInNewTabCore } from "./useFileOperations";
+vi.mock("@/contexts/WindowContext", () => ({
+  useWindowLabel: vi.fn(() => "main"),
+}));
+
+vi.mock("./useFileShortcuts", () => ({
+  useFileShortcuts: mockUseFileShortcuts,
+}));
+
+import { moveTabToNewWorkspaceWindow, openFileInNewTabCore, useFileOperations } from "./useFileOperations";
 import { useWorkspaceStore } from "@/stores/workspaceStore";
 import { useTabStore } from "@/stores/tabStore";
 import { isWithinRoot } from "@/utils/paths";
@@ -286,5 +297,29 @@ describe("openFileInNewTabCore", () => {
     await openFileInNewTabCore("main", "/path/to/binary.png");
 
     expect(mockAddFile).not.toHaveBeenCalled();
+  });
+});
+
+describe("useFileOperations hook", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("delegates to useFileShortcuts with the current window label", () => {
+    renderHook(() => useFileOperations());
+
+    expect(mockUseFileShortcuts).toHaveBeenCalledWith("main");
+  });
+
+  it("passes window label from context to useFileShortcuts", async () => {
+    const { useWindowLabel } = await import("@/contexts/WindowContext");
+    vi.mocked(useWindowLabel).mockReturnValue("doc-1");
+
+    renderHook(() => useFileOperations());
+
+    expect(mockUseFileShortcuts).toHaveBeenCalledWith("doc-1");
+
+    // Reset to default
+    vi.mocked(useWindowLabel).mockReturnValue("main");
   });
 });

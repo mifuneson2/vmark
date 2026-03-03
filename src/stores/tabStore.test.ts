@@ -749,5 +749,118 @@ describe("tabStore", () => {
       // Should not throw, tabs unchanged
       expect(store.getTabsByWindow("main")).toHaveLength(2);
     });
+
+    it("does nothing for invalid toIndex (negative)", () => {
+      const store = useTabStore.getState();
+
+      const id1 = store.createTab("main", "/file1.md");
+      store.createTab("main", "/file2.md");
+
+      store.moveTabToIndex("main", id1, -1);
+
+      const tabs = store.getTabsByWindow("main");
+      expect(tabs[0].id).toBe(id1);
+    });
+
+    it("does nothing for invalid toIndex (out of range)", () => {
+      const store = useTabStore.getState();
+
+      const id1 = store.createTab("main", "/file1.md");
+      store.createTab("main", "/file2.md");
+
+      store.moveTabToIndex("main", id1, 10);
+
+      const tabs = store.getTabsByWindow("main");
+      expect(tabs[0].id).toBe(id1);
+    });
+  });
+
+  describe("detachTab", () => {
+    it("removes tab without adding to closed history", () => {
+      const store = useTabStore.getState();
+
+      const id1 = store.createTab("main", "/file1.md");
+      store.createTab("main", "/file2.md");
+
+      store.detachTab("main", id1);
+
+      expect(store.getTabsByWindow("main")).toHaveLength(1);
+      const state = useTabStore.getState();
+      expect(state.closedTabs["main"] ?? []).toHaveLength(0);
+    });
+
+    it("activates adjacent tab when detaching active tab", () => {
+      const store = useTabStore.getState();
+
+      store.createTab("main", "/file1.md");
+      const id2 = store.createTab("main", "/file2.md");
+      const id3 = store.createTab("main", "/file3.md");
+
+      store.setActiveTab("main", id2);
+      store.detachTab("main", id2);
+
+      expect(store.getActiveTab("main")?.id).toBe(id3);
+    });
+
+    it("sets active to null when detaching the last tab", () => {
+      const store = useTabStore.getState();
+
+      const id = store.createTab("main", "/file.md");
+      store.detachTab("main", id);
+
+      expect(store.getActiveTab("main")).toBeNull();
+    });
+
+    it("does nothing for non-existent tab", () => {
+      const store = useTabStore.getState();
+
+      store.createTab("main", "/file1.md");
+      store.detachTab("main", "non-existent-id");
+
+      expect(store.getTabsByWindow("main")).toHaveLength(1);
+    });
+
+    it("does not change active tab when detaching non-active tab", () => {
+      const store = useTabStore.getState();
+
+      store.createTab("main", "/file1.md");
+      const id2 = store.createTab("main", "/file2.md");
+      const id3 = store.createTab("main", "/file3.md");
+
+      store.setActiveTab("main", id3);
+      store.detachTab("main", id2);
+
+      expect(store.getActiveTab("main")?.id).toBe(id3);
+    });
+
+    it("selects left tab when detaching rightmost active tab", () => {
+      const store = useTabStore.getState();
+
+      store.createTab("main", "/file1.md");
+      const id2 = store.createTab("main", "/file2.md");
+      const id3 = store.createTab("main", "/file3.md");
+
+      store.setActiveTab("main", id3);
+      store.detachTab("main", id3);
+
+      expect(store.getActiveTab("main")?.id).toBe(id2);
+    });
+  });
+
+  describe("closeTabsToRight with active tab on the right", () => {
+    it("adjusts active tab when it was to the right of anchor", () => {
+      const store = useTabStore.getState();
+
+      const id1 = store.createTab("main", "/file1.md");
+      store.createTab("main", "/file2.md");
+      store.createTab("main", "/file3.md");
+
+      // Active is the last tab (file3) which is to the right of id1
+      store.closeTabsToRight("main", id1);
+
+      // Active tab (file3) was closed, should adjust to id1 (the kept tab)
+      expect(store.getActiveTab("main")?.id).toBe(id1);
+      expect(store.getTabsByWindow("main")).toHaveLength(1);
+    });
   });
 });

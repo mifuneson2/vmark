@@ -16,6 +16,7 @@ export function createSourceLinkCreatePopupPlugin() {
     class SourceLinkCreatePopupPluginInstance {
       private popupView: SourceLinkCreatePopupView;
 
+      /* v8 ignore start -- @preserve reason: CodeMirror ViewPlugin lifecycle callbacks only run inside a live CM editor; not instantiated in unit tests */
       constructor(view: EditorView) {
         this.popupView = new SourceLinkCreatePopupView(view);
       }
@@ -27,6 +28,7 @@ export function createSourceLinkCreatePopupPlugin() {
       destroy() {
         this.popupView.destroy();
       }
+      /* v8 ignore stop */
     }
   );
 }

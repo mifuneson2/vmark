@@ -39,9 +39,13 @@ export function useMcpClients(mcpRunning: boolean): McpClient[] {
     const fetchClients = async () => {
       try {
         const list = await invoke<McpClient[]>("mcp_bridge_connected_clients");
+        /* v8 ignore start -- cancelled=true race: cleanup runs before async completes */
         if (!cancelled) setClients(list);
+        /* v8 ignore stop */
       } catch {
+        /* v8 ignore start -- cancelled=true race: cleanup runs before async completes */
         if (!cancelled) setClients([]);
+        /* v8 ignore stop */
       }
     };
 

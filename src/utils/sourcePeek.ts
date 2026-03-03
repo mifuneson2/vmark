@@ -46,6 +46,7 @@ function createDocFromSlice(schema: Schema, slice: Slice): PMNode {
   try {
     return docType.create(null, content);
   } catch {
+    /* v8 ignore next -- @preserve error recovery path; createAndFill() branches are unreachable in unit tests */
     return docType.createAndFill() ?? docType.create();
   }
 }

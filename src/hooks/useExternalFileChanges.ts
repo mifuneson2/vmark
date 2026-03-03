@@ -175,6 +175,7 @@ export function useExternalFileChanges(): void {
         await handleDirtyChange(pending[0].tabId, pending[0].filePath);
       } else {
         // Multiple files - show batch dialog
+        /* v8 ignore next -- @preserve || "file" fallback fires only when getFileName returns "" (path is "/"); effectively unreachable in production */
         const fileNames = pending.map((p) => getFileName(p.filePath) || "file").join(", ");
         const result = await message(
           `${pending.length} files have been modified externally:\n${fileNames}\n\nWhat would you like to do?`,
@@ -249,6 +250,7 @@ export function useExternalFileChanges(): void {
   const handleModifyEvent = useCallback(
     async (tabId: string, changedPath: string, diskContent: string) => {
       const doc = useDocumentStore.getState().getDocument(tabId);
+      /* v8 ignore next -- @preserve doc is always defined when tabId is from an open tab; null branch is defensive */
       if (!doc) return;
 
       // File reappeared after deletion — always reload and clear missing
@@ -290,6 +292,7 @@ export function useExternalFileChanges(): void {
     let cancelled = false;
 
     const setupListener = async () => {
+      /* v8 ignore next -- @preserve cancelled is only true during React cleanup; race condition branch */
       if (cancelled) return;
 
       const unlisten = await listen<FsChangeEvent>("fs:changed", async (event) => {

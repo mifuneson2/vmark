@@ -298,6 +298,26 @@ describe("handleClosingBracket", () => {
 /*  handleBackspacePair                                                */
 /* ================================================================== */
 
+describe("handleTextInput — normalizeRightDoubleQuote branch", () => {
+  it("normalizes right double curly quote to left when normalizeRightDoubleQuote is true", () => {
+    // \u201D is the right/closing curly quote; with normalization it becomes \u201C (opening)
+    // and auto-pair should insert \u201C\u201D pair.
+    // Requires includeCJK: true so getClosingChar recognises \u201C.
+    const config: AutoPairConfig = {
+      enabled: true,
+      includeCJK: true,
+      includeCurlyQuotes: true,
+      normalizeRightDoubleQuote: true,
+    };
+    const state = createState("", 0);
+    const { view } = createMockView(state);
+    const handled = handleTextInput(view, 1, 1, "\u201D", config);
+    expect(handled).toBe(true);
+    // \u201D is normalized to \u201C, which pairs with \u201D
+    expect(getText(view.state)).toBe("\u201C\u201D");
+  });
+});
+
 describe("handleBackspacePair", () => {
   it("deletes curly quote pair when cursor is between them", () => {
     const state = createState("\u201C\u201D", 1);

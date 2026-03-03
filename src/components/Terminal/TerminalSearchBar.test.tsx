@@ -145,4 +145,120 @@ describe("TerminalSearchBar", () => {
       expect(addon.findNext).toHaveBeenCalled();
     });
   });
+
+  describe("button clicks", () => {
+    it("previous button calls findPrevious", () => {
+      render(<TerminalSearchBar getSearchAddon={getSearchAddon} onClose={onClose} />);
+      const input = screen.getByPlaceholderText("Search...");
+      fireEvent.change(input, { target: { value: "test" } });
+      vi.clearAllMocks();
+
+      const prevBtn = screen.getByTitle("Previous (Shift+Enter)");
+      fireEvent.click(prevBtn);
+      expect(addon.findPrevious).toHaveBeenCalledWith("test");
+    });
+
+    it("next button calls findNext", () => {
+      render(<TerminalSearchBar getSearchAddon={getSearchAddon} onClose={onClose} />);
+      const input = screen.getByPlaceholderText("Search...");
+      fireEvent.change(input, { target: { value: "test" } });
+      vi.clearAllMocks();
+
+      const nextBtn = screen.getByTitle("Next (Enter)");
+      fireEvent.click(nextBtn);
+      expect(addon.findNext).toHaveBeenCalledWith("test");
+    });
+
+    it("close button clears decorations and calls onClose", () => {
+      render(<TerminalSearchBar getSearchAddon={getSearchAddon} onClose={onClose} />);
+
+      const closeBtn = screen.getByTitle("Close (Escape)");
+      fireEvent.click(closeBtn);
+      expect(addon.clearDecorations).toHaveBeenCalled();
+      expect(onClose).toHaveBeenCalled();
+    });
+
+    it("prev/next buttons are disabled when query is empty", () => {
+      render(<TerminalSearchBar getSearchAddon={getSearchAddon} onClose={onClose} />);
+
+      const prevBtn = screen.getByTitle("Previous (Shift+Enter)");
+      const nextBtn = screen.getByTitle("Next (Enter)");
+      expect(prevBtn).toBeDisabled();
+      expect(nextBtn).toBeDisabled();
+    });
+
+    it("prev/next buttons are enabled when query is non-empty", () => {
+      render(<TerminalSearchBar getSearchAddon={getSearchAddon} onClose={onClose} />);
+      const input = screen.getByPlaceholderText("Search...");
+      fireEvent.change(input, { target: { value: "hello" } });
+
+      const prevBtn = screen.getByTitle("Previous (Shift+Enter)");
+      const nextBtn = screen.getByTitle("Next (Enter)");
+      expect(prevBtn).not.toBeDisabled();
+      expect(nextBtn).not.toBeDisabled();
+    });
+  });
+
+  describe("edge cases", () => {
+    it("clearing input clears decorations", () => {
+      render(<TerminalSearchBar getSearchAddon={getSearchAddon} onClose={onClose} />);
+      const input = screen.getByPlaceholderText("Search...");
+      fireEvent.change(input, { target: { value: "test" } });
+      vi.clearAllMocks();
+
+      fireEvent.change(input, { target: { value: "" } });
+      expect(addon.clearDecorations).toHaveBeenCalled();
+      expect(addon.findNext).not.toHaveBeenCalled();
+    });
+
+    it("handles null search addon gracefully on input", () => {
+      const nullAddonGetter = () => null;
+      render(<TerminalSearchBar getSearchAddon={nullAddonGetter} onClose={onClose} />);
+      const input = screen.getByPlaceholderText("Search...");
+
+      // Should not throw
+      expect(() => {
+        fireEvent.change(input, { target: { value: "test" } });
+      }).not.toThrow();
+    });
+
+    it("handles null search addon gracefully on Enter", () => {
+      const nullAddonGetter = () => null;
+      render(<TerminalSearchBar getSearchAddon={nullAddonGetter} onClose={onClose} />);
+      const input = screen.getByPlaceholderText("Search...");
+      fireEvent.change(input, { target: { value: "test" } });
+
+      expect(() => {
+        fireEvent.keyDown(input, { key: "Enter" });
+      }).not.toThrow();
+    });
+
+    it("handles null search addon gracefully on close", () => {
+      const nullAddonGetter = () => null;
+      render(<TerminalSearchBar getSearchAddon={nullAddonGetter} onClose={onClose} />);
+
+      expect(() => {
+        fireEvent.keyDown(screen.getByPlaceholderText("Search..."), { key: "Escape" });
+      }).not.toThrow();
+      expect(onClose).toHaveBeenCalled();
+    });
+
+    it("compositionEnd with empty query clears decorations", () => {
+      render(<TerminalSearchBar getSearchAddon={getSearchAddon} onClose={onClose} />);
+      const input = screen.getByPlaceholderText("Search...");
+
+      fireEvent.compositionStart(input);
+      // Simulate composition that results in empty (user cancelled)
+      fireEvent.change(input, { target: { value: "" } });
+      fireEvent.compositionEnd(input);
+
+      expect(addon.clearDecorations).toHaveBeenCalled();
+    });
+
+    it("auto-focuses the input on mount", () => {
+      render(<TerminalSearchBar getSearchAddon={getSearchAddon} onClose={onClose} />);
+      const input = screen.getByPlaceholderText("Search...");
+      expect(document.activeElement).toBe(input);
+    });
+  });
 });

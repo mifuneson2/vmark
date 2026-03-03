@@ -63,6 +63,7 @@ export function fixCompositionSplitBlock(
   try {
     textAtPos = state.doc.textBetween(startPos, pinyinEnd);
   } catch {
+    /* v8 ignore next -- @preserve textBetween only throws for out-of-range positions; guarded by pinyinEnd check above */
     return null;
   }
   if (textAtPos !== pinyin) return null;

@@ -108,7 +108,11 @@ export function UpdateIndicator() {
       restartApp();
     } else if (status === "error") {
       checkForUpdates();
+    /* v8 ignore start -- @preserve unreachable else: getIndicatorConfig only returns non-null for checking/downloading/available/ready/error statuses */
+    } else {
+      // no-op for any other clickable status
     }
+    /* v8 ignore stop */
   };
 
   return (

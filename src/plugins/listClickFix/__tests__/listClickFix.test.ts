@@ -507,4 +507,39 @@ describe("handleClick direct tests", () => {
 
     editor.destroy();
   });
+
+  it("returns false when schema has no listItem type", () => {
+    // Use an editor without list support by checking with a schema without listItem
+    const noListSchema = new Schema({
+      nodes: {
+        doc: { content: "paragraph+" },
+        paragraph: { content: "text*" },
+        text: { inline: true },
+      },
+    });
+    const listItemType = findListItemType(noListSchema);
+    expect(listItemType).toBeUndefined();
+  });
+
+  it("returns false when posAtDOM result is not in empty list item (scenario 2 guard)", () => {
+    // Create editor where DOM <li> contains text — scenario 2 guard
+    const editor = createEditor(
+      "<ul><li>Not empty</li></ul><p>After</p>"
+    );
+    const view = editor.view;
+
+    const liElement = view.dom.querySelector("li")!;
+    expect(liElement).toBeDefined();
+
+    // pos outside list (paragraph), target is in <li> but it's not empty
+    const afterPos = findTextPos(editor.state.doc, "After");
+    const event = new MouseEvent("click");
+    Object.defineProperty(event, "target", { value: liElement });
+    const result = handleClick(view, afterPos, event);
+
+    // Should return false because the <li> is not empty
+    expect(result).toBe(false);
+
+    editor.destroy();
+  });
 });

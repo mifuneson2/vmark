@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { buildDetailsBlock, buildAlertBlock, buildMathBlock } from "./sourceInsertions";
+import {
+  buildDetailsBlock,
+  buildAlertBlock,
+  buildMathBlock,
+  buildDiagramBlock,
+  buildMarkmapBlock,
+} from "./sourceInsertions";
 
 describe("buildDetailsBlock", () => {
   it("creates details block without selection", () => {
@@ -68,5 +74,37 @@ describe("buildMathBlock", () => {
   it("handles multiline math content", () => {
     const result = buildMathBlock("a = 1\nb = 2");
     expect(result.text).toBe("$$\na = 1\nb = 2\n$$");
+  });
+});
+
+describe("buildDiagramBlock", () => {
+  it("creates diagram block with default content when no selection", () => {
+    const result = buildDiagramBlock("");
+    expect(result.text).toContain("```mermaid\n");
+    expect(result.text).toContain("\n```");
+    expect(result.text).toContain("graph TD");
+    expect(result.cursorOffset).toBe("```mermaid\n".length);
+  });
+
+  it("wraps selection in diagram block", () => {
+    const result = buildDiagramBlock("flowchart LR\n  A --> B");
+    expect(result.text).toBe("```mermaid\nflowchart LR\n  A --> B\n```");
+    expect(result.cursorOffset).toBe("```mermaid\n".length);
+  });
+});
+
+describe("buildMarkmapBlock", () => {
+  it("creates markmap block with default content when no selection", () => {
+    const result = buildMarkmapBlock("");
+    expect(result.text).toContain("```markmap\n");
+    expect(result.text).toContain("\n```");
+    expect(result.text).toContain("# Mindmap");
+    expect(result.cursorOffset).toBe("```markmap\n".length);
+  });
+
+  it("wraps selection in markmap block", () => {
+    const result = buildMarkmapBlock("# My Map\n## Branch");
+    expect(result.text).toBe("```markmap\n# My Map\n## Branch\n```");
+    expect(result.cursorOffset).toBe("```markmap\n".length);
   });
 });

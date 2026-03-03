@@ -65,5 +65,14 @@ describe("workspaceBootstrap", () => {
       };
       expect(needsBootstrap(state)).toBe(false);
     });
+
+    it("returns false when isWorkspaceMode is true but rootPath is null (line 50)", () => {
+      const state: WorkspaceBootstrapState = {
+        rootPath: null,
+        config: null,
+        isWorkspaceMode: true,
+      };
+      expect(needsBootstrap(state)).toBe(false);
+    });
   });
 });

@@ -131,6 +131,7 @@ export class LinkPopupView extends WysiwygPopupView<LinkPopupState> {
 
   private handleInputKeydown = (e: KeyboardEvent) => {
     if (isImeKeyEvent(e)) return;
+    /* v8 ignore start -- @preserve non-Enter/Escape keys are not handled */
     if (e.key === "Enter") {
       e.preventDefault();
       this.handleSave();
@@ -139,6 +140,7 @@ export class LinkPopupView extends WysiwygPopupView<LinkPopupState> {
       this.closePopup();
       this.focusEditor();
     }
+    /* v8 ignore stop */
   };
 
   private handleSave = () => {
@@ -195,6 +197,7 @@ export class LinkPopupView extends WysiwygPopupView<LinkPopupState> {
 
     // External link - open in browser
     import("@tauri-apps/plugin-opener").then(({ openUrl }) => {
+      /* v8 ignore next -- @preserve openUrl failure is a Tauri runtime error; not testable in jsdom */
       openUrl(href).catch((error: unknown) => {
         console.error("Failed to open link:", error);
       });

@@ -77,6 +77,7 @@ export function createListBlankLinePlugin() {
         const doc = view.state.doc;
         const totalLines = doc.lines;
 
+        /* v8 ignore next -- @preserve zero-lines guard: tests always use documents with content */
         if (totalLines === 0) return builder.finish();
 
         // Pass 1: Classify all lines

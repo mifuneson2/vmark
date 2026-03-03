@@ -307,4 +307,103 @@ describe("unifiedHistoryStore", () => {
       expect(useUnifiedHistoryStore.getState().isRestoring).toBe(false);
     });
   });
+
+  describe("pushUndo", () => {
+    it("pushes to undo stack without clearing redo", () => {
+      const store = useUnifiedHistoryStore.getState();
+
+      // Set up redo stack first
+      store.pushRedo(TAB_A, createCheckpointData("Redo-1"));
+      expect(store.canRedoCheckpoint(TAB_A)).toBe(true);
+
+      // pushUndo should NOT clear redo stack
+      store.pushUndo(TAB_A, createCheckpointData("Undo-1"));
+
+      expect(store.canUndoCheckpoint(TAB_A)).toBe(true);
+      expect(store.canRedoCheckpoint(TAB_A)).toBe(true);
+    });
+
+    it("adds checkpoint with timestamp", () => {
+      const store = useUnifiedHistoryStore.getState();
+      const before = Date.now();
+
+      store.pushUndo(TAB_A, createCheckpointData("Content"));
+
+      const checkpoint = store.popUndo(TAB_A);
+      expect(checkpoint).not.toBeNull();
+      expect(checkpoint!.markdown).toBe("Content");
+      expect(checkpoint!.timestamp).toBeGreaterThanOrEqual(before);
+    });
+
+    it("trims undo stack when exceeding maxCheckpoints", () => {
+      const store = useUnifiedHistoryStore.getState();
+      const max = store.maxCheckpoints;
+
+      for (let i = 0; i < max + 10; i++) {
+        store.pushUndo(TAB_A, createCheckpointData(`Content ${i}`));
+      }
+
+      let count = 0;
+      while (store.popUndo(TAB_A) !== null) {
+        count++;
+      }
+
+      expect(count).toBe(max);
+    });
+  });
+
+  describe("popRedo with non-existent document", () => {
+    it("returns null for non-existent document", () => {
+      const store = useUnifiedHistoryStore.getState();
+      expect(store.popRedo("non-existent-tab")).toBeNull();
+    });
+  });
+
+  describe("createCheckpoint on new document (no prior history)", () => {
+    it("creates history entry for new document", () => {
+      const store = useUnifiedHistoryStore.getState();
+
+      // No prior documents entry for TAB_A
+      store.createCheckpoint(TAB_A, createCheckpointData("First checkpoint"));
+
+      expect(store.canUndoCheckpoint(TAB_A)).toBe(true);
+      const cp = store.popUndo(TAB_A);
+      expect(cp!.markdown).toBe("First checkpoint");
+    });
+  });
+
+  describe("pushRedo / pushUndo on new document (no prior history)", () => {
+    it("creates history entry for new document via pushRedo", () => {
+      const store = useUnifiedHistoryStore.getState();
+
+      store.pushRedo(TAB_A, createCheckpointData("Redo content"));
+
+      expect(store.canRedoCheckpoint(TAB_A)).toBe(true);
+    });
+
+    it("creates history entry for new document via pushUndo", () => {
+      const store = useUnifiedHistoryStore.getState();
+
+      store.pushUndo(TAB_A, createCheckpointData("Undo content"));
+
+      expect(store.canUndoCheckpoint(TAB_A)).toBe(true);
+    });
+  });
+
+  describe("cursorInfo in checkpoints", () => {
+    it("preserves cursorInfo when provided", () => {
+      const store = useUnifiedHistoryStore.getState();
+      const cursorInfo = { line: 5, column: 10, offset: 42 };
+
+      store.createCheckpoint(TAB_A, {
+        markdown: "Content",
+        mode: "source",
+        cursorInfo: cursorInfo as never,
+      });
+
+      const cp = store.popUndo(TAB_A);
+      expect(cp!.cursorInfo).toEqual(cursorInfo);
+      expect(cp!.mode).toBe("source");
+    });
+  });
 });

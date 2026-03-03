@@ -117,4 +117,71 @@ describe("inline code boundary plugin", () => {
     expect(storedMarks).not.toBeNull();
     expect(storedMarks?.some((m) => m.type.name === "code")).toBe(true);
   });
+
+  it("does not set storedMarks when nodeAfter has no code mark (bold only)", () => {
+    // "Hello " + bold text (not code) + " world"
+    const boldMark = schema.marks.bold.create();
+    const state = EditorState.create({
+      doc: schema.node("doc", null, [
+        schema.node("paragraph", null, [
+          schema.text("Hello "),
+          schema.text("bold", [boldMark]),
+          schema.text(" world"),
+        ]),
+      ]),
+      plugins: [createInlineCodeBoundaryPlugin()],
+    });
+
+    // Move cursor to left boundary of bold text (position 7)
+    const tr = state.tr.setSelection(TextSelection.create(state.doc, 7));
+    const newState = state.apply(tr);
+
+    // Should not set storedMarks since nodeAfter has bold, not code
+    const storedMarks = newState.storedMarks;
+    const hasCode = storedMarks?.some((m) => m.type.name === "code") ?? false;
+    expect(hasCode).toBe(false);
+  });
+
+  it("does not act when cursor is at end of paragraph (no nodeAfter)", () => {
+    const state = createStateWithPlugin("Hello ", "code", "");
+
+    // Move cursor to end of paragraph (position after "code" ends)
+    const endPos = 1 + "Hello ".length + "code".length;
+    const tr = state.tr.setSelection(TextSelection.create(state.doc, endPos));
+    const newState = state.apply(tr);
+
+    // No nodeAfter at end of paragraph, should not set code mark
+    const storedMarks = newState.storedMarks;
+    expect(storedMarks).toBeNull();
+  });
+
+  it("does not act on schema without code mark", () => {
+    const noCodeSchema = new Schema({
+      nodes: {
+        doc: { content: "paragraph+" },
+        paragraph: { content: "text*", group: "block" },
+        text: { inline: true },
+      },
+      marks: {
+        bold: {
+          parseDOM: [{ tag: "strong" }],
+          toDOM() { return ["strong", 0]; },
+        },
+      },
+    });
+
+    const state = EditorState.create({
+      doc: noCodeSchema.node("doc", null, [
+        noCodeSchema.node("paragraph", null, [noCodeSchema.text("Hello world")]),
+      ]),
+      plugins: [createInlineCodeBoundaryPlugin()],
+    });
+
+    // Move cursor to position 1
+    const tr = state.tr.setSelection(TextSelection.create(state.doc, 1));
+    const newState = state.apply(tr);
+
+    // No code mark type in schema, should return null
+    expect(newState.storedMarks).toBeNull();
+  });
 });

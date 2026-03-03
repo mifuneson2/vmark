@@ -104,6 +104,7 @@ export const detailsBlockExtension = Node.create({
           if (!dispatch) return true;
 
           const tr = state.tr.insert(insertPos, detailsNode);
+          /* v8 ignore next -- @preserve null-coalesce: detailsNode always has a firstChild (summaryNode), nullish branch unreachable */
           const summarySize = detailsNode.firstChild?.nodeSize ?? 0;
           tr.setSelection(TextSelection.near(tr.doc.resolve(insertPos + 1 + summarySize + 1)));
           dispatch(tr.scrollIntoView());
@@ -125,6 +126,7 @@ export const detailsBlockExtension = Node.create({
           const paragraphEnd = $start.after($start.depth);
 
           commands.insertContentAt({ from: paragraphStart, to: paragraphEnd }, detailsNode);
+          /* v8 ignore next -- @preserve null-coalesce: detailsNode always has a firstChild (summaryNode), nullish branch unreachable */
           const summarySize = detailsNode.firstChild?.nodeSize ?? 0;
           commands.setTextSelection(paragraphStart + 1 + summarySize + 1);
           return null;

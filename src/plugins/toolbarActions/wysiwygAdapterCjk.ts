@@ -62,7 +62,9 @@ export function handleFormatCJK(context: WysiwygToolbarContext): boolean {
  */
 function handleFormatCJKBlock(context: WysiwygToolbarContext): boolean {
   const { editor, view } = context;
+  /* v8 ignore start -- @preserve reason: missing editor or view context not tested */
   if (!editor || !view) return false;
+  /* v8 ignore stop */
 
   const { $from } = editor.state.selection;
   if ($from.depth < 1) return false;

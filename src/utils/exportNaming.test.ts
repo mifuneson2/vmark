@@ -131,6 +131,13 @@ describe("extractFirstH1", () => {
     it("does not match setext H2 (dashes)", () => {
       expect(extractFirstH1("Not H1\n---")).toBeNull();
     });
+
+    it("ignores setext candidate starting with special chars (looks like syntax)", () => {
+      // A line starting with - before === looks like a list item, not a heading
+      expect(extractFirstH1("- Not a heading\n===")).toBeNull();
+      expect(extractFirstH1("> Not a heading\n===")).toBeNull();
+      expect(extractFirstH1("# Not setext\n===")).not.toBeNull(); // ATX wins
+    });
   });
 
   describe("Edge cases", () => {
@@ -465,6 +472,11 @@ describe("getExportFolderName", () => {
     it("uses fallback when file name is only dots", () => {
       expect(getExportFolderName("No H1", "/path/to/...", "Fallback")).toBe("Fallback");
     });
+
+    it("uses fallback when filePath ends with separator (empty last component, line 240 branch)", () => {
+      // "/path/to/" splits to ["", "path", "to", ""] → last part is "" → empty filename
+      expect(getExportFolderName("No H1", "/path/to/", "Fallback")).toBe("Fallback");
+    });
   });
 
   describe("Empty and edge cases", () => {
@@ -586,6 +598,14 @@ describe("getSaveFileName", () => {
 
     it("strips images but keeps alt text", () => {
       expect(getSaveFileName("# ![Alt](image.png) Title", "Untitled")).toBe("Alt Title");
+    });
+
+    it("strips reference-style links but keeps text", () => {
+      expect(getSaveFileName("# [Click Here][ref] Title", "Untitled")).toBe("Click Here Title");
+    });
+
+    it("strips reference-style images but keeps alt text", () => {
+      expect(getSaveFileName("# ![Alt][img] Title", "Untitled")).toBe("Alt Title");
     });
 
     it("handles complex mixed formatting", () => {

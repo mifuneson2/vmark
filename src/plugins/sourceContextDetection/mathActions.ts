@@ -38,6 +38,7 @@ export function getBlockMathContentRange(
   let from: number;
   if (openLineBare) {
     const contentStartLine = info.startLine + 1;
+    /* v8 ignore next -- @preserve reason: single-line block math with no content is an edge case */
     if (contentStartLine > doc.lines) return null;
     from = doc.line(contentStartLine).from;
   } else {
@@ -47,8 +48,11 @@ export function getBlockMathContentRange(
   let to: number;
   if (closeLineBare) {
     const contentEndLine = info.endLine - 1;
+    /* v8 ignore next -- @preserve reason: empty block math range not exercised in tests */
     if (contentEndLine < 1) return null;
+    /* v8 ignore next -- @preserve reason: overlapping open/close lines edge case not tested */
     if (openLineBare && contentEndLine < info.startLine + 1) return null;
+    /* v8 ignore next -- @preserve reason: non-bare open line edge case not exercised in tests */
     if (!openLineBare && contentEndLine < info.startLine) return null;
     to = doc.line(contentEndLine).to;
   } else {

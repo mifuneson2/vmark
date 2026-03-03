@@ -541,6 +541,109 @@ describe("HeadingPicker", () => {
     });
   });
 
+  describe("Empty heading text", () => {
+    it("renders (empty heading) for heading with no text", async () => {
+      setState({
+        isOpen: true,
+        headings: [{ id: "empty", text: "", level: 1, pos: 0 }],
+        anchorRect: { top: 100, bottom: 120, left: 50, right: 150 },
+      });
+
+      render(<HeadingPicker />);
+      await vi.runAllTimersAsync();
+
+      expect(screen.getByText("(empty heading)")).not.toBeNull();
+    });
+  });
+
+  describe("Keyboard navigation with empty list", () => {
+    it("ArrowDown with no headings does not crash", async () => {
+      setState({
+        isOpen: true,
+        headings: [],
+        anchorRect: { top: 100, bottom: 120, left: 50, right: 150 },
+      });
+
+      render(<HeadingPicker />);
+      await vi.runAllTimersAsync();
+
+      const container = document.querySelector(".heading-picker") as HTMLElement;
+      // ArrowDown with maxIndex = -1 should be a no-op
+      expect(() => fireEvent.keyDown(container, { key: "ArrowDown" })).not.toThrow();
+      expect(() => fireEvent.keyDown(container, { key: "ArrowUp" })).not.toThrow();
+    });
+
+    it("Enter with no filtered headings does not select", async () => {
+      setState({
+        isOpen: true,
+        headings: [],
+        anchorRect: { top: 100, bottom: 120, left: 50, right: 150 },
+      });
+
+      render(<HeadingPicker />);
+      await vi.runAllTimersAsync();
+
+      const container = document.querySelector(".heading-picker") as HTMLElement;
+      fireEvent.keyDown(container, { key: "Enter" });
+
+      expect(mockSelectHeading).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("Container bounds", () => {
+    it("uses containerBounds when provided", async () => {
+      setState({
+        isOpen: true,
+        headings: mockHeadings,
+        anchorRect: { top: 100, bottom: 120, left: 50, right: 150 },
+        containerBounds: {
+          horizontal: { left: 10, right: 790 },
+          vertical: { top: 10, bottom: 590 },
+        },
+      });
+
+      render(<HeadingPicker />);
+      await vi.runAllTimersAsync();
+
+      const picker = document.querySelector(".heading-picker") as HTMLElement;
+      expect(picker).not.toBeNull();
+    });
+
+    it("uses default anchor when anchorRect is null", async () => {
+      setState({
+        isOpen: true,
+        headings: mockHeadings,
+        anchorRect: null,
+      });
+
+      render(<HeadingPicker />);
+      await vi.runAllTimersAsync();
+
+      const picker = document.querySelector(".heading-picker") as HTMLElement;
+      expect(picker).not.toBeNull();
+    });
+  });
+
+  describe("Fallback to document.body", () => {
+    it("uses fixed positioning when no editor container available", async () => {
+      // Remove the editor container
+      editorContainer.remove();
+
+      setState({
+        isOpen: true,
+        headings: mockHeadings,
+        anchorRect: { top: 100, bottom: 120, left: 50, right: 150 },
+      });
+
+      render(<HeadingPicker />);
+      await vi.runAllTimersAsync();
+
+      const picker = document.querySelector(".heading-picker") as HTMLElement;
+      expect(picker).not.toBeNull();
+      expect(picker.style.position).toBe("fixed");
+    });
+  });
+
   describe("Selection clamping", () => {
     it("clamps selection when filter reduces list", async () => {
       setState({

@@ -154,4 +154,67 @@ describe("useCrashRecoveryCleanup", () => {
 
     expect(mockDeleteRecoverySnapshot).not.toHaveBeenCalled();
   });
+
+  it("prunes tracking for removed documents", async () => {
+    renderHook(() => useCrashRecoveryCleanup());
+
+    // First: make tab-2 dirty so it's tracked in prevDirtyRef
+    act(() => {
+      useDocumentStore.setState({
+        documents: {
+          ...useDocumentStore.getState().documents,
+          "tab-2": {
+            ...useDocumentStore.getState().documents["tab-2"],
+            content: "# Modified",
+            isDirty: true,
+          },
+        },
+      });
+    });
+
+    // Now remove tab-2's document entirely (simulate tab close cleanup)
+    act(() => {
+      const docs = { ...useDocumentStore.getState().documents };
+      delete docs["tab-2"];
+      useDocumentStore.setState({ documents: docs });
+    });
+
+    // The pruning should not cause errors — subsequent updates should still work
+    act(() => {
+      useDocumentStore.setState({
+        documents: {
+          ...useDocumentStore.getState().documents,
+          "tab-1": {
+            ...useDocumentStore.getState().documents["tab-1"],
+            isDirty: false,
+            savedContent: "# Content",
+          },
+        },
+      });
+    });
+
+    await vi.waitFor(() => {
+      expect(mockDeleteRecoverySnapshot).toHaveBeenCalledWith("tab-1");
+    });
+  });
+
+  it("does not delete snapshot when document becomes dirty (clean to dirty)", () => {
+    renderHook(() => useCrashRecoveryCleanup());
+
+    // tab-2 goes from clean to dirty — should NOT trigger deletion
+    act(() => {
+      useDocumentStore.setState({
+        documents: {
+          ...useDocumentStore.getState().documents,
+          "tab-2": {
+            ...useDocumentStore.getState().documents["tab-2"],
+            content: "# Now dirty",
+            isDirty: true,
+          },
+        },
+      });
+    });
+
+    expect(mockDeleteRecoverySnapshot).not.toHaveBeenCalled();
+  });
 });

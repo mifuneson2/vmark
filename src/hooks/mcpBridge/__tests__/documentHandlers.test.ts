@@ -261,5 +261,203 @@ describe("documentHandlers", () => {
         error: "No active editor",
       });
     });
+
+    it("returns error when no active tab (lines 141-143)", async () => {
+      // Set activeTabId to null to trigger the !activeTabId branch
+      const _origActiveTabId = mockTabStoreState.activeTabId;
+      (mockTabStoreState.activeTabId as unknown as Record<string, string | null>)["main"] = null;
+
+      const editor = {
+        state: {
+          doc: {
+            textContent: "Hello",
+            descendants: () => {},
+          },
+        },
+      };
+      mockGetEditor.mockReturnValue(editor);
+
+      await handleMetadataGet("req-13");
+
+      expect(mockRespond).toHaveBeenCalledWith({
+        id: "req-13",
+        success: false,
+        error: "No active document",
+      });
+
+      // Restore
+      (mockTabStoreState.activeTabId as unknown as Record<string, string | null>)["main"] = "tab-1";
+    });
+
+    it("extracts h1 heading as document title (lines 155-159)", async () => {
+      // descendants visits a heading with level 1 → title overrides tab.title
+      let _titleOverrideCallback: ((node: unknown) => boolean | void) | null = null;
+      const editor = {
+        state: {
+          doc: {
+            textContent: "My Heading",
+            descendants: (cb: (node: unknown) => boolean | void) => {
+              _titleOverrideCallback = cb;
+              // Call cb with a level-1 heading to trigger title override
+              const result = cb({
+                type: { name: "heading" },
+                attrs: { level: 1 },
+                textContent: "My Document Title",
+              });
+              if (result === false) return; // stop traversal
+            },
+          },
+        },
+      };
+      mockGetEditor.mockReturnValue(editor);
+
+      await handleMetadataGet("req-14");
+
+      const call = mockRespond.mock.calls[0][0];
+      expect(call.success).toBe(true);
+      expect(call.data.title).toBe("My Document Title");
+    });
+
+    it("returns wordCount 0 for empty text", async () => {
+      const editor = {
+        state: {
+          doc: {
+            textContent: "",
+            descendants: () => {},
+          },
+        },
+      };
+      mockGetEditor.mockReturnValue(editor);
+
+      await handleMetadataGet("req-empty-text");
+
+      const call = mockRespond.mock.calls[0][0];
+      expect(call.success).toBe(true);
+      expect(call.data.wordCount).toBe(0);
+      expect(call.data.characterCount).toBe(0);
+    });
+
+    it("returns Untitled when tab is not found in tabs array", async () => {
+      // Set tabs to empty array so tab lookup returns undefined
+      const origTabs = mockTabStoreState.tabs;
+      mockTabStoreState.tabs = { main: [] };
+
+      const editor = {
+        state: {
+          doc: {
+            textContent: "some text",
+            descendants: () => {},
+          },
+        },
+      };
+      mockGetEditor.mockReturnValue(editor);
+
+      await handleMetadataGet("req-no-tab");
+
+      const call = mockRespond.mock.calls[0][0];
+      expect(call.success).toBe(true);
+      expect(call.data.title).toBe("Untitled");
+
+      mockTabStoreState.tabs = origTabs;
+    });
+
+    it("returns null filePath and false isModified when document not found", async () => {
+      mockDocStoreState.getDocument.mockReturnValueOnce(null);
+
+      const editor = {
+        state: {
+          doc: {
+            textContent: "test",
+            descendants: () => {},
+          },
+        },
+      };
+      mockGetEditor.mockReturnValue(editor);
+
+      await handleMetadataGet("req-no-doc");
+
+      const call = mockRespond.mock.calls[0][0];
+      expect(call.success).toBe(true);
+      expect(call.data.filePath).toBeNull();
+      expect(call.data.isModified).toBe(false);
+    });
+
+    it("handles non-Error thrown value (String(error) branch)", async () => {
+      mockGetEditor.mockImplementation(() => {
+        throw 42;      });
+
+      await handleMetadataGet("req-ne-meta");
+
+      expect(mockRespond).toHaveBeenCalledWith({
+        id: "req-ne-meta",
+        success: false,
+        error: "42",
+      });
+    });
+  });
+
+  // ── non-Error catch branches for getContent, search, outline ──
+
+  describe("handleGetContent — non-Error catch branch", () => {
+    it("handles non-Error thrown value", async () => {
+      mockGetDocumentContent.mockImplementation(() => {
+        throw "raw string";      });
+
+      await handleGetContent("req-ne-gc");
+
+      expect(mockRespond).toHaveBeenCalledWith({
+        id: "req-ne-gc",
+        success: false,
+        error: "raw string",
+      });
+    });
+  });
+
+  describe("handleDocumentSearch — non-Error catch branch", () => {
+    it("handles non-Error thrown value", async () => {
+      mockGetEditor.mockImplementation(() => {
+        throw null;      });
+
+      await handleDocumentSearch("req-ne-ds", { query: "x" });
+
+      expect(mockRespond).toHaveBeenCalledWith({
+        id: "req-ne-ds",
+        success: false,
+        error: "null",
+      });
+    });
+  });
+
+  describe("handleOutlineGet — non-Error catch branch", () => {
+    it("handles non-Error thrown value", async () => {
+      mockGetEditor.mockImplementation(() => {
+        throw false;      });
+
+      await handleOutlineGet("req-ne-og");
+
+      expect(mockRespond).toHaveBeenCalledWith({
+        id: "req-ne-og",
+        success: false,
+        error: "false",
+      });
+    });
+  });
+
+  describe("handleDocumentSearch — lineEnd === -1 branch (no newline after match)", () => {
+    it("handles match at end of text without trailing newline", async () => {
+      const editor = {
+        state: {
+          doc: { textContent: "no newline here" },
+        },
+      };
+      mockGetEditor.mockReturnValue(editor);
+
+      await handleDocumentSearch("req-lineend", { query: "here" });
+
+      const call = mockRespond.mock.calls[0][0];
+      expect(call.success).toBe(true);
+      expect(call.data).toHaveLength(1);
+      expect(call.data[0].text).toBe("no newline here");
+    });
   });
 });

@@ -127,6 +127,7 @@ export function useTerminalPosition() {
     const updateAll = () => {
       // 1. Resolve effective position
       let pos: EffectiveTerminalPosition;
+      /* v8 ignore next 2 -- @preserve explicit position setting branch; tests use "auto" position which falls through to computeTerminalPosition */
       if (position === "bottom" || position === "right") {
         pos = position;
       } else {

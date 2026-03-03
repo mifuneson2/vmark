@@ -95,6 +95,24 @@ describe("resolveOpenAction", () => {
   });
 
   describe("when not in workspace mode", () => {
+    it("returns no_op when workspace root cannot be resolved (root-level file)", () => {
+      // /file.md has no valid parent directory → resolveWorkspaceRootForExternalFile returns null
+      const context: OpenActionContext = {
+        filePath: "/file.md",
+        workspaceRoot: null,
+        isWorkspaceMode: false,
+        existingTabId: null,
+        replaceableTab: null,
+      };
+
+      const result = resolveOpenAction(context);
+
+      expect(result).toEqual({
+        action: "no_op",
+        reason: "cannot_resolve_workspace_root",
+      });
+    });
+
     it("returns open_workspace_in_new_window for any file without replaceable tab", () => {
       const context: OpenActionContext = {
         filePath: "/some/folder/file.md",

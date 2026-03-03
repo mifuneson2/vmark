@@ -106,6 +106,106 @@ describe("updateStore", () => {
       expect(state.error).toBeNull();
       expect(state.updateInfo).toBeNull();
       expect(state.dismissed).toBe(false);
+      expect(state.downloadProgress).toBeNull();
+      expect(state.pendingUpdate).toBeNull();
+    });
+  });
+
+  describe("setUpdateInfo", () => {
+    it("sets update info", () => {
+      const info = { version: "2.0.0", notes: "New features", pubDate: "2024-01-01", currentVersion: "1.0.0" };
+      useUpdateStore.getState().setUpdateInfo(info);
+
+      expect(useUpdateStore.getState().updateInfo).toEqual(info);
+    });
+
+    it("clears update info with null", () => {
+      useUpdateStore.getState().setUpdateInfo({ version: "1.0.0", notes: "", pubDate: "", currentVersion: "0.9.0" });
+      useUpdateStore.getState().setUpdateInfo(null);
+
+      expect(useUpdateStore.getState().updateInfo).toBeNull();
+    });
+  });
+
+  describe("setDownloadProgress", () => {
+    it("sets download progress directly", () => {
+      const progress = { downloaded: 500, total: 1000 };
+      useUpdateStore.getState().setDownloadProgress(progress);
+
+      expect(useUpdateStore.getState().downloadProgress).toEqual(progress);
+    });
+
+    it("sets download progress with null total", () => {
+      const progress = { downloaded: 100, total: null };
+      useUpdateStore.getState().setDownloadProgress(progress);
+
+      expect(useUpdateStore.getState().downloadProgress).toEqual({ downloaded: 100, total: null });
+    });
+
+    it("clears download progress with null", () => {
+      useUpdateStore.getState().setDownloadProgress({ downloaded: 500, total: 1000 });
+      useUpdateStore.getState().setDownloadProgress(null);
+
+      expect(useUpdateStore.getState().downloadProgress).toBeNull();
+    });
+
+    it("accepts function updater", () => {
+      useUpdateStore.getState().setDownloadProgress({ downloaded: 100, total: 1000 });
+
+      useUpdateStore.getState().setDownloadProgress((prev) => {
+        if (!prev) return { downloaded: 0, total: 1000 };
+        return { ...prev, downloaded: prev.downloaded + 200 };
+      });
+
+      expect(useUpdateStore.getState().downloadProgress).toEqual({ downloaded: 300, total: 1000 });
+    });
+
+    it("function updater receives null when no previous progress", () => {
+      useUpdateStore.getState().setDownloadProgress((prev) => {
+        expect(prev).toBeNull();
+        return { downloaded: 0, total: 500 };
+      });
+
+      expect(useUpdateStore.getState().downloadProgress).toEqual({ downloaded: 0, total: 500 });
+    });
+  });
+
+  describe("setPendingUpdate", () => {
+    it("sets pending update", () => {
+      const fakeUpdate = { version: "2.0.0" } as never;
+      useUpdateStore.getState().setPendingUpdate(fakeUpdate);
+
+      expect(useUpdateStore.getState().pendingUpdate).toBe(fakeUpdate);
+    });
+
+    it("clears pending update with null", () => {
+      useUpdateStore.getState().setPendingUpdate({ version: "2.0.0" } as never);
+      useUpdateStore.getState().setPendingUpdate(null);
+
+      expect(useUpdateStore.getState().pendingUpdate).toBeNull();
+    });
+  });
+
+  describe("setStatus transitions", () => {
+    it("transitions through typical update flow", () => {
+      const store = useUpdateStore.getState();
+
+      store.setStatus("checking");
+      expect(useUpdateStore.getState().status).toBe("checking");
+
+      store.setStatus("available");
+      expect(useUpdateStore.getState().status).toBe("available");
+
+      store.setStatus("downloading");
+      expect(useUpdateStore.getState().status).toBe("downloading");
+
+      store.setStatus("ready");
+      expect(useUpdateStore.getState().status).toBe("ready");
+    });
+
+    it("sets up-to-date status", () => {
+      useUpdateStore.getState().setStatus("up-to-date");
+      expect(useUpdateStore.getState().status).toBe("up-to-date");
     });
   });
 });

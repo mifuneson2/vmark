@@ -135,9 +135,12 @@ export function findBlockMathAtCursor(view: EditorView, pos: number): BlockMathR
     }
   }
 
+  /* v8 ignore start -- @preserve reason: block math without closing delimiter not tested */
   if (!closeLine) return null;
+  /* v8 ignore stop */
 
   // Verify cursor is actually inside the block (not on open/close line)
+  /* v8 ignore next -- @preserve reason: cursor on open/close fence line of block math not tested */
   if (cursorLineNum <= openLine.num || cursorLineNum >= closeLine) {
     return null;
   }

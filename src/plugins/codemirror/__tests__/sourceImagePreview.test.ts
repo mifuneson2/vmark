@@ -297,3 +297,388 @@ describe("sourceImagePreview audio/video support", () => {
     expect(mockUpdateContent).toHaveBeenCalledWith("clip.mp4", expect.any(Object), "video");
   });
 });
+
+describe("sourceImagePreview findMediaAtCursor edge cases", () => {
+  let coordsSpy: ReturnType<typeof vi.spyOn>;
+  let activeView: EditorView | null = null;
+
+  beforeAll(() => {
+    coordsSpy = vi.spyOn(EditorView.prototype, "coordsAtPos").mockReturnValue({
+      top: 100,
+      left: 50,
+      bottom: 120,
+      right: 200,
+    });
+  });
+
+  afterAll(() => {
+    coordsSpy.mockRestore();
+  });
+
+  beforeEach(() => {
+    mockIsOpen = false;
+    subscribers.clear();
+    mockHide.mockClear();
+    mockHideImagePreview.mockClear();
+    mockShow.mockClear();
+    mockIsVisible.mockClear();
+    mockIsVisible.mockReturnValue(false);
+    mockUpdateContent.mockClear();
+    mockGetMediaType.mockClear();
+    mockGetMediaType.mockReturnValue("image");
+    coordsSpy.mockClear();
+  });
+
+  afterEach(() => {
+    activeView?.destroy();
+    activeView = null;
+  });
+
+  it("detects angle-bracket path syntax ![alt](<path with spaces>)", async () => {
+    const content = "![alt](<my image.png>)";
+    activeView = createView(content, 10);
+
+    await flushRaf();
+
+    expect(mockShow).toHaveBeenCalledWith(
+      "my image.png",
+      expect.any(Object),
+      activeView!.dom,
+      "image",
+    );
+  });
+
+  it("detects image with title attribute ![alt](path \"title\")", async () => {
+    const content = '![alt](image.png "Photo title")';
+    activeView = createView(content, 10);
+
+    await flushRaf();
+
+    expect(mockShow).toHaveBeenCalledWith(
+      "image.png",
+      expect.any(Object),
+      activeView!.dom,
+      "image",
+    );
+  });
+
+  it("hides preview when cursor is outside image but on same line", async () => {
+    const content = "text before ![alt](image.png) text after";
+    activeView = createView(content, 2);
+
+    await flushRaf();
+
+    expect(mockShow).not.toHaveBeenCalled();
+    expect(mockHideImagePreview).toHaveBeenCalled();
+  });
+
+  it("hides preview for range selection even inside image", async () => {
+    const content = "![alt](image.png)";
+    const state = EditorState.create({
+      doc: content,
+      selection: { anchor: 2, head: 10 },
+      extensions: [createSourceImagePreviewPlugin()],
+    });
+    activeView = new EditorView({ state, parent: document.createElement("div") });
+
+    await flushRaf();
+
+    expect(mockShow).not.toHaveBeenCalled();
+    expect(mockHideImagePreview).toHaveBeenCalled();
+  });
+
+  it("handles empty alt text ![](image.png)", async () => {
+    const content = "![](image.png)";
+    activeView = createView(content, 5);
+
+    await flushRaf();
+
+    expect(mockShow).toHaveBeenCalledWith(
+      "image.png",
+      expect.any(Object),
+      activeView!.dom,
+      "image",
+    );
+  });
+
+  it("handles cursor at exact start of image syntax", async () => {
+    const content = "![alt](image.png)";
+    activeView = createView(content, 0);
+
+    await flushRaf();
+
+    // Cursor at pos 0 is inside the match (starts at 0)
+    expect(mockShow).toHaveBeenCalledWith(
+      "image.png",
+      expect.any(Object),
+      activeView!.dom,
+      "image",
+    );
+  });
+
+  it("hides preview when cursor is at exact end of image syntax", async () => {
+    const content = "![alt](image.png)";
+    // pos === matchEnd means NOT inside (check is pos < matchEnd)
+    activeView = createView(content, content.length);
+
+    await flushRaf();
+
+    expect(mockShow).not.toHaveBeenCalled();
+  });
+
+  it("handles mouseleave to clear hover preview", async () => {
+    mockIsOpen = false;
+    const content = "![alt](image.png)";
+    activeView = createView(content, content.length); // cursor outside image
+
+    await flushRaf();
+    mockHideImagePreview.mockClear();
+
+    const leaveEvent = new MouseEvent("mouseleave", { bubbles: true });
+    activeView.dom.dispatchEvent(leaveEvent);
+
+    // mouseleave should try to clear hover — but no hover was set, so no hide call
+    // (clearHoverPreview only hides if hoverImageRange is set and currentImageRange is null)
+  });
+
+  it("hover shows preview for image not under cursor", async () => {
+    mockIsOpen = false;
+    const content = "text ![alt](image.png) more text";
+    // Cursor at end of line (not inside image)
+    activeView = createView(content, content.length);
+
+    await flushRaf();
+    mockHideImagePreview.mockClear();
+    mockShow.mockClear();
+
+    // Mock posAtCoords to return a position inside the image syntax
+    const posAtCoordsSpy = vi.spyOn(activeView, "posAtCoords").mockReturnValue(8);
+
+    const moveEvent = new MouseEvent("mousemove", {
+      clientX: 50,
+      clientY: 10,
+      bubbles: true,
+    });
+    activeView.dom.dispatchEvent(moveEvent);
+
+    // Hover should trigger show for the image
+    expect(mockShow).toHaveBeenCalledWith(
+      "image.png",
+      expect.any(Object),
+      activeView!.dom,
+      "image",
+    );
+
+    posAtCoordsSpy.mockRestore();
+  });
+
+  it("hover on same image range does nothing", async () => {
+    mockIsOpen = false;
+    const content = "text ![alt](image.png) more text";
+    activeView = createView(content, content.length);
+
+    await flushRaf();
+    mockHideImagePreview.mockClear();
+    mockShow.mockClear();
+
+    // Mock posAtCoords to return inside the image
+    const posAtCoordsSpy = vi.spyOn(activeView, "posAtCoords").mockReturnValue(8);
+
+    // First hover — shows preview
+    const moveEvent1 = new MouseEvent("mousemove", {
+      clientX: 50, clientY: 10, bubbles: true,
+    });
+    activeView.dom.dispatchEvent(moveEvent1);
+    expect(mockShow).toHaveBeenCalledTimes(1);
+
+    mockShow.mockClear();
+
+    // Second hover on same range — should be a no-op (same from/to)
+    const moveEvent2 = new MouseEvent("mousemove", {
+      clientX: 60, clientY: 10, bubbles: true,
+    });
+    activeView.dom.dispatchEvent(moveEvent2);
+    expect(mockShow).not.toHaveBeenCalled();
+
+    posAtCoordsSpy.mockRestore();
+  });
+
+  it("hover does nothing when cursor is inside an image (cursor-based preview takes priority)", async () => {
+    mockIsOpen = false;
+    const content = "![alt](image.png)";
+    // Cursor inside the image — this triggers cursor-based preview
+    activeView = createView(content, 5);
+
+    await flushRaf();
+    mockShow.mockClear();
+
+    // Mock posAtCoords for hover
+    const posAtCoordsSpy = vi.spyOn(activeView, "posAtCoords").mockReturnValue(10);
+
+    const moveEvent = new MouseEvent("mousemove", {
+      clientX: 80, clientY: 10, bubbles: true,
+    });
+    activeView.dom.dispatchEvent(moveEvent);
+
+    // currentImageRange is set, so hover is skipped
+    expect(mockShow).not.toHaveBeenCalled();
+
+    posAtCoordsSpy.mockRestore();
+  });
+
+  it("hover clears preview when posAtCoords returns null", async () => {
+    mockIsOpen = false;
+    const content = "text ![alt](image.png) more text";
+    activeView = createView(content, content.length);
+
+    await flushRaf();
+    mockHideImagePreview.mockClear();
+
+    // posAtCoords returns null (mouse outside editor area)
+    const posAtCoordsSpy = vi.spyOn(activeView, "posAtCoords").mockReturnValue(null);
+
+    const moveEvent = new MouseEvent("mousemove", {
+      clientX: -10, clientY: -10, bubbles: true,
+    });
+    activeView.dom.dispatchEvent(moveEvent);
+
+    // clearHoverPreview should be called (but no hoverImageRange was set, so no actual hide)
+    posAtCoordsSpy.mockRestore();
+  });
+
+  it("hover clears existing hover preview when moving away from image", async () => {
+    mockIsOpen = false;
+    const content = "text ![alt](image.png) more text";
+    activeView = createView(content, content.length);
+
+    await flushRaf();
+    mockHideImagePreview.mockClear();
+    mockShow.mockClear();
+
+    const posAtCoordsSpy = vi.spyOn(activeView, "posAtCoords");
+
+    // First: hover over image
+    posAtCoordsSpy.mockReturnValue(8);
+    activeView.dom.dispatchEvent(new MouseEvent("mousemove", {
+      clientX: 50, clientY: 10, bubbles: true,
+    }));
+    expect(mockShow).toHaveBeenCalled();
+    mockHideImagePreview.mockClear();
+
+    // Then: hover outside image
+    posAtCoordsSpy.mockReturnValue(0);
+    activeView.dom.dispatchEvent(new MouseEvent("mousemove", {
+      clientX: 5, clientY: 10, bubbles: true,
+    }));
+
+    // Should clear hover preview
+    expect(mockHideImagePreview).toHaveBeenCalled();
+
+    posAtCoordsSpy.mockRestore();
+  });
+
+  it("mouseleave clears hover preview when hoverImageRange is set", async () => {
+    mockIsOpen = false;
+    const content = "text ![alt](image.png) more text";
+    activeView = createView(content, content.length);
+
+    await flushRaf();
+    mockHideImagePreview.mockClear();
+
+    const posAtCoordsSpy = vi.spyOn(activeView, "posAtCoords").mockReturnValue(8);
+
+    // Hover over image to set hoverImageRange
+    activeView.dom.dispatchEvent(new MouseEvent("mousemove", {
+      clientX: 50, clientY: 10, bubbles: true,
+    }));
+    mockHideImagePreview.mockClear();
+
+    // Mouse leave
+    activeView.dom.dispatchEvent(new MouseEvent("mouseleave", { bubbles: true }));
+
+    // clearHoverPreview should hide since hoverImageRange is set and no currentImageRange
+    expect(mockHideImagePreview).toHaveBeenCalled();
+
+    posAtCoordsSpy.mockRestore();
+  });
+
+  it("does not show hover preview when coordsAtPos returns null", async () => {
+    mockIsOpen = false;
+    const content = "text ![alt](image.png) more text";
+    activeView = createView(content, content.length);
+
+    await flushRaf();
+    mockShow.mockClear();
+
+    const posAtCoordsSpy = vi.spyOn(activeView, "posAtCoords").mockReturnValue(8);
+    // Make coordsAtPos return null
+    coordsSpy.mockReturnValue(null);
+
+    activeView.dom.dispatchEvent(new MouseEvent("mousemove", {
+      clientX: 50, clientY: 10, bubbles: true,
+    }));
+
+    // showPreviewForRange should return early because coords are null
+    expect(mockShow).not.toHaveBeenCalled();
+
+    posAtCoordsSpy.mockRestore();
+    // Restore coords for other tests
+    coordsSpy.mockReturnValue({ top: 100, left: 50, bottom: 120, right: 200 });
+  });
+
+  it("update triggers scheduleCheck on selectionSet", async () => {
+    mockIsOpen = false;
+    const content = "![alt](image.png)";
+    activeView = createView(content, 0);
+
+    await flushRaf();
+    mockShow.mockClear();
+    mockHideImagePreview.mockClear();
+
+    // Move cursor into the image
+    activeView.dispatch({
+      selection: { anchor: 5 },
+    });
+
+    await flushRaf();
+
+    // After cursor move into image, preview should show
+    expect(mockShow).toHaveBeenCalled();
+  });
+
+  it("update triggers scheduleCheck on docChanged", async () => {
+    mockIsOpen = false;
+    const content = "text";
+    activeView = createView(content, 0);
+
+    await flushRaf();
+    mockShow.mockClear();
+    mockHideImagePreview.mockClear();
+
+    // Insert image syntax at cursor
+    activeView.dispatch({
+      changes: { from: 0, to: 0, insert: "![alt](image.png) " },
+      selection: { anchor: 5 },
+    });
+
+    await flushRaf();
+
+    // After doc change with cursor in new image, preview should show
+    expect(mockShow).toHaveBeenCalled();
+  });
+
+  it("cleans up event listeners on destroy", async () => {
+    const content = "![alt](image.png)";
+    activeView = createView(content, 5);
+    await flushRaf();
+
+    const removeEventSpy = vi.spyOn(activeView.dom, "removeEventListener");
+    activeView.destroy();
+    activeView = null;
+
+    // Should remove mousemove and mouseleave listeners
+    expect(removeEventSpy).toHaveBeenCalledWith("mousemove", expect.any(Function));
+    expect(removeEventSpy).toHaveBeenCalledWith("mouseleave", expect.any(Function));
+    removeEventSpy.mockRestore();
+  });
+});

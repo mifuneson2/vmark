@@ -74,6 +74,7 @@ function handleSmartSelectAll(state: EditorState, dispatch?: (tr: Transaction) =
     }
 
     // Select entire document
+    /* v8 ignore next -- @preserve dispatch is always provided by ProseMirror keyboard handlers; the no-dispatch path is a dry-run check that Tiptap never uses for this command */
     if (dispatch) {
       const tr = state.tr.setSelection(TextSelection.create(state.doc, 0, docSize));
       tr.setMeta("addToHistory", false);
@@ -86,6 +87,7 @@ function handleSmartSelectAll(state: EditorState, dispatch?: (tr: Transaction) =
     return true;
   }
 
+  /* v8 ignore next -- @preserve dispatch is always provided by ProseMirror keyboard handlers; the no-dispatch path is a dry-run check that Tiptap never uses for this command */
   if (dispatch) {
     const pluginState = smartSelectPluginKey.getState(state) ?? { stack: [], lastExpanded: null };
     const tr = state.tr.setSelection(
@@ -115,6 +117,7 @@ function handleSelectionUndo(state: EditorState, dispatch?: (tr: Transaction) =>
   const last = pluginState.lastExpanded;
   if (!last || from !== last.from || to !== last.to) {
     // Selection was changed externally — clear stack, fall through to normal undo
+    /* v8 ignore next -- @preserve dispatch is always provided by ProseMirror keyboard handlers */
     if (dispatch) {
       const tr = state.tr;
       tr.setMeta(smartSelectPluginKey, { stack: [], lastExpanded: null });
@@ -125,6 +128,7 @@ function handleSelectionUndo(state: EditorState, dispatch?: (tr: Transaction) =>
   }
 
   // Pop the stack and restore previous selection
+  /* v8 ignore next -- @preserve dispatch is always provided by ProseMirror keyboard handlers */
   if (dispatch) {
     const newStack = pluginState.stack.slice(0, -1);
     const prev = pluginState.stack[pluginState.stack.length - 1];

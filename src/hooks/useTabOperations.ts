@@ -61,7 +61,9 @@ async function cleanupOrphansIfEnabled(
  * Windows/Linux: create a new untitled tab (users expect the window to persist).
  */
 async function closeWindowIfEmpty(windowLabel: string): Promise<void> {
+  /* v8 ignore start -- tabs[windowLabel] always exists when called after a tab close; ?? [] is defensive */
   const remaining = useTabStore.getState().tabs[windowLabel] ?? [];
+  /* v8 ignore stop */
   if (remaining.length === 0) {
     if (isMacPlatform()) {
       await persistWorkspaceSession(windowLabel);

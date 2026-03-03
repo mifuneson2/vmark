@@ -61,4 +61,38 @@ describe("applyPathReconciliation", () => {
     expect(useDocumentStore.getState().getDocument(tabA)?.isMissing).toBe(true);
     expect(useDocumentStore.getState().getDocument(tabB)?.isMissing).toBe(true);
   });
+
+  it("skips tabs without filePath for update_path (line 35)", () => {
+    // Create a tab without a filePath (new unsaved tab)
+    const unsavedTab = useTabStore.getState().createTab(WINDOW_MAIN);
+    useDocumentStore.getState().initDocument(unsavedTab, "unsaved", null);
+
+    // Also create a matching tab to confirm it still updates
+    const savedTab = useTabStore.getState().createTab(WINDOW_MAIN, "/tmp/file.md");
+    useDocumentStore.getState().initDocument(savedTab, "saved", "/tmp/file.md");
+
+    applyPathReconciliation([
+      { action: "update_path", oldPath: "/tmp/file.md", newPath: "/tmp/renamed.md" },
+    ]);
+
+    // Saved tab should be updated
+    expect(useDocumentStore.getState().getDocument(savedTab)?.filePath).toBe("/tmp/renamed.md");
+    // Unsaved tab should be untouched
+    expect(useDocumentStore.getState().getDocument(unsavedTab)?.filePath).toBeNull();
+  });
+
+  it("skips tabs without filePath for mark_missing (line 44)", () => {
+    const unsavedTab = useTabStore.getState().createTab(WINDOW_MAIN);
+    useDocumentStore.getState().initDocument(unsavedTab, "unsaved", null);
+
+    const savedTab = useTabStore.getState().createTab(WINDOW_MAIN, "/tmp/gone.md");
+    useDocumentStore.getState().initDocument(savedTab, "saved", "/tmp/gone.md");
+
+    applyPathReconciliation([
+      { action: "mark_missing", oldPath: "/tmp/gone.md" },
+    ]);
+
+    expect(useDocumentStore.getState().getDocument(savedTab)?.isMissing).toBe(true);
+    expect(useDocumentStore.getState().getDocument(unsavedTab)?.isMissing).toBeFalsy();
+  });
 });

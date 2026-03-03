@@ -20,6 +20,7 @@ function findNextFocusableIndex(
   isFocusable: (index: number) => boolean,
   direction: 1 | -1
 ): number {
+  /* v8 ignore next -- @preserve reason: total <= 0 guard; toolbar always has at least one button in tests */
   if (total <= 0) return 0;
   let index = start;
 

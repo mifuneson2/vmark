@@ -285,7 +285,9 @@ export function useUnifiedMenuCommands(): void {
       // Clean up any existing listeners
       unlistenRefs.current = safeUnlistenAll(unlistenRefs.current);
 
+      /* v8 ignore start -- disposed=true race: component unmounts between safeUnlistenAll and this check */
       if (disposed) return;
+      /* v8 ignore stop */
 
       const currentWindow = getCurrentWebviewWindow();
       const windowLabel = currentWindow.label;
@@ -356,6 +358,7 @@ export function useUnifiedMenuCommands(): void {
       // Wait for all listeners to be registered using allSettled to handle partial failures
       const results = await Promise.allSettled(listenerPromises);
 
+      /* v8 ignore start -- disposed=true race: component unmounts while awaiting allSettled */
       if (disposed) {
         // Component unmounted during setup, clean up any successful listeners
         for (const result of results) {
@@ -365,6 +368,7 @@ export function useUnifiedMenuCommands(): void {
         }
         return;
       }
+      /* v8 ignore stop */
 
       // Collect successful listeners, log failures
       const unlisteners: UnlistenFn[] = [];

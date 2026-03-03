@@ -94,6 +94,7 @@ export function handleMultiCursorPaste(
   }
 
   const ranges = selection.ranges;
+  /* v8 ignore next -- @preserve MultiSelection always has at least one range; empty guard is defensive */
   if (ranges.length === 0) return null;
 
   const lines = text.split(/\r?\n/);

@@ -105,6 +105,7 @@ function deleteAndUpdateFocus(state: AiSuggestionState, id: string): AiSuggestio
     const sorted = Array.from(newSuggestions.values()).sort(
       (a, b) => a.from - b.from
     );
+    /* v8 ignore next -- @preserve sorted has at least one element because newSuggestions.size > 0 */
     newFocusedId = sorted[0]?.id ?? null;
   } else if (state.focusedSuggestionId !== id) {
     newFocusedId = state.focusedSuggestionId;
@@ -232,6 +233,7 @@ export const useAiSuggestionStore = create<AiSuggestionState & AiSuggestionActio
       if (suggestions.size === 0) return;
 
       const sorted = get().getSortedSuggestions();
+      /* v8 ignore next -- @preserve double-guard; suggestions.size > 0 guarantees getSortedSuggestions is non-empty */
       if (sorted.length === 0) return;
 
       const currentIndex = focusedSuggestionId
@@ -247,6 +249,7 @@ export const useAiSuggestionStore = create<AiSuggestionState & AiSuggestionActio
       if (suggestions.size === 0) return;
 
       const sorted = get().getSortedSuggestions();
+      /* v8 ignore next -- @preserve double-guard; suggestions.size > 0 guarantees getSortedSuggestions is non-empty */
       if (sorted.length === 0) return;
 
       const currentIndex = focusedSuggestionId

@@ -53,6 +53,7 @@ export function parseMarkdown(
   try {
     perfStart("parseMarkdownToMdast");
     const mdast = parseMarkdownToMdast(safeMarkdown, options);
+    /* v8 ignore next -- @preserve parseMarkdownToMdast always returns Root with children array */
     perfEnd("parseMarkdownToMdast", { nodeCount: mdast.children?.length ?? 0 });
 
     perfStart("mdastToProseMirror");

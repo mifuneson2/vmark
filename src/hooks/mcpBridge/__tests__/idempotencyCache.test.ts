@@ -112,6 +112,39 @@ describe("IdempotencyCache", () => {
     });
   });
 
+  describe("startCleanupTimer", () => {
+    it("starts the timer and auto-cleans expired entries (line 133)", () => {
+      vi.useFakeTimers();
+
+      cache.set("req-1", { id: "req-1", success: true }, 1000);
+      cache.startCleanupTimer();
+
+      // Entry exists before cleanup
+      expect(cache.has("req-1")).toBe(true);
+
+      // Advance past TTL + cleanup interval (default 60s)
+      vi.advanceTimersByTime(61_000);
+
+      // Auto-cleanup should have removed expired entry
+      expect(cache.has("req-1")).toBe(false);
+
+      cache.stopCleanupTimer();
+      vi.useRealTimers();
+    });
+
+    it("does not start duplicate timer when already running (line 130)", () => {
+      vi.useFakeTimers();
+
+      cache.startCleanupTimer();
+      // Call again — should early return (line 130)
+      cache.startCleanupTimer();
+
+      // No error, just works
+      cache.stopCleanupTimer();
+      vi.useRealTimers();
+    });
+  });
+
   describe("idempotency behavior", () => {
     it("returns cached response for duplicate requests", () => {
       const response1 = { id: "req-1", success: true, data: { value: 1 } };

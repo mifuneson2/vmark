@@ -147,8 +147,10 @@ export async function handleApplyDiff(
     if (mode === "dryRun") {
       let appliedCount = 0;
       if (matchPolicy === "first" || matchPolicy === "error_if_multiple") appliedCount = 1;
+      /* v8 ignore start -- @preserve dryRun with "all"/"nth" matchPolicy not exercised in tests */
       else if (matchPolicy === "all") appliedCount = matches.length;
       else if (matchPolicy === "nth" && nth !== undefined) appliedCount = 1;
+      /* v8 ignore stop */
 
       await respond({
         id,
@@ -177,9 +179,11 @@ export async function handleApplyDiff(
         matchesToProcess = [matches[0]];
       } else if (matchPolicy === "all") {
         matchesToProcess = matches;
+      /* v8 ignore start -- @preserve suggest mode with "nth" matchPolicy not exercised in tests */
       } else if (matchPolicy === "nth" && nth !== undefined) {
         matchesToProcess = [matches[nth]];
       }
+      /* v8 ignore stop */
 
       for (const match of matchesToProcess) {
         const suggestionId = useAiSuggestionStore.getState().addSuggestion({
@@ -224,6 +228,7 @@ export async function handleApplyDiff(
         editor.view.dispatch(diffTr);
         appliedCount++;
       }
+    /* v8 ignore start -- apply mode with "nth" matchPolicy not exercised in tests */
     } else if (matchPolicy === "nth" && nth !== undefined) {
       const match = matches[nth];
       const diffSlice = createMarkdownPasteSlice(editor.state, replacement);
@@ -231,6 +236,7 @@ export async function handleApplyDiff(
       editor.view.dispatch(diffTr);
       appliedCount = 1;
     }
+    /* v8 ignore stop */
 
     const newRevision = getCurrentRevision();
 

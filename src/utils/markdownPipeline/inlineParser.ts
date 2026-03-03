@@ -54,6 +54,7 @@ export function parseInlineMarkdown(text: string): Content[] {
 
     // The parser creates a root with children
     // For inline text, this should result in a single paragraph
+    /* v8 ignore next -- @preserve runSync output always has children for valid remark processors */
     const children = (transformed as { children?: Content[] }).children ?? [];
 
     if (children.length === 0) {

@@ -132,9 +132,13 @@ export function goToNextCell(view: EditorView): boolean {
     // The new row is now at targetRowIndex
     const newDoc = view.state.doc;
     const newLineNum = info.startLine + 1 + targetRowIndex;
+    // newLineNum > newDoc.lines only if insertRowBelow failed silently (defensive guard)
+    /* v8 ignore next -- @preserve reason: newLineNum always valid after insertRowBelow succeeds */
     if (newLineNum <= newDoc.lines) {
       const newLine = newDoc.line(newLineNum);
       const newCells = getCellBoundaries(newLine.text);
+      // newCells.length === 0 only if the inserted row has no parseable cells (defensive guard)
+      /* v8 ignore next -- @preserve reason: insertRowBelow always produces a row with cells */
       if (newCells.length > 0) {
         view.dispatch({
           selection: { anchor: newLine.from + newCells[0].from },
@@ -150,6 +154,7 @@ export function goToNextCell(view: EditorView): boolean {
   const targetLine = doc.line(targetLineNum);
   const targetCells = getCellBoundaries(targetLine.text);
 
+  /* v8 ignore next 8 -- @preserve reason: safety guard; table detection guarantees target rows have parseable cells, so targetCells is never empty here */
   if (targetCells.length > 0) {
     view.dispatch({
       selection: { anchor: targetLine.from + targetCells[0].from },
@@ -157,7 +162,7 @@ export function goToNextCell(view: EditorView): boolean {
     });
     return true;
   }
-
+  /* v8 ignore next -- @preserve reason: unreachable when targetCells is non-empty (see above guard) */
   return false;
 }
 
@@ -200,6 +205,8 @@ export function goToPreviousCell(view: EditorView): boolean {
 
   if (prevRowIndex < 0) {
     // Already at first cell of header - stay put
+    // cells.length === 0 only if the header row has no parseable cells (defensive guard)
+    /* v8 ignore next -- @preserve reason: table detection requires valid cells in the header row */
     if (cells.length > 0) {
       view.dispatch({
         selection: { anchor: currentLine.from + cells[0].from },
@@ -214,6 +221,7 @@ export function goToPreviousCell(view: EditorView): boolean {
   const targetLine = doc.line(targetLineNum);
   const targetCells = getCellBoundaries(targetLine.text);
 
+  /* v8 ignore next 9 -- @preserve reason: safety guard; table detection guarantees target rows have parseable cells, so targetCells is never empty here */
   if (targetCells.length > 0) {
     const lastCell = targetCells[targetCells.length - 1];
     view.dispatch({
@@ -222,7 +230,7 @@ export function goToPreviousCell(view: EditorView): boolean {
     });
     return true;
   }
-
+  /* v8 ignore next -- @preserve reason: unreachable when targetCells is non-empty (see above guard) */
   return false;
 }
 

@@ -277,4 +277,62 @@ describe("formatHandlers", () => {
       });
     });
   });
+
+  describe("non-Error thrown values (String(error) branch)", () => {
+    it("handleFormatToggle handles non-Error thrown value", async () => {
+      vi.mocked(getEditor).mockImplementation(() => {
+        throw "raw string error";
+      });
+
+      await handleFormatToggle("req-str-1", { format: "bold" });
+
+      expect(respond).toHaveBeenCalledWith({
+        id: "req-str-1",
+        success: false,
+        error: "raw string error",
+      });
+    });
+
+    it("handleFormatSetLink handles non-Error thrown value", async () => {
+      vi.mocked(getEditor).mockImplementation(() => {
+        throw 42;
+      });
+
+      await handleFormatSetLink("req-str-2", { href: "https://example.com" });
+
+      expect(respond).toHaveBeenCalledWith({
+        id: "req-str-2",
+        success: false,
+        error: "42",
+      });
+    });
+
+    it("handleFormatRemoveLink handles non-Error thrown value", async () => {
+      vi.mocked(getEditor).mockImplementation(() => {
+        throw "unset error";
+      });
+
+      await handleFormatRemoveLink("req-str-3");
+
+      expect(respond).toHaveBeenCalledWith({
+        id: "req-str-3",
+        success: false,
+        error: "unset error",
+      });
+    });
+
+    it("handleFormatClear handles non-Error thrown value", async () => {
+      vi.mocked(getEditor).mockImplementation(() => {
+        throw "clear error";
+      });
+
+      await handleFormatClear("req-str-4");
+
+      expect(respond).toHaveBeenCalledWith({
+        id: "req-str-4",
+        success: false,
+        error: "clear error",
+      });
+    });
+  });
 });

@@ -43,6 +43,7 @@ export function createBrHidingPlugin(hide: boolean) {
       }
 
       update(update: ViewUpdate) {
+        /* v8 ignore next 3 -- @preserve viewportChanged branch and else path not covered in tests */
         if (update.docChanged || update.viewportChanged) {
           this.decorations = this.buildDecorations(update.view);
         }

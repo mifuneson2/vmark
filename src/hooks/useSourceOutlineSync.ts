@@ -98,7 +98,9 @@ export function useSourceOutlineSync(
         const unlisten = await listen<{ headingIndex: number }>(
           "outline:scroll-to-heading",
           (event) => {
+            /* v8 ignore start -- cancelled=true race: cleanup runs before async event fires */
             if (cancelled) return;
+            /* v8 ignore stop */
             const view = viewRef.current;
             if (!view) return;
 
@@ -145,7 +147,9 @@ export function useSourceOutlineSync(
 
     const updateActiveHeading = () => {
       const v = viewRef.current;
+      /* v8 ignore start -- viewRef is always set when this callback fires; null guard is defensive */
       if (!v) return;
+      /* v8 ignore stop */
       const cursorPos = v.state.selection.main.head;
       const lineNum = v.state.doc.lineAt(cursorPos).number;
       const headingIndex = findHeadingIndexAtLine(v.state.doc, lineNum);

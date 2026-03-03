@@ -167,4 +167,41 @@ describe("imeToast", () => {
     vi.advanceTimersByTime(5000);
     expect(mocks.toastInfo).toHaveBeenCalledWith("stuck");
   });
+
+  it("clearFallbackTimer is a no-op when timer is already null (normal flush path)", () => {
+    // Normal path: compositionend fires, no fallback timer running
+    setComposing(true);
+    imeToast.info("test");
+    // Cancel fallback timer by advancing past it first (so it fires and clears itself)
+    // then compositionend also fires — clearFallbackTimer is called with null timer
+    setComposing(false);
+    // Fire compositionend immediately so fallback hasn't run yet — but timer IS set
+    // We need to clear it: advance just past POST_COMPOSITION_DELAY after compositionend
+    fireCompositionEnd();
+    vi.advanceTimersByTime(60);
+    // Toast flushed, fallbackTimer was cleared (it was non-null so the !null branch ran)
+    expect(mocks.toastInfo).toHaveBeenCalledWith("test");
+  });
+
+  it("skips re-attaching compositionend listener when it is already attached", () => {
+    // Queue two toasts back-to-back while composing, then compositionend fires
+    // but isEditorComposing() is still true (rapid re-composition).
+    // flushPendingToasts sees composing=true. The first call attaches the listener.
+    // The second queued toast triggers deferIfComposing again while listener already attached.
+    setComposing(true);
+    imeToast.info("first");
+    // Listener is now attached. Simulate compositionend firing (listener consumed)
+    // but still composing — flushPendingToasts tries to re-attach, succeeds
+    fireCompositionEnd();
+    // Still composing — flush re-defers
+    vi.advanceTimersByTime(60);
+    // Now queue another toast (listener already attached from re-defer)
+    imeToast.info("second");
+    // Composition ends for real
+    setComposing(false);
+    fireCompositionEnd();
+    vi.advanceTimersByTime(60);
+    expect(mocks.toastInfo).toHaveBeenCalledWith("first");
+    expect(mocks.toastInfo).toHaveBeenCalledWith("second");
+  });
 });

@@ -8,6 +8,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import {
   useAiSuggestionStore,
   resetAiSuggestionStore,
+  initSuggestionTabWatcher,
 } from "../aiSuggestionStore";
 import { AI_SUGGESTION_EVENTS } from "@/plugins/aiSuggestion/types";
 import type { SuggestionType } from "@/plugins/aiSuggestion/types";
@@ -440,6 +441,152 @@ describe("clearAll", () => {
     useAiSuggestionStore.getState().clearAll();
 
     expect(useAiSuggestionStore.getState().suggestions.size).toBe(0);
+    expect(useAiSuggestionStore.getState().focusedSuggestionId).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// initSuggestionTabWatcher
+// ---------------------------------------------------------------------------
+describe("initSuggestionTabWatcher", () => {
+  it("clears suggestions for previous tab when tab changes", () => {
+    addTestSuggestion({ tabId: "tab-A", from: 0, to: 5 });
+    addTestSuggestion({ tabId: "tab-B", from: 10, to: 15 });
+
+    let subscriberCallback: ((state: { activeTabId: Record<string, string | null> }) => void) | null = null;
+    const mockSubscribe = vi.fn((cb: (state: { activeTabId: Record<string, string | null> }) => void) => {
+      subscriberCallback = cb;
+      return () => {};
+    });
+
+    initSuggestionTabWatcher(mockSubscribe);
+    expect(mockSubscribe).toHaveBeenCalledOnce();
+
+    // Simulate initial tab state
+    subscriberCallback!({ activeTabId: { main: "tab-A" } });
+
+    // Simulate switching to tab-B — should clear tab-A suggestions
+    subscriberCallback!({ activeTabId: { main: "tab-B" } });
+
+    // tab-A suggestions should be cleared
+    const remaining = useAiSuggestionStore.getState().getSortedSuggestions();
+    expect(remaining.every((s) => s.tabId === "tab-B")).toBe(true);
+  });
+
+  it("does not initialize twice when called consecutively", () => {
+    // resetAiSuggestionStore was called in beforeEach, resetting the flag.
+    // Initialize once:
+    const firstSubscribe = vi.fn(() => () => {});
+    initSuggestionTabWatcher(firstSubscribe);
+    expect(firstSubscribe).toHaveBeenCalledOnce();
+
+    // Second call should be a no-op:
+    const secondSubscribe = vi.fn(() => () => {});
+    initSuggestionTabWatcher(secondSubscribe);
+    expect(secondSubscribe).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// navigatePrevious — currentIndex > 0 branch (line 256 right-hand side)
+// ---------------------------------------------------------------------------
+describe("navigatePrevious — from middle of list", () => {
+  it("moves to previous suggestion when focused is not first (covers line 256 right branch)", () => {
+    const id1 = addTestSuggestion({ from: 0, to: 5 });
+    const id2 = addTestSuggestion({ from: 10, to: 15 });
+    const id3 = addTestSuggestion({ from: 20, to: 25 });
+
+    // Focus the last suggestion (index 2 in sorted order)
+    useAiSuggestionStore.getState().focusSuggestion(id3);
+    expect(useAiSuggestionStore.getState().focusedSuggestionId).toBe(id3);
+
+    // navigatePrevious: currentIndex = 2 > 0, so prevIndex = 2 - 1 = 1
+    useAiSuggestionStore.getState().navigatePrevious();
+    expect(useAiSuggestionStore.getState().focusedSuggestionId).toBe(id2);
+
+    // navigatePrevious again: currentIndex = 1 > 0, so prevIndex = 0
+    useAiSuggestionStore.getState().navigatePrevious();
+    expect(useAiSuggestionStore.getState().focusedSuggestionId).toBe(id1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// navigateNext/navigatePrevious with null focus
+// ---------------------------------------------------------------------------
+describe("navigateNext with null focus", () => {
+  it("focuses the first suggestion when no current focus", () => {
+    addTestSuggestion({ from: 10, to: 15 });
+    addTestSuggestion({ from: 0, to: 5 });
+
+    // Clear focus manually
+    useAiSuggestionStore.setState({ focusedSuggestionId: null });
+
+    useAiSuggestionStore.getState().navigateNext();
+
+    // Should go to first sorted suggestion (from: 0)
+    const sorted = useAiSuggestionStore.getState().getSortedSuggestions();
+    expect(useAiSuggestionStore.getState().focusedSuggestionId).toBe(sorted[0].id);
+  });
+});
+
+describe("navigatePrevious with null focus", () => {
+  it("focuses the first suggestion when no current focus", () => {
+    addTestSuggestion({ from: 10, to: 15 });
+    addTestSuggestion({ from: 0, to: 5 });
+
+    // Clear focus manually
+    useAiSuggestionStore.setState({ focusedSuggestionId: null });
+
+    useAiSuggestionStore.getState().navigatePrevious();
+
+    // Should wrap: currentIndex is 0, prevIndex = sorted.length - 1
+    const sorted = useAiSuggestionStore.getState().getSortedSuggestions();
+    expect(useAiSuggestionStore.getState().focusedSuggestionId).toBe(
+      sorted[sorted.length - 1].id
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// deleteAndUpdateFocus — non-focused suggestion removed
+// ---------------------------------------------------------------------------
+describe("deleteAndUpdateFocus edge cases", () => {
+  it("preserves focus when removing a non-focused suggestion", () => {
+    const id1 = addTestSuggestion({ from: 0, to: 5 });
+    const id2 = addTestSuggestion({ from: 10, to: 15 });
+
+    // Focus is on id1 (first added)
+    expect(useAiSuggestionStore.getState().focusedSuggestionId).toBe(id1);
+
+    // Remove id2 (not focused)
+    useAiSuggestionStore.getState().acceptSuggestion(id2);
+
+    // Focus should remain on id1
+    expect(useAiSuggestionStore.getState().focusedSuggestionId).toBe(id1);
+  });
+
+  it("sorts remaining suggestions by position when focused is deleted", () => {
+    // Add 3 suggestions: positions 20, 5, 10
+    const id1 = addTestSuggestion({ from: 20, to: 25 });
+    const id2 = addTestSuggestion({ from: 5, to: 10 });
+    addTestSuggestion({ from: 10, to: 15 });
+
+    // Focus on id1 (from: 20)
+    useAiSuggestionStore.getState().focusSuggestion(id1);
+    expect(useAiSuggestionStore.getState().focusedSuggestionId).toBe(id1);
+
+    // Delete focused suggestion — sort callback runs on 2 remaining
+    useAiSuggestionStore.getState().acceptSuggestion(id1);
+
+    // Focus should move to the first by position (from: 5 = id2)
+    expect(useAiSuggestionStore.getState().focusedSuggestionId).toBe(id2);
+  });
+
+  it("sets focus to null when removing the last suggestion", () => {
+    const id = addTestSuggestion({ from: 0, to: 5 });
+
+    useAiSuggestionStore.getState().acceptSuggestion(id);
+
     expect(useAiSuggestionStore.getState().focusedSuggestionId).toBeNull();
   });
 });

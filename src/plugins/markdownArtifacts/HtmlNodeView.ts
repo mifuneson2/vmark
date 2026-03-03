@@ -40,7 +40,9 @@ class BaseHtmlNodeView implements NodeView {
   constructor(node: PMNode, options: HtmlNodeViewOptions) {
     this.node = node;
     this.options = options;
+    /* v8 ignore start -- @preserve value attr is always set on HTML nodes */
     this.value = String(node.attrs.value ?? "");
+    /* v8 ignore stop */
     this.renderMode = useSettingsStore.getState().markdown.htmlRenderingMode;
 
     this.dom = document.createElement(options.inline ? "span" : "div");
@@ -83,6 +85,7 @@ class BaseHtmlNodeView implements NodeView {
 
     // Switch to source mode
     const editorStore = useEditorStore.getState();
+    /* v8 ignore next -- @preserve already-in-source-mode path skips toggle; tested path always enters from WYSIWYG */
     if (!editorStore.sourceMode) {
       editorStore.toggleSourceMode();
     }

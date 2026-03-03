@@ -97,6 +97,7 @@ async function writeDirtySnapshots(
   } catch (error) {
     crashRecoveryLog(
       "Writer error:",
+      /* v8 ignore next -- defensive: errors from Tauri invoke are always Error instances */
       error instanceof Error ? error.message : String(error)
     );
   } finally {

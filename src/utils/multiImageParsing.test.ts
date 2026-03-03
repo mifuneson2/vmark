@@ -109,6 +109,30 @@ describe("parseMultiplePaths", () => {
       expect(result.paths).toEqual(["/path/one.jpg", "/path/two.png"]);
     });
   });
+
+  describe("newline format with single path (line 133 branch)", () => {
+    it("returns single format when newline-split yields only one path", () => {
+      // Text has a newline but only one non-empty line → format is "single"
+      const result = parseMultiplePaths("/path/to/image.jpg\n");
+      expect(result.paths).toEqual(["/path/to/image.jpg"]);
+      expect(result.format).toBe("single");
+    });
+
+    it("returns single format with leading blank line before single path", () => {
+      const result = parseMultiplePaths("\n/path/to/image.jpg");
+      expect(result.paths).toEqual(["/path/to/image.jpg"]);
+      expect(result.format).toBe("single");
+    });
+  });
+
+  describe("shell parse with zero paths (line 140 branch)", () => {
+    it("returns empty paths when quoted text contains only empty string", () => {
+      // '""' is non-empty (passes !trimmed guard), no newlines, shell parse yields 0 paths
+      const result = parseMultiplePaths('""');
+      expect(result.paths).toEqual([]);
+      expect(result.format).toBe("single");
+    });
+  });
 });
 
 describe("mightContainMultiplePaths", () => {
@@ -130,5 +154,10 @@ describe("mightContainMultiplePaths", () => {
 
   it("returns false for empty string", () => {
     expect(mightContainMultiplePaths("")).toBe(false);
+  });
+
+  it("returns true for Windows-style paths with spaces and backslash (line 168 branch)", () => {
+    // Has spaces and backslash → mightContainMultiplePaths returns true
+    expect(mightContainMultiplePaths("C:\\Users\\image1.png C:\\Users\\image2.png")).toBe(true);
   });
 });

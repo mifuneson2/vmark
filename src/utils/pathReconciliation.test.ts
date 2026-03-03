@@ -119,5 +119,40 @@ describe("pathReconciliation", () => {
       expect(results).toHaveLength(1);
       expect(results[0].action).toBe("update_path");
     });
+
+    it("does nothing for direct match rename without newPath", () => {
+      const input: PathChangeInput = {
+        changeType: "rename",
+        oldPath: "/Users/test/docs/file.md",
+        newPath: undefined,
+        openFilePaths: ["/Users/test/docs/file.md"],
+      };
+      const results = reconcilePathChange(input);
+      // Direct match with rename but no newPath — no action produced
+      expect(results).toHaveLength(0);
+    });
+
+    it("does nothing for folder match rename without newPath", () => {
+      const input: PathChangeInput = {
+        changeType: "rename",
+        oldPath: "/Users/test/docs",
+        newPath: undefined,
+        openFilePaths: ["/Users/test/docs/file.md"],
+      };
+      const results = reconcilePathChange(input);
+      // Folder match with rename but no newPath — no action produced
+      expect(results).toHaveLength(0);
+    });
+
+    it("does not match folder prefix with similar name prefix", () => {
+      const input: PathChangeInput = {
+        changeType: "delete",
+        oldPath: "/Users/test/docs",
+        openFilePaths: ["/Users/test/docsextra/file.md"],
+      };
+      const results = reconcilePathChange(input);
+      // /Users/test/docsextra/ does not start with /Users/test/docs/
+      expect(results).toHaveLength(0);
+    });
   });
 });

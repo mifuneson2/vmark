@@ -66,8 +66,11 @@ export function extractTiptapContext(state: EditorState): CursorContext {
     // Table
     if (typeName === "table" && !ctx.inTable) {
       const numRows = node.childCount;
+      /* v8 ignore next -- @preserve numRows is always > 0 for a valid table; the 0-row case is prevented by the schema */
       const numCols = numRows > 0 ? node.child(0).childCount : 0;
+      /* v8 ignore next -- @preserve $from.depth is always > d (table depth) when cursor is inside a table cell; the fallback 0 covers malformed documents */
       const rowIndex = $from.depth > d ? $from.index(d) : 0;
+      /* v8 ignore next -- @preserve $from.depth is always > d+1 (tableRow depth) when cursor is inside a table cell */
       const colIndex = $from.depth > d + 1 ? $from.index(d + 1) : 0;
 
       ctx.inTable = {

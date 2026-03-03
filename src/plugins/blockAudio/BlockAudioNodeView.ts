@@ -69,6 +69,7 @@ export class BlockAudioNodeView implements NodeView {
     const rect = this.audio.getBoundingClientRect();
     useMediaPopupStore.getState().openPopup({
       mediaSrc: this.originalSrc,
+      /* v8 ignore next -- @preserve null-coalesce: audio.title is always a string, nullish branch not reached */
       mediaTitle: this.audio.title ?? "",
       mediaNodePos: pos,
       mediaNodeType: "block_audio",
@@ -119,6 +120,7 @@ export class BlockAudioNodeView implements NodeView {
         this.audio.src = resolvedSrc;
       })
       .catch((err) => {
+        /* v8 ignore next -- @preserve early return: destroyed/stale request guard in catch block */
         if (this.destroyed || requestId !== this.resolveRequestId) return;
         showMediaError(this.dom, this.audio, this.originalSrc, err instanceof Error ? err.message : "Failed to resolve path", AUDIO_LOAD_CONFIG);
       });

@@ -83,6 +83,7 @@ export function migrateSession(session: SessionData): SessionData {
   while (current.version < SCHEMA_VERSION) {
     const migrateFn = migrations[current.version];
 
+    /* v8 ignore next 7 -- @preserve programming error guard: all schema version steps must have migrations */
     if (!migrateFn) {
       // CRITICAL: Every version step must have an explicit migration
       // Silently bumping version can skip required field additions

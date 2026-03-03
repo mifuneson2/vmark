@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { Schema } from "@tiptap/pm/model";
-import { EditorState, TextSelection } from "@tiptap/pm/state";
+import { EditorState, TextSelection, SelectionRange } from "@tiptap/pm/state";
 import { EditorView } from "@tiptap/pm/view";
 import { MultiSelection } from "../MultiSelection";
 import { multiCursorPlugin } from "../multiCursorPlugin";
@@ -215,5 +215,43 @@ describe("addCursorBelow", () => {
     const state2 = state1.apply(tr2!);
     const sel2 = state2.selection as MultiSelection;
     expect(sel2.ranges).toHaveLength(3);
+  });
+
+  it("returns null when posAtCoords resolves to a position already occupied by an existing cursor", () => {
+    // Build a MultiSelection with two cursors: pos=2 (lower) and pos=7 (higher).
+    // For addCursorBelow: the bottommost cursor is pos=7.
+    // Mock posAtCoords to return pos=2 (already occupied by the first cursor).
+    // newPos (2) !== pos (7), but rangeExists(existingRanges, 2, 2) → true → return null.
+    const doc = createMultiParagraphDoc(["aaa", "bbb"]);
+    const baseState = EditorState.create({
+      doc,
+      schema,
+      plugins: [multiCursorPlugin()],
+      selection: TextSelection.create(doc, 7),
+    });
+    const $p2 = doc.resolve(2);
+    const $p7 = doc.resolve(7);
+    // normalizeRangesWithPrimary sorts ascending, so ranges end up [pos2, pos7]
+    const multiSel = new MultiSelection(
+      [new SelectionRange($p2, $p2), new SelectionRange($p7, $p7)],
+      1 // primary is pos=7
+    );
+    const stateWithMulti = baseState.apply(baseState.tr.setSelection(multiSel));
+    const view = createView(stateWithMulti);
+
+    // Mock: coordsAtPos(7) returns top=20, bottom=40; posAtCoords returns pos=2 (duplicate)
+    Object.defineProperty(view, "coordsAtPos", {
+      value: vi.fn(() => ({ left: 8, right: 16, top: 20, bottom: 40 })),
+      configurable: true,
+    });
+    Object.defineProperty(view, "posAtCoords", {
+      value: vi.fn(() => ({ pos: 2, inside: -1 })),
+      configurable: true,
+    });
+
+    const tr = addCursorBelow(stateWithMulti, view);
+    // newPos=2 !== pos=7, but pos=2 already exists in existingRanges → returns null
+    expect(tr).toBeNull();
+    view.destroy();
   });
 });

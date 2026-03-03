@@ -37,14 +37,130 @@ vi.mock("@tiptap/pm/view", () => ({
 }));
 
 import { renderMermaid } from "@/plugins/mermaid";
+import { setupMermaidPanZoom } from "@/plugins/mermaid/mermaidPanZoom";
+import { setupMermaidExport } from "@/plugins/mermaid/mermaidExport";
 import { diagramWarn } from "@/utils/debug";
-import { createMermaidPreviewWidget } from "./renderMermaidPreview";
+import { updateMermaidLivePreview, createMermaidPreviewWidget } from "./renderMermaidPreview";
+
+describe("updateMermaidLivePreview", () => {
+  beforeEach(() => {
+    vi.mocked(renderMermaid).mockReset();
+  });
+
+  it("renders valid mermaid SVG into the element", async () => {
+    vi.mocked(renderMermaid).mockResolvedValueOnce("<svg>diagram</svg>");
+
+    const element = document.createElement("div");
+    const token = 1;
+    await updateMermaidLivePreview(element, "graph TD; A-->B", token, () => token);
+
+    expect(element.textContent).toContain("diagram");
+  });
+
+  it("shows error for invalid mermaid syntax", async () => {
+    vi.mocked(renderMermaid).mockResolvedValueOnce(null);
+
+    const element = document.createElement("div");
+    const token = 1;
+    await updateMermaidLivePreview(element, "bad syntax", token, () => token);
+
+    expect(element.textContent).toContain("Invalid syntax");
+  });
+
+  it("skips update when token is stale", async () => {
+    vi.mocked(renderMermaid).mockResolvedValueOnce("<svg>diagram</svg>");
+
+    const element = document.createElement("div");
+    const token = 1;
+    await updateMermaidLivePreview(element, "graph TD", token, () => 2);
+
+    // Element should NOT be updated because token changed
+    expect(element.textContent).toBe("");
+  });
+
+  it("skips error display when token is stale on null result", async () => {
+    vi.mocked(renderMermaid).mockResolvedValueOnce(null);
+
+    const element = document.createElement("div");
+    const token = 1;
+    await updateMermaidLivePreview(element, "bad", token, () => 2);
+
+    expect(element.textContent).not.toContain("Invalid syntax");
+  });
+});
 
 describe("createMermaidPreviewWidget", () => {
   beforeEach(() => {
     capturedFactory = null;
     vi.mocked(renderMermaid).mockReset();
     vi.mocked(diagramWarn).mockClear();
+    vi.mocked(setupMermaidPanZoom).mockClear();
+    vi.mocked(setupMermaidExport).mockClear();
+  });
+
+  it("creates placeholder element with correct class", () => {
+    // Must provide a mock return so the .then() inside the factory doesn't throw
+    vi.mocked(renderMermaid).mockResolvedValueOnce("<svg>ok</svg>");
+
+    const cache = new Map();
+    createMermaidPreviewWidget(10, "graph TD", "key", cache, vi.fn());
+
+    expect(capturedFactory).not.toBeNull();
+    const element = capturedFactory!(null);
+    // Before the promise resolves, placeholder should have loading state
+    expect(element.className).toContain("mermaid-preview");
+    expect(element.className).toContain("mermaid-loading");
+    expect(element.textContent).toBe("Rendering diagram...");
+  });
+
+  it("renders mermaid and updates element on success", async () => {
+    vi.mocked(renderMermaid).mockResolvedValueOnce("<svg>result</svg>");
+
+    const cache = new Map();
+    createMermaidPreviewWidget(10, "graph TD; A-->B", "key", cache, vi.fn());
+
+    const element = capturedFactory!(null);
+
+    await vi.waitFor(() => {
+      expect(element.className).toBe("code-block-preview mermaid-preview");
+    });
+
+    expect(element.textContent).toContain("result");
+    expect(cache.get("key")).toEqual({ rendered: "<svg>result</svg>" });
+    expect(setupMermaidPanZoom).toHaveBeenCalledWith(element);
+    expect(setupMermaidExport).toHaveBeenCalledWith(element, "graph TD; A-->B");
+  });
+
+  it("shows error state when renderMermaid returns null", async () => {
+    vi.mocked(renderMermaid).mockResolvedValueOnce(null);
+
+    const cache = new Map();
+    createMermaidPreviewWidget(10, "bad", "key", cache, vi.fn());
+
+    const element = capturedFactory!(null);
+
+    await vi.waitFor(() => {
+      expect(element.className).toContain("mermaid-error");
+    });
+
+    expect(element.textContent).toContain("Failed to render diagram");
+  });
+
+  it("does not set up pan-zoom on null render", async () => {
+    vi.mocked(renderMermaid).mockResolvedValueOnce(null);
+
+    const cache = new Map();
+    createMermaidPreviewWidget(10, "bad", "key", cache, vi.fn());
+
+    capturedFactory!(null);
+
+    await vi.waitFor(() => {
+      expect(renderMermaid).toHaveBeenCalled();
+    });
+
+    // Allow microtasks to flush
+    await new Promise((r) => setTimeout(r, 0));
+    expect(setupMermaidPanZoom).not.toHaveBeenCalled();
   });
 
   it("shows error state when renderMermaid rejects", async () => {
@@ -60,5 +176,51 @@ describe("createMermaidPreviewWidget", () => {
       expect(element.className).toContain("mermaid-error");
     });
     expect(diagramWarn).toHaveBeenCalled();
+  });
+
+  it("logs non-Error objects in rejection path", async () => {
+    vi.mocked(renderMermaid).mockRejectedValueOnce("string error");
+
+    const cache = new Map();
+    createMermaidPreviewWidget(10, "bad", "key", cache, vi.fn());
+
+    capturedFactory!(null);
+
+    await vi.waitFor(() => {
+      expect(diagramWarn).toHaveBeenCalledWith(
+        "Mermaid preview render failed:",
+        "string error"
+      );
+    });
+  });
+
+  it("does not cache on render failure (null)", async () => {
+    vi.mocked(renderMermaid).mockResolvedValueOnce(null);
+
+    const cache = new Map();
+    createMermaidPreviewWidget(10, "bad", "key", cache, vi.fn());
+
+    capturedFactory!(null);
+
+    await vi.waitFor(() => {
+      expect(renderMermaid).toHaveBeenCalled();
+    });
+
+    expect(cache.has("key")).toBe(false);
+  });
+
+  it("does not cache on render rejection", async () => {
+    vi.mocked(renderMermaid).mockRejectedValueOnce(new Error("fail"));
+
+    const cache = new Map();
+    createMermaidPreviewWidget(10, "bad", "key", cache, vi.fn());
+
+    capturedFactory!(null);
+
+    await vi.waitFor(() => {
+      expect(diagramWarn).toHaveBeenCalled();
+    });
+
+    expect(cache.has("key")).toBe(false);
   });
 });

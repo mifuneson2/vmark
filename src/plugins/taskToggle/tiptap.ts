@@ -44,6 +44,7 @@ function findParentListAtCursor(state: EditorState): { pos: number; name: string
       return { pos: $from.before(d), name };
     }
   }
+  /* v8 ignore next -- @preserve reason: list item always has parent list in toggle task flow */
   return null;
 }
 
@@ -64,6 +65,7 @@ function toggleTaskCheckbox(state: EditorState, dispatch?: EditorView["dispatch"
   }
 
   tr.setNodeMarkup(listItemInfo.pos, undefined, {
+    /* v8 ignore next -- @preserve reason: list item node always has attrs in Tiptap schema */
     ...(listItem.attrs ?? {}),
     checked: nextChecked,
   });

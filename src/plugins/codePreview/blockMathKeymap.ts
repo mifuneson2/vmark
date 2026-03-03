@@ -50,6 +50,7 @@ function exitEditing(view: EditorView, revert: boolean): boolean {
   const store = useBlockMathEditingStore.getState();
   const { editingPos, originalContent } = store;
 
+  /* v8 ignore next -- @preserve early return: editingPos is always non-null when exitEditing is called */
   if (editingPos === null) return false;
 
   const { state, dispatch } = view;

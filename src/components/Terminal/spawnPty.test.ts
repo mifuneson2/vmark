@@ -376,6 +376,56 @@ describe("spawnPty shell selection", () => {
     expect(spawnCalls).toEqual(["/usr/bin/nonexistent", "/bin/zsh"]);
   });
 
+  it("sets VMARK_WORKSPACE env when workspace root is available", async () => {
+    vi.mocked(useSettingsStore.getState).mockReturnValue({
+      terminal: { shell: "" },
+    } as ReturnType<typeof useSettingsStore.getState>);
+    vi.mocked(useWorkspaceStore.getState).mockReturnValue({
+      rootPath: "/my/workspace",
+    } as ReturnType<typeof useWorkspaceStore.getState>);
+
+    await spawnPty({ term: mockTerm, onExit: vi.fn(), disposed: () => false });
+
+    const spawnCallEnv = vi.mocked(spawn).mock.calls[0][2] as { env: Record<string, string> };
+    expect(spawnCallEnv.env.VMARK_WORKSPACE).toBe("/my/workspace");
+  });
+
+  it("throws original error when spawn fails and no configured shell", async () => {
+    vi.mocked(useSettingsStore.getState).mockReturnValue({
+      terminal: { shell: "" },
+    } as ReturnType<typeof useSettingsStore.getState>);
+
+    vi.mocked(spawn).mockImplementation((() => {
+      throw new Error("spawn failed");
+    }) as unknown as typeof spawn);
+
+    await expect(
+      spawnPty({ term: mockTerm, onExit: vi.fn(), disposed: () => false }),
+    ).rejects.toThrow("spawn failed");
+  });
+
+  it("calls onExit callback when PTY exits", async () => {
+    vi.mocked(useSettingsStore.getState).mockReturnValue({
+      terminal: { shell: "" },
+    } as ReturnType<typeof useSettingsStore.getState>);
+
+    let exitHandler: (e: { exitCode: number }) => void = () => {};
+    vi.mocked(spawn).mockReturnValue({
+      onData: vi.fn(),
+      onExit: vi.fn((handler: (e: { exitCode: number }) => void) => {
+        exitHandler = handler;
+      }),
+      write: vi.fn(),
+      resize: vi.fn(),
+      kill: vi.fn(),
+    } as unknown as ReturnType<typeof spawn>);
+
+    const onExit = vi.fn();
+    await spawnPty({ term: mockTerm, onExit, disposed: () => false });
+    exitHandler({ exitCode: 42 });
+    expect(onExit).toHaveBeenCalledWith(42);
+  });
+
   it("throws if disposed during fallback await", async () => {
     vi.mocked(useSettingsStore.getState).mockReturnValue({
       terminal: { shell: "/usr/bin/nonexistent" },
@@ -388,5 +438,98 @@ describe("spawnPty shell selection", () => {
     await expect(
       spawnPty({ term: mockTerm, onExit: vi.fn(), disposed: () => true }),
     ).rejects.toThrow("disposed");
+  });
+
+  it("falls back to /bin/sh when get_default_shell returns a non-absolute path", async () => {
+    // L141/142: shellIsAbsolute check — when the resolved shell is relative, use /bin/sh
+    vi.mocked(spawn).mockReturnValue({
+      onData: vi.fn(),
+      onExit: vi.fn(),
+      write: vi.fn(),
+      resize: vi.fn(),
+      kill: vi.fn(),
+    } as unknown as ReturnType<typeof spawn>);
+    vi.mocked(useSettingsStore.getState).mockReturnValue({
+      terminal: { shell: "" },
+    } as ReturnType<typeof useSettingsStore.getState>);
+    vi.mocked(invoke).mockImplementation((cmd: string) => {
+      if (cmd === "get_default_shell") return Promise.resolve("zsh"); // no leading /
+      return Promise.resolve(null);
+    });
+
+    await spawnPty({ term: mockTerm, onExit: vi.fn(), disposed: () => false });
+
+    expect(spawn).toHaveBeenCalledWith("/bin/sh", [], expect.any(Object));
+  });
+
+  it("uses /bin/sh fallback when shell setting is relative path", async () => {
+    // L141/142: configuredShell is set but not absolute — safeShell is "", so
+    // get_default_shell is called. If that also returns a non-absolute path, use /bin/sh.
+    vi.mocked(spawn).mockReturnValue({
+      onData: vi.fn(),
+      onExit: vi.fn(),
+      write: vi.fn(),
+      resize: vi.fn(),
+      kill: vi.fn(),
+    } as unknown as ReturnType<typeof spawn>);
+    vi.mocked(useSettingsStore.getState).mockReturnValue({
+      terminal: { shell: "bash" }, // relative — not absolute
+    } as ReturnType<typeof useSettingsStore.getState>);
+    vi.mocked(invoke).mockImplementation((cmd: string) => {
+      if (cmd === "get_default_shell") return Promise.resolve("fish"); // also not absolute
+      return Promise.resolve(null);
+    });
+
+    await spawnPty({ term: mockTerm, onExit: vi.fn(), disposed: () => false });
+
+    expect(spawn).toHaveBeenCalledWith("/bin/sh", [], expect.any(Object));
+  });
+
+  it("uses default cols/rows (80/24) when term.cols and term.rows are 0", async () => {
+    // L160: term.cols || 80 / term.rows || 24 — when cols/rows are 0 (falsy)
+    vi.mocked(spawn).mockReturnValue({
+      onData: vi.fn(),
+      onExit: vi.fn(),
+      write: vi.fn(),
+      resize: vi.fn(),
+      kill: vi.fn(),
+    } as unknown as ReturnType<typeof spawn>);
+    vi.mocked(useSettingsStore.getState).mockReturnValue({
+      terminal: { shell: "" },
+    } as ReturnType<typeof useSettingsStore.getState>);
+    vi.mocked(invoke).mockResolvedValue("/bin/zsh");
+
+    const zeroTerm = { cols: 0, rows: 0, write: vi.fn() } as unknown as import("@xterm/xterm").Terminal;
+
+    await spawnPty({ term: zeroTerm, onExit: vi.fn(), disposed: () => false });
+
+    const spawnArgs = vi.mocked(spawn).mock.calls[0][2] as { cols: number; rows: number };
+    expect(spawnArgs.cols).toBe(80);
+    expect(spawnArgs.rows).toBe(24);
+  });
+
+  it("throws 'disposed before fallback spawn' when disposed becomes true after fallback shell resolved (L168)", async () => {
+    // L168: disposed() check AFTER the fallback invoke resolves
+    // Need: disposed() returns false at L143 (pre-spawn check) but true at L168 (post-fallback-await)
+    vi.mocked(useSettingsStore.getState).mockReturnValue({
+      terminal: { shell: "/usr/bin/nonexistent" },
+    } as ReturnType<typeof useSettingsStore.getState>);
+
+    let callCount = 0;
+    const disposedFn = () => {
+      callCount++;
+      // First call (L143 check before spawn): not disposed
+      // Second call (L168 check after fallback await): disposed
+      return callCount >= 2;
+    };
+
+    // First spawn (configured shell) throws; second spawn never reached because disposed
+    vi.mocked(spawn).mockImplementation((() => {
+      throw new Error("spawn failed");
+    }) as unknown as typeof spawn);
+
+    await expect(
+      spawnPty({ term: mockTerm, onExit: vi.fn(), disposed: disposedFn }),
+    ).rejects.toThrow("disposed before fallback spawn");
   });
 });

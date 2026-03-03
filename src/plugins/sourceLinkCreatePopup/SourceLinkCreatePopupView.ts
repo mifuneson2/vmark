@@ -156,6 +156,7 @@ export class SourceLinkCreatePopupView {
         }
       } else if (e.key === "Escape") {
         const activeEl = document.activeElement as HTMLElement;
+        /* v8 ignore next -- @preserve reason: Escape with focus outside container is an edge case */
         if (activeEl && this.container.contains(activeEl)) {
           e.preventDefault();
           useLinkCreatePopupStore.getState().closePopup();

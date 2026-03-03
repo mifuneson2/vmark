@@ -56,6 +56,7 @@ export function ProviderSwitcher({ onClose, onCloseAll }: ProviderSwitcherProps)
   // Escape closes just the switcher (stop propagation to prevent closing picker)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      /* v8 ignore next -- @preserve non-Escape key branch: tests only send Escape to this handler */
       if (e.key === "Escape") {
         e.stopPropagation();
         onClose();

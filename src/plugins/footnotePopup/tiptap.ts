@@ -180,6 +180,7 @@ class FootnotePopupPluginView {
         if (this.lastSelectedRefPos === pos) return;
         this.lastSelectedRefPos = pos;
 
+        /* v8 ignore next -- @preserve footnote_reference nodes always have a label attr */
         const label = String(node.attrs.label ?? "");
         const definition = findFootnoteDefinition(this.view, label);
         const content = definition?.content ?? "Footnote not found";

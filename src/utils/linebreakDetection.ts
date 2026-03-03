@@ -53,6 +53,7 @@ function detectHardBreakStyle(text: string): HardBreakStyle {
   let fenceLength = 0;
 
   for (let i = 0; i < lastIndex; i += 1) {
+    /* v8 ignore next -- @preserve loop bound i < lastIndex < lines.length guarantees lines[i] is defined */
     const line = lines[i] ?? "";
     const fence = isFenceLine(line);
     if (fence) {

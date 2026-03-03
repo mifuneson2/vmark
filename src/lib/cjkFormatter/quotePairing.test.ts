@@ -296,4 +296,217 @@ describe("quotePairing", () => {
       // This might not detect the CJK comma as a boundary
     });
   });
+
+  describe("edge cases - apostrophe with curly quotes", () => {
+    test("detects apostrophe with curly single close quote (right quote)", () => {
+      // \u2019 is curly single close, used as apostrophe
+      const tokens = tokenizeQuotes("don\u2019t");
+      expect(tokens).toHaveLength(1);
+      expect(tokens[0].role).toBe("apostrophe");
+    });
+
+    test("detects apostrophe with curly single open quote", () => {
+      // \u2018 is curly single open, also checked in isApostrophe
+      const tokens = tokenizeQuotes("don\u2018t");
+      expect(tokens).toHaveLength(1);
+      expect(tokens[0].role).toBe("apostrophe");
+    });
+
+    test("detects possessive 's followed by non-letter", () => {
+      // Xiaolai's followed by space (non-letter after s)
+      const tokens = tokenizeQuotes("Xiaolai's .");
+      const apostrophes = tokens.filter((t) => t.role === "apostrophe");
+      expect(apostrophes).toHaveLength(1);
+    });
+
+    test("does not treat letter-quote-s-letter as possessive", () => {
+      // "Cat'stuff" - the s is followed by more letters, so it's not possessive
+      const tokens = tokenizeQuotes("Cat'stuff");
+      // It's apostrophe because letter + ' + letter pattern
+      expect(tokens[0].role).toBe("apostrophe");
+    });
+
+    test("detects possessive at end of string", () => {
+      const tokens = tokenizeQuotes("Xiaolai's");
+      const apostrophes = tokens.filter((t) => t.role === "apostrophe");
+      expect(apostrophes).toHaveLength(1);
+    });
+  });
+
+  describe("edge cases - decade abbreviation with curly open", () => {
+    test("detects decade with curly single open quote", () => {
+      const tokens = tokenizeQuotes("\u201890s");
+      expect(tokens).toHaveLength(1);
+      expect(tokens[0].role).toBe("apostrophe");
+    });
+
+    test("does not detect decade when preceded by digit", () => {
+      // 5'90s - digit before quote means feet, not decade
+      const tokens = tokenizeQuotes("5'90s");
+      const primes = tokens.filter((t) => t.role === "prime");
+      expect(primes.length).toBeGreaterThanOrEqual(1);
+    });
+
+    test("curly single close quote (\u2019) is not a decade opener (line 122 false branch)", () => {
+      // \u2019 is CURLY_SINGLE_CLOSE — isDecadeAbbreviation returns false immediately
+      // because char is neither "'" nor CURLY_SINGLE_OPEN (\u2018).
+      // Without a letter before it, isApostrophe also returns false, so it is
+      // classified as open/close (not apostrophe) — verifying line 122 is reached.
+      const tokens = tokenizeQuotes("\u201990s");
+      // \u2019 before "90s": not prime (no digit before), not apostrophe (no letter before),
+      // not decade (char is \u2019, not \u2018 or '). Classified as open or close.
+      const quoteToken = tokens.find((t) => t.role === "open" || t.role === "close");
+      expect(quoteToken).toBeDefined();
+    });
+  });
+
+  describe("edge cases - prime with non-digit break", () => {
+    test("double prime after digits with non-digit lookback break", () => {
+      // Pattern like a10" — the lookback for ' finds 'a' (non-digit) and breaks
+      const tokens = tokenizeQuotes('a10"');
+      const primes = tokens.filter((t) => t.role === "prime");
+      expect(primes).toHaveLength(1);
+    });
+  });
+
+  describe("classifyQuote — stack-based close fallback", () => {
+    test("classifies quote as close when stack has matching opener", () => {
+      // "abc"def" — the third " has no whitespace/punctuation signals
+      // but the stack has an opener, so it should be classified as close.
+      // The second " closes the first, the third becomes open,
+      // and the fourth closes the third.
+      const { pairs } = analyzeQuotes('"abc"def"xyz"');
+      // Should pair successfully
+      expect(pairs.length).toBeGreaterThanOrEqual(2);
+    });
+
+    test("defaults to open when no signals and empty stack", () => {
+      // Single quote char surrounded by non-whitespace, non-punctuation
+      // with empty stack → defaults to open
+      const tokens = tokenizeQuotes('a"b');
+      // leftNeighbor is 'a' (non-whitespace, non-open-bracket) → not strong open
+      // rightNeighbor is 'b' (non-whitespace, non-close-bracket, non-terminal) → not strong close
+      // Stack is empty → defaults to "open"
+      const quoteToken = tokens.find(
+        (t) => t.role === "open" || t.role === "close"
+      );
+      expect(quoteToken?.role).toBe("open");
+    });
+  });
+
+  describe("applyContextualQuotes — single quotes in contextual CJK", () => {
+    test("CJK-involved single quotes become curly in contextual mode", () => {
+      const result = applyContextualQuotes("中文'Hello'", "contextual");
+      expect(result).toBe("中文\u2018Hello\u2019");
+    });
+  });
+
+  describe("applyContextualQuotes - unknown mode fallthrough", () => {
+    test("handles single quotes in corner-for-cjk mode with CJK", () => {
+      const result = applyContextualQuotes("中文'Hello'", "corner-for-cjk");
+      expect(result).toBe("中文『Hello』");
+    });
+
+    test("single quotes in contextual mode stay straight for Latin", () => {
+      const result = applyContextualQuotes("'Hello'", "contextual");
+      expect(result).toBe("'Hello'");
+    });
+
+    test("single quotes in curly-everywhere mode become curly", () => {
+      const result = applyContextualQuotes("'Hello'", "curly-everywhere");
+      expect(result).toBe("\u2018Hello\u2019");
+    });
+
+    // line 440: the `else { continue }` branch — an unrecognized mode skips replacement
+    // The function signature currently accepts only specific modes so this is a type-safety
+    // guard hit only when called with an unexpected value at runtime.
+    test("unknown mode skips all replacements and returns original text unchanged", () => {
+      // Force an unknown mode via type cast to test the `else { continue }` branch (line 440)
+      const result = applyContextualQuotes('"Hello"', "unknown-mode" as Parameters<typeof applyContextualQuotes>[1]);
+      // No replacements applied — returns original text
+      expect(result).toBe('"Hello"');
+    });
+  });
+
+  describe("isApostrophe — non-quote char returns false (line 88)", () => {
+    test("double quote character is never treated as apostrophe", () => {
+      // Double quote between letters: a"b — isApostrophe returns false for '"'
+      const tokens = tokenizeQuotes('a"b');
+      const dblQuote = tokens.find(t => t.type === "double");
+      expect(dblQuote).toBeDefined();
+      expect(dblQuote!.role).not.toBe("apostrophe");
+    });
+  });
+
+  describe("possessive — afterS check branches (lines 100-105)", () => {
+    test("letter+apostrophe+s followed by letter is NOT possessive (falls to contraction)", () => {
+      // "it'stuff" — t + ' + s, afterS='t' (a letter) → possessive fails
+      // But letter+'+letter (t+'+s) triggers isApostrophe at line 95 first
+      const tokens = tokenizeQuotes("it'stuff");
+      // First check: before='t' (letter), after='s' (letter) → line 95 returns true
+      expect(tokens[0].role).toBe("apostrophe");
+    });
+
+    test("possessive with afterS as empty (end of string, line 102 false branch)", () => {
+      // "cat's" — at end, pos+2 >= length → afterS="" → possessive ✓
+      const tokens = tokenizeQuotes("cat's");
+      expect(tokens[0].role).toBe("apostrophe");
+    });
+
+    test("possessive where afterS is a non-letter (space)", () => {
+      // "dog's tail" — s followed by space → possessive ✓
+      const tokens = tokenizeQuotes("dog's tail");
+      const apostrophes = tokens.filter(t => t.role === "apostrophe");
+      expect(apostrophes).toHaveLength(1);
+    });
+  });
+
+  describe("classifyQuote — stack close with empty stack default (line 118/222)", () => {
+    test("quote with no contextual signals and empty stack defaults to open", () => {
+      // Place a quote between two non-whitespace, non-bracket, non-punctuation chars
+      // with an empty stack → default to "open"
+      const tokens = tokenizeQuotes('x"y');
+      const qt = tokens.find(t => t.type === "double" && (t.role === "open" || t.role === "close"));
+      expect(qt).toBeDefined();
+      expect(qt!.role).toBe("open");
+    });
+  });
+
+  describe("tokenizeQuotes — apostrophe edge cases", () => {
+    // line 88: char is not ' or curly single → return false from isApostrophe
+    // (These exercise the `if (char !== ...)` guard that returns false for non-apostrophe chars)
+    test("double quote adjacent to letters is not treated as apostrophe", () => {
+      // '"' is not a single-quote char, so isApostrophe returns false immediately
+      const tokens = tokenizeQuotes('say "hello"');
+      // Both double quotes should be classified as open/close, not apostrophe
+      expect(tokens.some((t) => t.role === "apostrophe")).toBe(false);
+    });
+
+    // line 100-105: Letter + ' + s pattern where afterS IS a letter (possessive false branch)
+    // e.g., "it's" — letter before, 's' after, but followed by more letters → not possessive
+    test("letter-apostrophe-s followed by more letters is contraction, not possessive", () => {
+      // "isn't" — n + ' + t (not 's'), but "it's" where after 's' is a space → possessive
+      // To hit the `afterS IS letter` branch: needs letter + ' + s + letter
+      // Example: "Elsa's" → a + ' + s followed by nothing → possessive ✓
+      // Example: "isn't" → n + ' + t → contraction branch (before='n', after='t') ✓
+      // For the `!/[a-zA-Z]/.test(afterS)` false path: "class" has l + a + s + s
+      // We need: letter + apostrophe + s + letter → e.g., "it'self" (contrived)
+      const tokens = tokenizeQuotes("it'self");
+      // before='t', after='s', afterS='e' (a letter) → possessive check fails →
+      // falls through to isApostrophe returning false → classified as open/close quote
+      // (not apostrophe), meaning there should be no apostrophe token
+      // before='t' (letter), after='s' (letter) → line 95 returns true first
+      expect(tokens.some((t) => t.role === "apostrophe")).toBe(true);
+    });
+
+    // line 102: cond-expr `pos + 2 < text.length ? text[pos + 2] : ""`
+    // when apostrophe is near end of string (pos + 2 >= length) → afterS = ""
+    test("possessive apostrophe at near-end of string (afterS is empty)", () => {
+      // "cat's" — t + ' + s at positions 3,4; afterS would be text[5] = undefined → ""
+      // !/[a-zA-Z]/.test("") → true → returns true (is possessive)
+      const tokens = tokenizeQuotes("cat's");
+      expect(tokens).toHaveLength(1);
+      expect(tokens[0].role).toBe("apostrophe");
+    });
+  });
 });

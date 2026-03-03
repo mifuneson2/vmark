@@ -70,6 +70,57 @@ describe("handleTabKeyboard", () => {
     expect(onActivate).toHaveBeenCalledWith("tab-1");
   });
 
+  it("activates the tab on Space", () => {
+    const onActivate = vi.fn();
+    const event = createKeyboardEvent({ key: " " });
+
+    handleTabKeyboard({
+      tabId: "tab-1",
+      event,
+      tabs: [{ id: "tab-1", filePath: null, title: "One", isPinned: false }],
+      onReorder: vi.fn(),
+      onActivate,
+    });
+
+    expect(event.preventDefault).toHaveBeenCalledTimes(1);
+    expect(onActivate).toHaveBeenCalledWith("tab-1");
+  });
+
+  it("does nothing when tabId is not found in tabs (fromIndex === -1)", () => {
+    const onReorder = vi.fn();
+    const onActivate = vi.fn();
+    const event = createKeyboardEvent({ key: "ArrowLeft", altKey: true, shiftKey: true });
+
+    handleTabKeyboard({
+      tabId: "nonexistent",
+      event,
+      tabs: [{ id: "tab-1", filePath: null, title: "One", isPinned: false }],
+      onReorder,
+      onActivate,
+    });
+
+    expect(event.preventDefault).toHaveBeenCalledTimes(1);
+    expect(onReorder).not.toHaveBeenCalled();
+  });
+
+  it("does nothing for unrelated keys", () => {
+    const onReorder = vi.fn();
+    const onActivate = vi.fn();
+    const event = createKeyboardEvent({ key: "a" });
+
+    handleTabKeyboard({
+      tabId: "tab-1",
+      event,
+      tabs: [{ id: "tab-1", filePath: null, title: "One", isPinned: false }],
+      onReorder,
+      onActivate,
+    });
+
+    expect(event.preventDefault).not.toHaveBeenCalled();
+    expect(onReorder).not.toHaveBeenCalled();
+    expect(onActivate).not.toHaveBeenCalled();
+  });
+
   it("ignores key handling during IME composition", () => {
     const onReorder = vi.fn();
     const onActivate = vi.fn();

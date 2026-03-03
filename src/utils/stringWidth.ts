@@ -16,6 +16,7 @@
 export function getDisplayWidth(str: string): number {
   let width = 0;
   for (const char of str) {
+    /* v8 ignore next -- @preserve codePointAt(0) is always defined when iterating string chars */
     const code = char.codePointAt(0) || 0;
     // CJK characters have width 2
     if (

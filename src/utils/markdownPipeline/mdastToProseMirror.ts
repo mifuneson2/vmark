@@ -320,6 +320,7 @@ function mergeInlineHtmlTags(children: readonly Content[]): Content[] {
         continue;
       }
       const closeNode = children[closeIndex] as Html;
+      // v8 ignore next -- @preserve reason: node.value and closeNode.value are always strings here — parseInlineHtmlOpen and isInlineHtmlClose require non-null values to match; the ?? "" branches are structurally unreachable
       const mergedValue = `${String(node.value ?? "")}${serializeInlineHtmlNodes(innerNodes)}${String(closeNode.value ?? "")}`;
       result.push({ type: "html", value: mergedValue } as Html);
       index = closeIndex;
@@ -367,6 +368,7 @@ function serializeInlineHtmlNode(node: Content): string {
       return String((node as Html).value ?? "");
     case "break":
       return "<br>";
+    // v8 ignore next 5 -- @preserve reason: canSafelyMerge() only allows text/html/break into the merge path; a non-text/html/break node (with or without children) can never reach serializeInlineHtmlNode
     default:
       if ("children" in node && Array.isArray(node.children)) {
         return serializeInlineHtmlNodes(node.children as Content[]);

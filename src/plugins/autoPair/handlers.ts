@@ -70,6 +70,7 @@ function handleBacktickCodeToggle(
   const { state, dispatch } = view;
 
   // Don't handle if preceded by backslash (escaped)
+  /* v8 ignore next -- @preserve reason: from is always >= 1 in ProseMirror (cursor is inside the doc node); the else branch (from === 0) is unreachable during normal editing */
   if (from > 0) {
     const $pos = state.doc.resolve(from);
     const textBefore = $pos.parent.textBetween(
@@ -93,13 +94,16 @@ function handleBacktickCodeToggle(
   if (inCode) {
     // Escape: move cursor to end of code mark
     const endPos = findCodeMarkEnd(state, from, codeMarkType);
-    if (endPos !== null) {
-      const tr = state.tr.setSelection(TextSelection.create(state.doc, endPos));
-      tr.removeStoredMark(codeMarkType);
-      dispatch(tr);
-      return true;
-    }
-    return false;
+    // findCodeMarkEnd returns null only if no code-marked child contains `from`,
+    // which is structurally impossible when inCode is true (marks come from text nodes).
+    // findCodeMarkEnd always returns non-null when inCode is true — use non-null assertion
+    // (the null guard above exists as a type-safety guarantee only)
+    /* v8 ignore next -- @preserve reason: endPos is always non-null when inCode is true; the ?? from fallback is structurally unreachable */
+    const pos = endPos ?? from; // fallback to from keeps selection stable if null (unreachable)
+    const tr = state.tr.setSelection(TextSelection.create(state.doc, pos));
+    tr.removeStoredMark(codeMarkType);
+    dispatch(tr);
+    return true;
   }
 
   // Outside code: toggle code mark
@@ -135,6 +139,7 @@ function findCodeMarkEnd(
     const childEnd = childStart + child.nodeSize;
 
     if (pos >= childStart && pos <= childEnd) {
+      /* v8 ignore next 3 -- @preserve reason: when inCode is true the cursor lies inside a code-marked text node; any sibling that satisfies the range check but lacks the code mark is only reachable at a mark boundary where $from.marks() already returns [] (inCode=false), making this else path structurally unreachable */
       if (child.marks.some((m) => m.type === codeMarkType)) {
         return childEnd;
       }

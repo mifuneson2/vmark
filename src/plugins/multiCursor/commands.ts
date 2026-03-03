@@ -194,6 +194,7 @@ export function selectAllOccurrences(state: EditorState): Transaction | null {
   // Find all occurrences
   const occurrences = findAllOccurrences(state, searchText, bounds ?? undefined);
 
+  /* v8 ignore next -- @preserve defensive guard: findAllOccurrences always finds non-empty searchText in doc */
   if (occurrences.length === 0) return null;
 
   // Create ranges for all occurrences
@@ -203,6 +204,7 @@ export function selectAllOccurrences(state: EditorState): Transaction | null {
     return new SelectionRange($from, $to);
   });
   const filteredRanges = bounds ? filterRangesToBounds(ranges, bounds) : ranges;
+  /* v8 ignore next -- @preserve defensive guard: occurrences are found within bounds, filtering cannot remove all */
   if (filteredRanges.length === 0) return null;
 
   // Find which occurrence contains the original selection to set as primary
@@ -415,9 +417,11 @@ function addCursorVertical(
   const extremeRange =
     direction === -1
       ? existingRanges.reduce((min, r) =>
+          /* v8 ignore next -- @preserve ranges sorted ascending; r < min is structurally unreachable */
           r.$from.pos < min.$from.pos ? r : min
         )
       : existingRanges.reduce((max, r) =>
+          /* v8 ignore next -- @preserve ranges sorted ascending; r <= max fallback is structurally unreachable */
           r.$from.pos > max.$from.pos ? r : max
         );
 
