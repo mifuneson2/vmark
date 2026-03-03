@@ -803,6 +803,13 @@ describe("restoreCursorInTiptap — container node handling", () => {
         parseDOM: [{ tag: "p" }],
         toDOM() { return ["p", 0]; },
       },
+      blockquote: {
+        content: "block+",
+        group: "block",
+        attrs: { sourceLine: { default: null } },
+        parseDOM: [{ tag: "blockquote" }],
+        toDOM() { return ["blockquote", 0]; },
+      },
       alertBlock: {
         content: "block+",
         group: "block",
@@ -929,6 +936,36 @@ describe("restoreCursorInTiptap — container node handling", () => {
     };
 
     // Should still dispatch (finds textblock child via nested descendants)
+    restoreCursorInTiptap(view as never, info);
+    expect(view.dispatch).toHaveBeenCalled();
+  });
+
+  it("falls through non-container, non-textblock node with matching sourceLine (branch 21[1])", () => {
+    // blockquote is NOT in containerTypes, and NOT a textblock.
+    // When it matches sourceLine, the code should skip it and continue searching.
+    const bq = containerSchema.node("blockquote", { sourceLine: 3 }, [
+      containerSchema.node("paragraph", { sourceLine: 4 }, [containerSchema.text("quoted text")]),
+    ]);
+    const doc = containerSchema.node("doc", null, [
+      containerSchema.node("paragraph", { sourceLine: 1 }, [containerSchema.text("before")]),
+      bq,
+    ]);
+    const state = EditorState.create({ doc, schema: containerSchema });
+    const view = createMockView(state);
+
+    const info: CursorInfo = {
+      sourceLine: 3,
+      wordAtCursor: "quoted",
+      offsetInWord: 0,
+      nodeType: "blockquote",
+      percentInLine: 0,
+      contextBefore: "",
+      contextAfter: "quoted text",
+    };
+
+    // blockquote matches sourceLine=3 but is not textblock and not in containerTypes.
+    // Code falls through and continues searching. The paragraph at sourceLine=4 won't match.
+    // Falls back to findClosestSourceLine.
     restoreCursorInTiptap(view as never, info);
     expect(view.dispatch).toHaveBeenCalled();
   });

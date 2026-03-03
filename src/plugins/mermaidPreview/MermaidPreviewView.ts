@@ -123,6 +123,7 @@ export class MermaidPreviewView {
   private setupResizeHandlers() {
     const onMouseDown = (e: MouseEvent) => {
       const handle = (e.target as HTMLElement).closest(".mermaid-preview-resize") as HTMLElement;
+      /* v8 ignore next -- @preserve defensive guard: listener is only attached to resize handle elements */
       if (!handle) return;
 
       this.isResizing = true;

@@ -772,4 +772,54 @@ describe("SourceEditor", () => {
       vi.advanceTimersByTime(16);
     });
   });
+
+  describe("showLineNumbers class (branch 26, line 269)", () => {
+    it("includes show-line-numbers class when showLineNumbers is true", async () => {
+      const { useEditorStore } = await import("@/stores/editorStore");
+      // Override selector mock to return showLineNumbers: true
+      (useEditorStore as unknown as ReturnType<typeof vi.fn>).mockImplementation(
+        (selector: (s: Record<string, unknown>) => unknown) =>
+          selector({ wordWrap: true, showLineNumbers: true })
+      );
+
+      const { container } = render(<SourceEditor />);
+      const editorDiv = container.firstChild as HTMLElement;
+      expect(editorDiv.className).toContain("show-line-numbers");
+
+      // Restore original mock
+      (useEditorStore as unknown as ReturnType<typeof vi.fn>).mockImplementation(
+        (selector: (s: Record<string, unknown>) => unknown) =>
+          selector({ wordWrap: true, showLineNumbers: false })
+      );
+    });
+  });
+
+  describe("autoPairEnabled nullish coalescing (branch 14, line 148)", () => {
+    it("defaults autoPairEnabled to true when undefined", async () => {
+      const { useSettingsStore } = await import("@/stores/settingsStore");
+      (useSettingsStore as unknown as Record<string, unknown>).getState = () => ({
+        markdown: { showBrTags: false, autoPairEnabled: undefined, enableRegexSearch: true },
+      });
+
+      // This exercises the `?? true` fallback on line 148
+      const { container } = render(<SourceEditor />);
+      expect(container.firstChild).toBeInstanceOf(HTMLDivElement);
+
+      // Restore
+      (useSettingsStore as unknown as Record<string, unknown>).getState = () => ({
+        markdown: { showBrTags: false, autoPairEnabled: true, enableRegexSearch: true },
+      });
+    });
+  });
+
+  describe("visibility effect early returns", () => {
+    it("returns early when hidden stays true on rerender (branch 21, line 219)", () => {
+      const { rerender } = render(<SourceEditor hidden />);
+      mockSetActiveSourceView.mockClear();
+
+      // Rerender still hidden — should not register active view
+      rerender(<SourceEditor hidden />);
+      expect(mockSetActiveSourceView).not.toHaveBeenCalled();
+    });
+  });
 });

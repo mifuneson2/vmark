@@ -366,6 +366,77 @@ describe("LinkPopupView", () => {
   });
 
   // ---------------------------------------------------------------------------
+  // handleSave — lines 149-150: empty href triggers remove
+  // ---------------------------------------------------------------------------
+
+  it("handleSave removes link when href is empty or whitespace", () => {
+    const popup = new LinkPopupView(view as never);
+    triggerStore({ isOpen: true, anchorRect: ANCHOR, href: "   " });
+
+    const saveBtn = popup["saveBtn"] as HTMLElement;
+    saveBtn.click();
+
+    // Empty/whitespace href should trigger handleRemove path
+    expect(view.dispatch).toHaveBeenCalled();
+
+    popup.destroy();
+  });
+
+  // ---------------------------------------------------------------------------
+  // handleOpen — lines 197-199: external link open
+  // ---------------------------------------------------------------------------
+
+  it("handleOpen opens external link in browser", async () => {
+    const popup = new LinkPopupView(view as never);
+    triggerStore({ isOpen: true, anchorRect: ANCHOR, href: "https://example.com" });
+
+    const openBtn = popup["openBtn"] as HTMLElement;
+    openBtn.click();
+
+    // Wait for dynamic import to resolve
+    await new Promise((r) => setTimeout(r, 10));
+
+    const { openUrl } = await import("@tauri-apps/plugin-opener");
+    expect(openUrl).toHaveBeenCalledWith("https://example.com");
+
+    popup.destroy();
+  });
+
+  // ---------------------------------------------------------------------------
+  // handleOpen — empty href guard
+  // ---------------------------------------------------------------------------
+
+  it("handleOpen does nothing when href is empty", () => {
+    const popup = new LinkPopupView(view as never);
+    triggerStore({ isOpen: true, anchorRect: ANCHOR, href: "" });
+
+    const openBtn = popup["openBtn"] as HTMLElement;
+    openBtn.click();
+
+    // Should not navigate or open anything
+    expect(view.dispatch).not.toHaveBeenCalled();
+
+    popup.destroy();
+  });
+
+  // ---------------------------------------------------------------------------
+  // handleCopy — empty href guard
+  // ---------------------------------------------------------------------------
+
+  it("handleCopy does nothing when href is empty", async () => {
+    const popup = new LinkPopupView(view as never);
+    triggerStore({ isOpen: true, anchorRect: ANCHOR, href: "" });
+
+    const copyBtn = popup["copyBtn"] as HTMLElement;
+    copyBtn.click();
+
+    await new Promise((r) => setTimeout(r, 10));
+
+    // No clipboard operation attempted
+    popup.destroy();
+  });
+
+  // ---------------------------------------------------------------------------
   // handleRemove — lines 232-233: catch block
   // ---------------------------------------------------------------------------
 

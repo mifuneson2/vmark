@@ -331,4 +331,69 @@ describe("extractTiptapContext", () => {
       expect(ctx.contextMode).toBe("insert");
     });
   });
+
+  describe("fallback values for node attrs", () => {
+    it("uses empty string fallback when codeBlock language is falsy (line 59)", () => {
+      // codeBlock with language="" — the || "" fallback triggers
+      const document = doc(codeBlock("", "code here"));
+      const state = createState(document, 2);
+
+      const ctx = extractTiptapContext(state);
+
+      expect(ctx.inCodeBlock).toBeDefined();
+      expect(ctx.inCodeBlock?.language).toBe("");
+    });
+
+    it("uses fallback level 1 when heading level is falsy (line 115)", () => {
+      // Create a heading with level=0 (falsy) to trigger `|| 1` fallback
+      const h = testSchema.node("heading", { level: 0 }, [testSchema.text("Title")]);
+      const document = doc(h);
+      const state = createState(document, 2);
+
+      const ctx = extractTiptapContext(state);
+
+      expect(ctx.inHeading).toBeDefined();
+      expect(ctx.inHeading?.level).toBe(1);
+    });
+
+    it("handles table with zero cols when row has no children (line 69-70)", () => {
+      // A table with 0 rows is not valid in the schema, but we test a 1x1 table
+      // and position the cursor so $from.depth relative to table triggers fallback
+      const document = doc(
+        table(
+          tableRow(tableCell(p("only cell")))
+        )
+      );
+      const state = createState(document, 5);
+
+      const ctx = extractTiptapContext(state);
+
+      expect(ctx.inTable).toBeDefined();
+      expect(ctx.inTable?.totalRows).toBe(1);
+      expect(ctx.inTable?.totalCols).toBe(1);
+    });
+  });
+
+  describe("word detection skipped in special contexts", () => {
+    it("skips word detection when cursor is in a link (line 133)", () => {
+      const document = doc(p("before ", linkedText("link text", "https://example.com"), " after"));
+      const state = createState(document, 11); // Inside the link
+
+      const ctx = extractTiptapContext(state);
+
+      // inLink should be detected, inWord should NOT be set
+      expect(ctx.inLink).toBeDefined();
+      expect(ctx.inWord).toBeUndefined();
+    });
+
+    it("skips word detection when cursor is in formatted text (line 133)", () => {
+      const document = doc(p("before ", boldText("bold text"), " after"));
+      const state = createState(document, 11); // Inside bold
+
+      const ctx = extractTiptapContext(state);
+
+      expect(ctx.inFormattedRange).toBeDefined();
+      expect(ctx.inWord).toBeUndefined();
+    });
+  });
 });

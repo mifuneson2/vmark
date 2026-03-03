@@ -746,6 +746,81 @@ describe("sectionHandlers", () => {
     });
   });
 
+  describe("error handling — non-Error thrown (catch blocks)", () => {
+    it("handleSectionUpdate converts non-Error to string (line 238)", async () => {
+      // Force a non-Error throw from inside the try block
+      mockValidateBaseRevision.mockImplementation(() => { throw 42; });
+
+      await handleSectionUpdate("req-err-1", {
+        baseRevision: "rev-1",
+        target: { heading: "Intro" },
+        newContent: "new text",
+      });
+
+      expect(mockRespond).toHaveBeenCalledWith({
+        id: "req-err-1",
+        success: false,
+        error: "42",
+      });
+    });
+
+    it("handleSectionInsert converts non-Error to string (line 379)", async () => {
+      mockValidateBaseRevision.mockImplementation(() => { throw "string error"; });
+
+      await handleSectionInsert("req-err-2", {
+        baseRevision: "rev-1",
+        heading: { level: 2, text: "New" },
+        content: "content",
+      });
+
+      expect(mockRespond).toHaveBeenCalledWith({
+        id: "req-err-2",
+        success: false,
+        error: "string error",
+      });
+    });
+
+    it("handleSectionMove converts non-Error to string (line 562)", async () => {
+      mockValidateBaseRevision.mockImplementation(() => { throw { code: 500 }; });
+
+      await handleSectionMove("req-err-3", {
+        baseRevision: "rev-1",
+        section: { heading: "A" },
+        after: { heading: "B" },
+      });
+
+      expect(mockRespond).toHaveBeenCalledWith({
+        id: "req-err-3",
+        success: false,
+        error: "[object Object]",
+      });
+    });
+  });
+
+  describe("findSection — heading not first in descendants (branch 0, 4, 6)", () => {
+    it("handleSectionUpdate returns true for non-heading node in descendants callback", async () => {
+      // This tests the `return true` branch in the descendants callback when
+      // a non-heading node is visited (the iterator continues past it).
+      const editor = createMockEditor([
+        { type: "paragraph", text: "Intro text", nodeSize: 12 },
+        { type: "heading", level: 2, text: "Section", nodeSize: 10 },
+        { type: "paragraph", text: "Content", nodeSize: 10 },
+      ]);
+      mockGetEditor.mockReturnValue(editor);
+
+      await handleSectionUpdate("req-desc-1", {
+        baseRevision: "rev-1",
+        target: { heading: "Section" },
+        newContent: "new content",
+        mode: "dryRun",
+      });
+
+      const call = mockRespond.mock.calls[0][0];
+      expect(call.success).toBe(true);
+      expect(call.data.preview.sectionHeading).toBe("Section");
+    });
+  });
+
   describe("handleSectionMove — target inside moving section (lines 458-465)", () => {
     it("returns invalid_operation when target is inside the section being moved", async () => {
       // We need afterSection.to > sectionRange.from && afterSection.to < sectionRange.to

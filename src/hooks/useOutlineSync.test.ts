@@ -57,6 +57,24 @@ function createMockDoc(headings: Array<{ name: string; pos: number }>) {
   };
 }
 
+/** Build a mock doc with mixed node types (headings + paragraphs) */
+function createMixedMockDoc(nodes: Array<{ name: string; pos: number }>) {
+  const allNodes = nodes.map((n) => ({
+    node: { type: { name: n.name } },
+    pos: n.pos,
+  }));
+
+  return {
+    descendants: (cb: (node: { type: { name: string } }, pos: number) => boolean | undefined) => {
+      for (const entry of allNodes) {
+        const shouldContinue = cb(entry.node, entry.pos);
+        if (shouldContinue === false) break;
+      }
+    },
+    resolve: (pos: number) => pos,
+  };
+}
+
 function createMockView(
   headingPositions: number[] = [],
   selectionAnchor = 0
@@ -462,6 +480,137 @@ describe("useOutlineSync — cursor tracking", () => {
 
     // cancelAnimationFrame should be called during cleanup
     expect(cancelSpy).toHaveBeenCalled();
+    cancelSpy.mockRestore();
+  });
+
+  it("findHeadingPosition early-returns for nodes visited after target found (branch 0, line 44)", async () => {
+    // ProseMirror's descendants may continue visiting sibling nodes even after a callback
+    // returns false for a child. The guard on line 44 (if pos !== -1) handles this.
+    // We simulate this by NOT breaking on return false — continuing to call the callback.
+    // Also include a paragraph BEFORE the heading to exercise the non-heading branch (line 46).
+    const allNodes = [
+      { node: { type: { name: "paragraph" } }, pos: 0 },  // non-heading before target (line 46 false)
+      { node: { type: { name: "heading" } }, pos: 10 },   // target (index 0)
+      { node: { type: { name: "paragraph" } }, pos: 30 }, // visited after target found (line 44 true)
+    ];
+    const doc = {
+      descendants: (cb: (node: { type: { name: string } }, pos: number) => boolean | undefined) => {
+        // Deliberately do NOT break on false — simulates ProseMirror continuing to
+        // visit sibling nodes, which triggers the pos !== -1 early return on line 44.
+        for (const entry of allNodes) {
+          cb(entry.node, entry.pos);
+        }
+      },
+      resolve: (pos: number) => pos,
+    };
+
+    const view = {
+      state: {
+        doc,
+        tr: { setSelection: vi.fn().mockReturnThis(), setMeta: vi.fn().mockReturnThis() },
+        selection: { anchor: 0 },
+      },
+      dispatch: vi.fn(),
+      focus: vi.fn(),
+      nodeDOM: vi.fn(() => {
+        const el = document.createElement("h1");
+        el.scrollIntoView = vi.fn();
+        return el;
+      }),
+    };
+    const getView = () => view as unknown as ReturnType<() => import("@tiptap/pm/view").EditorView>;
+
+    renderHook(() => useOutlineSync(getView));
+    await vi.waitFor(() => expect(mocks.listen).toHaveBeenCalled());
+
+    const calls = mocks.listen.mock.calls as unknown[][];
+    const scrollCall = calls.find((c) => c[0] === "outline:scroll-to-heading");
+    const callback = scrollCall![1] as ListenCallback;
+
+    // Click heading at index 0. After finding it, the mock continues to call cb for
+    // the paragraph node — the pos !== -1 guard on line 44 fires and returns false.
+    callback({ payload: { headingIndex: 0 } });
+    expect(view.dispatch).toHaveBeenCalled();
+  });
+
+  it("findHeadingIndexAtPosition skips non-heading nodes (branch 3[1], line 68)", () => {
+    const dom = document.createElement("div");
+    mockDom = dom;
+
+    // Create a doc with mixed headings and paragraphs — paragraphs exercise the
+    // false branch of `if (node.type.name === "heading")` in findHeadingIndexAtPosition.
+    const mixedDoc = createMixedMockDoc([
+      { name: "paragraph", pos: 0 },    // non-heading → false branch (line 68)
+      { name: "heading", pos: 10 },
+      { name: "paragraph", pos: 30 },    // non-heading → false branch
+      { name: "heading", pos: 50 },
+    ]);
+
+    const view = {
+      state: {
+        doc: mixedDoc,
+        tr: { setSelection: vi.fn().mockReturnThis(), setMeta: vi.fn().mockReturnThis() },
+        selection: { anchor: 60 }, // after both headings
+      },
+      dispatch: vi.fn(),
+      focus: vi.fn(),
+      nodeDOM: vi.fn(() => {
+        const el = document.createElement("h1");
+        el.scrollIntoView = vi.fn();
+        return el;
+      }),
+    };
+    const getView = () => view as unknown as ReturnType<() => import("@tiptap/pm/view").EditorView>;
+
+    renderHook(() => useOutlineSync(getView));
+
+    // With cursor at 60, after heading at pos 50 (index 1), activeHeadingLine should be 1
+    const headingLine = useUIStore.getState().activeHeadingLine;
+    expect(headingLine).toBe(1);
+  });
+
+  it("cancelled guard prevents updateActiveHeading when view exists but cancelled (line 160)", () => {
+    const dom = document.createElement("div");
+    mockDom = dom;
+
+    const view = createMockView([0, 50], 10);
+    const getView = () => view as unknown as ReturnType<() => import("@tiptap/pm/view").EditorView>;
+
+    // Capture rAF callbacks so we can fire them manually after unmount
+    const rafCallbacks: FrameRequestCallback[] = [];
+    const rafSpy = vi.spyOn(globalThis, "requestAnimationFrame").mockImplementation((cb) => {
+      rafCallbacks.push(cb);
+      return rafCallbacks.length;
+    });
+    const cancelSpy = vi.spyOn(globalThis, "cancelAnimationFrame").mockImplementation(() => {});
+
+    const setActiveHeadingLineSpy = vi.spyOn(useUIStore.getState(), "setActiveHeadingLine");
+
+    const { unmount } = renderHook(() => useOutlineSync(getView));
+
+    // Initial update will have called setActiveHeadingLine via rAF
+    // Fire any pending rAFs from initialization
+    while (rafCallbacks.length > 0) {
+      rafCallbacks.shift()?.(0);
+    }
+    setActiveHeadingLineSpy.mockClear();
+
+    // Trigger keyup to queue a new rAF
+    dom.dispatchEvent(new Event("keyup"));
+
+    // Unmount sets cancelled=true
+    unmount();
+
+    // Now manually fire the pending rAF — updateActiveHeading should bail due to cancelled
+    while (rafCallbacks.length > 0) {
+      rafCallbacks.shift()?.(0);
+    }
+
+    // setActiveHeadingLine should NOT have been called after unmount
+    expect(setActiveHeadingLineSpy).not.toHaveBeenCalled();
+
+    setActiveHeadingLineSpy.mockRestore();
+    rafSpy.mockRestore();
     cancelSpy.mockRestore();
   });
 });

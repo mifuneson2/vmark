@@ -28,9 +28,12 @@ export function getNodeContext(view: EditorView): NodeContext {
 
     if (typeName === "table") {
       const tablePos = $from.before(d);
+      /* v8 ignore next -- @preserve fallback unreachable: valid selections always have $from.depth > table depth */
       const rowIndex = $from.depth > d ? $from.index(d) : 0;
+      /* v8 ignore next -- @preserve fallback unreachable: valid selections always have $from.depth > table depth + 1 */
       const colIndex = $from.depth > d + 1 ? $from.index(d + 1) : 0;
       const numRows = node.childCount;
+      /* v8 ignore next -- @preserve numRows is always > 0 because ProseMirror's "tableRow+" content spec requires at least one row */
       const numCols = numRows > 0 ? node.child(0).childCount : 0;
 
       return {
@@ -187,9 +190,11 @@ export function handleBlockquoteNest(view: EditorView) {
       const endPos = $from.after(d);
 
       const blockquoteType = state.schema.nodes.blockquote;
+      /* v8 ignore next -- @preserve structurally unreachable: the for-loop only enters this branch when node.type.name === "blockquote", guaranteeing the type exists in schema */
       if (!blockquoteType) return;
 
       const range = state.doc.resolve(startPos + 1).blockRange(state.doc.resolve(endPos - 1));
+      /* v8 ignore next -- @preserve defensive guard: blockRange between valid blockquote boundaries always resolves */
       if (!range) return;
 
       dispatch(state.tr.wrap(range, [{ type: blockquoteType }]));

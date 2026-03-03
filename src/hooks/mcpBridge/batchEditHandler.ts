@@ -284,7 +284,8 @@ export async function handleBatchEdit(
             const updateSlice = createMarkdownPasteSlice(editor.state, op.text);
             const updateTr = editor.state.tr.replaceRange(textRange.from, textRange.to, updateSlice);
             editor.view.dispatch(updateTr);
-            changedNodeIds.push(op.nodeId || `updated-${changedNodeIds.length}`);
+            // Validation ensures nodeId is present for update ops
+            changedNodeIds.push(op.nodeId /* v8 ignore next */ || `updated-${changedNodeIds.length}`);
           }
           break;
 
@@ -295,7 +296,8 @@ export async function handleBatchEdit(
               .setTextSelection({ from: resolved.from, to: resolved.to })
               .deleteSelection()
               .run();
-            deletedNodeIds.push(op.nodeId || `deleted-${deletedNodeIds.length}`);
+            // Validation ensures nodeId is present for delete ops
+            deletedNodeIds.push(op.nodeId /* v8 ignore next */ || `deleted-${deletedNodeIds.length}`);
           }
           break;
 
@@ -309,7 +311,8 @@ export async function handleBatchEdit(
             for (const mark of op.marks) {
               editor.commands.toggleMark(mark.type, mark.attrs);
             }
-            changedNodeIds.push(op.nodeId || `formatted-${changedNodeIds.length}`);
+            // Validation ensures nodeId is present for format ops
+            changedNodeIds.push(op.nodeId /* v8 ignore next */ || `formatted-${changedNodeIds.length}`);
           }
           break;
 

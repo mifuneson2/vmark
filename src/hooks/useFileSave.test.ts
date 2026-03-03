@@ -878,6 +878,54 @@ describe("handleSave — additional branches", () => {
 
     // Should not throw; guardResult === undefined triggers warning
   });
+
+  it("shows non-Error rejection as string in save toast (line 202)", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.mocked(useDocumentStore.getState).mockReturnValue({
+      getDocument: vi.fn(() => ({
+        content: "# Untitled",
+        filePath: null,
+        isDirty: true,
+        isMissing: false,
+      })),
+      clearMissing: vi.fn(),
+    } as unknown as ReturnType<typeof useDocumentStore.getState>);
+
+    vi.mocked(resolveMissingFileSaveAction).mockReturnValue("save_allowed" as never);
+    // Reject with a non-Error
+    mockSaveDialog.mockRejectedValueOnce("non-error rejection");
+
+    await handleSave("main");
+
+    expect(toast.error).toHaveBeenCalledWith("Save dialog failed: non-error rejection");
+    errorSpy.mockRestore();
+  });
+
+  it("uses empty title fallback when tab is not found (line 146)", async () => {
+    // Set up so tab is not found in tabs array
+    vi.mocked(useTabStore.getState).mockReturnValue({
+      activeTabId: { main: "tab-orphan" },
+      tabs: { main: [] }, // No tabs — find returns undefined
+    } as unknown as ReturnType<typeof useTabStore.getState>);
+
+    vi.mocked(useDocumentStore.getState).mockReturnValue({
+      getDocument: vi.fn(() => ({
+        content: "# Untitled",
+        filePath: null,
+        isDirty: true,
+        isMissing: false,
+      })),
+      clearMissing: vi.fn(),
+    } as unknown as ReturnType<typeof useDocumentStore.getState>);
+
+    vi.mocked(resolveMissingFileSaveAction).mockReturnValue("save_allowed" as never);
+    mockSaveDialog.mockResolvedValueOnce(null); // Cancel dialog
+
+    await handleSave("main");
+
+    // The save dialog is invoked (even though cancelled), confirming buildDefaultSavePath ran
+    expect(mockSaveDialog).toHaveBeenCalled();
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -927,6 +975,30 @@ describe("handleSaveAs — additional branches", () => {
     await handleSaveAs("main");
 
     expect(toast.error).toHaveBeenCalledWith(expect.stringContaining("Save As dialog crashed"));
+    errorSpy.mockRestore();
+  });
+
+  it("shows non-Error rejection as string in Save As toast (line 267)", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.mocked(useTabStore.getState).mockReturnValue({
+      activeTabId: { main: "tab-1" },
+      tabs: { main: [{ id: "tab-1", title: "Test" }] },
+    } as unknown as ReturnType<typeof useTabStore.getState>);
+
+    vi.mocked(useDocumentStore.getState).mockReturnValue({
+      getDocument: vi.fn(() => ({
+        content: "# Content",
+        filePath: "/workspace/test.md",
+        isDirty: false,
+        isMissing: false,
+      })),
+    } as unknown as ReturnType<typeof useDocumentStore.getState>);
+
+    mockSaveDialog.mockRejectedValueOnce(42);
+
+    await handleSaveAs("main");
+
+    expect(toast.error).toHaveBeenCalledWith("Save dialog failed: 42");
     errorSpy.mockRestore();
   });
 
@@ -1033,5 +1105,28 @@ describe("handleMoveTo — additional branches", () => {
     await handleMoveTo("main");
 
     expect(mockRemove).not.toHaveBeenCalled();
+  });
+
+  it("shows non-Error rejection as string in Move To toast (line 303)", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.mocked(useTabStore.getState).mockReturnValue({
+      activeTabId: { main: "tab-1" },
+      tabs: { main: [{ id: "tab-1", title: "Test" }] },
+    } as unknown as ReturnType<typeof useTabStore.getState>);
+
+    vi.mocked(useDocumentStore.getState).mockReturnValue({
+      getDocument: vi.fn(() => ({
+        content: "# Content",
+        filePath: "/workspace/old.md",
+      })),
+    } as unknown as ReturnType<typeof useDocumentStore.getState>);
+
+    // Reject with a non-Error value
+    mockSaveDialog.mockRejectedValueOnce("string rejection");
+
+    await handleMoveTo("main");
+
+    expect(toast.error).toHaveBeenCalledWith("Save dialog failed: string rejection");
+    errorSpy.mockRestore();
   });
 });

@@ -280,6 +280,197 @@ describe("MermaidPreviewView — resize onMouseDown no-op on non-handle target",
   });
 });
 
+// ---------------------------------------------------------------------------
+// Branch coverage: drag/resize with empty style values (lines 93-94, 134-135)
+// parseInt("") returns NaN, so the || 0 fallback is exercised
+// ---------------------------------------------------------------------------
+
+describe("MermaidPreviewView — drag with no initial style position", () => {
+  let preview4: MermaidPreviewView;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.useFakeTimers();
+    preview4 = new MermaidPreviewView();
+  });
+
+  afterEach(() => {
+    preview4.destroy();
+    vi.useRealTimers();
+  });
+
+  it("drag start defaults left/top to 0 when style values are empty (lines 93-94)", () => {
+    preview4.show("graph LR; A-->B", ANCHOR);
+    const container = document.querySelector(".mermaid-preview") as HTMLElement;
+
+    // Ensure container has no left/top style set (parseInt("") → NaN → || 0)
+    container.style.left = "";
+    container.style.top = "";
+
+    const header = document.querySelector(".mermaid-preview-header") as HTMLElement;
+    header.dispatchEvent(new MouseEvent("mousedown", { clientX: 50, clientY: 50, bubbles: true }));
+
+    // Move to trigger drag
+    document.dispatchEvent(new MouseEvent("mousemove", { clientX: 70, clientY: 70, bubbles: true }));
+
+    // Container should be positioned relative to 0,0 start + delta
+    expect(container.style.left).toBe("20px");
+    expect(container.style.top).toBe("20px");
+
+    document.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+  });
+
+  it("resize start defaults left/top to 0 when style values are empty (lines 134-135)", () => {
+    preview4.show("graph LR; A-->B", ANCHOR);
+    const container = document.querySelector(".mermaid-preview") as HTMLElement;
+
+    // Clear style positions
+    container.style.left = "";
+    container.style.top = "";
+
+    const handle = document.querySelector(".mermaid-preview-resize") as HTMLElement;
+    handle.dispatchEvent(new MouseEvent("mousedown", { clientX: 300, clientY: 300, bubbles: true, cancelable: true }));
+
+    const internal = preview4 as unknown as { resizeStartLeft: number; resizeStartTop: number };
+    expect(internal.resizeStartLeft).toBe(0);
+    expect(internal.resizeStartTop).toBe(0);
+
+    document.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Branch coverage: resize from "w" and "n" corners (lines 156, 165)
+// ---------------------------------------------------------------------------
+
+describe("MermaidPreviewView — resize from west and north corners", () => {
+  let preview5: MermaidPreviewView;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.useFakeTimers();
+    preview5 = new MermaidPreviewView();
+  });
+
+  afterEach(() => {
+    preview5.destroy();
+    vi.useRealTimers();
+  });
+
+  it("resizes from west (w) corner adjusting left and width (line 156)", () => {
+    preview5.show("graph LR; A-->B", ANCHOR);
+    const container = document.querySelector(".mermaid-preview") as HTMLElement;
+
+    // Find a resize handle and override its corner to "w"
+    const handles = container.querySelectorAll(".mermaid-preview-resize");
+    const handle = handles[0] as HTMLElement;
+    handle.dataset.corner = "w";
+
+    container.style.left = "100px";
+    container.style.width = "400px";
+
+    // Mock offsetWidth for resize calculations
+    Object.defineProperty(container, "offsetWidth", { value: 400, configurable: true });
+    Object.defineProperty(container, "offsetHeight", { value: 300, configurable: true });
+
+    handle.dispatchEvent(new MouseEvent("mousedown", { clientX: 100, clientY: 200, bubbles: true, cancelable: true }));
+
+    // Drag left (decreasing clientX → expanding west)
+    document.dispatchEvent(new MouseEvent("mousemove", { clientX: 50, clientY: 200, bubbles: true }));
+
+    // Width should increase (moved 50px left), left should decrease
+    expect(parseInt(container.style.width)).toBeGreaterThanOrEqual(400);
+    expect(parseInt(container.style.left)).toBeLessThanOrEqual(100);
+
+    document.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+  });
+
+  it("resizes from north (n) corner adjusting top and height (line 165)", () => {
+    preview5.show("graph LR; A-->B", ANCHOR);
+    const container = document.querySelector(".mermaid-preview") as HTMLElement;
+
+    const handles = container.querySelectorAll(".mermaid-preview-resize");
+    const handle = handles[0] as HTMLElement;
+    handle.dataset.corner = "n";
+
+    container.style.top = "200px";
+    container.style.height = "400px";
+
+    Object.defineProperty(container, "offsetWidth", { value: 400, configurable: true });
+    Object.defineProperty(container, "offsetHeight", { value: 400, configurable: true });
+
+    handle.dispatchEvent(new MouseEvent("mousedown", { clientX: 200, clientY: 200, bubbles: true, cancelable: true }));
+
+    // Drag up (decreasing clientY → expanding north)
+    document.dispatchEvent(new MouseEvent("mousemove", { clientX: 200, clientY: 150, bubbles: true }));
+
+    // Height should increase, top should decrease
+    expect(parseInt(container.style.height)).toBeGreaterThanOrEqual(400);
+    expect(parseInt(container.style.top)).toBeLessThanOrEqual(200);
+
+    document.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+  });
+
+  it("resizes from nw corner adjusting both top/left and width/height", () => {
+    preview5.show("graph LR; A-->B", ANCHOR);
+    const container = document.querySelector(".mermaid-preview") as HTMLElement;
+
+    const handles = container.querySelectorAll(".mermaid-preview-resize");
+    const handle = handles[0] as HTMLElement;
+    handle.dataset.corner = "nw";
+
+    container.style.left = "100px";
+    container.style.top = "100px";
+
+    Object.defineProperty(container, "offsetWidth", { value: 400, configurable: true });
+    Object.defineProperty(container, "offsetHeight", { value: 300, configurable: true });
+
+    handle.dispatchEvent(new MouseEvent("mousedown", { clientX: 100, clientY: 100, bubbles: true, cancelable: true }));
+    document.dispatchEvent(new MouseEvent("mousemove", { clientX: 50, clientY: 50, bubbles: true }));
+
+    // Both dimensions should change
+    expect(parseInt(container.style.width)).toBeGreaterThanOrEqual(400);
+    expect(parseInt(container.style.height)).toBeGreaterThanOrEqual(300);
+
+    document.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Branch coverage: updatePosition with host === null (line 294)
+// ---------------------------------------------------------------------------
+
+describe("MermaidPreviewView — updatePosition host fallback (line 294)", () => {
+  let preview6: MermaidPreviewView;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.useFakeTimers();
+    preview6 = new MermaidPreviewView();
+  });
+
+  afterEach(() => {
+    preview6.destroy();
+    vi.useRealTimers();
+  });
+
+  it("uses document.body when this.host is null (line 294)", () => {
+    // Show without editorDom to leave host as document.body
+    preview6.show("graph LR; A-->B", ANCHOR);
+
+    // Force host to null after show to exercise the ?? fallback
+    const internal = preview6 as unknown as { host: HTMLElement | null; hasDragged: boolean };
+    internal.host = null;
+    internal.hasDragged = false; // Ensure updatePosition doesn't short-circuit
+
+    // This should use document.body fallback at line 294
+    preview6.updatePosition(ANCHOR);
+
+    // No error means the fallback worked
+    expect(preview6.isVisible()).toBe(true);
+  });
+});
+
 describe("MermaidPreviewView — applyZoom with SVG (lines 231-249)", () => {
   let preview3: MermaidPreviewView;
 

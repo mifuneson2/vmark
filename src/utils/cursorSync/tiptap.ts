@@ -161,6 +161,8 @@ export function restoreCursorInTiptap(view: EditorView, cursorInfo: CursorInfo):
           found = true;
           return false;
         }
+        /* v8 ignore next */
+        // Container nodes always have textblock descendants in valid ProseMirror docs
       }
     }
     return true;

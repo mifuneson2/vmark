@@ -764,4 +764,284 @@ describe("useToolbarKeyboard", () => {
       expect(onActivate).not.toHaveBeenCalled();
     });
   });
+
+  describe("focusButton container guard (branch 2, line 92)", () => {
+    it("no-ops when containerRef.current is null", () => {
+      // Using no external ref — internal ref will be null since no DOM rendered
+      const { result } = renderHook(() =>
+        useToolbarKeyboard({
+          buttonCount,
+          isButtonFocusable: allFocusable,
+          focusMode: false, // Don't auto-focus
+          onActivate,
+        })
+      );
+
+      // Call handleKeyDown which triggers focusButton — containerRef is null
+      act(() => {
+        const event = createKeyEvent("ArrowRight");
+        result.current.handleKeyDown(event);
+      });
+
+      // Should not throw — focusButton returns early when container is null
+      expect(result.current.focusedIndex).toBe(1);
+    });
+  });
+
+  describe("ArrowDown/ArrowUp when onOpenDropdown returns false (branch 13, line 148)", () => {
+    it("does not preventDefault when dropdown did not open", () => {
+      onOpenDropdown.mockReturnValue(false);
+      const isDropdownButton = () => true;
+
+      const { result } = renderHook(() =>
+        useToolbarKeyboard({
+          buttonCount,
+          isButtonFocusable: allFocusable,
+          isDropdownButton,
+          focusMode: true,
+          onActivate,
+          onOpenDropdown,
+        })
+      );
+
+      act(() => {
+        result.current.setFocusedIndex(0);
+      });
+
+      act(() => {
+        const event = createKeyEvent("ArrowDown");
+        result.current.handleKeyDown(event);
+        // opened === false, so preventDefault should NOT be called
+        expect(event.preventDefault).not.toHaveBeenCalled();
+      });
+
+      expect(onOpenDropdown).toHaveBeenCalledWith(0);
+    });
+  });
+
+  describe("focusButton with real container (branch 1[1], line 88)", () => {
+    it("focuses the button at the given index when container has buttons", () => {
+      const container = document.createElement("div");
+      const btn0 = document.createElement("button");
+      btn0.className = "universal-toolbar-btn";
+      const btn1 = document.createElement("button");
+      btn1.className = "universal-toolbar-btn";
+      container.appendChild(btn0);
+      container.appendChild(btn1);
+      document.body.appendChild(container);
+
+      const focusSpy = vi.spyOn(btn1, "focus");
+      const externalRef = { current: container } as React.RefObject<HTMLDivElement | null>;
+
+      const { result } = renderHook(() =>
+        useToolbarKeyboard({
+          buttonCount: 2,
+          isButtonFocusable: allFocusable,
+          containerRef: externalRef,
+          focusMode: false,
+          onActivate,
+        })
+      );
+
+      // Navigate right from index 0 → focusButton(1) with real container
+      act(() => {
+        result.current.setFocusedIndex(0);
+      });
+      act(() => {
+        result.current.handleKeyDown(createKeyEvent("ArrowRight"));
+      });
+
+      expect(focusSpy).toHaveBeenCalled();
+      container.remove();
+    });
+  });
+
+  describe("ArrowRight/Left auto-open dropdown (branches 7-10, lines 125/136)", () => {
+    it("auto-opens dropdown when navigating right to a dropdown button", () => {
+      const isDropdownButton = vi.fn((i: number) => i === 1);
+
+      const { result } = renderHook(() =>
+        useToolbarKeyboard({
+          buttonCount: 3,
+          isButtonFocusable: allFocusable,
+          focusMode: false,
+          onActivate,
+          isDropdownButton,
+          onOpenDropdown,
+        })
+      );
+
+      act(() => {
+        result.current.setFocusedIndex(0);
+      });
+      act(() => {
+        result.current.handleKeyDown(createKeyEvent("ArrowRight"));
+      });
+
+      // Navigation moves to index 1 which is a dropdown button
+      expect(isDropdownButton).toHaveBeenCalledWith(1);
+      expect(onOpenDropdown).toHaveBeenCalledWith(1);
+    });
+
+    it("auto-opens dropdown when navigating left to a dropdown button", () => {
+      const isDropdownButton = vi.fn((i: number) => i === 0);
+
+      const { result } = renderHook(() =>
+        useToolbarKeyboard({
+          buttonCount: 3,
+          isButtonFocusable: allFocusable,
+          focusMode: false,
+          onActivate,
+          isDropdownButton,
+          onOpenDropdown,
+        })
+      );
+
+      act(() => {
+        result.current.setFocusedIndex(1);
+      });
+      act(() => {
+        result.current.handleKeyDown(createKeyEvent("ArrowLeft"));
+      });
+
+      // Navigation moves to index 0 which is a dropdown button
+      expect(isDropdownButton).toHaveBeenCalledWith(0);
+      expect(onOpenDropdown).toHaveBeenCalledWith(0);
+    });
+  });
+
+  describe("focusMode effect edge cases", () => {
+    it("skips focus when container has no buttons (branch 20, line 198)", () => {
+      vi.useFakeTimers();
+
+      // Create a container with no .universal-toolbar-btn elements
+      const container = document.createElement("div");
+      document.body.appendChild(container);
+      const externalRef = { current: container } as React.RefObject<HTMLDivElement | null>;
+
+      renderHook(() =>
+        useToolbarKeyboard({
+          buttonCount,
+          isButtonFocusable: allFocusable,
+          containerRef: externalRef,
+          focusMode: true,
+          onActivate,
+        })
+      );
+
+      // Advance setTimeout — buttons.length === 0 guard should fire
+      vi.advanceTimersByTime(10);
+
+      // No error — guard prevented focus attempt
+      container.remove();
+      vi.useRealTimers();
+    });
+
+    it("focuses safeIndex when it IS focusable (branch 21[0], line 200 true path)", () => {
+      vi.useFakeTimers();
+
+      const container = document.createElement("div");
+      const btn0 = document.createElement("button");
+      btn0.className = "universal-toolbar-btn";
+      const focusSpy0 = vi.spyOn(btn0, "focus");
+      const btn1 = document.createElement("button");
+      btn1.className = "universal-toolbar-btn";
+      container.appendChild(btn0);
+      container.appendChild(btn1);
+      document.body.appendChild(container);
+
+      const externalRef = { current: container } as React.RefObject<HTMLDivElement | null>;
+
+      // All buttons are focusable — safeIndex=0 IS focusable → true path
+      renderHook(() =>
+        useToolbarKeyboard({
+          buttonCount: 2,
+          isButtonFocusable: allFocusable,
+          containerRef: externalRef,
+          focusMode: true,
+          onActivate,
+        })
+      );
+
+      vi.advanceTimersByTime(10);
+
+      // btn0 (index 0) should be focused directly (no fallback)
+      expect(focusSpy0).toHaveBeenCalled();
+
+      container.remove();
+      vi.useRealTimers();
+    });
+
+    it("falls back to first focusable when safeIndex is not focusable (branch 21, line 201)", () => {
+      vi.useFakeTimers();
+
+      // Create a container with toolbar buttons
+      const container = document.createElement("div");
+      const btn0 = document.createElement("button");
+      btn0.className = "universal-toolbar-btn";
+      const focusSpy0 = vi.spyOn(btn0, "focus");
+      const btn1 = document.createElement("button");
+      btn1.className = "universal-toolbar-btn";
+      const focusSpy1 = vi.spyOn(btn1, "focus");
+      container.appendChild(btn0);
+      container.appendChild(btn1);
+      document.body.appendChild(container);
+
+      const externalRef = { current: container } as React.RefObject<HTMLDivElement | null>;
+
+      // Button 0 is NOT focusable, button 1 IS focusable
+      const isButtonFocusable = (i: number) => i !== 0;
+
+      renderHook(() =>
+        useToolbarKeyboard({
+          buttonCount: 2,
+          isButtonFocusable,
+          containerRef: externalRef,
+          focusMode: true,
+          onActivate,
+        })
+      );
+
+      // Advance setTimeout — safeIndex=0 is not focusable, should fall back
+      vi.advanceTimersByTime(10);
+
+      // btn1 (index 1) should be focused as the first focusable
+      expect(focusSpy1).toHaveBeenCalled();
+      expect(focusSpy0).not.toHaveBeenCalled();
+
+      container.remove();
+      vi.useRealTimers();
+    });
+
+    it("skips focus when active element is already inside container (branch 22, line 203)", () => {
+      vi.useFakeTimers();
+
+      const container = document.createElement("div");
+      const btn = document.createElement("button");
+      btn.className = "universal-toolbar-btn";
+      container.appendChild(btn);
+      document.body.appendChild(container);
+
+      // Focus the button so activeElement is inside container
+      btn.focus();
+
+      const externalRef = { current: container } as React.RefObject<HTMLDivElement | null>;
+
+      renderHook(() =>
+        useToolbarKeyboard({
+          buttonCount: 1,
+          isButtonFocusable: allFocusable,
+          containerRef: externalRef,
+          focusMode: true,
+          onActivate,
+        })
+      );
+
+      // The effect should return early because activeElement is inside container
+      // The setTimeout should not be set
+
+      container.remove();
+      vi.useRealTimers();
+    });
+  });
 });

@@ -1019,6 +1019,100 @@ describe("useTabDragOut", () => {
     expect(pendingCalls.length).toBeGreaterThan(0);
   });
 
+  it("touch hold continues when pointer moves within threshold (branch 21[1], line 244 false)", () => {
+    vi.useFakeTimers();
+    const bar = createTabBar({
+      barTop: 0,
+      barHeight: 40,
+      tabRects: [{ left: 0, width: 120 }],
+    });
+    const tabBarRef = createRef<HTMLElement>();
+    tabBarRef.current = bar;
+
+    const onDragOut = vi.fn();
+    const onReorder = vi.fn();
+    const { result } = renderHook(() =>
+      useTabDragOut({ tabBarRef, onDragOut, onReorder })
+    );
+
+    act(() => {
+      result.current.getTabDragHandlers("tab-1", false).onPointerDown(
+        createPointerDownEvent({ clientX: 30, clientY: 20, pointerType: "touch" })
+      );
+      // Move less than TOUCH_HOLD_CANCEL_PX (8px) in both axes — should NOT cancel hold
+      dispatchPointer("pointermove", 35, 25); // dx=5, dy=5, both <= 8
+    });
+
+    // Hold mode should still be active (not cancelled)
+    expect(result.current.dragMode).toBe("hold");
+
+    // Now let the hold timer fire → should transition to pending
+    act(() => {
+      vi.advanceTimersByTime(250);
+    });
+
+    expect(result.current.dragMode).toBe("pending");
+    expect(result.current.dragTabId).toBe("tab-1");
+  });
+
+  it("cancels touch hold when pointer moves too far vertically during hold (line 242, holdDy)", () => {
+    vi.useFakeTimers();
+    const bar = createTabBar({
+      barTop: 0,
+      barHeight: 40,
+      tabRects: [{ left: 0, width: 120 }],
+    });
+    const tabBarRef = createRef<HTMLElement>();
+    tabBarRef.current = bar;
+
+    const onDragOut = vi.fn();
+    const onReorder = vi.fn();
+    const { result } = renderHook(() =>
+      useTabDragOut({ tabBarRef, onDragOut, onReorder })
+    );
+
+    act(() => {
+      result.current.getTabDragHandlers("tab-1", false).onPointerDown(
+        createPointerDownEvent({ clientX: 30, clientY: 20, pointerType: "touch" })
+      );
+      // Move more than TOUCH_HOLD_CANCEL_PX (8px) vertically during hold
+      dispatchPointer("pointermove", 30, 30);
+    });
+
+    // Should have cancelled the hold — mode should be idle
+    expect(result.current.dragMode).toBe("idle");
+    expect(onDragOut).not.toHaveBeenCalled();
+  });
+
+  it("no-ops onDragMove when callback is not provided (line 296)", () => {
+    const bar = createTabBar({
+      barTop: 0,
+      barHeight: 40,
+      tabRects: [{ left: 0, width: 120 }],
+    });
+    const tabBarRef = createRef<HTMLElement>();
+    tabBarRef.current = bar;
+
+    const onDragOut = vi.fn();
+    const onReorder = vi.fn();
+    // No onDragMove provided
+    const { result } = renderHook(() =>
+      useTabDragOut({ tabBarRef, onDragOut, onReorder })
+    );
+
+    act(() => {
+      result.current.getTabDragHandlers("tab-1", false).onPointerDown(
+        createPointerDownEvent({ clientX: 20, clientY: 20 })
+      );
+      // Move far down to enter dragout — this triggers the onDragMove?.() path
+      dispatchPointer("pointermove", 20, 120);
+      dispatchPointer("pointerup", 20, 120);
+    });
+
+    // Should not crash — onDragMove is undefined, optional chaining skips
+    expect(onDragOut).toHaveBeenCalledTimes(1);
+  });
+
   it("calcDropIndex returns -1 in reorder mode when tabs disappear mid-drag (line 279)", () => {
     const bar = createTabBar({
       barTop: 0,

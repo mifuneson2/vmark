@@ -89,6 +89,7 @@ export function useToolbarKeyboard(
 
     const buttons = container.querySelectorAll<HTMLButtonElement>(".universal-toolbar-btn");
     const targetIndex = Math.min(index, buttons.length - 1);
+    /* v8 ignore next -- @preserve defensive guard: targetIndex is always valid when buttons.length > 0, and empty containers return early via focusMode effect */
     if (buttons[targetIndex]) {
       buttons[targetIndex].focus();
     }
