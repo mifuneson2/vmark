@@ -2,13 +2,14 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 // --- Hoisted mocks (available before vi.mock factories execute) ---
 
-const { mockOpenUrl, mockTerminalLog, MockWebLinksAddon, mockWriteText, mockClipboardWarn, mockReadTextFile, mockCreateTab, mockInitDocument, mockSettingsGetState, terminalFlags } = vi.hoisted(() => ({
+const { mockOpenUrl, mockTerminalLog, MockWebLinksAddon, mockWriteText, mockClipboardWarn, mockReadTextFile, mockStat, mockCreateTab, mockInitDocument, mockSettingsGetState, terminalFlags } = vi.hoisted(() => ({
   mockOpenUrl: vi.fn<(url: string) => Promise<void>>(),
   mockTerminalLog: vi.fn(),
   MockWebLinksAddon: vi.fn(),
   mockWriteText: vi.fn<(text: string) => Promise<void>>(),
   mockClipboardWarn: vi.fn(),
   mockReadTextFile: vi.fn<(path: string) => Promise<string>>(),
+  mockStat: vi.fn<(path: string) => Promise<{ size: number }>>(),
   mockCreateTab: vi.fn(() => "tab-new"),
   mockInitDocument: vi.fn(),
   mockSettingsGetState: vi.fn(() => ({
@@ -30,6 +31,7 @@ vi.mock("@tauri-apps/plugin-clipboard-manager", () => ({
 
 vi.mock("@tauri-apps/plugin-fs", () => ({
   readTextFile: (...args: unknown[]) => mockReadTextFile(...(args as [string])),
+  stat: (...args: unknown[]) => mockStat(...(args as [string])),
 }));
 
 vi.mock("@/utils/debug", () => ({
@@ -495,6 +497,29 @@ describe("createTerminalInstance — IME composition with textarea", () => {
     vi.useRealTimers();
   });
 
+  it("flushes pending committed text via onCompositionCommit on rapid back-to-back composition", () => {
+    vi.useFakeTimers();
+    const inst = makeInstanceWithTextarea();
+    const textarea = inst.container.querySelector(".xterm-helper-textarea")!;
+    const commitCb = vi.fn();
+    inst.onCompositionCommit = commitCb;
+
+    // First composition: start → end with data
+    textarea.dispatchEvent(new Event("compositionstart"));
+    const compEnd = new Event("compositionend") as CompositionEvent;
+    Object.defineProperty(compEnd, "data", { value: "你好" });
+    textarea.dispatchEvent(compEnd);
+
+    // Immediately start another composition before grace period expires
+    textarea.dispatchEvent(new Event("compositionstart"));
+
+    // The pending text from the first composition should have been flushed
+    expect(commitCb).toHaveBeenCalledWith("你好");
+
+    inst.dispose();
+    vi.useRealTimers();
+  });
+
   it("fires onCompositionCommit after grace period with committed text", () => {
     vi.useFakeTimers();
     const inst = makeInstanceWithTextarea();
@@ -606,6 +631,7 @@ describe("createTerminalInstance — copy-on-select with copyOnSelect enabled", 
   let termInst: ReturnType<typeof createTerminalInstance>;
 
   beforeEach(() => {
+    vi.useFakeTimers();
     vi.clearAllMocks();
     terminalFlags.createsTextarea = false;
     mockSettingsGetState.mockReturnValue({
@@ -632,6 +658,7 @@ describe("createTerminalInstance — copy-on-select with copyOnSelect enabled", 
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     mockSettingsGetState.mockReturnValue({
       appearance: { theme: "default" },
       terminal: { copyOnSelect: false },
@@ -643,6 +670,7 @@ describe("createTerminalInstance — copy-on-select with copyOnSelect enabled", 
     vi.mocked(termInst.term.getSelection).mockReturnValue("selected text\n");
 
     selectionHandler();
+    vi.advanceTimersByTime(150);
 
     expect(mockWriteText).toHaveBeenCalledWith("selected text");
   });
@@ -652,6 +680,7 @@ describe("createTerminalInstance — copy-on-select with copyOnSelect enabled", 
     vi.mocked(termInst.term.getSelection).mockReturnValue("\n\n");
 
     selectionHandler();
+    vi.advanceTimersByTime(150);
 
     // "\n\n".trimEnd() === "" which is falsy, so writeText is not called
     expect(mockWriteText).not.toHaveBeenCalled();
@@ -661,8 +690,25 @@ describe("createTerminalInstance — copy-on-select with copyOnSelect enabled", 
     vi.mocked(termInst.term.hasSelection).mockReturnValue(false);
 
     selectionHandler();
+    vi.advanceTimersByTime(150);
 
     expect(mockWriteText).not.toHaveBeenCalled();
+  });
+
+  it("debounces rapid selection changes", () => {
+    vi.mocked(termInst.term.hasSelection).mockReturnValue(true);
+    vi.mocked(termInst.term.getSelection).mockReturnValue("first");
+
+    selectionHandler();
+    vi.advanceTimersByTime(50); // Not yet fired
+
+    // Second selection change resets the timer
+    vi.mocked(termInst.term.getSelection).mockReturnValue("second");
+    selectionHandler();
+    vi.advanceTimersByTime(150);
+
+    expect(mockWriteText).toHaveBeenCalledTimes(1);
+    expect(mockWriteText).toHaveBeenCalledWith("second");
   });
 
   it("logs warning when clipboard write fails", async () => {
@@ -671,6 +717,7 @@ describe("createTerminalInstance — copy-on-select with copyOnSelect enabled", 
     mockWriteText.mockRejectedValueOnce(new Error("Clipboard denied"));
 
     selectionHandler();
+    vi.advanceTimersByTime(150);
 
     await vi.waitFor(() => {
       expect(mockClipboardWarn).toHaveBeenCalledWith(
@@ -686,6 +733,7 @@ describe("createTerminalInstance — copy-on-select with copyOnSelect enabled", 
     mockWriteText.mockRejectedValueOnce("string error");
 
     selectionHandler();
+    vi.advanceTimersByTime(150);
 
     await vi.waitFor(() => {
       expect(mockClipboardWarn).toHaveBeenCalledWith(
@@ -693,6 +741,30 @@ describe("createTerminalInstance — copy-on-select with copyOnSelect enabled", 
         "string error",
       );
     });
+  });
+
+  it("dispose clears pending copy-on-select timer", () => {
+    vi.mocked(termInst.term.hasSelection).mockReturnValue(true);
+    vi.mocked(termInst.term.getSelection).mockReturnValue("text");
+
+    selectionHandler(); // Starts the debounce timer
+    termInst.dispose(); // Should clear it
+    vi.advanceTimersByTime(150);
+
+    expect(mockWriteText).not.toHaveBeenCalled();
+  });
+
+  it("does not copy when selection is cleared before debounce fires", () => {
+    vi.mocked(termInst.term.hasSelection).mockReturnValue(true);
+    vi.mocked(termInst.term.getSelection).mockReturnValue("text");
+
+    selectionHandler(); // Starts the debounce timer
+
+    // Selection cleared before timer fires
+    vi.mocked(termInst.term.hasSelection).mockReturnValue(false);
+    vi.advanceTimersByTime(150);
+
+    expect(mockWriteText).not.toHaveBeenCalled();
   });
 });
 
@@ -773,6 +845,7 @@ describe("createTerminalInstance — file link callback", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockStat.mockResolvedValue({ size: 1024 }); // Small file
     mockReadTextFile.mockResolvedValue("# Hello");
     mockCreateTab.mockReturnValue("tab-new");
 
@@ -817,6 +890,31 @@ describe("createTerminalInstance — file link callback", () => {
       );
     });
   });
+
+  it("blocks files exceeding size limit", async () => {
+    mockStat.mockResolvedValueOnce({ size: 20 * 1024 * 1024 }); // 20 MB
+
+    fileLinkCallback("/path/to/huge.bin");
+
+    await vi.waitFor(() => {
+      expect(mockTerminalLog).toHaveBeenCalledWith(
+        "File too large to open in editor:",
+        "/path/to/huge.bin",
+        "(20MB)",
+      );
+    });
+    expect(mockReadTextFile).not.toHaveBeenCalled();
+  });
+
+  it("proceeds when stat fails (falls through to readTextFile)", async () => {
+    mockStat.mockRejectedValueOnce(new Error("stat failed"));
+
+    fileLinkCallback("/path/to/file.md");
+
+    await vi.waitFor(() => {
+      expect(mockReadTextFile).toHaveBeenCalledWith("/path/to/file.md");
+    });
+  });
 });
 
 describe("createTerminalInstance — resolveMonoFont fallback", () => {
@@ -839,17 +937,57 @@ describe("createTerminalInstance — web link opener plugin load failure", () =>
     webLinkHandler = MockWebLinksAddon.mock.calls[0][0];
   });
 
-  it("logs error when opener plugin import fails", async () => {
-    // The openUrl mock is set up via dynamic import. We need to make the
-    // import itself fail. Since we can't easily mock dynamic import failure,
-    // we test the openUrl rejection path which is already covered.
-    // The opener plugin load failure path (lines 210-212) would require
-    // the dynamic import to reject.
+  it("opens safe URL schemes (https)", async () => {
     mockOpenUrl.mockResolvedValue(undefined);
     webLinkHandler(new MouseEvent("click"), "https://example.com");
 
     await vi.waitFor(() => {
       expect(mockOpenUrl).toHaveBeenCalledWith("https://example.com");
+    });
+  });
+
+  it("blocks unsafe URL schemes (javascript:)", () => {
+    webLinkHandler(new MouseEvent("click"), "javascript:alert(1)");
+
+    expect(mockOpenUrl).not.toHaveBeenCalled();
+    expect(mockTerminalLog).toHaveBeenCalledWith(
+      "Blocked unsafe URL scheme:",
+      "javascript:",
+      "javascript:alert(1)",
+    );
+  });
+
+  it("blocks file: URL scheme", () => {
+    webLinkHandler(new MouseEvent("click"), "file:///etc/passwd");
+
+    expect(mockOpenUrl).not.toHaveBeenCalled();
+    expect(mockTerminalLog).toHaveBeenCalledWith(
+      "Blocked unsafe URL scheme:",
+      "file:",
+      "file:///etc/passwd",
+    );
+  });
+
+  it("skips invalid URLs silently", () => {
+    webLinkHandler(new MouseEvent("click"), "not-a-valid-url");
+
+    expect(mockOpenUrl).not.toHaveBeenCalled();
+    expect(mockTerminalLog).not.toHaveBeenCalledWith(
+      expect.stringContaining("Blocked"),
+      expect.anything(),
+      expect.anything(),
+    );
+  });
+
+  it("caches opener import across multiple clicks", async () => {
+    mockOpenUrl.mockResolvedValue(undefined);
+
+    webLinkHandler(new MouseEvent("click"), "https://first.com");
+    webLinkHandler(new MouseEvent("click"), "https://second.com");
+
+    await vi.waitFor(() => {
+      expect(mockOpenUrl).toHaveBeenCalledWith("https://first.com");
+      expect(mockOpenUrl).toHaveBeenCalledWith("https://second.com");
     });
   });
 });
