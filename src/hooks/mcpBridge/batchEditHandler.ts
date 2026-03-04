@@ -194,8 +194,8 @@ export async function handleBatchEdit(
       }
     }
 
-    // For suggest mode, create suggestions
-    if (mode === "suggest" || !isAutoApproveEnabled()) {
+    // For non-auto-approve, create suggestions for user review
+    if (!isAutoApproveEnabled()) {
       const suggestionIds: string[] = [];
 
       for (const { op, resolved } of resolvedOps) {

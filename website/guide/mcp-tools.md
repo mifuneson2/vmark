@@ -105,7 +105,7 @@ Apply multiple operations atomically.
 | `operations` | array | Yes | Array of operations (max 100). |
 | `baseRevision` | string | Yes | Expected revision for conflict detection. |
 | `requestId` | string | No | Idempotency key. |
-| `mode` | string | No | `apply`, `suggest`, or `dryRun`. Default: `apply`. |
+| `mode` | string | No | `dryRun` to preview without applying. Apply-vs-suggest is controlled by user setting. |
 
 Each operation requires `type` (`update`, `insert`, `delete`, `format`, or `move`), `nodeId`, and optionally `text`/`content`.
 
@@ -123,7 +123,7 @@ Find and replace text with match policy control.
 | `matchPolicy` | string | No | `first`, `all`, `nth`, or `error_if_multiple`. Default: `first`. |
 | `nth` | number | No | Which match to replace (0-indexed, for `nth` policy). |
 | `scopeQuery` | object | No | Scope filter to narrow search. |
-| `mode` | string | No | `apply`, `suggest`, or `dryRun`. Default: `apply`. |
+| `mode` | string | No | `dryRun` to preview without applying. Apply-vs-suggest is controlled by user setting. |
 
 **Returns:** `{ matchCount, appliedCount, matches[], suggestionIds[] }`
 
@@ -136,7 +136,7 @@ Replace text using context anchoring for precise targeting.
 | `anchor` | object | Yes | `{ text, beforeContext, afterContext }` |
 | `replacement` | string | Yes | Replacement text. |
 | `baseRevision` | string | Yes | Expected revision for conflict detection. |
-| `mode` | string | No | `apply`, `suggest`, or `dryRun`. Default: `apply`. |
+| `mode` | string | No | `dryRun` to preview without applying. Apply-vs-suggest is controlled by user setting. |
 
 ### `read_paragraph`
 
@@ -159,7 +159,7 @@ Modify a paragraph in the document.
 | `target` | object | Yes | `{ index: 0 }` or `{ containing: "text" }` |
 | `operation` | string | Yes | `replace`, `append`, `prepend`, or `delete`. |
 | `content` | string | Conditional | New content (required except for `delete`). |
-| `mode` | string | No | `apply` or `suggest`. Default: `suggest`. |
+| `mode` | string | No | `dryRun` to preview without applying. Apply-vs-suggest is controlled by user setting. |
 
 **Returns:** `{ success, message, suggestionId?, applied, newRevision? }`
 
@@ -172,7 +172,7 @@ Insert content at common document locations.
 | `baseRevision` | string | Yes | Document revision for conflict detection. |
 | `destination` | varies | Yes | Where to insert (see below). |
 | `content` | string | Yes | Markdown content to insert. |
-| `mode` | string | No | `apply` or `suggest`. Default: `suggest`. |
+| `mode` | string | No | `dryRun` to preview without applying. Apply-vs-suggest is controlled by user setting. |
 
 **Destination options:**
 - `"end_of_document"` — Insert at the end
@@ -263,7 +263,7 @@ Update a section's content.
 | `baseRevision` | string | Yes | Document revision. |
 | `target` | object | Yes | `{ heading, byIndex, or sectionId }` |
 | `newContent` | string | Yes | New section content (markdown). |
-| `mode` | string | No | `apply`, `suggest`, or `dryRun`. |
+| `mode` | string | No | `dryRun` to preview without applying. Apply-vs-suggest is controlled by user setting. |
 
 ### `insert_section`
 
@@ -275,7 +275,7 @@ Insert a new section.
 | `after` | object | No | Section target to insert after. |
 | `sectionHeading` | object | Yes | `{ level, text }` — heading level (1-6) and text. |
 | `content` | string | No | Section body content. |
-| `mode` | string | No | `apply`, `suggest`, or `dryRun`. |
+| `mode` | string | No | `dryRun` to preview without applying. Apply-vs-suggest is controlled by user setting. |
 
 ### `move_section`
 
@@ -286,7 +286,7 @@ Move a section to a new location.
 | `baseRevision` | string | Yes | Document revision. |
 | `section` | object | Yes | Section to move: `{ heading, byIndex, or sectionId }`. |
 | `after` | object | No | Section target to move after. |
-| `mode` | string | No | `apply`, `suggest`, or `dryRun`. |
+| `mode` | string | No | `dryRun` to preview without applying. Apply-vs-suggest is controlled by user setting. |
 
 ---
 
@@ -432,7 +432,7 @@ Batch modify a list's structure and content.
 | `baseRevision` | string | Yes | Document revision. |
 | `target` | object | Yes | `{ listId }`, `{ selector }`, or `{ listIndex }` |
 | `operations` | array | Yes | Array of list operations. |
-| `mode` | string | No | `apply`, `suggest`, or `dryRun`. Default: `apply`. |
+| `mode` | string | No | `dryRun` to preview without applying. Apply-vs-suggest is controlled by user setting. |
 
 Operations: `add_item`, `delete_item`, `update_item`, `toggle_check`, `reorder`, `set_indent`
 
@@ -467,7 +467,7 @@ Batch modify a table's structure and content.
 | `baseRevision` | string | Yes | Document revision. |
 | `target` | object | Yes | `{ tableId }`, `{ afterHeading }`, or `{ tableIndex }` |
 | `operations` | array | Yes | Array of table operations. |
-| `mode` | string | No | `apply`, `suggest`, or `dryRun`. Default: `apply`. |
+| `mode` | string | No | `dryRun` to preview without applying. Apply-vs-suggest is controlled by user setting. |
 
 Operations: `add_row`, `delete_row`, `add_column`, `delete_column`, `update_cell`, `set_header`
 

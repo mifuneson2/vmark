@@ -166,8 +166,8 @@ export async function handleReplaceAnchored(
       return;
     }
 
-    // For suggest mode, create suggestion
-    if (mode === "suggest" || !isAutoApproveEnabled()) {
+    // For non-auto-approve, create suggestion for user review
+    if (!isAutoApproveEnabled()) {
       const suggestionId = useAiSuggestionStore.getState().addSuggestion({
         tabId: getActiveTabId(),
         type: "replace",

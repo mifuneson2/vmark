@@ -330,7 +330,7 @@ describe("batchOpHandlers", () => {
       expect(call.data.preview.operationCount).toBe(1);
     });
 
-    it("returns suggest-mode warning when auto-approve disabled", async () => {
+    it("returns warning when auto-approve disabled", async () => {
       const listNode = {
         type: { name: "orderedList" },
         nodeSize: 20,
@@ -359,7 +359,7 @@ describe("batchOpHandlers", () => {
 
       const call = mockRespond.mock.calls[0][0];
       expect(call.success).toBe(true);
-      expect(call.data.warning).toContain("suggest mode not yet supported");
+      expect(call.data.warning).toContain("auto-approve to be enabled");
     });
 
     it("finds list by selector (bulletlist)", async () => {
@@ -454,8 +454,8 @@ describe("batchOpHandlers", () => {
     });
   });
 
-  describe("handleTableBatchModify — suggest mode", () => {
-    it("returns warning in suggest mode", async () => {
+  describe("handleTableBatchModify — auto-approve disabled", () => {
+    it("returns warning when auto-approve disabled", async () => {
       const tableNode = {
         type: { name: "table" },
         childCount: 1,
@@ -484,7 +484,7 @@ describe("batchOpHandlers", () => {
 
       const call = mockRespond.mock.calls[0][0];
       expect(call.success).toBe(true);
-      expect(call.data.warning).toContain("suggest mode not yet supported");
+      expect(call.data.warning).toContain("auto-approve to be enabled");
     });
   });
 

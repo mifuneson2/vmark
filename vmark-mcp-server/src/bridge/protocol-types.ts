@@ -230,6 +230,9 @@ export interface SectionInfo {
 
 /**
  * Operation mode for mutations.
+ * Only 'dryRun' has effect — apply-vs-suggest is controlled by the user's
+ * autoApproveEdits setting. 'apply' and 'suggest' are accepted for backward
+ * compatibility but ignored.
  */
 export type OperationMode = 'apply' | 'suggest' | 'dryRun';
 

@@ -470,6 +470,48 @@ describe("smartInsertHandlers", () => {
     expect(call.data.insertPosition).toBeDefined();
   });
 
+  // ── dryRun mode ──
+
+  it("returns preview without applying in dryRun mode", async () => {
+    const editor = createMockEditor();
+    mockGetEditor.mockReturnValue(editor);
+
+    await handleSmartInsert("req-dry-1", {
+      baseRevision: "rev-1",
+      destination: "end_of_document",
+      content: "dry run text",
+      mode: "dryRun",
+    });
+
+    const call = mockRespond.mock.calls[0][0];
+    expect(call.success).toBe(true);
+    expect(call.data.applied).toBe(false);
+    expect(call.data.preview).toBeDefined();
+    expect(call.data.preview.insertPosition).toBeDefined();
+    expect(call.data.preview.content).toContain("dry run text");
+    expect(call.data.newRevision).toBe("rev-new");
+    // Should NOT dispatch or create suggestions
+    expect(editor.view.dispatch).not.toHaveBeenCalled();
+    expect(mockAddSuggestion).not.toHaveBeenCalled();
+  });
+
+  it("dryRun returns preview for start_of_document", async () => {
+    const editor = createMockEditor();
+    mockGetEditor.mockReturnValue(editor);
+
+    await handleSmartInsert("req-dry-2", {
+      baseRevision: "rev-1",
+      destination: "start_of_document",
+      content: "prepend text",
+      mode: "dryRun",
+    });
+
+    const call = mockRespond.mock.calls[0][0];
+    expect(call.success).toBe(true);
+    expect(call.data.applied).toBe(false);
+    expect(call.data.preview.insertPosition).toBe(0);
+  });
+
   it("handles non-Error thrown value in catch (String(error) branch)", async () => {
     mockGetEditor.mockImplementation(() => {
       throw "raw string error";

@@ -281,14 +281,14 @@ export async function handleTableBatchModify(
       return;
     }
 
-    // For suggest mode, table operations are complex - show warning
-    if (mode === "suggest" || !isAutoApproveEnabled()) {
+    // For non-auto-approve, table operations are complex - show warning
+    if (!isAutoApproveEnabled()) {
       await respond({
         id,
         success: true,
         data: {
           success: false,
-          warning: "Table batch operations in suggest mode not yet supported. Use mode='apply' or enable auto-approve.",
+          warning: "Table batch operations require auto-approve to be enabled in Settings > Integrations.",
           operationCount: operations.length,
         },
       });
@@ -522,14 +522,14 @@ export async function handleListBatchModify(
       return;
     }
 
-    // For suggest mode, list operations are complex
-    if (mode === "suggest" || !isAutoApproveEnabled()) {
+    // For non-auto-approve, list operations are complex
+    if (!isAutoApproveEnabled()) {
       await respond({
         id,
         success: true,
         data: {
           success: false,
-          warning: "List batch operations in suggest mode not yet supported. Use mode='apply' or enable auto-approve.",
+          warning: "List batch operations require auto-approve to be enabled in Settings > Integrations.",
           operationCount: operations.length,
         },
       });

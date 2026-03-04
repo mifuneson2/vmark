@@ -170,8 +170,8 @@ export async function handleApplyDiff(
       return;
     }
 
-    // For suggest mode, create suggestions
-    if (mode === "suggest" || !isAutoApproveEnabled()) {
+    // For non-auto-approve, create suggestions for user review
+    if (!isAutoApproveEnabled()) {
       const suggestionIds: string[] = [];
       let matchesToProcess: TextMatch[] = [];
 

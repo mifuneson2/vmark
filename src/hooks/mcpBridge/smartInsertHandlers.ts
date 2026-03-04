@@ -13,8 +13,9 @@ import { useAiSuggestionStore } from "@/stores/aiSuggestionStore";
 import { validateBaseRevision, getCurrentRevision } from "./revisionTracker";
 import { createMarkdownPasteSlice } from "@/plugins/markdownPaste/tiptap";
 
-// Types
-type OperationMode = "apply" | "suggest";
+// Types — 'apply'/'suggest' accepted for backward compat but ignored;
+// only 'dryRun' has effect. Apply-vs-suggest is controlled by autoApproveEdits.
+type OperationMode = "apply" | "suggest" | "dryRun";
 
 type SmartInsertDestination =
   | "end_of_document"
@@ -164,7 +165,7 @@ export async function handleSmartInsert(
     const baseRevision = requireString(args, "baseRevision");
     const destination = args.destination as SmartInsertDestination;
     const content = requireString(args, "content");
-    const mode = stringWithDefault(args, "mode", "suggest") as OperationMode;
+    const mode = stringWithDefault(args, "mode", "apply") as OperationMode;
 
     // Validate revision
     const revisionError = validateBaseRevision(baseRevision);
@@ -204,8 +205,22 @@ export async function handleSmartInsert(
     // Create content with proper paragraph wrapping
     const contentToInsert = `\n\n${content}\n\n`;
 
-    // For suggest mode or non-auto-approve, create suggestion
-    if (mode === "suggest" || !isAutoApproveEnabled()) {
+    // For dryRun, return preview without applying
+    if (mode === "dryRun") {
+      await respond({
+        id,
+        success: true,
+        data: {
+          preview: { insertPosition: insertPos, content: contentToInsert },
+          applied: false,
+          newRevision: getCurrentRevision(),
+        },
+      });
+      return;
+    }
+
+    // For non-auto-approve, create suggestion for user review
+    if (!isAutoApproveEnabled()) {
       const suggestionId = useAiSuggestionStore.getState().addSuggestion({
         tabId: getActiveTabId(),
         type: "insert",

@@ -194,8 +194,8 @@ export async function handleSectionUpdate(
       return;
     }
 
-    // For suggest mode or non-auto-approve, create suggestion
-    if (mode === "suggest" || !isAutoApproveEnabled()) {
+    // For non-auto-approve, create suggestion for user review
+    if (!isAutoApproveEnabled()) {
       const originalContent = editor.state.doc.textBetween(contentStart, section.to);
       const suggestionId = useAiSuggestionStore.getState().addSuggestion({
         tabId: getActiveTabId(),
@@ -337,8 +337,8 @@ export async function handleSectionInsert(
       return;
     }
 
-    // For suggest mode or non-auto-approve, create suggestion
-    if (mode === "suggest" || !isAutoApproveEnabled()) {
+    // For non-auto-approve, create suggestion for user review
+    if (!isAutoApproveEnabled()) {
       const suggestionId = useAiSuggestionStore.getState().addSuggestion({
         tabId: getActiveTabId(),
         type: "insert",
@@ -498,9 +498,8 @@ export async function handleSectionMove(
       return;
     }
 
-    // For suggest mode, we can't easily represent a move as a suggestion
-    // So we fall back to showing what would happen
-    if (mode === "suggest" || !isAutoApproveEnabled()) {
+    // For non-auto-approve, create delete + insert suggestions for user review
+    if (!isAutoApproveEnabled()) {
       // Create delete + insert suggestions
       const deleteId = useAiSuggestionStore.getState().addSuggestion({
         tabId: getActiveTabId(),

@@ -102,7 +102,7 @@ export function registerStructureTool(server: VMarkMcpServer): void {
           mode: {
             type: 'string',
             enum: ['apply', 'suggest', 'dryRun'],
-            description: 'Execution mode (for update/insert/move_section).',
+            description: 'Only "dryRun" has effect (preview without applying). "apply"/"suggest" accepted but ignored — controlled by user setting.',
           },
           windowId: { type: 'string', description: 'Optional window identifier.' },
         },

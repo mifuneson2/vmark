@@ -108,7 +108,7 @@ export function registerDocumentTool(server: VMarkMcpServer): void {
           all: { type: 'boolean', description: 'Replace all occurrences (for replace_in_source).' },
           baseRevision: { type: 'string', description: 'Document revision (for mutations).' },
           requestId: { type: 'string', description: 'Idempotency key (for batch_edit).' },
-          mode: { type: 'string', enum: ['apply', 'suggest', 'dryRun'], description: 'Execution mode (dryRun only for batch_edit, apply_diff, replace_anchored, write_paragraph, smart_insert).' },
+          mode: { type: 'string', enum: ['apply', 'suggest', 'dryRun'], description: 'Only "dryRun" has effect (preview without applying). "apply"/"suggest" are accepted but ignored — apply-vs-suggest is controlled by user setting (autoApproveEdits).' },
           operations: { type: 'array', items: { type: 'object' }, description: 'Operation array (for batch_edit).' },
           scopeQuery: { type: 'object', description: 'Scope filter (for apply_diff).' },
           original: { type: 'string', description: 'Text to find (for apply_diff).' },
@@ -463,7 +463,7 @@ async function handleWriteParagraph(
   const target = args.target as ParagraphTarget;
   const operation = args.operation as ParagraphOperation;
   const content = getStringArg(args, 'content');
-  const mode = (args.mode as OperationMode) ?? 'suggest';
+  const mode = (args.mode as OperationMode) ?? 'apply';
 
   const VALID_OPERATIONS: ParagraphOperation[] = ['replace', 'append', 'prepend', 'delete'];
   if (!operation || !VALID_OPERATIONS.includes(operation)) {
@@ -505,7 +505,7 @@ async function handleSmartInsert(
 ) {
   const baseRevision = requireStringArg(args, 'baseRevision');
   const content = requireStringArg(args, 'content');
-  const mode = (args.mode as OperationMode) ?? 'suggest';
+  const mode = (args.mode as OperationMode) ?? 'apply';
 
   const destination = parseDestination(args.destination);
   if (!destination) {

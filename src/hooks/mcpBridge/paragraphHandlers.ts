@@ -14,8 +14,9 @@ import { useAiSuggestionStore } from "@/stores/aiSuggestionStore";
 import { validateBaseRevision, getCurrentRevision } from "./revisionTracker";
 import { createMarkdownPasteSlice } from "@/plugins/markdownPaste/tiptap";
 
-// Types
-type OperationMode = "apply" | "suggest";
+// Types — 'apply'/'suggest' accepted for backward compat but ignored;
+// only 'dryRun' has effect. Apply-vs-suggest is controlled by autoApproveEdits.
+type OperationMode = "apply" | "suggest" | "dryRun";
 type ParagraphOperation = "replace" | "append" | "prepend" | "delete";
 
 interface ParagraphTarget {
@@ -209,7 +210,7 @@ export async function handleParagraphWrite(
     const target = args.target as ParagraphTarget;
     const operation = requireString(args, "operation") as ParagraphOperation;
     const content = optionalString(args, "content");
-    const mode = stringWithDefault(args, "mode", "suggest") as OperationMode;
+    const mode = stringWithDefault(args, "mode", "apply") as OperationMode;
 
     // Validate revision
     const revisionError = validateBaseRevision(baseRevision);
@@ -287,8 +288,22 @@ export async function handleParagraphWrite(
         throw new Error(`Unknown operation: ${operation}`);
     }
 
-    // For suggest mode or non-auto-approve, create suggestion
-    if (mode === "suggest" || !isAutoApproveEnabled()) {
+    // For dryRun, return preview without applying
+    if (mode === "dryRun") {
+      await respond({
+        id,
+        success: true,
+        data: {
+          preview: { operation, from, to, newContent, originalContent },
+          applied: false,
+          newRevision: getCurrentRevision(),
+        },
+      });
+      return;
+    }
+
+    // For non-auto-approve, create suggestion for user review
+    if (!isAutoApproveEnabled()) {
       const suggestionType = operation === "delete" ? "delete" : from === to ? "insert" : "replace";
       const suggestionId = useAiSuggestionStore.getState().addSuggestion({
         tabId: getActiveTabId(),

@@ -562,6 +562,66 @@ describe("paragraphHandlers", () => {
     });
   });
 
+  // ── dryRun mode ──
+
+  describe("handleParagraphWrite — dryRun mode", () => {
+    it("returns preview without applying for replace", async () => {
+      const editor = createMockEditor(["old text"]);
+      mockGetEditor.mockReturnValue(editor);
+
+      await handleParagraphWrite("req-dry-1", {
+        baseRevision: "rev-1",
+        target: { index: 0 },
+        operation: "replace",
+        content: "new text",
+        mode: "dryRun",
+      });
+
+      const call = mockRespond.mock.calls[0][0];
+      expect(call.success).toBe(true);
+      expect(call.data.applied).toBe(false);
+      expect(call.data.preview).toBeDefined();
+      expect(call.data.preview.operation).toBe("replace");
+      expect(call.data.preview.newContent).toBe("new text");
+      expect(call.data.preview.originalContent).toBe("old text");
+      expect(call.data.newRevision).toBe("rev-new");
+    });
+
+    it("returns preview without applying for delete", async () => {
+      const editor = createMockEditor(["to delete"]);
+      mockGetEditor.mockReturnValue(editor);
+
+      await handleParagraphWrite("req-dry-2", {
+        baseRevision: "rev-1",
+        target: { index: 0 },
+        operation: "delete",
+        mode: "dryRun",
+      });
+
+      const call = mockRespond.mock.calls[0][0];
+      expect(call.success).toBe(true);
+      expect(call.data.applied).toBe(false);
+      expect(call.data.preview.operation).toBe("delete");
+      expect(call.data.preview.newContent).toBe("");
+    });
+
+    it("does not dispatch to editor in dryRun", async () => {
+      const editor = createMockEditor(["text"]);
+      mockGetEditor.mockReturnValue(editor);
+
+      await handleParagraphWrite("req-dry-3", {
+        baseRevision: "rev-1",
+        target: { index: 0 },
+        operation: "replace",
+        content: "new",
+        mode: "dryRun",
+      });
+
+      expect(editor.view.dispatch).not.toHaveBeenCalled();
+      expect(editor.chain).not.toHaveBeenCalled();
+    });
+  });
+
   // ── non-Error catch branches ──
 
   describe("handleParagraphRead — non-Error catch branch", () => {
