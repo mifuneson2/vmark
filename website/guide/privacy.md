@@ -70,6 +70,7 @@ VMark is fully open source. You can verify everything described here:
 
 - Update endpoint configuration: [`src-tauri/tauri.conf.json`](https://github.com/xiaolai/vmark/blob/main/src-tauri/tauri.conf.json)
 - Machine hash generation: [`src-tauri/src/lib.rs`](https://github.com/xiaolai/vmark/blob/main/src-tauri/src/lib.rs) — search for `machine_id_hash`
+- Server-side stats aggregation: [`server/vmark-stats-json`](https://github.com/xiaolai/vmark/blob/main/server/vmark-stats-json) — the exact script that runs on our server to produce the [public stats](https://log.vmark.app/api/stats)
 - No other network calls exist in the codebase — search for `fetch`, `http`, or `reqwest` yourself
 
 ## Disabling Update Checks

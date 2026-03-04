@@ -1,0 +1,116 @@
+#!/bin/bash
+# vmark-stats-json — Aggregate update-check logs into stats.json
+#
+# Runs every 10 minutes via cron. Parses Caddy JSON access logs for
+# update-check pings and produces a JSON summary with unique IPs,
+# unique devices (from X-Machine-Id header), platforms, and versions.
+#
+# Input:  /var/log/caddy/vmark-updates.log (Caddy structured JSON logs)
+# Output: /var/www/vmark-stats/stats.json   (served at log.vmark.app/api/stats)
+#
+# See website/guide/privacy.md for what data is collected and why.
+
+LOG=/var/log/caddy/vmark-updates.log
+OUT=/var/www/vmark-stats/stats.json
+
+grep '"uri":"/update/latest.json' "$LOG" 2>/dev/null | \
+grep -v 'l9scan\|bot\|crawler\|spider' | \
+python3 -c "
+import sys, json
+from datetime import datetime, timedelta
+from collections import defaultdict
+from urllib.parse import urlparse, parse_qs
+
+daily_ips = defaultdict(set)
+daily_pings = defaultdict(int)
+daily_devices = defaultdict(set)
+all_ips = set()
+all_devices = set()
+total_pings = 0
+platforms = defaultdict(int)
+versions = defaultdict(int)
+
+for line in sys.stdin:
+    try:
+        d = json.loads(line)
+        ts = datetime.fromtimestamp(d['ts'])
+        ip = d['request']['remote_ip']
+        uri = d['request']['uri']
+        day = ts.strftime('%Y-%m-%d')
+        daily_ips[day].add(ip)
+        daily_pings[day] += 1
+        all_ips.add(ip)
+        total_pings += 1
+
+        # Extract X-Machine-Id header (case-insensitive key in Caddy JSON)
+        headers = d['request'].get('headers', {})
+        mid_list = headers.get('X-Machine-Id') or headers.get('x-machine-id') or []
+        if mid_list:
+            mid = mid_list[0]
+            daily_devices[day].add(mid)
+            all_devices.add(mid)
+
+        # Parse query params: ?target=darwin&arch=aarch64&version=0.5.10
+        qs = parse_qs(urlparse(uri).query)
+        target = qs.get('target', ['unknown'])[0]
+        arch = qs.get('arch', ['unknown'])[0]
+        version = qs.get('version', ['unknown'])[0]
+        if target != 'unknown':
+            platforms[f'{target}-{arch}'] += 1
+        if version != 'unknown':
+            versions[version] += 1
+    except:
+        pass
+
+now = datetime.utcnow()
+today = now.strftime('%Y-%m-%d')
+last_7_ips = set()
+last_7_pings = 0
+last_7_devices = set()
+last_30_ips = set()
+last_30_pings = 0
+last_30_devices = set()
+for i in range(7):
+    d = (now - timedelta(days=i)).strftime('%Y-%m-%d')
+    last_7_ips |= daily_ips.get(d, set())
+    last_7_pings += daily_pings.get(d, 0)
+    last_7_devices |= daily_devices.get(d, set())
+for i in range(30):
+    d = (now - timedelta(days=i)).strftime('%Y-%m-%d')
+    last_30_ips |= daily_ips.get(d, set())
+    last_30_pings += daily_pings.get(d, 0)
+    last_30_devices |= daily_devices.get(d, set())
+
+history = []
+for day in sorted(daily_ips)[-30:]:
+    entry = {
+        'date': day,
+        'ips': len(daily_ips[day]),
+        'pings': daily_pings[day],
+    }
+    if daily_devices.get(day):
+        entry['devices'] = len(daily_devices[day])
+    history.append(entry)
+
+today_devices = daily_devices.get(today, set())
+
+result = {
+    'updated': now.isoformat() + 'Z',
+    'today': {'ips': len(daily_ips.get(today, set())), 'pings': daily_pings.get(today, 0)},
+    'week':  {'ips': len(last_7_ips),  'pings': last_7_pings},
+    'month': {'ips': len(last_30_ips), 'pings': last_30_pings},
+    'total': {'ips': len(all_ips),     'pings': total_pings},
+    'platforms': dict(sorted(platforms.items(), key=lambda x: -x[1])),
+    'versions': dict(sorted(versions.items(), key=lambda x: -x[1])),
+    'history': history,
+}
+
+# Only add devices fields if any machine IDs were seen
+if all_devices:
+    result['today']['devices'] = len(today_devices)
+    result['week']['devices'] = len(last_7_devices)
+    result['month']['devices'] = len(last_30_devices)
+    result['total']['devices'] = len(all_devices)
+
+print(json.dumps(result))
+" > "$OUT" 2>/dev/null || echo '{"today":{"ips":0,"pings":0},"week":{"ips":0,"pings":0},"month":{"ips":0,"pings":0},"total":{"ips":0,"pings":0},"platforms":{},"versions":{},"history":[]}' > "$OUT"
