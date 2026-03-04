@@ -15,35 +15,52 @@
  *     (plus 80ms grace period) is dropped to prevent garbled preedit text from
  *     being sent to the PTY. Clean committed text is written directly via
  *     onCompositionCommit, bypassing xterm's space-injected onData.
- *   - Theme, font size, and workspace root changes are synced across all sessions
- *     via settingsStore/workspaceStore subscriptions. Workspace root change
- *     auto-cd's running sessions (Ctrl+U to clear partial input first).
+ *   - Theme sync uses buildXtermThemeForId() from terminalTheme.ts for
+ *     per-theme ANSI color palettes. Font size and workspace root changes
+ *     are also synced across all sessions via store subscriptions.
+ *   - Workspace root change auto-cd's running sessions via buildCdCommand(),
+ *     which escapes paths for shell safety (Ctrl+U clears partial input first).
+ *   - Spawn failures are reflected in the UI via markSessionDead().
  *   - Session map (sessionsRef) is imperative (not React state) because xterm
  *     instances must be managed outside React's render cycle.
  *
  * @coordinates-with TerminalPanel.tsx — provides fit(), getActiveTerminal, getActiveSearchAddon
  * @coordinates-with createTerminalInstance.ts — factory for xterm + addons
+ * @coordinates-with terminalTheme.ts — per-theme ANSI color palettes for xterm.js
  * @coordinates-with spawnPty.ts — shell process creation
  * @coordinates-with terminalSessionStore — store driving session list and active ID
  * @module components/Terminal/useTerminalSessions
  */
 import { useRef, useEffect, useCallback } from "react";
 import type { IPty } from "tauri-pty";
-import { useSettingsStore, themes } from "@/stores/settingsStore";
+import { useSettingsStore } from "@/stores/settingsStore";
 import { useTerminalSessionStore } from "@/stores/terminalSessionStore";
 import {
   createTerminalInstance,
   type TerminalInstance,
 } from "./createTerminalInstance";
+import { buildXtermThemeForId } from "./terminalTheme";
 import { spawnPty, resolveTerminalCwd } from "./spawnPty";
 import { useWorkspaceStore } from "@/stores/workspaceStore";
 import type { SearchAddon } from "@xterm/addon-search";
 
 const PTY_RESIZE_DEBOUNCE_MS = 100;
 
-function sanitizeAndEscapePath(path: string): string {
+/**
+ * Escape a path for shell `cd` command.
+ * POSIX: wraps in single quotes with proper escaping.
+ * Note: VMark is macOS-primary; Windows best-effort.
+ */
+function escapePathForCd(path: string): string {
   const sanitized = path.replace(/[\n\r]/g, "");
   return sanitized.replace(/'/g, "'\\''");
+}
+
+/** Build a cd command string for the given path. */
+function buildCdCommand(path: string): string {
+  const escaped = escapePathForCd(path);
+  // Ctrl+U clears any partial input, then cd
+  return `\x15cd '${escaped}'\n`;
 }
 
 interface SessionEntry {
@@ -163,16 +180,17 @@ export function useTerminalSessions(
       // If workspace changed while spawning, cd to the current root
       const currentRoot = useWorkspaceStore.getState().rootPath;
       if (currentRoot && currentRoot !== cwd) {
-        const escaped = sanitizeAndEscapePath(currentRoot);
-        pty.write(`\x15cd '${escaped}'\n`);
+        pty.write(buildCdCommand(currentRoot));
         currentEntry.spawnedCwd = currentRoot;
       }
     } catch (err) {
       const e = sessionsRef.current.get(sessionId);
       if (e && !e.disposed) {
-        e.instance.term.write(`\r\nFailed to start shell: ${err}\r\n`);
+        const errMsg = err instanceof Error ? err.message : String(err);
+        e.instance.term.write(`\r\nFailed to start shell: ${errMsg}\r\n`);
         e.instance.term.write("Press any key to retry...\r\n");
         e.shellExited = true;
+        useTerminalSessionStore.getState().markSessionDead(sessionId);
       }
     }
   }, []);
@@ -409,24 +427,7 @@ export function useTerminalSessions(
       const themeId = state.appearance.theme;
       if (themeId === prevTheme) return;
       prevTheme = themeId;
-      const colors = themes[themeId];
-      const isDark = themeId.includes("night") || themeId.includes("dark");
-      const newTheme = {
-        background: colors.background,
-        foreground: colors.foreground,
-        cursor: colors.foreground,
-        cursorAccent: colors.background,
-        selectionBackground: colors.selection ?? "rgba(0,102,204,0.25)",
-        scrollbarSliderBackground: isDark
-          ? "rgba(255,255,255,0.12)"
-          : "rgba(0,0,0,0.10)",
-        scrollbarSliderHoverBackground: isDark
-          ? "rgba(255,255,255,0.20)"
-          : "rgba(0,0,0,0.18)",
-        scrollbarSliderActiveBackground: isDark
-          ? "rgba(255,255,255,0.30)"
-          : "rgba(0,0,0,0.25)",
-      };
+      const newTheme = buildXtermThemeForId(themeId);
       for (const [, entry] of sessionsRef.current) {
         entry.instance.term.options.theme = newTheme;
       }
@@ -444,11 +445,10 @@ export function useTerminalSessions(
       }
       prevRoot = newRoot;
 
-      const escaped = sanitizeAndEscapePath(newRoot);
+      const cdCommand = buildCdCommand(newRoot);
       for (const [, entry] of sessionsRef.current) {
         if (entry.pty && !entry.shellExited && entry.spawnedCwd !== newRoot) {
-          // Ctrl+U clears any partial input, then cd to new workspace
-          entry.pty.write(`\x15cd '${escaped}'\n`);
+          entry.pty.write(cdCommand);
           entry.spawnedCwd = newRoot;
         }
       }

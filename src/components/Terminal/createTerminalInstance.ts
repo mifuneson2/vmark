@@ -15,15 +15,20 @@
  *     period after compositionend to block xterm's space-injected onData,
  *     and fires onCompositionCommit with clean committed text for direct
  *     PTY write (fixes macOS Chinese IME: "claude" → "cl au de").
+ *     Rapid back-to-back compositions flush pending text immediately.
  *   - WebGL renderer is optional (settings-driven); falls back silently
  *     to canvas on GPU-incompatible systems.
+ *   - Web links only open safe URL schemes (http, https, mailto);
+ *     opener import is cached across clicks.
  *   - File link provider detects file paths in output and opens them as
- *     new editor tabs on click.
- *   - Copy-on-select is gated by a settings flag and respects composition.
- *   - Theme colors are resolved from settingsStore at creation time;
+ *     new editor tabs on click, with a 10 MB size guard.
+ *   - Copy-on-select is debounced (150ms), gated by a settings flag,
+ *     and respects composition state.
+ *   - Theme colors are resolved via buildXtermTheme() from terminalTheme.ts;
  *     runtime theme changes are handled by useTerminalSessions.
  *
  * @coordinates-with useTerminalSessions.ts — caller that manages instance lifecycle
+ * @coordinates-with terminalTheme.ts — per-theme ANSI color palettes for xterm.js
  * @coordinates-with fileLinkProvider.ts — file path detection in terminal output
  * @coordinates-with terminalKeyHandler.ts — custom Cmd+C/V/K/F handling
  * @module components/Terminal/createTerminalInstance
@@ -36,12 +41,13 @@ import { Unicode11Addon } from "@xterm/addon-unicode11";
 import { SearchAddon } from "@xterm/addon-search";
 import { SerializeAddon } from "@xterm/addon-serialize";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
-import { useSettingsStore, themes } from "@/stores/settingsStore";
+import { useSettingsStore } from "@/stores/settingsStore";
 import { useTabStore } from "@/stores/tabStore";
 import { useDocumentStore } from "@/stores/documentStore";
 import { getCurrentWindowLabel } from "@/utils/workspaceStorage";
 import { createFileLinkProvider } from "./fileLinkProvider";
 import { createTerminalKeyHandler } from "./terminalKeyHandler";
+import { buildXtermTheme } from "./terminalTheme";
 import { clipboardWarn, terminalLog } from "@/utils/debug";
 
 import "@xterm/xterm/css/xterm.css";
@@ -53,28 +59,7 @@ function resolveMonoFont(): string {
   return mono || "ui-monospace, SFMono-Regular, Menlo, Monaco, monospace";
 }
 
-/** Build xterm ITheme from the app's current theme. */
-function buildXtermTheme() {
-  const themeId = useSettingsStore.getState().appearance.theme;
-  const colors = themes[themeId];
-  const isDark = themeId.includes("night") || themeId.includes("dark");
-  return {
-    background: colors.background,
-    foreground: colors.foreground,
-    cursor: colors.foreground,
-    cursorAccent: colors.background,
-    selectionBackground: colors.selection ?? "rgba(0,102,204,0.25)",
-    scrollbarSliderBackground: isDark
-      ? "rgba(255,255,255,0.12)"
-      : "rgba(0,0,0,0.10)",
-    scrollbarSliderHoverBackground: isDark
-      ? "rgba(255,255,255,0.20)"
-      : "rgba(0,0,0,0.18)",
-    scrollbarSliderActiveBackground: isDark
-      ? "rgba(255,255,255,0.30)"
-      : "rgba(0,0,0,0.25)",
-  };
-}
+// buildXtermTheme is imported from ./terminalTheme
 
 export interface TerminalInstance {
   term: Terminal;
@@ -155,27 +140,39 @@ export function createTerminalInstance(options: CreateOptions): TerminalInstance
   // keeping composing=true during a grace period to block xterm's garbled onData.
   let composing = false;
   let compositionGraceTimer: ReturnType<typeof setTimeout> | null = null;
+  let pendingCommitText: string | null = null;
   let onCompositionCommit: ((text: string) => void) | null = null;
   const textarea = container.querySelector<HTMLTextAreaElement>(".xterm-helper-textarea");
   const onCompositionStart = () => {
-    composing = true;
+    // Flush any pending committed text from a previous compositionend before
+    // starting a new composition — prevents input loss in rapid back-to-back
+    // IME commits (e.g., typing fast in Chinese pinyin).
     if (compositionGraceTimer) {
       clearTimeout(compositionGraceTimer);
       compositionGraceTimer = null;
+      if (pendingCommitText && onCompositionCommit) {
+        onCompositionCommit(pendingCommitText);
+      }
+      pendingCommitText = null;
     }
+    composing = true;
     terminalLog("compositionstart");
   };
   const onCompositionEnd = (e: CompositionEvent) => {
     const committedText = e.data;
     terminalLog("compositionend", committedText);
+    // Store committed text so compositionstart can flush it if a new
+    // composition begins before the grace period expires.
+    pendingCommitText = committedText;
     // Keep composing=true during grace period to block xterm's onData
     compositionGraceTimer = setTimeout(() => {
       compositionGraceTimer = null;
       composing = false;
       // Send clean committed text directly to PTY
-      if (committedText && onCompositionCommit) {
-        onCompositionCommit(committedText);
+      if (pendingCommitText && onCompositionCommit) {
+        onCompositionCommit(pendingCommitText);
       }
+      pendingCommitText = null;
     }, 80);
   };
   if (textarea) {
@@ -204,22 +201,48 @@ export function createTerminalInstance(options: CreateOptions): TerminalInstance
     }
   }
 
-  // Web links
+  // Web links — only open safe URL schemes; cache import to avoid repeated module resolution
+  const SAFE_LINK_SCHEMES = ["http:", "https:", "mailto:"];
+  let openerPromise: Promise<{ openUrl: (url: string) => Promise<void> }> | null = null;
   term.loadAddon(new WebLinksAddon((_event, uri) => {
-    import("@tauri-apps/plugin-opener").then(({ openUrl }) => {
+    try {
+      const parsed = new URL(uri);
+      if (!SAFE_LINK_SCHEMES.includes(parsed.protocol)) {
+        terminalLog("Blocked unsafe URL scheme:", parsed.protocol, uri);
+        return;
+      }
+    } catch {
+      // Not a valid absolute URL — skip
+      return;
+    }
+    if (!openerPromise) {
+      openerPromise = import("@tauri-apps/plugin-opener");
+    }
+    openerPromise.then(({ openUrl }) => {
       openUrl(uri).catch((error: unknown) => {
         terminalLog("Failed to open URL:", error instanceof Error ? error.message : String(error));
       });
     /* v8 ignore start -- @preserve reason: dynamic import of a vi.mock'd module always resolves in tests; the import-failure catch is only reachable in production when the plugin binary is missing */
     }).catch((error: unknown) => {
+      openerPromise = null; // Reset on failure so next click retries
       terminalLog("Failed to load opener plugin:", error instanceof Error ? error.message : String(error));
     });
     /* v8 ignore stop */
   }));
 
-  // File links
+  // File links — with size guard to prevent freezing on large files
+  const MAX_FILE_LINK_SIZE = 10 * 1024 * 1024; // 10 MB
   term.registerLinkProvider(createFileLinkProvider(term, (filePath) => {
-    import("@tauri-apps/plugin-fs").then(({ readTextFile }) => {
+    import("@tauri-apps/plugin-fs").then(async ({ readTextFile, stat }) => {
+      try {
+        const info = await stat(filePath);
+        if (info.size > MAX_FILE_LINK_SIZE) {
+          terminalLog("File too large to open in editor:", filePath, `(${Math.round(info.size / 1024 / 1024)}MB)`);
+          return;
+        }
+      } catch {
+        // stat failed — proceed anyway, readTextFile will catch
+      }
       readTextFile(filePath).then((content) => {
         const windowLabel = getCurrentWindowLabel();
         const tabId = useTabStore.getState().createTab(windowLabel, filePath);
@@ -239,13 +262,19 @@ export function createTerminalInstance(options: CreateOptions): TerminalInstance
     createTerminalKeyHandler(term, ptyRef, { onSearch }),
   );
 
-  // Copy on select
+  // Copy on select — debounced to avoid repeated clipboard writes during drag
+  let copyOnSelectTimer: ReturnType<typeof setTimeout> | null = null;
   term.onSelectionChange(() => {
+    if (copyOnSelectTimer) { clearTimeout(copyOnSelectTimer); copyOnSelectTimer = null; }
     if (!composing && term.hasSelection() && useSettingsStore.getState().terminal.copyOnSelect) {
-      const text = term.getSelection().trimEnd();
-      if (text) writeText(text).catch((error: unknown) => {
-        clipboardWarn("Clipboard write failed:", error instanceof Error ? error.message : String(error));
-      });
+      copyOnSelectTimer = setTimeout(() => {
+        copyOnSelectTimer = null;
+        if (!term.hasSelection()) return;
+        const text = term.getSelection().trimEnd();
+        if (text) writeText(text).catch((error: unknown) => {
+          clipboardWarn("Clipboard write failed:", error instanceof Error ? error.message : String(error));
+        });
+      }, 150);
     }
   });
 
@@ -253,6 +282,10 @@ export function createTerminalInstance(options: CreateOptions): TerminalInstance
     if (compositionGraceTimer) {
       clearTimeout(compositionGraceTimer);
       compositionGraceTimer = null;
+    }
+    if (copyOnSelectTimer) {
+      clearTimeout(copyOnSelectTimer);
+      copyOnSelectTimer = null;
     }
     if (textarea) {
       textarea.removeEventListener("compositionstart", onCompositionStart);
