@@ -15,15 +15,20 @@
  *     period after compositionend to block xterm's space-injected onData,
  *     and fires onCompositionCommit with clean committed text for direct
  *     PTY write (fixes macOS Chinese IME: "claude" → "cl au de").
+ *     Rapid back-to-back compositions flush pending text immediately.
  *   - WebGL renderer is optional (settings-driven); falls back silently
  *     to canvas on GPU-incompatible systems.
+ *   - Web links only open safe URL schemes (http, https, mailto);
+ *     opener import is cached across clicks.
  *   - File link provider detects file paths in output and opens them as
- *     new editor tabs on click.
- *   - Copy-on-select is gated by a settings flag and respects composition.
- *   - Theme colors are resolved from settingsStore at creation time;
+ *     new editor tabs on click, with a 10 MB size guard.
+ *   - Copy-on-select is debounced (150ms), gated by a settings flag,
+ *     and respects composition state.
+ *   - Theme colors are resolved via buildXtermTheme() from terminalTheme.ts;
  *     runtime theme changes are handled by useTerminalSessions.
  *
  * @coordinates-with useTerminalSessions.ts — caller that manages instance lifecycle
+ * @coordinates-with terminalTheme.ts — per-theme ANSI color palettes for xterm.js
  * @coordinates-with fileLinkProvider.ts — file path detection in terminal output
  * @coordinates-with terminalKeyHandler.ts — custom Cmd+C/V/K/F handling
  * @module components/Terminal/createTerminalInstance

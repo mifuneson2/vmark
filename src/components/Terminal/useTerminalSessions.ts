@@ -15,14 +15,18 @@
  *     (plus 80ms grace period) is dropped to prevent garbled preedit text from
  *     being sent to the PTY. Clean committed text is written directly via
  *     onCompositionCommit, bypassing xterm's space-injected onData.
- *   - Theme, font size, and workspace root changes are synced across all sessions
- *     via settingsStore/workspaceStore subscriptions. Workspace root change
- *     auto-cd's running sessions (Ctrl+U to clear partial input first).
+ *   - Theme sync uses buildXtermThemeForId() from terminalTheme.ts for
+ *     per-theme ANSI color palettes. Font size and workspace root changes
+ *     are also synced across all sessions via store subscriptions.
+ *   - Workspace root change auto-cd's running sessions via buildCdCommand(),
+ *     which escapes paths for shell safety (Ctrl+U clears partial input first).
+ *   - Spawn failures are reflected in the UI via markSessionDead().
  *   - Session map (sessionsRef) is imperative (not React state) because xterm
  *     instances must be managed outside React's render cycle.
  *
  * @coordinates-with TerminalPanel.tsx — provides fit(), getActiveTerminal, getActiveSearchAddon
  * @coordinates-with createTerminalInstance.ts — factory for xterm + addons
+ * @coordinates-with terminalTheme.ts — per-theme ANSI color palettes for xterm.js
  * @coordinates-with spawnPty.ts — shell process creation
  * @coordinates-with terminalSessionStore — store driving session list and active ID
  * @module components/Terminal/useTerminalSessions
