@@ -308,46 +308,6 @@ export function Button({
   );
 }
 
-interface IconButtonProps {
-  children: React.ReactNode;
-  onClick?: (e: React.MouseEvent) => void;
-  title?: string;
-  disabled?: boolean;
-  className?: string;
-  size?: "xs" | "sm" | "md";
-}
-
-const iconButtonSizes = {
-  xs: "w-5 h-5",
-  sm: "w-6 h-6",
-  md: "w-7 h-7",
-};
-
-export function IconButton({
-  children,
-  onClick,
-  title,
-  disabled,
-  className = "",
-  size = "sm",
-}: IconButtonProps) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      title={title}
-      disabled={disabled}
-      className={`${iconButtonSizes[size]} flex items-center justify-center rounded
-                  text-[var(--text-tertiary)] hover:text-[var(--text-primary)]
-                  hover:bg-[var(--hover-bg)] transition-colors
-                  disabled:opacity-50 disabled:cursor-not-allowed
-                  ${className}`}
-    >
-      {children}
-    </button>
-  );
-}
-
 // ============================================================================
 // Copy Button
 // ============================================================================

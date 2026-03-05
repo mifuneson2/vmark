@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { shouldBlockMenuAction, isEditorContext } from "./focusGuard";
+import { shouldBlockMenuAction } from "./focusGuard";
 
 describe("focusGuard", () => {
   // Helper to create a mock element with closest() behavior
@@ -149,68 +149,4 @@ describe("focusGuard", () => {
     });
   });
 
-  describe("isEditorContext", () => {
-    it("returns true for WYSIWYG editor (.ProseMirror)", () => {
-      const mockElement = createMockElement({
-        ".ProseMirror": true,
-        ".cm-editor": false,
-        ".editor-container": false,
-      });
-      vi.spyOn(document, "activeElement", "get").mockReturnValue(mockElement);
-
-      expect(isEditorContext()).toBe(true);
-    });
-
-    it("returns true for Source editor (.cm-editor)", () => {
-      const mockElement = createMockElement({
-        ".ProseMirror": false,
-        ".cm-editor": true,
-        ".editor-container": false,
-      });
-      vi.spyOn(document, "activeElement", "get").mockReturnValue(mockElement);
-
-      expect(isEditorContext()).toBe(true);
-    });
-
-    it("returns true for editor-container", () => {
-      const mockElement = createMockElement({
-        ".ProseMirror": false,
-        ".cm-editor": false,
-        ".editor-container": true,
-      });
-      vi.spyOn(document, "activeElement", "get").mockReturnValue(mockElement);
-
-      expect(isEditorContext()).toBe(true);
-    });
-
-    it("returns false for other contexts", () => {
-      const mockElement = createMockElement({
-        ".ProseMirror": false,
-        ".cm-editor": false,
-        ".editor-container": false,
-        ".sidebar": true,
-      });
-      vi.spyOn(document, "activeElement", "get").mockReturnValue(mockElement);
-
-      expect(isEditorContext()).toBe(false);
-    });
-
-    it("returns false when no activeElement", () => {
-      vi.spyOn(document, "activeElement", "get").mockReturnValue(null);
-
-      expect(isEditorContext()).toBe(false);
-    });
-
-    it("returns false for find bar", () => {
-      const mockElement = createMockElement({
-        ".ProseMirror": false,
-        ".cm-editor": false,
-        ".editor-container": false,
-        ".find-bar": true,
-      });
-      vi.spyOn(document, "activeElement", "get").mockReturnValue(mockElement);
-
-      expect(isEditorContext()).toBe(false);
-    });
-  });
 });

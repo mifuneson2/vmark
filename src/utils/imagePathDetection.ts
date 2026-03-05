@@ -224,26 +224,6 @@ export function detectImagePath(text: string): ImagePathResult {
 }
 
 /**
- * Quick check if text might be an image path (without full classification).
- * Useful for fast filtering before detailed detection.
- */
-export function looksLikeImagePath(text: string): boolean {
-  const trimmed = text.trim();
-  if (!trimmed) return false;
-
-  const firstLine = trimmed.split("\n")[0].trim();
-  /* v8 ignore start -- firstLine is always truthy when trimmed is non-empty; defensive guard */
-  if (!firstLine) return false;
-  /* v8 ignore stop */
-
-  // Data URL
-  if (firstLine.startsWith("data:image/")) return true;
-
-  // Check for image extension
-  return hasImageExtension(firstLine);
-}
-
-/**
  * Result of detecting multiple image paths.
  */
 export interface MultiImageDetectionResult {

@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { detectAndNormalizeUrl, looksLikeUrl } from "./urlDetection";
+import { detectAndNormalizeUrl } from "./urlDetection";
 
 describe("detectAndNormalizeUrl", () => {
   describe("standard protocols", () => {
@@ -268,31 +268,31 @@ describe("detectAndNormalizeUrl - additional edge cases", () => {
   });
 });
 
-describe("looksLikeUrl", () => {
-  it("returns true for URLs with protocol", () => {
-    expect(looksLikeUrl("https://example.com")).toBe(true);
-    expect(looksLikeUrl("ftp://files.example.com")).toBe(true);
+describe("looksLikeUrl (tested via detectAndNormalizeUrl)", () => {
+  it("detects URLs with protocol", () => {
+    expect(detectAndNormalizeUrl("https://example.com").isUrl).toBe(true);
+    expect(detectAndNormalizeUrl("ftp://files.example.com").isUrl).toBe(true);
   });
 
-  it("returns true for email addresses", () => {
-    expect(looksLikeUrl("user@example.com")).toBe(true);
+  it("detects email addresses", () => {
+    expect(detectAndNormalizeUrl("user@example.com").isUrl).toBe(true);
   });
 
-  it("returns true for common domains", () => {
-    expect(looksLikeUrl("example.com")).toBe(true);
-    expect(looksLikeUrl("example.org")).toBe(true);
+  it("detects common domains", () => {
+    expect(detectAndNormalizeUrl("example.com").isUrl).toBe(true);
+    expect(detectAndNormalizeUrl("example.org").isUrl).toBe(true);
   });
 
-  it("returns true for localhost", () => {
-    expect(looksLikeUrl("localhost:3000")).toBe(true);
+  it("detects localhost", () => {
+    expect(detectAndNormalizeUrl("localhost:3000").isUrl).toBe(true);
   });
 
-  it("returns false for plain text", () => {
-    expect(looksLikeUrl("hello world")).toBe(false);
+  it("rejects plain text", () => {
+    expect(detectAndNormalizeUrl("hello world").isUrl).toBe(false);
   });
 
-  it("returns false for empty string", () => {
-    expect(looksLikeUrl("")).toBe(false);
+  it("rejects empty string", () => {
+    expect(detectAndNormalizeUrl("").isUrl).toBe(false);
   });
 });
 

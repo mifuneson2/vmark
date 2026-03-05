@@ -10,7 +10,6 @@ const mockJoin = vi.mocked(join);
 
 import {
   readClipboardImagePath,
-  hasClipboardImagePath,
 } from "./clipboardImagePath";
 
 beforeEach(() => {
@@ -322,42 +321,3 @@ describe("readClipboardImagePath", () => {
   });
 });
 
-describe("hasClipboardImagePath", () => {
-  it("returns true for validated image path", async () => {
-    mockReadText.mockResolvedValue("https://example.com/photo.png");
-    const result = await hasClipboardImagePath();
-    expect(result).toBe(true);
-  });
-
-  it("returns false for non-image text", async () => {
-    mockReadText.mockResolvedValue("hello world");
-    const result = await hasClipboardImagePath();
-    expect(result).toBe(false);
-  });
-
-  it("returns false for empty clipboard", async () => {
-    mockReadText.mockResolvedValue("");
-    const result = await hasClipboardImagePath();
-    expect(result).toBe(false);
-  });
-
-  it("returns false for non-validated absolute path", async () => {
-    mockReadText.mockResolvedValue("/Users/test/missing.png");
-    mockExists.mockResolvedValue(false);
-    const result = await hasClipboardImagePath();
-    expect(result).toBe(false);
-  });
-
-  it("returns true for validated absolute path", async () => {
-    mockReadText.mockResolvedValue("/Users/test/photo.png");
-    mockExists.mockResolvedValue(true);
-    const result = await hasClipboardImagePath();
-    expect(result).toBe(true);
-  });
-
-  it("returns false when clipboard throws", async () => {
-    mockReadText.mockRejectedValue(new Error("fail"));
-    const result = await hasClipboardImagePath();
-    expect(result).toBe(false);
-  });
-});

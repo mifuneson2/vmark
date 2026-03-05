@@ -283,29 +283,3 @@ export function isSubstantialHtml(html: string): boolean {
 
   return false;
 }
-
-/**
- * Detect if HTML is from Microsoft Word.
- */
-export function isWordHtml(html: string): boolean {
-  return (
-    html.includes("xmlns:w=") ||
-    html.includes("urn:schemas-microsoft-com:office:word") ||
-    html.includes("mso-") ||
-    html.includes("MsoNormal") ||
-    html.includes("<o:p>")
-  );
-}
-
-/**
- * Detect if HTML is from a web page (has external resources or complex structure).
- */
-export function isWebPageHtml(html: string): boolean {
-  return (
-    html.includes("<!DOCTYPE") ||
-    html.includes("<html") ||
-    html.includes("<head") ||
-    html.includes("<body") ||
-    /<link[^>]+stylesheet/i.test(html)
-  );
-}

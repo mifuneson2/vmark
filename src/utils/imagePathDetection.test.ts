@@ -3,7 +3,6 @@ import {
   detectImagePath,
   detectMultipleImagePaths,
   hasImageExtension,
-  looksLikeImagePath,
   IMAGE_EXTENSIONS,
 } from "./imagePathDetection";
 
@@ -227,35 +226,6 @@ describe("detectImagePath", () => {
       const result = detectImagePath(input);
       expect(result.originalText).toBe(input);
     });
-  });
-});
-
-describe("looksLikeImagePath", () => {
-  it("returns true for data URLs", () => {
-    expect(looksLikeImagePath("data:image/png;base64,abc")).toBe(true);
-  });
-
-  it("returns true for paths with image extensions", () => {
-    expect(looksLikeImagePath("/path/to/image.png")).toBe(true);
-    expect(looksLikeImagePath("https://example.com/photo.jpg")).toBe(true);
-  });
-
-  it("returns false for non-image paths", () => {
-    expect(looksLikeImagePath("/path/to/document.pdf")).toBe(false);
-    expect(looksLikeImagePath("https://example.com/page")).toBe(false);
-  });
-
-  it("returns false for empty string", () => {
-    expect(looksLikeImagePath("")).toBe(false);
-  });
-
-  it("uses first line only", () => {
-    expect(looksLikeImagePath("image.png\ntext.txt")).toBe(true);
-  });
-
-  it("returns false when trimmed text has empty first line", () => {
-    // "\n" trims to "\n" (non-empty) but first line is "" (empty after split)
-    expect(looksLikeImagePath("\n")).toBe(false);
   });
 });
 

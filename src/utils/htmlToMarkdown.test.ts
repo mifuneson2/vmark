@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { htmlToMarkdown, isSubstantialHtml, isWordHtml, isWebPageHtml } from "./htmlToMarkdown";
+import { htmlToMarkdown, isSubstantialHtml } from "./htmlToMarkdown";
 import { buildCodeMask } from "./markdownCodeMask";
 
 describe("htmlToMarkdown", () => {
@@ -103,33 +103,6 @@ describe("isSubstantialHtml", () => {
 
   it("returns true for multiple paragraphs", () => {
     expect(isSubstantialHtml("<p>Para 1</p><p>Para 2</p>")).toBe(true);
-  });
-});
-
-describe("isWordHtml", () => {
-  it("detects Word HTML patterns", () => {
-    expect(isWordHtml('xmlns:w="urn:schemas-microsoft-com')).toBe(true);
-    expect(isWordHtml('<p class="MsoNormal">Text</p>')).toBe(true);
-    expect(isWordHtml('<o:p>Text</o:p>')).toBe(true);
-    expect(isWordHtml('style="mso-special-character"')).toBe(true);
-  });
-
-  it("returns false for regular HTML", () => {
-    expect(isWordHtml("<p>Regular text</p>")).toBe(false);
-    expect(isWordHtml("<div><span>Content</span></div>")).toBe(false);
-  });
-});
-
-describe("isWebPageHtml", () => {
-  it("detects web page patterns", () => {
-    expect(isWebPageHtml("<!DOCTYPE html>")).toBe(true);
-    expect(isWebPageHtml("<html><body>Content</body></html>")).toBe(true);
-    expect(isWebPageHtml('<link rel="stylesheet">')).toBe(true);
-  });
-
-  it("returns false for fragment HTML", () => {
-    expect(isWebPageHtml("<p>Just a paragraph</p>")).toBe(false);
-    expect(isWebPageHtml("<div>Content</div>")).toBe(false);
   });
 });
 

@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { parseYoutubeUrl, isYoutubeUrl } from "@/utils/youtubeUrlParser";
+import { parseYoutubeUrl } from "@/utils/youtubeUrlParser";
 
 describe("parseYoutubeUrl", () => {
   describe("standard watch URLs", () => {
@@ -106,24 +106,24 @@ describe("parseYoutubeUrl", () => {
   });
 });
 
-describe("isYoutubeUrl", () => {
-  it("returns true for YouTube watch URL", () => {
-    expect(isYoutubeUrl("https://www.youtube.com/watch?v=dQw4w9WgXcQ")).toBe(true);
+describe("isYoutubeUrl (via parseYoutubeUrl)", () => {
+  it("returns non-null for YouTube watch URL", () => {
+    expect(parseYoutubeUrl("https://www.youtube.com/watch?v=dQw4w9WgXcQ")).not.toBeNull();
   });
 
-  it("returns true for youtu.be URL", () => {
-    expect(isYoutubeUrl("https://youtu.be/dQw4w9WgXcQ")).toBe(true);
+  it("returns non-null for youtu.be URL", () => {
+    expect(parseYoutubeUrl("https://youtu.be/dQw4w9WgXcQ")).not.toBeNull();
   });
 
-  it("returns true for embed URL", () => {
-    expect(isYoutubeUrl("https://www.youtube.com/embed/dQw4w9WgXcQ")).toBe(true);
+  it("returns non-null for embed URL", () => {
+    expect(parseYoutubeUrl("https://www.youtube.com/embed/dQw4w9WgXcQ")).not.toBeNull();
   });
 
-  it("returns false for non-YouTube", () => {
-    expect(isYoutubeUrl("https://example.com")).toBe(false);
+  it("returns null for non-YouTube", () => {
+    expect(parseYoutubeUrl("https://example.com")).toBeNull();
   });
 
-  it("returns false for empty string", () => {
-    expect(isYoutubeUrl("")).toBe(false);
+  it("returns null for empty string", () => {
+    expect(parseYoutubeUrl("")).toBeNull();
   });
 });

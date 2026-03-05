@@ -123,7 +123,9 @@ export function useFileShortcuts(windowLabel: string): void {
       const saveAsKey = shortcuts.getShortcut("saveAs");
       if (matchesShortcutEvent(e, saveAsKey)) {
         e.preventDefault();
-        handleSaveAs(windowLabel);
+        void handleSaveAs(windowLabel).catch((err) =>
+          console.error("[FileOps] Save As failed:", err)
+        );
         return;
       }
 
@@ -133,7 +135,9 @@ export function useFileShortcuts(windowLabel: string): void {
       if (matchesShortcutEvent(e, saveKey)) {
         fileOpsLog("Cmd+S keyboard shortcut matched");
         e.preventDefault();
-        handleSave(windowLabel);
+        void handleSave(windowLabel).catch((err) =>
+          console.error("[FileOps] Save failed:", err)
+        );
         return;
       }
       /* v8 ignore stop */

@@ -206,23 +206,3 @@ export function detectAndNormalizeUrl(
   // Not a recognized URL pattern
   return { isUrl: false, normalizedUrl: null, originalText: text };
 }
-
-/**
- * Quick check if text looks like a URL (without full normalization).
- * Useful for fast filtering before detailed detection.
- */
-export function looksLikeUrl(text: string): boolean {
-  const trimmed = text.trim();
-  if (!trimmed) return false;
-
-  // Check for common URL indicators
-  return (
-    trimmed.includes("://") ||
-    trimmed.includes("@") ||
-    trimmed.includes(".com") ||
-    trimmed.includes(".org") ||
-    trimmed.includes(".net") ||
-    trimmed.includes(".io") ||
-    trimmed.startsWith("localhost")
-  );
-}

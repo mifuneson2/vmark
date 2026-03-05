@@ -15,8 +15,8 @@ const {
 } = vi.hoisted(() => ({
   mockListen: vi.fn(() => Promise.resolve(vi.fn())),
   mockUnlisten: vi.fn(),
-  mockHandleSave: vi.fn(),
-  mockHandleSaveAs: vi.fn(),
+  mockHandleSave: vi.fn(() => Promise.resolve()),
+  mockHandleSaveAs: vi.fn(() => Promise.resolve()),
   mockHandleMoveTo: vi.fn(),
   mockHandleSaveAllQuit: vi.fn(),
   mockHandleOpen: vi.fn(),

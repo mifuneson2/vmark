@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { isSafeUrl, sanitizeUrl, sanitizeUrlWithFallback } from "./urlValidation";
+import { isSafeUrl, sanitizeUrl } from "./urlValidation";
 
 describe("urlValidation", () => {
   describe("isSafeUrl", () => {
@@ -97,22 +97,4 @@ describe("urlValidation", () => {
     });
   });
 
-  describe("sanitizeUrlWithFallback", () => {
-    it("returns URL for safe URLs", () => {
-      expect(sanitizeUrlWithFallback("https://example.com")).toBe("https://example.com");
-    });
-
-    it("returns fallback for unsafe URLs", () => {
-      expect(sanitizeUrlWithFallback("javascript:alert(1)")).toBe("about:blank");
-    });
-
-    it("uses custom fallback", () => {
-      expect(sanitizeUrlWithFallback("javascript:alert(1)", "#")).toBe("#");
-    });
-
-    it("returns fallback for null/undefined", () => {
-      expect(sanitizeUrlWithFallback(null)).toBe("about:blank");
-      expect(sanitizeUrlWithFallback(undefined)).toBe("about:blank");
-    });
-  });
 });

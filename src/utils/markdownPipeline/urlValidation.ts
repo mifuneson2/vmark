@@ -92,22 +92,3 @@ export function sanitizeUrl(url: string | null | undefined): string | null {
   if (!url) return null;
   return isSafeUrl(url) ? url : null;
 }
-
-/**
- * Sanitize a URL with a fallback value.
- *
- * @param url - The URL to sanitize
- * @param fallback - Value to return if URL is unsafe (default: "about:blank")
- * @returns The original URL if safe, or the fallback if unsafe
- *
- * @example
- * sanitizeUrlWithFallback("https://example.com"); // "https://example.com"
- * sanitizeUrlWithFallback("javascript:alert(1)"); // "about:blank"
- */
-export function sanitizeUrlWithFallback(
-  url: string | null | undefined,
-  fallback = "about:blank"
-): string {
-  if (!url) return fallback;
-  return isSafeUrl(url) ? url : fallback;
-}

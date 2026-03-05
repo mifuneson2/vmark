@@ -4,84 +4,13 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
-  isToday,
-  isYesterday,
   formatRelativeTime,
   formatExactTime,
   formatSnapshotTime,
-  getDayLabel,
   groupByDay,
 } from "./dateUtils";
 
 describe("dateUtils", () => {
-  describe("isToday", () => {
-    it("returns true for today", () => {
-      expect(isToday(new Date())).toBe(true);
-    });
-
-    it("returns true for today at midnight", () => {
-      const midnight = new Date();
-      midnight.setHours(0, 0, 0, 0);
-      expect(isToday(midnight)).toBe(true);
-    });
-
-    it("returns true for today at 11:59 PM", () => {
-      const endOfDay = new Date();
-      endOfDay.setHours(23, 59, 59, 999);
-      expect(isToday(endOfDay)).toBe(true);
-    });
-
-    it("returns false for yesterday", () => {
-      const yesterday = new Date();
-      yesterday.setDate(yesterday.getDate() - 1);
-      expect(isToday(yesterday)).toBe(false);
-    });
-
-    it("returns false for tomorrow", () => {
-      const tomorrow = new Date();
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      expect(isToday(tomorrow)).toBe(false);
-    });
-
-    it("returns false for a week ago", () => {
-      const weekAgo = new Date();
-      weekAgo.setDate(weekAgo.getDate() - 7);
-      expect(isToday(weekAgo)).toBe(false);
-    });
-  });
-
-  describe("isYesterday", () => {
-    it("returns true for yesterday", () => {
-      const yesterday = new Date();
-      yesterday.setDate(yesterday.getDate() - 1);
-      expect(isYesterday(yesterday)).toBe(true);
-    });
-
-    it("returns true for yesterday at midnight", () => {
-      const yesterday = new Date();
-      yesterday.setDate(yesterday.getDate() - 1);
-      yesterday.setHours(0, 0, 0, 0);
-      expect(isYesterday(yesterday)).toBe(true);
-    });
-
-    it("returns true for yesterday at 11:59 PM", () => {
-      const yesterday = new Date();
-      yesterday.setDate(yesterday.getDate() - 1);
-      yesterday.setHours(23, 59, 59, 999);
-      expect(isYesterday(yesterday)).toBe(true);
-    });
-
-    it("returns false for today", () => {
-      expect(isYesterday(new Date())).toBe(false);
-    });
-
-    it("returns false for two days ago", () => {
-      const twoDaysAgo = new Date();
-      twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
-      expect(isYesterday(twoDaysAgo)).toBe(false);
-    });
-  });
-
   describe("formatRelativeTime", () => {
     let nowSpy: ReturnType<typeof vi.spyOn>;
 
@@ -181,29 +110,6 @@ describe("dateUtils", () => {
       expect(result).not.toContain("Yesterday");
       // Should contain some date info
       expect(result.length).toBeGreaterThan(0);
-    });
-  });
-
-  describe("getDayLabel", () => {
-    it('returns "Today" for today', () => {
-      expect(getDayLabel(new Date())).toBe("Today");
-    });
-
-    it('returns "Yesterday" for yesterday', () => {
-      const yesterday = new Date();
-      yesterday.setDate(yesterday.getDate() - 1);
-      expect(getDayLabel(yesterday)).toBe("Yesterday");
-    });
-
-    it("returns formatted date for older dates", () => {
-      const weekAgo = new Date();
-      weekAgo.setDate(weekAgo.getDate() - 7);
-      const result = getDayLabel(weekAgo);
-      // Should not be Today or Yesterday
-      expect(result).not.toBe("Today");
-      expect(result).not.toBe("Yesterday");
-      // Should contain day name (locale-dependent)
-      expect(result.length).toBeGreaterThan(5);
     });
   });
 

@@ -52,24 +52,3 @@ export function shouldBlockMenuAction(): boolean {
 
   return false;
 }
-
-/**
- * Check if the current focus is in an editor context where menu actions should apply.
- *
- * @returns true if focus is in an editor (WYSIWYG or Source)
- */
-export function isEditorContext(): boolean {
-  const activeElement = document.activeElement;
-  if (!activeElement) return false;
-
-  // WYSIWYG (ProseMirror)
-  if (activeElement.closest(".ProseMirror")) return true;
-
-  // Source (CodeMirror)
-  if (activeElement.closest(".cm-editor")) return true;
-
-  // Editor container (handles some edge cases)
-  if (activeElement.closest(".editor-container")) return true;
-
-  return false;
-}

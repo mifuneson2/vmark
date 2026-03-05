@@ -16,7 +16,7 @@ vi.mock("@/utils/debug", () => ({
 
 import { useSettingsStore } from "@/stores/settingsStore";
 import { imageResizeLog } from "@/utils/debug";
-import { getAutoResizeMax, resizeImageIfNeeded } from "./imageResize";
+import { resizeImageIfNeeded } from "./imageResize";
 
 // --- DOM mock helpers ---
 
@@ -121,26 +121,6 @@ beforeEach(() => {
   // Default: disabled
   setAutoResizeMax(0);
 });
-
-// =============================================================================
-// getAutoResizeMax
-// =============================================================================
-
-describe("getAutoResizeMax", () => {
-  it("returns configured max dimension from settings", () => {
-    setAutoResizeMax(1920);
-    expect(getAutoResizeMax()).toBe(1920);
-  });
-
-  it("returns 0 when auto-resize is disabled", () => {
-    setAutoResizeMax(0);
-    expect(getAutoResizeMax()).toBe(0);
-  });
-});
-
-// =============================================================================
-// resizeImageIfNeeded
-// =============================================================================
 
 describe("resizeImageIfNeeded", () => {
   // ---- Early-return paths (no DOM needed) ----

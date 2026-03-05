@@ -14,7 +14,7 @@ import { imageResizeLog } from "@/utils/debug";
  * Get the effective max dimension from settings.
  * Returns 0 if auto-resize is disabled.
  */
-export function getAutoResizeMax(): number {
+function getAutoResizeMax(): number {
   const { autoResizeMax } = useSettingsStore.getState().image;
 
   // 0 means disabled, otherwise use the configured max dimension

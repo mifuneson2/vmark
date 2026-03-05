@@ -120,10 +120,17 @@ export async function moveTabToNewWorkspaceWindow(
   const isLastTab = windowTabs.length === 1;
 
   // Open in new window - derive workspace from file's parent folder
-  await invoke("open_workspace_in_new_window", {
-    workspaceRoot: getParentDir(filePath),
-    filePath: filePath,
-  });
+  // Only close current tab/window if the new window opened successfully
+  try {
+    await invoke("open_workspace_in_new_window", {
+      workspaceRoot: getParentDir(filePath),
+      filePath: filePath,
+    });
+  } catch (error) {
+    console.error("[FileOps] Failed to open workspace in new window:", error);
+    toast.error("Failed to move file to new window");
+    return;
+  }
 
   if (isLastTab) {
     const currentWindow = getCurrentWebviewWindow();

@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { detectCode, shouldPasteAsCodeBlock } from "./codeDetection";
+import { shouldPasteAsCodeBlock } from "./codeDetection";
+import { detectCode } from "./codeDetection/index";
 
 describe("detectCode", () => {
   it("detects JavaScript code", () => {

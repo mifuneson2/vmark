@@ -163,12 +163,3 @@ export async function readClipboardImagePath(): Promise<ClipboardImagePathResult
     return null;
   }
 }
-
-/**
- * Check if clipboard contains a valid image path.
- * Quick check without full validation.
- */
-export async function hasClipboardImagePath(): Promise<boolean> {
-  const result = await readClipboardImagePath();
-  return result?.isImage === true && result.validated;
-}

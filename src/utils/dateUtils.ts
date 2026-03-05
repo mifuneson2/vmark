@@ -7,14 +7,14 @@
 /**
  * Check if a date is today
  */
-export function isToday(date: Date): boolean {
+function isToday(date: Date): boolean {
   return date.toDateString() === new Date().toDateString();
 }
 
 /**
  * Check if a date is yesterday
  */
-export function isYesterday(date: Date): boolean {
+function isYesterday(date: Date): boolean {
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
   return date.toDateString() === yesterday.toDateString();
@@ -64,7 +64,7 @@ export function formatSnapshotTime(timestamp: number): string {
 /**
  * Get a day label for grouping (e.g., "Today", "Yesterday", "Monday, Dec 25")
  */
-export function getDayLabel(date: Date): string {
+function getDayLabel(date: Date): string {
   if (isToday(date)) return "Today";
   if (isYesterday(date)) return "Yesterday";
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseMultiplePaths, mightContainMultiplePaths } from "./multiImageParsing";
+import { parseMultiplePaths } from "./multiImageParsing";
 
 describe("parseMultiplePaths", () => {
   describe("newline-separated format", () => {
@@ -135,29 +135,29 @@ describe("parseMultiplePaths", () => {
   });
 });
 
-describe("mightContainMultiplePaths", () => {
-  it("returns true for text with newlines", () => {
-    expect(mightContainMultiplePaths("/path/one.jpg\n/path/two.jpg")).toBe(true);
+describe("mightContainMultiplePaths (tested via parseMultiplePaths)", () => {
+  it("parses text with newlines as multiple paths", () => {
+    const result = parseMultiplePaths("/path/one.jpg\n/path/two.jpg");
+    expect(result.paths.length).toBe(2);
   });
 
-  it("returns true for text with quotes", () => {
-    expect(mightContainMultiplePaths('"/path/image.jpg"')).toBe(true);
+  it("parses text with quotes", () => {
+    const result = parseMultiplePaths('"/path/image.jpg"');
+    expect(result.paths).toEqual(["/path/image.jpg"]);
   });
 
-  it("returns true for paths with spaces", () => {
-    expect(mightContainMultiplePaths("/path/one.jpg /path/two.jpg")).toBe(true);
+  it("parses paths with spaces as multiple", () => {
+    const result = parseMultiplePaths("/path/one.jpg /path/two.jpg");
+    expect(result.paths.length).toBe(2);
   });
 
-  it("returns false for single path without spaces", () => {
-    expect(mightContainMultiplePaths("/path/to/image.jpg")).toBe(false);
+  it("parses single path without spaces", () => {
+    const result = parseMultiplePaths("/path/to/image.jpg");
+    expect(result.format).toBe("single");
   });
 
-  it("returns false for empty string", () => {
-    expect(mightContainMultiplePaths("")).toBe(false);
-  });
-
-  it("returns true for Windows-style paths with spaces and backslash (line 168 branch)", () => {
-    // Has spaces and backslash → mightContainMultiplePaths returns true
-    expect(mightContainMultiplePaths("C:\\Users\\image1.png C:\\Users\\image2.png")).toBe(true);
+  it("returns empty for empty string", () => {
+    const result = parseMultiplePaths("");
+    expect(result.paths).toEqual([]);
   });
 });

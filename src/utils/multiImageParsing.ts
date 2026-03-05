@@ -148,27 +148,3 @@ export function parseMultiplePaths(text: string): ParsedPaths {
 
   return { paths, format: "shell" };
 }
-
-/**
- * Quick check if text might contain multiple paths.
- * Useful for fast filtering before detailed parsing.
- */
-export function mightContainMultiplePaths(text: string): boolean {
-  const trimmed = text.trim();
-  if (!trimmed) return false;
-
-  // Contains newlines
-  if (trimmed.includes("\n")) return true;
-
-  // Contains quotes (shell-style indicator)
-  if (trimmed.includes('"') || trimmed.includes("'")) return true;
-
-  // Contains multiple spaces (potential shell-style)
-  // but only if it looks like multiple paths (has path-like patterns)
-  const spaceCount = (trimmed.match(/ /g) || []).length;
-  if (spaceCount > 0 && (trimmed.includes("/") || trimmed.includes("\\"))) {
-    return true;
-  }
-
-  return false;
-}

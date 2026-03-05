@@ -10,7 +10,7 @@
  */
 
 /** Validates an 11-character YouTube video ID (alphanumeric, hyphen, underscore). */
-export const YOUTUBE_VIDEO_ID_RE = /^[a-zA-Z0-9_-]{11}$/;
+const YOUTUBE_VIDEO_ID_RE = /^[a-zA-Z0-9_-]{11}$/;
 
 /** Allowed YouTube hostnames (exact match after stripping www.). */
 const YOUTUBE_HOSTS = new Set([
@@ -61,11 +61,4 @@ export function parseYoutubeUrl(url: string): string | null {
   if (pathMatch?.[1]) return pathMatch[1];
 
   return null;
-}
-
-/**
- * Check if a URL is a YouTube URL (any format).
- */
-export function isYoutubeUrl(url: string): boolean {
-  return parseYoutubeUrl(url) !== null;
 }

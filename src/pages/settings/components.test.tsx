@@ -16,7 +16,6 @@ import {
   CollapsibleGroup,
   TagInput,
   Button,
-  IconButton,
   CopyButton,
   CloseButton,
 } from "./components";
@@ -527,32 +526,6 @@ describe("Button", () => {
 // ============================================================================
 // IconButton
 // ============================================================================
-
-describe("IconButton", () => {
-  it("renders with title", () => {
-    render(<IconButton title="Delete">X</IconButton>);
-    expect(screen.getByTitle("Delete")).toBeInTheDocument();
-  });
-
-  it("calls onClick when clicked", async () => {
-    const onClick = vi.fn();
-    const user = userEvent.setup();
-    render(<IconButton onClick={onClick}>X</IconButton>);
-
-    await user.click(screen.getByRole("button"));
-    expect(onClick).toHaveBeenCalledTimes(1);
-  });
-
-  it("is disabled when disabled prop is set", () => {
-    render(<IconButton disabled>X</IconButton>);
-    expect(screen.getByRole("button")).toBeDisabled();
-  });
-
-  it("applies custom className", () => {
-    render(<IconButton className="extra-class">X</IconButton>);
-    expect(screen.getByRole("button").className).toContain("extra-class");
-  });
-});
 
 // ============================================================================
 // CopyButton
