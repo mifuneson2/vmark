@@ -8,6 +8,7 @@
  */
 
 import { respond, getEditor } from "./utils";
+import { requireNumber } from "./validateArgs";
 
 /**
  * Handle selection.get request.
@@ -49,8 +50,8 @@ export async function handleSelectionSet(
     const editor = getEditor();
     if (!editor) throw new Error("No active editor");
 
-    const from = args.from as number;
-    const to = args.to as number;
+    const from = requireNumber(args, "from");
+    const to = requireNumber(args, "to");
 
     editor.commands.setTextSelection({ from, to });
 

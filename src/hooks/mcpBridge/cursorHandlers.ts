@@ -9,6 +9,7 @@
 
 import type { ResolvedPos } from "@tiptap/pm/model";
 import { respond, getEditor } from "./utils";
+import { requireNumber, optionalNumber } from "./validateArgs";
 
 /**
  * Block context information for cursor position.
@@ -93,8 +94,8 @@ export async function handleCursorGetContext(
     const currentLine = blockNode.textContent;
 
     // Get context blocks
-    const linesBefore = (args.linesBefore as number) ?? 5;
-    const linesAfter = (args.linesAfter as number) ?? 5;
+    const linesBefore = optionalNumber(args, "linesBefore") ?? 5;
+    const linesAfter = optionalNumber(args, "linesAfter") ?? 5;
 
     // Collect blocks before and after the current block
     const beforeBlocks: string[] = [];
@@ -154,7 +155,7 @@ export async function handleCursorSetPosition(
     const editor = getEditor();
     if (!editor) throw new Error("No active editor");
 
-    const position = args.position as number;
+    const position = requireNumber(args, "position");
     editor.commands.setTextSelection(position);
 
     await respond({ id, success: true, data: null });

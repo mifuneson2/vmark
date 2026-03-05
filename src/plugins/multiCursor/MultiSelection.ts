@@ -48,8 +48,8 @@ export class MultiSelection extends Selection {
    */
   map(doc: Node, mapping: Mappable): Selection {
     const mappedRanges = this.ranges.map((range) => {
-      const from = mapping.map(range.$from.pos);
-      const to = mapping.map(range.$to.pos);
+      const from = mapping.map(range.$from.pos, -1);
+      const to = mapping.map(range.$to.pos, 1);
       const $from = doc.resolve(from);
       const $to = doc.resolve(to);
       return new SelectionRange($from, $to);
@@ -110,11 +110,12 @@ export class MultiSelection extends Selection {
     json: { ranges: Array<{ anchor: number; head: number }>; primaryIndex: number }
   ): MultiSelection {
     const backwardFlags: boolean[] = [];
+    const size = doc.content.size;
     const ranges = json.ranges.map((r) => {
       const isBackward = r.anchor > r.head;
       backwardFlags.push(isBackward);
-      const from = Math.min(r.anchor, r.head);
-      const to = Math.max(r.anchor, r.head);
+      const from = Math.max(0, Math.min(Math.min(r.anchor, r.head), size));
+      const to = Math.max(0, Math.min(Math.max(r.anchor, r.head), size));
       return new SelectionRange(doc.resolve(from), doc.resolve(to));
     });
     return new MultiSelection(ranges, json.primaryIndex, backwardFlags);

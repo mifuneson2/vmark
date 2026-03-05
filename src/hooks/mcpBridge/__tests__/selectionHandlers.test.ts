@@ -112,6 +112,38 @@ describe("selectionHandlers", () => {
       });
     });
 
+    it("returns error when from is missing", async () => {
+      const editor = {
+        state: { selection: { from: 0 }, doc: {} },
+        commands: { setTextSelection: vi.fn() },
+      };
+      mockGetEditor.mockReturnValue(editor);
+
+      await handleSelectionSet("req-val1", { to: 5 });
+
+      expect(mockRespond).toHaveBeenCalledWith({
+        id: "req-val1",
+        success: false,
+        error: expect.stringContaining("'from'"),
+      });
+    });
+
+    it("returns error when to is a string instead of number", async () => {
+      const editor = {
+        state: { selection: { from: 0 }, doc: {} },
+        commands: { setTextSelection: vi.fn() },
+      };
+      mockGetEditor.mockReturnValue(editor);
+
+      await handleSelectionSet("req-val2", { from: 0, to: "5" });
+
+      expect(mockRespond).toHaveBeenCalledWith({
+        id: "req-val2",
+        success: false,
+        error: expect.stringContaining("'to'"),
+      });
+    });
+
     it("returns error when no editor", async () => {
       mockGetEditor.mockReturnValue(null);
 

@@ -174,6 +174,26 @@ describe("MultiSelection", () => {
       expect(mapped.ranges[1].$to.pos).toBe(9);
     });
 
+    it("maps from with bias -1 and to with bias 1 at insertion boundary", () => {
+      const state = createState("hello world");
+      const doc = state.doc;
+
+      // Selection range covering "hello" (pos 1-6)
+      const $from = doc.resolve(1);
+      const $to = doc.resolve(6);
+      const ranges = [new SelectionRange($from, $to)];
+      const multiSel = new MultiSelection(ranges, 0);
+
+      // Insert "XX" at exactly position 1 (the from boundary)
+      const tr = state.tr.insertText("XX", 1, 1);
+      const mapped = multiSel.map(tr.doc, tr.mapping) as MultiSelection;
+
+      // from should stay at 1 (bias -1: stay before insertion)
+      expect(mapped.ranges[0].$from.pos).toBe(1);
+      // to should shift to 8 (6 + 2 inserted chars, bias 1: stay after)
+      expect(mapped.ranges[0].$to.pos).toBe(8);
+    });
+
     it("preserves primaryIndex through mapping", () => {
       const state = createState("hello world");
       const doc = state.doc;
@@ -370,6 +390,41 @@ describe("MultiSelection", () => {
       const multiSel = new MultiSelection(ranges, 0);
 
       expect(multiSel.getTextContent(doc)).toBe("\n");
+    });
+  });
+
+  describe("fromJSON edge cases", () => {
+    it("clamps out-of-bounds positions to doc size", () => {
+      const doc = createDoc("hi");
+      const size = doc.content.size;
+      // Position 999 exceeds doc size
+      const sel = MultiSelection.fromJSON(doc, {
+        ranges: [{ anchor: 999, head: 999 }],
+        primaryIndex: 0,
+      });
+      expect(sel.ranges[0].$from.pos).toBeLessThanOrEqual(size);
+      expect(sel.ranges[0].$to.pos).toBeLessThanOrEqual(size);
+    });
+
+    it("clamps negative positions to 0", () => {
+      const doc = createDoc("hi");
+      const sel = MultiSelection.fromJSON(doc, {
+        ranges: [{ anchor: -5, head: -10 }],
+        primaryIndex: 0,
+      });
+      expect(sel.ranges[0].$from.pos).toBeGreaterThanOrEqual(0);
+      expect(sel.ranges[0].$to.pos).toBeGreaterThanOrEqual(0);
+    });
+
+    it("clamps mixed out-of-bounds range (from valid, to exceeds)", () => {
+      const doc = createDoc("hi");
+      const size = doc.content.size;
+      const sel = MultiSelection.fromJSON(doc, {
+        ranges: [{ anchor: 1, head: 999 }],
+        primaryIndex: 0,
+      });
+      expect(sel.ranges[0].$from.pos).toBe(1);
+      expect(sel.ranges[0].$to.pos).toBeLessThanOrEqual(size);
     });
   });
 

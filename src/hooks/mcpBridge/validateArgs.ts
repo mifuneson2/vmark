@@ -20,6 +20,17 @@ export function requireString(args: Record<string, unknown>, key: string): strin
 }
 
 /**
+ * Require a number argument. Throws with a clear message if missing or wrong type.
+ */
+export function requireNumber(args: Record<string, unknown>, key: string): number {
+  const val = args[key];
+  if (typeof val !== "number") {
+    throw new Error(`Missing or invalid '${key}' (expected number, got ${typeof val})`);
+  }
+  return val;
+}
+
+/**
  * Get an optional string argument. Returns undefined if not present.
  * Throws if present but wrong type.
  */
