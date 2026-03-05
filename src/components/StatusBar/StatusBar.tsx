@@ -2,7 +2,8 @@
  * StatusBar
  *
  * Purpose: Bottom bar combining tab strip, word/character counts, auto-save indicator,
- * MCP status, terminal toggle, and editor mode toggle into a single horizontal bar.
+ * AI status indicator, MCP status, terminal toggle, and editor mode toggle into a
+ * single horizontal bar. Auto-shows when AI has active status (hasActiveStatus).
  *
  * User interactions:
  *   - Click a tab pill to switch documents; middle-click or X to close
@@ -98,10 +99,18 @@ export function StatusBar() {
   const terminalShortcut = useShortcutsStore((state) => state.getShortcut("toggleTerminal"));
   const saveShortcut = useShortcutsStore((state) => state.getShortcut("save"));
   const aiRunning = useAiInvocationStore((state) => state.isRunning);
+  const aiElapsed = useAiInvocationStore((state) => state.elapsedSeconds);
+  const aiError = useAiInvocationStore((state) => state.error);
+  const aiShowSuccess = useAiInvocationStore((state) => state.showSuccess);
+  const aiHasActiveStatus = useAiInvocationStore((state) => state.hasActiveStatus);
   const { running: mcpRunning, loading: mcpLoading, error: mcpError } = useMcpServer();
   const mcpClients = useMcpClients(mcpRunning);
 
   const openMcpSettings = useCallback(() => openSettingsWindow("integrations"), []);
+  const handleRetryAi = useCallback(() => {
+    // Dismiss error in status bar — user can retry from the picker or resubmit
+    useAiInvocationStore.getState().dismissError();
+  }, []);
   const showAutoSavePaused = isMissing && autoSaveEnabled;
 
   const tabs = useTabStore((state) => (isDocumentWindow ? state.tabs[windowLabel] ?? EMPTY_TABS : EMPTY_TABS));
@@ -195,7 +204,7 @@ export function StatusBar() {
   const showTabs = isDocumentWindow && tabs.length >= 1;
   const showNewTabButton = isDocumentWindow;
 
-  if (!statusBarVisible && !aiRunning) return null;
+  if (!statusBarVisible && !aiHasActiveStatus) return null;
 
   return (
     <>
@@ -268,6 +277,12 @@ export function StatusBar() {
 
           <StatusBarRight
             aiRunning={aiRunning}
+            elapsedSeconds={aiElapsed}
+            aiError={aiError}
+            showSuccess={aiShowSuccess}
+            onCancelAi={() => useAiInvocationStore.getState().cancel()}
+            onRetryAi={handleRetryAi}
+            onDismissError={() => useAiInvocationStore.getState().dismissError()}
             mcpRunning={mcpRunning}
             mcpLoading={mcpLoading}
             mcpError={mcpError}

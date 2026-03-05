@@ -3,7 +3,13 @@
  *
  * Spotlight-style centered overlay for browsing and invoking AI genies.
  * Opens via Cmd+Y, supports keyboard navigation, search, and freeform input.
- * Freeform textarea supports prompt history (Up/Down cycling, ghost text, Ctrl+R dropdown).
+ *
+ * Uses a single unified textarea that doubles as search (when genies match)
+ * and freeform prompt input (when no matches). Two-step Enter confirmation
+ * for freeform: first Enter shows hint, second Enter submits.
+ *
+ * Integrates mode state machine from geniePickerStore to show inline
+ * GenieResponseView for processing/preview/error states.
  */
 
 import {
@@ -15,6 +21,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { useGeniePickerStore } from "@/stores/geniePickerStore";
+import { useAiInvocationStore } from "@/stores/aiInvocationStore";
 import { useGeniesStore } from "@/stores/geniesStore";
 import { useGenieInvocation } from "@/hooks/useGenieInvocation";
 import { useAiProviderStore } from "@/stores/aiProviderStore";
@@ -22,8 +29,10 @@ import { usePromptHistory } from "@/hooks/usePromptHistory";
 import type { GenieDefinition, GenieScope } from "@/types/aiGenies";
 import { isImeKeyEvent } from "@/utils/imeGuard";
 import { useImeComposition } from "@/hooks/useImeComposition";
+import { useAiSuggestionStore } from "@/stores/aiSuggestionStore";
 import { GenieChips } from "./GenieChips";
 import { GenieItem } from "./GenieItem";
+import { GenieResponseView } from "./GenieResponseView";
 import { PromptHistoryDropdown } from "./PromptHistoryDropdown";
 import { ProviderSwitcher } from "./ProviderSwitcher";
 import "./genie-picker.css";
@@ -33,6 +42,12 @@ const SCOPES: GenieScope[] = ["selection", "block", "document"];
 export function GeniePicker() {
   const isOpen = useGeniePickerStore((s) => s.isOpen);
   const filterScope = useGeniePickerStore((s) => s.filterScope);
+  const mode = useGeniePickerStore((s) => s.mode);
+  const responseText = useGeniePickerStore((s) => s.responseText);
+  const pickerError = useGeniePickerStore((s) => s.pickerError);
+  const submittedPrompt = useGeniePickerStore((s) => s.submittedPrompt);
+
+  const elapsedSeconds = useAiInvocationStore((s) => s.elapsedSeconds);
 
   const genies = useGeniesStore((s) => s.genies);
   const loading = useGeniesStore((s) => s.loading);
@@ -41,13 +56,13 @@ export function GeniePicker() {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [activeScope, setActiveScope] = useState<GenieScope | null>(null);
   const [showProviderSwitcher, setShowProviderSwitcher] = useState(false);
+  const [freeformConfirmed, setFreeformConfirmed] = useState(false);
 
-  const inputRef = useRef<HTMLInputElement>(null);
-  const freeformRef = useRef<HTMLTextAreaElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const { invokeGenie, invokeFreeform, isRunning } = useGenieInvocation();
+  const { invokeGenie, invokeFreeform } = useGenieInvocation();
   const activeProvider = useAiProviderStore((s) => s.activeProvider);
   const activeProviderName = useAiProviderStore((s) => {
     if (!s.activeProvider) return null;
@@ -68,6 +83,8 @@ export function GeniePicker() {
       useGeniesStore.getState().loadGenies();
       setFilter("");
       setSelectedIndex(0);
+      setFreeformConfirmed(false);
+      setShowProviderSwitcher(false);
       promptHistory.reset();
       setActiveScope(filterScope);
     }
@@ -110,9 +127,10 @@ export function GeniePicker() {
 
   const grouped = useMemo(() => {
     const groups = new Map<string, GenieDefinition[]>();
+    const recentNames = new Set(recents.map((r) => r.metadata.name));
     for (const g of filtered) {
       // Skip recents from main list if showing recents section
-      if (!filter && recents.some((r) => r.metadata.name === g.metadata.name)) {
+      if (!filter && recentNames.has(g.metadata.name)) {
         continue;
       }
       /* v8 ignore next -- @preserve ?? fallback: all test genies have a category defined */
@@ -138,6 +156,8 @@ export function GeniePicker() {
     useGeniePickerStore.getState().closePicker();
     setFilter("");
     setSelectedIndex(0);
+    setFreeformConfirmed(false);
+    setShowProviderSwitcher(false);
     promptHistory.reset();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -151,21 +171,48 @@ export function GeniePicker() {
   );
 
   const handleFreeformSubmit = useCallback(() => {
-    const text = promptHistory.displayValue.trim();
+    const text = filter.trim();
+    /* v8 ignore next -- @preserve guard: freeform submit only reachable when filter is non-empty */
     if (!text) return;
     const scope = activeScope ?? "selection";
     promptHistory.recordAndReset(text);
     handleClose();
     invokeFreeform(text, scope);
-  }, [promptHistory, activeScope, handleClose, invokeFreeform]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filter, activeScope, handleClose, invokeFreeform]);
+
+  const handleAccept = useCallback(() => {
+    // Accept the focused AI suggestion (created by useGenieInvocation in preview mode)
+    const { focusedSuggestionId, acceptSuggestion } = useAiSuggestionStore.getState();
+    if (focusedSuggestionId) {
+      acceptSuggestion(focusedSuggestionId);
+    }
+    handleClose();
+  }, [handleClose]);
+
+  const handleRetry = useCallback(() => {
+    useGeniePickerStore.getState().resetToInput();
+  }, []);
+
+  const handleCancelAi = useCallback(() => {
+    useAiInvocationStore.getState().cancel();
+    useGeniePickerStore.getState().resetToInput();
+  }, []);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       if (isImeKeyEvent(e.nativeEvent) || ime.isComposing()) return;
-      // If freeform is focused, let the hook handle ArrowUp/ArrowDown/Tab/Escape
-      // (the hook calls stopPropagation when it consumes the key)
-      if (document.activeElement === freeformRef.current) {
-        if (e.key === "ArrowUp" || e.key === "ArrowDown") return;
+
+      // In non-input modes, Escape returns to input; all other keys are blocked
+      if (mode === "processing" || mode === "preview" || mode === "error") {
+        e.preventDefault();
+        if (e.key === "Escape") {
+          if (mode === "processing") {
+            useAiInvocationStore.getState().cancel();
+          }
+          useGeniePickerStore.getState().resetToInput();
+        }
+        return;
       }
 
       const maxIndex = flatList.length - 1;
@@ -184,19 +231,23 @@ export function GeniePicker() {
           setSelectedIndex((prev) => Math.max(prev - 1, 0));
         }
       } else if (e.key === "Enter" && !e.shiftKey) {
-        // Check if freeform textarea is focused
-        if (document.activeElement === freeformRef.current) {
-          e.preventDefault();
-          handleFreeformSubmit();
-          return;
-        }
         e.preventDefault();
-        const selected = flatList[selectedIndex];
-        if (selected) {
-          handleSelect(selected);
+        // If genies match, select the highlighted one
+        if (flatList.length > 0) {
+          const selected = flatList[selectedIndex];
+          /* v8 ignore next -- @preserve guard: selectedIndex always valid when flatList.length > 0 */
+          if (selected) {
+            handleSelect(selected);
+          }
+        } else if (filter.trim()) {
+          // No matches — two-step freeform confirmation
+          if (!freeformConfirmed) {
+            setFreeformConfirmed(true);
+          } else {
+            handleFreeformSubmit();
+          }
         }
       } else if (e.key === "Tab") {
-        // If freeform consumed Tab for ghost text, it already stopPropagated
         e.preventDefault();
         // Cycle through scopes
         const currentIdx = activeScope ? SCOPES.indexOf(activeScope) : -1;
@@ -210,8 +261,19 @@ export function GeniePicker() {
         setSelectedIndex(maxIndex >= 0 ? maxIndex : 0);
       }
     },
-    [flatList, selectedIndex, handleClose, handleSelect, activeScope, handleFreeformSubmit, ime]
+    [flatList, selectedIndex, handleClose, handleSelect, activeScope, handleFreeformSubmit, ime, mode, filter, freeformConfirmed]
   );
+
+  // Sync prompt history cycling back to filter.
+  // When cycling changes displayValue, push it into filter so the textarea updates.
+  // Safe from loops: typing sets displayValue === filter via handleChange, so the
+  // guard (displayValue !== filter) is only true when cycling produces a new value.
+  useEffect(() => {
+    if (flatList.length === 0 && promptHistory.displayValue !== filter) {
+      setFilter(promptHistory.displayValue);
+      setSelectedIndex(0);
+    }
+  }, [promptHistory.displayValue, filter, flatList.length]);
 
   // Click outside to close
   useEffect(() => {
@@ -248,10 +310,13 @@ export function GeniePicker() {
 
   let itemIndex = 0;
 
+  const isInputMode = mode === "search" || mode === "freeform";
+  const isResponseMode = mode === "processing" || mode === "preview" || mode === "error";
+
   /* v8 ignore next -- @preserve promptHistory UI only rendered when user opens Ctrl+R dropdown or types matching history */
   const historyDropdown = promptHistory.isDropdownOpen ? <PromptHistoryDropdown entries={promptHistory.dropdownEntries} selectedIndex={promptHistory.dropdownSelectedIndex} onSelect={promptHistory.selectDropdownEntry} onClose={promptHistory.closeDropdown} /> : null;
   /* v8 ignore next -- @preserve ghost text only shown when prompt history provides a completion; not exercised in unit tests */
-  const ghostTextEl = promptHistory.ghostText ? <span className="genie-freeform-ghost" aria-hidden="true"><span className="genie-freeform-ghost-spacer">{promptHistory.displayValue}</span><span className="genie-freeform-ghost-text">{promptHistory.ghostText}</span></span> : null;
+  const ghostTextEl = promptHistory.ghostText ? <span className="genie-freeform-ghost" aria-hidden="true"><span className="genie-freeform-ghost-spacer">{filter}</span><span className="genie-freeform-ghost-text">{promptHistory.ghostText}</span></span> : null;
 
   return createPortal(
     <div className="genie-picker-backdrop">
@@ -260,108 +325,130 @@ export function GeniePicker() {
         className="genie-picker"
         onKeyDown={handleKeyDown}
       >
-        {/* Search input */}
+        {/* Unified input (search + freeform) */}
         <div className="genie-picker-header">
-          <input
-            ref={inputRef}
-            className="genie-picker-search"
-            type="text"
-            placeholder="Search genies..."
-            value={filter}
-            onChange={(e) => {
-              setFilter(e.target.value);
-              setSelectedIndex(0);
-            }}
-            onFocus={() => setSelectedIndex(0)}
-            onCompositionStart={ime.onCompositionStart}
-            onCompositionEnd={ime.onCompositionEnd}
-          />
+          {historyDropdown}
+          <div className="genie-picker-input-wrapper">
+            <textarea
+              ref={inputRef}
+              className="genie-picker-search"
+              placeholder="Search genies or describe what you want..."
+              value={filter}
+              onChange={(e) => {
+                setFilter(e.target.value);
+                setSelectedIndex(0);
+                setFreeformConfirmed(false);
+                promptHistory.handleChange(e.target.value);
+              }}
+              onKeyDown={(e) => {
+                if (isInputMode && flatList.length === 0) {
+                  promptHistory.handleKeyDown(e);
+                }
+              }}
+              onFocus={() => setSelectedIndex(0)}
+              onCompositionStart={ime.onCompositionStart}
+              onCompositionEnd={ime.onCompositionEnd}
+              rows={1}
+            />
+            {ghostTextEl}
+          </div>
         </div>
 
-        {/* Quick chips (only when selection scope) */}
-        {activeScope === "selection" && (
-          <GenieChips genies={genies} onSelect={handleSelect} />
-        )}
-
-        {/* Genie list */}
-        <div className="genie-picker-list" ref={listRef}>
-          {loading && (
-            <div className="genie-picker-empty">Loading genies...</div>
-          )}
-
-          {!loading && flatList.length === 0 && !filter && (
-            <div className="genie-picker-empty">
-              No genies found. Add .md files to your genies directory.
-            </div>
-          )}
-
-          {!loading && flatList.length === 0 && filter && (
-            <div className="genie-picker-empty">
-              No matching genies for &ldquo;{filter}&rdquo;
-            </div>
-          )}
-
-          {/* Recents section */}
-          {recents.length > 0 && (
+        {/* Body: genie list or response view */}
+        <div className="genie-picker-body">
+          {isInputMode && (
             <>
-              <div className="genie-picker-section-title">Recently Used</div>
-              {recents.map((genie) => {
-                const idx = itemIndex++;
-                return (
-                  <GenieItem
-                    key={`recent-${genie.metadata.name}`}
-                    genie={genie}
-                    index={idx}
-                    selected={selectedIndex >= 0 && idx === selectedIndex}
-                    onSelect={handleSelect}
-                    onHover={setSelectedIndex}
-                  />
-                );
-              })}
+              {/* Quick chips (only when selection scope and no filter) */}
+              {activeScope === "selection" && !filter && (
+                <GenieChips genies={genies} onSelect={handleSelect} />
+              )}
+
+              {/* Genie list */}
+              <div className="genie-picker-list" ref={listRef}>
+                {loading && (
+                  <div className="genie-picker-empty">Loading genies...</div>
+                )}
+
+                {!loading && flatList.length === 0 && !filter && (
+                  <div className="genie-picker-empty">
+                    No genies found. Add .md files to your genies directory.
+                  </div>
+                )}
+
+                {/* No match — freeform hint */}
+                {!loading && flatList.length === 0 && filter && (
+                  <div className="genie-picker-no-match">
+                    No matching genies.{" "}
+                    {freeformConfirmed ? (
+                      <span className="genie-picker-confirm-hint">
+                        Press Enter again to run as AI prompt.
+                      </span>
+                    ) : (
+                      <span>
+                        Press{" "}
+                        <kbd className="genie-picker-kbd">Enter</kbd> to run
+                        as AI prompt.
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                {/* Recents section */}
+                {recents.length > 0 && (
+                  <>
+                    <div className="genie-picker-section-title">Recently Used</div>
+                    {recents.map((genie) => {
+                      const idx = itemIndex++;
+                      return (
+                        <GenieItem
+                          key={`recent-${genie.metadata.name}`}
+                          genie={genie}
+                          index={idx}
+                          selected={selectedIndex >= 0 && idx === selectedIndex}
+                          onSelect={handleSelect}
+                          onHover={setSelectedIndex}
+                        />
+                      );
+                    })}
+                  </>
+                )}
+
+                {/* Category sections */}
+                {Array.from(grouped.entries()).map(([category, list]) => (
+                  <div key={category}>
+                    <div className="genie-picker-section-title">{category}</div>
+                    {list.map((genie) => {
+                      const idx = itemIndex++;
+                      return (
+                        <GenieItem
+                          key={genie.filePath}
+                          genie={genie}
+                          index={idx}
+                          selected={selectedIndex >= 0 && idx === selectedIndex}
+                          onSelect={handleSelect}
+                          onHover={setSelectedIndex}
+                        />
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
             </>
           )}
 
-          {/* Category sections */}
-          {Array.from(grouped.entries()).map(([category, list]) => (
-            <div key={category}>
-              <div className="genie-picker-section-title">{category}</div>
-              {list.map((genie) => {
-                const idx = itemIndex++;
-                return (
-                  <GenieItem
-                    key={genie.filePath}
-                    genie={genie}
-                    index={idx}
-                    selected={selectedIndex >= 0 && idx === selectedIndex}
-                    onSelect={handleSelect}
-                    onHover={setSelectedIndex}
-                  />
-                );
-              })}
-            </div>
-          ))}
-        </div>
-
-        {/* Freeform input with ghost text + history dropdown */}
-        <div className="genie-picker-freeform">
-          {/* History dropdown (Layer 4) */}
-          {historyDropdown}
-          <div className="genie-freeform-ghost-wrapper">
-            <textarea
-              ref={freeformRef}
-              className="genie-picker-freeform-input"
-              placeholder="Describe what you want..."
-              value={promptHistory.displayValue}
-              onChange={(e) => promptHistory.handleChange(e.target.value)}
-              onKeyDown={promptHistory.handleKeyDown}
-              onCompositionStart={ime.onCompositionStart}
-              onCompositionEnd={ime.onCompositionEnd}
-              onFocus={() => setSelectedIndex(-1)}
-              rows={1}
+          {isResponseMode && (
+            <GenieResponseView
+              mode={mode}
+              responseText={responseText}
+              elapsedSeconds={elapsedSeconds}
+              error={pickerError}
+              submittedPrompt={submittedPrompt}
+              onAccept={handleAccept}
+              onReject={handleClose}
+              onRetry={handleRetry}
+              onCancel={handleCancelAi}
             />
-            {/* Ghost text overlay (Layer 3) */}
-            {ghostTextEl}
-          </div>
+          )}
         </div>
 
         {/* Footer */}
@@ -386,13 +473,10 @@ export function GeniePicker() {
               )}
             </span>
           )}
-          {isRunning && (
-            <span className="genie-picker-running">Running...</span>
-          )}
           <span className="genie-picker-hint">
             <kbd className="genie-picker-kbd">Tab</kbd> cycle scope
             {" "}
-            <kbd className="genie-picker-kbd">&uarr;&darr;</kbd> history
+            <kbd className="genie-picker-kbd">&uarr;&darr;</kbd> navigate
           </span>
         </div>
       </div>

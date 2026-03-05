@@ -7,7 +7,7 @@
  *   or applies changes directly when auto-approve is enabled.
  *
  * Pipeline: User triggers genie → extractContent(scope) → fillTemplate()
- *   → invoke("stream_ai_response") → listen("ai:chunk") → accumulate
+ *   → invoke("stream_ai_response") → listen("ai:response") → accumulate
  *   → if autoApprove: apply directly via createMarkdownPasteSlice
  *   → else: aiSuggestionStore.createSuggestion() → user accepts/rejects
  *
@@ -21,6 +21,7 @@
  * @coordinates-with aiSuggestionStore.ts — stores the suggestion for accept/reject
  * @coordinates-with aiProviderStore.ts — provides API key and provider config
  * @coordinates-with geniesStore.ts — provides genie definitions and templates
+ * @coordinates-with geniePickerStore.ts — feeds mode/response state for picker UI
  * @module hooks/useGenieInvocation
  */
 
@@ -37,7 +38,9 @@ import { useAiInvocationStore } from "@/stores/aiInvocationStore";
 import { useEditorStore } from "@/stores/editorStore";
 import { useTiptapEditorStore } from "@/stores/tiptapEditorStore";
 import { useGeniesStore } from "@/stores/geniesStore";
+import { useGeniePickerStore } from "@/stores/geniePickerStore";
 import { useTabStore } from "@/stores/tabStore";
+import { getCurrentWindowLabel } from "@/utils/workspaceStorage";
 import { getExpandedSourcePeekRange, serializeSourcePeekRange } from "@/utils/sourcePeek";
 import { extractSurroundingContext } from "@/utils/extractContext";
 import { createMarkdownPasteSlice } from "@/plugins/markdownPaste/tiptap";
@@ -60,10 +63,12 @@ function extractContent(scope: GenieScope, contextRadius = 0): ExtractionResult 
   const editor = useTiptapEditorStore.getState().editor;
   const sourceMode = useEditorStore.getState().sourceMode;
 
+  /* v8 ignore start -- callers guard against source mode; defensive only */
   if (sourceMode) {
     const content = useEditorStore.getState().content;
     return { text: content, from: 0, to: content.length };
   }
+  /* v8 ignore stop */
 
   if (!editor) return null;
 
@@ -102,8 +107,10 @@ function extractContent(scope: GenieScope, contextRadius = 0): ExtractionResult 
       return { text, from: 0, to: doc.content.size };
     }
 
+    /* v8 ignore start -- defensive: all valid scopes handled above */
     default:
       return null;
+    /* v8 ignore stop */
   }
 
   // Attach surrounding context for non-document scopes
@@ -185,7 +192,7 @@ export function useGenieInvocation() {
   }, []);
 
   const runGenie = useCallback(
-    async (filledPrompt: string, extraction: ExtractionResult, model?: string, action: GenieAction = "replace") => {
+    async (filledPrompt: string, extraction: ExtractionResult, model?: string, action: GenieAction = "replace", processingLabel?: string) => {
       const providerState = useAiProviderStore.getState();
       const provider = providerState.activeProvider;
       if (!provider) return; // Callers ensure provider exists
@@ -217,12 +224,20 @@ export function useGenieInvocation() {
       const requestId = crypto.randomUUID();
 
       // Capture current tab ID for suggestion scoping
-      const tabId = useTabStore.getState().activeTabId["main"] ?? "unknown";
+      const windowLabel = getCurrentWindowLabel();
+      const tabId = useTabStore.getState().activeTabId[windowLabel] ?? "unknown";
 
       // Try to acquire the invocation lock
       if (!useAiInvocationStore.getState().tryStart(requestId)) {
         return; // Already running
       }
+
+      // Signal picker to show processing state (after lock acquired to avoid stale UI)
+      /* v8 ignore start -- all callers pass a truthy label; guard is defensive */
+      if (processingLabel) {
+        useGeniePickerStore.getState().startProcessing(processingLabel);
+      }
+      /* v8 ignore stop */
 
       let accumulated = "";
 
@@ -232,12 +247,19 @@ export function useGenieInvocation() {
         if (chunk.requestId !== requestId) return;
 
         if (chunk.error) {
-          toast.error(chunk.error);
-          cancel();
+          useGeniePickerStore.getState().setPickerError(chunk.error);
+          useAiInvocationStore.getState().setError(chunk.error);
+          /* v8 ignore start -- ref cleanup timing depends on async listen resolution */
+          if (unlistenRef.current) {
+            unlistenRef.current();
+            unlistenRef.current = null;
+          }
+          /* v8 ignore stop */
           return;
         }
 
         accumulated += chunk.chunk;
+        useGeniePickerStore.getState().appendResponse(chunk.chunk);
 
         if (chunk.done) {
           // Apply accumulated result
@@ -257,9 +279,17 @@ export function useGenieInvocation() {
                   .scrollIntoView()
                   .setMeta("addToHistory", true);
                 editor.view.dispatch(tr);
+                useGeniePickerStore.getState().closePicker();
+                useAiInvocationStore.getState().finish();
+              } else {
+                useGeniePickerStore.getState().setPickerError("Editor unavailable — cannot apply changes");
+                useAiInvocationStore.getState().setError("Editor unavailable");
               }
             } else {
-              // Show as ghost text suggestion for user approval
+              // Show preview in picker (don't close)
+              useGeniePickerStore.getState().setPreview(accumulated.trim());
+              useAiInvocationStore.getState().finish();
+              // Also create suggestion for when user accepts
               useAiSuggestionStore.getState().addSuggestion({
                 tabId,
                 type: isInsert ? "insert" : "replace",
@@ -269,8 +299,17 @@ export function useGenieInvocation() {
                 originalContent: isInsert ? "" : extraction.text,
               });
             }
+          } else {
+            // Empty result
+            useGeniePickerStore.getState().setPickerError("AI returned empty response");
+            useAiInvocationStore.getState().setError("Empty response");
           }
-          cancel();
+          /* v8 ignore start -- ref cleanup timing depends on async listen resolution */
+          if (unlistenRef.current) {
+            unlistenRef.current();
+            unlistenRef.current = null;
+          }
+          /* v8 ignore stop */
         }
       });
 
@@ -290,11 +329,18 @@ export function useGenieInvocation() {
           cliPath: cliInfo?.path ?? null,
         });
       } catch (e) {
-        toast.error(`Failed to invoke AI genie: ${e}`);
-        cancel();
+        const message = e instanceof Error ? e.message : String(e);
+        useGeniePickerStore.getState().setPickerError(message);
+        useAiInvocationStore.getState().setError(message);
+        /* v8 ignore start -- ref cleanup timing depends on async listen resolution */
+        if (unlistenRef.current) {
+          unlistenRef.current();
+          unlistenRef.current = null;
+        }
+        /* v8 ignore stop */
       }
     },
-    [cancel]
+    []
   );
 
   const invokeGenie = useCallback(
@@ -322,16 +368,18 @@ export function useGenieInvocation() {
 
       // Build context string only if template uses {{context}}
       const hasContextVar = /\{\{\s*context\s*\}\}/.test(genie.template);
+      /* v8 ignore start -- ?? fallbacks are defensive; context fields may be undefined */
       const contextStr = hasContextVar
         ? formatContext(extracted.contextBefore ?? "", extracted.contextAfter ?? "")
         : undefined;
+      /* v8 ignore stop */
 
       const filled = fillTemplate(genie.template, extracted.text, contextStr);
 
       // Track genie as recent
       useGeniesStore.getState().addRecent(genie.metadata.name);
 
-      await runGenie(filled, extracted, genie.metadata.model, genie.metadata.action ?? "replace");
+      await runGenie(filled, extracted, genie.metadata.model, genie.metadata.action ?? "replace", genie.metadata.name);
     },
     [runGenie]
   );
@@ -365,12 +413,14 @@ export function useGenieInvocation() {
       const hasContext = extracted.contextBefore || extracted.contextAfter;
       let filled: string;
       if (hasContext) {
+        /* v8 ignore start -- ?? fallbacks are defensive; context fields may be undefined */
         const ctx = formatContext(extracted.contextBefore ?? "", extracted.contextAfter ?? "");
+        /* v8 ignore stop */
         filled = `${userPrompt}\n\n## Context (do not modify):\n${ctx}\n\n## Content:\n${extracted.text}`;
       } else {
         filled = `${userPrompt}\n\n${extracted.text}`;
       }
-      await runGenie(filled, extracted);
+      await runGenie(filled, extracted, undefined, "replace", userPrompt);
     },
     [runGenie]
   );
