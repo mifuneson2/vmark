@@ -80,7 +80,8 @@ onMounted(async () => {
   <div v-if="stats && stats.total && stats.total.pings > 0" class="user-stats">
     <div class="table-wrapper">
       <div class="stats-grid">
-        <div class="stat-header">
+        <!-- :key prevents VitePress lean-build from stripping this static node -->
+        <div class="stat-header" :key="'h'">
           <span class="header-spacer"></span>
           <span class="header-label">Today</span>
           <span class="header-label">This Week</span>
