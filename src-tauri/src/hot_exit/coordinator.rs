@@ -60,10 +60,17 @@ impl PendingRestoreState {
 /// Global pending restore state
 static PENDING_RESTORE: OnceLock<Arc<Mutex<PendingRestoreState>>> = OnceLock::new();
 
-/// Handle for the active restore timeout task (cancelled on new restore)
-static RESTORE_TIMEOUT_HANDLE: OnceLock<Arc<Mutex<Option<tokio::task::JoinHandle<()>>>>> = OnceLock::new();
+/// Handle for the active restore timeout task (cancelled on new restore).
+/// In production we use `tauri::async_runtime::spawn` (works from any thread);
+/// in tests we use `tokio::spawn` (works with `start_paused` time control).
+#[cfg(not(test))]
+type TimeoutJoinHandle = tauri::async_runtime::JoinHandle<()>;
+#[cfg(test)]
+type TimeoutJoinHandle = tokio::task::JoinHandle<()>;
 
-fn get_timeout_handle() -> Arc<Mutex<Option<tokio::task::JoinHandle<()>>>> {
+static RESTORE_TIMEOUT_HANDLE: OnceLock<Arc<Mutex<Option<TimeoutJoinHandle>>>> = OnceLock::new();
+
+fn get_timeout_handle() -> Arc<Mutex<Option<TimeoutJoinHandle>>> {
     Arc::clone(RESTORE_TIMEOUT_HANDLE.get_or_init(|| Arc::new(Mutex::new(None))))
 }
 
@@ -528,7 +535,7 @@ fn spawn_restore_timeout(generation: u64) {
         prev.abort();
     }
 
-    let new_handle = tokio::spawn(async move {
+    let future = async move {
         tokio::time::sleep(Duration::from_secs(RESTORE_TIMEOUT_SECS)).await;
         let pending = get_pending_restore_state();
         let mut state = lock_pending_restore(&pending);
@@ -547,7 +554,15 @@ fn spawn_restore_timeout(generation: u64) {
             );
             state.clear();
         }
-    });
+    };
+
+    // Production: tauri::async_runtime::spawn works from any thread (no tokio context needed).
+    // Tests: tokio::spawn runs on the test runtime with paused-time control.
+    #[cfg(not(test))]
+    let new_handle = tauri::async_runtime::spawn(future);
+    #[cfg(test)]
+    let new_handle = tokio::spawn(future);
+
     *handle_slot = Some(new_handle);
 }
 
