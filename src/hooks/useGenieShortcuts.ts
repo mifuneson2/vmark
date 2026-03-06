@@ -67,7 +67,12 @@ export function useGenieShortcuts() {
       const aiGeniesKey = useShortcutsStore.getState().getShortcut("aiPrompts");
       if (matchesShortcutEvent(e, aiGeniesKey)) {
         e.preventDefault();
-        useGeniePickerStore.getState().openPicker({ filterScope: detectScope() });
+        const store = useGeniePickerStore.getState();
+        if (store.isOpen) {
+          store.closePicker();
+        } else {
+          store.openPicker({ filterScope: detectScope() });
+        }
       }
     };
 
