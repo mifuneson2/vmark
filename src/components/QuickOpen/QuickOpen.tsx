@@ -1,0 +1,285 @@
+/**
+ * Quick Open
+ *
+ * Spotlight-style centered overlay for quickly opening files.
+ * Opens via Cmd+P, supports keyboard navigation, fuzzy search,
+ * and a pinned "Browse..." row at the bottom.
+ *
+ * Follows the GeniePicker pattern: portal to document.body,
+ * click-outside via setTimeout(0), IME guard, and data-index
+ * scroll tracking.
+ *
+ * @coordinates-with quickOpenStore.ts, useQuickOpenItems.ts, fuzzyMatch.ts
+ */
+
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { createPortal } from "react-dom";
+import { toast } from "sonner";
+import { useQuickOpenStore } from "./quickOpenStore";
+import { useWorkspaceStore } from "@/stores/workspaceStore";
+import { useRecentFilesStore } from "@/stores/recentFilesStore";
+import { useFileTree } from "@/components/Sidebar/FileExplorer/useFileTree";
+import { openFileInNewTabCore } from "@/hooks/useFileOpen";
+import { handleOpen } from "@/hooks/useFileOpen";
+import {
+  buildQuickOpenItems,
+  filterAndRankItems,
+  flattenFileTree,
+} from "./useQuickOpenItems";
+import { isImeKeyEvent } from "@/utils/imeGuard";
+import { useImeComposition } from "@/hooks/useImeComposition";
+import "./QuickOpen.css";
+
+// Inline SVG icons to avoid import complexity
+function FileIcon() {
+  return (
+    <svg className="quick-open-item-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2">
+      <path d="M4 1h5l4 4v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1z" />
+      <path d="M9 1v4h4" />
+    </svg>
+  );
+}
+
+function FolderIcon() {
+  return (
+    <svg className="quick-open-item-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2">
+      <path d="M2 3h4l2 2h6a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" />
+    </svg>
+  );
+}
+
+function renderHighlighted(text: string, indices: number[] | undefined): React.ReactNode {
+  if (!indices || indices.length === 0) return text;
+  const indexSet = new Set(indices);
+  return Array.from(text).map((char, i) =>
+    indexSet.has(i) ? (
+      <span key={i} className="quick-open-match">{char}</span>
+    ) : (
+      <span key={i}>{char}</span>
+    )
+  );
+}
+
+interface QuickOpenProps {
+  windowLabel: string;
+}
+
+export function QuickOpen({ windowLabel }: QuickOpenProps) {
+  const isOpen = useQuickOpenStore((s) => s.isOpen);
+  const [filter, setFilter] = useState("");
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  const ime = useImeComposition();
+
+  // Workspace file tree (reuse existing hook)
+  const rootPath = useWorkspaceStore((s) => s.rootPath);
+  const excludeFolders = useWorkspaceStore((s) => s.config?.excludeFolders ?? []);
+  const { tree } = useFileTree(rootPath, {
+    excludeFolders,
+    showHidden: false,
+    showAllFiles: false,
+    watchId: `quick-open-${windowLabel}`,
+  });
+
+  // Flatten workspace tree to file paths
+  const workspacePaths = useMemo(() => flattenFileTree(tree), [tree]);
+
+  // Build all items (recent + open tabs + workspace)
+  const allItems = useMemo(
+    () => buildQuickOpenItems(windowLabel, workspacePaths),
+    [windowLabel, workspacePaths]
+  );
+
+  // Filter and rank
+  const rankedItems = useMemo(
+    () => filterAndRankItems(allItems, filter),
+    [allItems, filter]
+  );
+
+  // Total count including Browse row
+  const totalCount = rankedItems.length + 1; // +1 for Browse
+
+  // Reset state on open
+  useEffect(() => {
+    if (isOpen) {
+      setFilter("");
+      setSelectedIndex(0);
+      requestAnimationFrame(() => inputRef.current?.focus());
+    }
+  }, [isOpen]);
+
+  const handleClose = useCallback(() => {
+    useQuickOpenStore.getState().close();
+  }, []);
+
+  const handleSelectItem = useCallback(
+    async (path: string) => {
+      handleClose();
+      try {
+        await openFileInNewTabCore(windowLabel, path);
+      } catch (error) {
+        // Stale file — remove from recent and toast
+        useRecentFilesStore.getState().removeFile(path);
+        const msg = error instanceof Error ? error.message : String(error);
+        toast.error(`Failed to open file: ${msg}`);
+      }
+    },
+    [windowLabel, handleClose]
+  );
+
+  const handleBrowse = useCallback(() => {
+    handleClose();
+    handleOpen(windowLabel);
+  }, [windowLabel, handleClose]);
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (isImeKeyEvent(e.nativeEvent) || ime.isComposing()) return;
+
+      if (e.key === "Escape") {
+        e.preventDefault();
+        handleClose();
+      } else if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setSelectedIndex((prev) => (prev + 1) % totalCount);
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setSelectedIndex((prev) => (prev - 1 + totalCount) % totalCount);
+      } else if (e.key === "Enter") {
+        e.preventDefault();
+        if (selectedIndex < rankedItems.length) {
+          handleSelectItem(rankedItems[selectedIndex].item.path);
+        } else {
+          // Browse row
+          handleBrowse();
+        }
+      }
+    },
+    [handleClose, totalCount, selectedIndex, rankedItems, handleSelectItem, handleBrowse, ime]
+  );
+
+  // Click outside to close
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        handleClose();
+      }
+    };
+    const timeout = setTimeout(() => {
+      document.addEventListener("mousedown", handleClickOutside);
+    }, 0);
+    return () => {
+      clearTimeout(timeout);
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isOpen, handleClose]);
+
+  // Scroll selected into view
+  useEffect(() => {
+    if (!listRef.current || selectedIndex < 0) return;
+    const item = listRef.current.querySelector(`[data-index="${selectedIndex}"]`);
+    if (item) item.scrollIntoView({ block: "nearest" });
+  }, [selectedIndex]);
+
+  if (!isOpen) return null;
+
+  const isWorkspace = useWorkspaceStore.getState().isWorkspaceMode;
+  const placeholder = isWorkspace ? "Open file..." : "Open recent file...";
+
+  return createPortal(
+    <div className="quick-open-backdrop">
+      <div
+        ref={containerRef}
+        className="quick-open"
+        onKeyDown={handleKeyDown}
+        role="dialog"
+        aria-label="Quick Open"
+      >
+        <div className="quick-open-header">
+          <input
+            ref={inputRef}
+            className="quick-open-input"
+            type="text"
+            placeholder={placeholder}
+            value={filter}
+            onChange={(e) => {
+              setFilter(e.target.value);
+              setSelectedIndex(0);
+            }}
+            onCompositionStart={ime.onCompositionStart}
+            onCompositionEnd={ime.onCompositionEnd}
+            role="combobox"
+            aria-expanded="true"
+            aria-controls="quick-open-list"
+            aria-activedescendant={`quick-open-item-${selectedIndex}`}
+          />
+        </div>
+
+        <div className="quick-open-list" ref={listRef} id="quick-open-list" role="listbox">
+          {rankedItems.length === 0 && filter && (
+            <div className="quick-open-empty">No files found</div>
+          )}
+
+          {rankedItems.map((ranked, index) => (
+            <div
+              key={ranked.item.path}
+              className={`quick-open-item${index === selectedIndex ? " quick-open-item--selected" : ""}`}
+              data-index={index}
+              role="option"
+              id={`quick-open-item-${index}`}
+              aria-selected={index === selectedIndex}
+              onClick={() => handleSelectItem(ranked.item.path)}
+              onMouseEnter={() => setSelectedIndex(index)}
+            >
+              <FileIcon />
+              <span className="quick-open-item-name">
+                {renderHighlighted(ranked.item.filename, ranked.match?.indices)}
+              </span>
+              {ranked.item.isOpenTab && <span className="quick-open-tab-dot" />}
+              {ranked.item.relPath !== ranked.item.filename && (
+                <span className="quick-open-item-path">
+                  {renderHighlighted(ranked.item.relPath, ranked.match?.pathIndices)}
+                </span>
+              )}
+            </div>
+          ))}
+
+          {/* Separator before Browse */}
+          {rankedItems.length > 0 && <div className="quick-open-separator" />}
+
+          {/* Browse row — always pinned at bottom */}
+          <div
+            className={`quick-open-item${selectedIndex === rankedItems.length ? " quick-open-item--selected" : ""}`}
+            data-index={rankedItems.length}
+            role="option"
+            id={`quick-open-item-${rankedItems.length}`}
+            aria-selected={selectedIndex === rankedItems.length}
+            onClick={handleBrowse}
+            onMouseEnter={() => setSelectedIndex(rankedItems.length)}
+          >
+            <FolderIcon />
+            <span className="quick-open-item-name">Browse...</span>
+          </div>
+        </div>
+
+        <div className="quick-open-footer">
+          <span className="quick-open-footer-hint">
+            <kbd className="quick-open-kbd">&uarr;&darr;</kbd> navigate{" "}
+            <kbd className="quick-open-kbd">Enter</kbd> open{" "}
+            <kbd className="quick-open-kbd">Esc</kbd> close
+          </span>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
