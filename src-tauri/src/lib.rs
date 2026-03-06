@@ -190,6 +190,15 @@ async fn atomic_write_file(path: String, content: String) -> Result<(), String> 
 ///   `getpwuid` reads the login shell from the user database, which is
 ///   reliable even in GUI apps where `$SHELL` may not be set.
 /// - Windows: `%COMSPEC%` → `%SystemRoot%\System32\cmd.exe` → `C:\Windows\System32\cmd.exe`
+/// Return the login shell's PATH — needed by the integrated terminal so that
+/// CLI tools (node, claude, etc.) are discoverable, matching system terminal behavior.
+///
+/// Delegates to `ai_provider::login_shell_path()` which caches the result.
+#[tauri::command]
+fn get_login_shell_path() -> String {
+    ai_provider::login_shell_path()
+}
+
 #[tauri::command]
 fn get_default_shell() -> String {
     if cfg!(target_os = "windows") {
@@ -490,6 +499,7 @@ pub fn run() {
             tab_transfer::focus_existing_window,
             tab_transfer::remove_tab_from_window,
             get_default_shell,
+            get_login_shell_path,
             list_available_shells,
             genies::commands::get_genies_dir,
             genies::commands::list_genies,

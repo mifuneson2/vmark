@@ -73,3 +73,16 @@ export function isReloadShortcut(e: Pick<KeyboardEvent, "key" | "metaKey" | "ctr
   if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "r") return true;
   return false;
 }
+
+/**
+ * Check if the currently focused element is inside the integrated terminal.
+ *
+ * When the terminal is focused (xterm's hidden textarea), keyboard shortcuts
+ * like Ctrl+R should pass through to the shell (e.g., zsh reverse-i-search)
+ * instead of being intercepted by the reload guard.
+ */
+export function isTerminalFocused(): boolean {
+  const el = document.activeElement;
+  if (!el) return false;
+  return el.closest(".terminal-container") !== null;
+}

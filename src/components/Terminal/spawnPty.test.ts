@@ -13,6 +13,7 @@ import {
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: vi.fn((cmd: string) => {
     if (cmd === "get_default_shell") return Promise.resolve("/bin/zsh");
+    if (cmd === "get_login_shell_path") return Promise.resolve("/usr/local/bin:/usr/bin:/bin");
     return Promise.resolve(null);
   }),
 }));
@@ -506,6 +507,23 @@ describe("spawnPty shell selection", () => {
     const spawnArgs = vi.mocked(spawn).mock.calls[0][2] as { cols: number; rows: number };
     expect(spawnArgs.cols).toBe(80);
     expect(spawnArgs.rows).toBe(24);
+  });
+
+  it("injects login shell PATH into PTY environment", async () => {
+    vi.mocked(useSettingsStore.getState).mockReturnValue({
+      terminal: { shell: "" },
+    } as ReturnType<typeof useSettingsStore.getState>);
+    vi.mocked(invoke).mockImplementation((cmd: string) => {
+      if (cmd === "get_default_shell") return Promise.resolve("/bin/zsh");
+      if (cmd === "get_login_shell_path") return Promise.resolve("/usr/local/bin:/usr/bin:/bin");
+      return Promise.resolve(null);
+    });
+
+    await spawnPty({ term: mockTerm, onExit: vi.fn(), disposed: () => false });
+
+    expect(invoke).toHaveBeenCalledWith("get_login_shell_path");
+    const spawnCallEnv = vi.mocked(spawn).mock.calls[0][2] as { env: Record<string, string> };
+    expect(spawnCallEnv.env.PATH).toBe("/usr/local/bin:/usr/bin:/bin");
   });
 
   it("throws 'disposed before fallback spawn' when disposed becomes true after fallback shell resolved (L168)", async () => {

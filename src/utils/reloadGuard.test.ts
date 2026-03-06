@@ -6,6 +6,7 @@ import {
   shouldBlockReload,
   getReloadWarningMessage,
   isReloadShortcut,
+  isTerminalFocused,
   type ReloadGuardInput,
 } from "./reloadGuard";
 
@@ -88,6 +89,40 @@ describe("reloadGuard", () => {
     it("ignores unrelated shortcuts", () => {
       expect(isReloadShortcut({ key: "s", metaKey: true, ctrlKey: false })).toBe(false);
       expect(isReloadShortcut({ key: "F4", metaKey: false, ctrlKey: false })).toBe(false);
+    });
+  });
+
+  describe("isTerminalFocused", () => {
+    it("returns true when activeElement is inside .terminal-container", () => {
+      const container = document.createElement("div");
+      container.className = "terminal-container";
+      const textarea = document.createElement("textarea");
+      container.appendChild(textarea);
+      document.body.appendChild(container);
+      textarea.focus();
+
+      expect(isTerminalFocused()).toBe(true);
+
+      document.body.removeChild(container);
+    });
+
+    it("returns false when activeElement is outside .terminal-container", () => {
+      const editor = document.createElement("div");
+      editor.className = "editor";
+      const input = document.createElement("input");
+      editor.appendChild(input);
+      document.body.appendChild(editor);
+      input.focus();
+
+      expect(isTerminalFocused()).toBe(false);
+
+      document.body.removeChild(editor);
+    });
+
+    it("returns false when activeElement is null (body focused)", () => {
+      // When nothing specific is focused, activeElement is <body>
+      (document.activeElement as HTMLElement)?.blur?.();
+      expect(isTerminalFocused()).toBe(false);
     });
   });
 });

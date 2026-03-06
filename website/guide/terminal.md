@@ -68,8 +68,13 @@ VMark sets these environment variables in every terminal session:
 | `TERM_PROGRAM` | `vmark` |
 | `EDITOR` | `vmark` |
 | `VMARK_WORKSPACE` | Workspace root path (when a folder is open) |
+| `PATH` | Full login shell PATH (same as your system terminal) |
+
+The integrated terminal inherits your login shell's `PATH`, so CLI tools like `node`, `claude`, and other user-installed binaries are discoverable — just as they would be in a regular terminal window.
 
 The shell is read from `$SHELL` (falls back to `/bin/sh`). The working directory starts at the workspace root, or the active file's parent directory, or `$HOME`.
+
+Standard shell shortcuts like `Ctrl+R` (reverse history search in zsh/bash) work when the terminal is focused — they are not intercepted by the editor.
 
 When you open a workspace or file after the terminal is already running, all sessions automatically `cd` to the new workspace root.
 

@@ -21,7 +21,7 @@
 
 import { useEffect } from "react";
 import { useDocumentStore } from "@/stores/documentStore";
-import { shouldBlockReload, getReloadWarningMessage, isReloadShortcut } from "@/utils/reloadGuard";
+import { shouldBlockReload, getReloadWarningMessage, isReloadShortcut, isTerminalFocused } from "@/utils/reloadGuard";
 
 /**
  * Production guard: block all reload triggers unconditionally.
@@ -32,7 +32,7 @@ import { shouldBlockReload, getReloadWarningMessage, isReloadShortcut } from "@/
 function useProductionReloadGuard(): void {
   useEffect(() => {
     const blockKeyboard = (e: KeyboardEvent) => {
-      if (isReloadShortcut(e)) {
+      if (isReloadShortcut(e) && !isTerminalFocused()) {
         e.preventDefault();
         e.stopPropagation();
       }

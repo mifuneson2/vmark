@@ -132,6 +132,10 @@ export function wirePtyFlowControl(
 export async function spawnPty(options: SpawnOptions): Promise<IPty> {
   const { term, cwd, onExit, disposed } = options;
 
+  // Fetch login shell PATH so CLI tools (node, claude, etc.) are discoverable.
+  // macOS GUI apps have minimal PATH; this aligns with system terminal behavior.
+  const loginPath = await invoke<string>("get_login_shell_path");
+
   const configuredShell = useSettingsStore.getState().terminal.shell.trim();
   // Reject relative paths (security: prevent CWD/PATH hijack on Windows).
   // Only absolute paths are accepted: Unix (/) or Windows drive letter (C:\).
@@ -153,6 +157,9 @@ export async function spawnPty(options: SpawnOptions): Promise<IPty> {
     // set UTF-8 encoding so the shell and tools handle CJK/multibyte correctly.
     // LC_CTYPE (not LANG) to only affect encoding without overriding the user's locale.
     LC_CTYPE: "UTF-8",
+    // Inject login shell PATH so CLI tools (node, claude, etc.) are on PATH,
+    // matching system terminal behavior on macOS GUI apps.
+    PATH: loginPath,
   };
   if (workspaceRoot) {
     env.VMARK_WORKSPACE = workspaceRoot;
