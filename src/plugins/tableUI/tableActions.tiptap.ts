@@ -18,6 +18,7 @@ import type { Node, ResolvedPos } from "@tiptap/pm/model";
 import { addColumnAfter, addColumnBefore, addRowAfter, addRowBefore, deleteColumn, deleteRow } from "@tiptap/pm/tables";
 import type { Selection } from "@tiptap/pm/state";
 import { isWrapperFitToWidth, toggleWrapperFitToWidth } from "@/plugins/tableScroll/fitToWidth";
+import { tableActionsError } from "@/utils/debug";
 
 type SelectionConstructor = {
   near: (pos: ResolvedPos, bias?: number) => Selection;
@@ -195,7 +196,7 @@ export function alignColumn(view: EditorView, alignment: TableAlignment, allColu
     view.focus();
     return true;
   } catch (error) {
-    console.error("[tableActions.tiptap] Align failed:", error);
+    tableActionsError("Align failed:", error);
     return false;
   }
 }
@@ -294,7 +295,7 @@ export function formatTable(view: EditorView): boolean {
     view.focus();
     return true;
   } catch (error) {
-    console.error("[tableActions.tiptap] Format table failed:", error);
+    tableActionsError("Format table failed:", error);
     return false;
   }
 }

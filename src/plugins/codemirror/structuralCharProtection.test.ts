@@ -519,6 +519,61 @@ describe("Structural Character Protection", () => {
     });
   });
 
+  describe("smartDelete forward-delete skips structural markers on next line", () => {
+    it("skips list marker on next line", () => {
+      const view = createView("text^\n- item");
+      const handled = smartDelete(view);
+      expect(handled).toBe(true);
+      // Cursor should move to after "- " on next line
+      const cursor = view.state.selection.main.head;
+      const line = view.state.doc.lineAt(cursor);
+      expect(line.text).toBe("- item");
+      expect(cursor - line.from).toBe(2); // after "- "
+    });
+
+    it("skips task marker on next line", () => {
+      const view = createView("text^\n- [ ] task");
+      const handled = smartDelete(view);
+      expect(handled).toBe(true);
+      const cursor = view.state.selection.main.head;
+      const line = view.state.doc.lineAt(cursor);
+      expect(line.text).toBe("- [ ] task");
+      expect(cursor - line.from).toBe(6); // after "- [ ] "
+    });
+
+    it("skips blockquote marker on next line", () => {
+      const view = createView("text^\n> quoted");
+      const handled = smartDelete(view);
+      expect(handled).toBe(true);
+      const cursor = view.state.selection.main.head;
+      const line = view.state.doc.lineAt(cursor);
+      expect(line.text).toBe("> quoted");
+      expect(cursor - line.from).toBe(2); // after "> "
+    });
+
+    it("skips ordered list marker on next line", () => {
+      const view = createView("text^\n1. item");
+      const handled = smartDelete(view);
+      expect(handled).toBe(true);
+      const cursor = view.state.selection.main.head;
+      const line = view.state.doc.lineAt(cursor);
+      expect(line.text).toBe("1. item");
+      expect(cursor - line.from).toBe(3); // after "1. "
+    });
+
+    it("returns false when not at end of line", () => {
+      const view = createView("te^xt\n- item");
+      const handled = smartDelete(view);
+      expect(handled).toBe(false);
+    });
+
+    it("returns false when next line has no structural marker", () => {
+      const view = createView("text^\nplain text");
+      const handled = smartDelete(view);
+      expect(handled).toBe(false);
+    });
+  });
+
   describe("multi-cursor bail-out", () => {
     it("smartBackspace returns false with multiple cursors", () => {
       const content = "| cell | next |";

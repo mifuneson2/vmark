@@ -1,3 +1,7 @@
+vi.mock("@/utils/debug", () => ({
+  sourcePeekError: vi.fn(),
+}));
+
 import { describe, expect, it, vi } from "vitest";
 import StarterKit from "@tiptap/starter-kit";
 import { getSchema } from "@tiptap/core";
@@ -265,12 +269,13 @@ describe("applySourcePeekMarkdown", () => {
     expect(mockDispatch).toHaveBeenCalled();
   });
 
-  it("returns false and logs error on failure", () => {
+  it("returns false and logs error on failure", async () => {
     const schema = createSchema();
     const doc = parseMarkdown(schema, "Text");
     const state = EditorState.create({ doc });
 
-    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    const debug = await import("@/utils/debug");
+    const sourcePeekError = vi.mocked(debug.sourcePeekError);
     const mockView = {
       state,
       dispatch: vi.fn(() => {
@@ -281,11 +286,10 @@ describe("applySourcePeekMarkdown", () => {
     const result = applySourcePeekMarkdown(mockView, { from: 0, to: 5 }, "New");
 
     expect(result).toBe(false);
-    expect(consoleError).toHaveBeenCalledWith(
-      "[SourcePeek] Failed to apply markdown:",
+    expect(sourcePeekError).toHaveBeenCalledWith(
+      "Failed to apply markdown:",
       expect.any(Error)
     );
 
-    consoleError.mockRestore();
   });
 });

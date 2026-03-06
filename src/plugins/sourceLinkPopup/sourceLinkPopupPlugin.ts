@@ -8,6 +8,7 @@
 import { type Extension } from "@codemirror/state";
 import { ViewPlugin, type EditorView } from "@codemirror/view";
 import { createSourcePopupPlugin } from "@/plugins/sourcePopup";
+import { sourceLinkError } from "@/utils/debug";
 import { useLinkPopupStore } from "@/stores/linkPopupStore";
 import { SourceLinkPopupView } from "./SourceLinkPopupView";
 import { findMarkdownLinkAtPosition } from "@/utils/markdownLinkPatterns";
@@ -139,7 +140,7 @@ function createCmdClickPlugin(): Extension {
         /* v8 ignore next 4 -- @preserve reason: dynamic import and error handler not tested in unit tests */
         import("@tauri-apps/plugin-opener").then(({ openUrl }) => {
           openUrl(href).catch((error: unknown) => {
-            console.error("Failed to open link:", error);
+            sourceLinkError("Failed to open link:", error);
           });
         });
       };

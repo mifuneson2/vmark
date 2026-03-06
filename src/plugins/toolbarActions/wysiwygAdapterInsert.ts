@@ -20,7 +20,7 @@ import { readClipboardImagePath } from "@/utils/clipboardImagePath";
 import { withReentryGuard } from "@/utils/reentryGuard";
 import { DEFAULT_MERMAID_DIAGRAM } from "@/plugins/mermaid/constants";
 import { DEFAULT_MARKMAP_CONTENT } from "@/plugins/markmap/constants";
-import { wysiwygAdapterWarn } from "@/utils/debug";
+import { wysiwygAdapterWarn, wysiwygAdapterError } from "@/utils/debug";
 import { isViewConnected, getActiveFilePath } from "./wysiwygAdapterUtils";
 import type { WysiwygToolbarContext } from "./types";
 
@@ -102,7 +102,7 @@ async function trySmartImageInsertion(view: EditorView): Promise<boolean> {
       const sourcePath = clipboardResult.resolvedPath ?? clipboardResult.path;
       imagePath = await copyImageToAssets(sourcePath, docPath);
     } catch (error) {
-      console.error("[wysiwygAdapter] Failed to copy image to assets:", error);
+      wysiwygAdapterError("Failed to copy image to assets:", error);
       // Copy failed, fall back to file picker
       return false;
     }

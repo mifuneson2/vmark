@@ -18,7 +18,6 @@
 
 import "./block-video.css";
 import { Node } from "@tiptap/core";
-import type { NodeView } from "@tiptap/pm/view";
 import { BlockVideoNodeView } from "./BlockVideoNodeView";
 import { sourceLineAttr } from "../shared/sourceLineAttr";
 import { mediaBlockKeyboardShortcuts } from "../shared/mediaNodeViewHelpers";
@@ -86,7 +85,7 @@ export const blockVideoExtension = Node.create({
     /* v8 ignore start -- @preserve reason: addNodeView factory callback only runs in live Tiptap editor; not exercised in unit tests */
     return ({ node, getPos, editor }) => {
       const safeGetPos = typeof getPos === "function" ? getPos : () => undefined;
-      return new BlockVideoNodeView(node, safeGetPos, editor) as unknown as NodeView;
+      return new BlockVideoNodeView(node, safeGetPos, editor);
     };
     /* v8 ignore stop */
   },

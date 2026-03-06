@@ -159,7 +159,7 @@ class FootnotePopupPluginView {
 
   constructor(view: EditorView) {
     this.view = view;
-    this.popupView = new FootnotePopupView(view as unknown as ConstructorParameters<typeof FootnotePopupView>[0]);
+    this.popupView = new FootnotePopupView(view);
   }
 
   update() {
@@ -220,7 +220,7 @@ export const footnotePopupExtension = Extension.create({
       new Plugin({
         key: footnotePopupPluginKey,
         view(editorView) {
-          const popup = new FootnotePopupPluginView(editorView as unknown as EditorView);
+          const popup = new FootnotePopupPluginView(editorView);
           return {
             update: () => popup.update(),
             destroy: () => popup.destroy(),

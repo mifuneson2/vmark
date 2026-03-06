@@ -34,6 +34,7 @@ vi.mock("@/utils/clipboardUrl", () => ({
 
 vi.mock("@/utils/debug", () => ({
   wysiwygAdapterWarn: vi.fn(),
+  wysiwygAdapterError: vi.fn(),
 }));
 
 vi.mock("./wysiwygAdapterUtils", () => ({
@@ -137,19 +138,18 @@ describe("openLinkEditor", () => {
     expect(ctx.view!.focus).toHaveBeenCalled();
   });
 
-  it("handles error when opening wiki link popup", () => {
+  it("handles error when opening wiki link popup", async () => {
     const openPopup = vi.fn(() => {
       throw new Error("popup error");
     });
     vi.mocked(useWikiLinkPopupStore.getState).mockReturnValue({ openPopup } as never);
-    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const debug = await import("@/utils/debug");
 
     const ctx = createContext({ inWikiLink: true });
     const result = openLinkEditor(ctx);
 
     expect(result).toBe(true); // still returns true (handled)
-    expect(consoleSpy).toHaveBeenCalled();
-    consoleSpy.mockRestore();
+    expect(vi.mocked(debug.wysiwygAdapterError)).toHaveBeenCalled();
   });
 
   it("returns true and triggers async smart link flow for non-wiki links", () => {
@@ -299,14 +299,11 @@ describe("openLinkEditor", () => {
     (ctx.view! as { coordsAtPos: ReturnType<typeof vi.fn> }).coordsAtPos = vi.fn(() => {
       throw new Error("coordsAtPos failed");
     });
-    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-
     openLinkEditor(ctx);
 
     await vi.waitFor(() => {
       expect(expandedToggleMarkTiptap).toHaveBeenCalledWith(ctx.view, "link");
     });
-    consoleSpy.mockRestore();
   });
 
   it("handles wiki link with null value attr", () => {

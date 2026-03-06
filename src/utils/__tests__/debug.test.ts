@@ -62,6 +62,14 @@ import {
   renderWarn,
   cleanupWarn,
   listClickFixLog,
+  windowContextError,
+  sourceLinkError,
+  resolveMediaError,
+  sourcePeekError,
+  saveError,
+  tableActionsError,
+  imageHashError,
+  wysiwygAdapterError,
 } from "../debug";
 
 /* ------------------------------------------------------------------ */
@@ -121,6 +129,14 @@ const allLoggers = {
   renderWarn,
   cleanupWarn,
   listClickFixLog,
+  windowContextError,
+  sourceLinkError,
+  resolveMediaError,
+  sourcePeekError,
+  saveError,
+  tableActionsError,
+  imageHashError,
+  wysiwygAdapterError,
 } as const;
 
 /* ------------------------------------------------------------------ */
@@ -136,7 +152,7 @@ describe("debug loggers — existence and type", () => {
   );
 
   it("exports all known loggers", () => {
-    expect(Object.keys(allLoggers).length).toBeGreaterThanOrEqual(52);
+    expect(Object.keys(allLoggers).length).toBeGreaterThanOrEqual(60);
   });
 });
 
@@ -150,7 +166,7 @@ describe("debug loggers — prefix conventions", () => {
    * Loggers ending in "Warn" use console.warn; others use console.log
    * (except menuDispatcherLog and mcpBridgeLog which use console.debug).
    */
-  const prefixMap: Record<string, { prefix: string; method: "log" | "warn" | "debug" }> = {
+  const prefixMap: Record<string, { prefix: string; method: "log" | "warn" | "debug" | "error" }> = {
     historyLog:           { prefix: "[History]",             method: "log" },
     autoSaveLog:          { prefix: "[AutoSave]",            method: "log" },
     terminalLog:          { prefix: "[Terminal]",             method: "log" },
@@ -203,12 +219,21 @@ describe("debug loggers — prefix conventions", () => {
     renderWarn:           { prefix: "[Render]",              method: "warn" },
     cleanupWarn:          { prefix: "[Cleanup]",             method: "warn" },
     listClickFixLog:      { prefix: "[ListClickFix]",        method: "warn" },
+    windowContextError:   { prefix: "[WindowContext]",        method: "error" },
+    sourceLinkError:      { prefix: "[SourceLink]",           method: "error" },
+    resolveMediaError:    { prefix: "[ResolveMedia]",         method: "error" },
+    sourcePeekError:      { prefix: "[SourcePeek]",           method: "error" },
+    saveError:            { prefix: "[Save]",                 method: "error" },
+    tableActionsError:    { prefix: "[TableActions]",         method: "error" },
+    imageHashError:       { prefix: "[ImageHashRegistry]",    method: "error" },
+    wysiwygAdapterError:  { prefix: "[wysiwygAdapter]",       method: "error" },
   };
 
   beforeEach(() => {
     vi.spyOn(console, "log").mockImplementation(() => {});
     vi.spyOn(console, "warn").mockImplementation(() => {});
     vi.spyOn(console, "debug").mockImplementation(() => {});
+    vi.spyOn(console, "error").mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -221,7 +246,7 @@ describe("debug loggers — prefix conventions", () => {
       const logger = allLoggers[name as keyof typeof allLoggers];
       logger("test message");
 
-      const spy = method === "warn" ? console.warn : method === "debug" ? console.debug : console.log;
+      const spy = method === "error" ? console.error : method === "warn" ? console.warn : method === "debug" ? console.debug : console.log;
       expect(spy).toHaveBeenCalledTimes(1);
       expect(spy).toHaveBeenCalledWith(prefix, "test message");
     },
@@ -237,6 +262,7 @@ describe("debug loggers — dev mode behavior", () => {
     vi.spyOn(console, "log").mockImplementation(() => {});
     vi.spyOn(console, "warn").mockImplementation(() => {});
     vi.spyOn(console, "debug").mockImplementation(() => {});
+    vi.spyOn(console, "error").mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -306,6 +332,11 @@ describe("debug loggers — dev mode behavior", () => {
     mcpBridgeLog("bridge event");
     expect(console.debug).toHaveBeenCalledWith("[MCP Bridge]", "bridge event");
   });
+
+  it("error loggers use console.error", () => {
+    windowContextError("init failed", { code: 42 });
+    expect(console.error).toHaveBeenCalledWith("[WindowContext]", "init failed", { code: 42 });
+  });
 });
 
 /* ------------------------------------------------------------------ */
@@ -317,6 +348,7 @@ describe("debug loggers — no-throw guarantee", () => {
     vi.spyOn(console, "log").mockImplementation(() => {});
     vi.spyOn(console, "warn").mockImplementation(() => {});
     vi.spyOn(console, "debug").mockImplementation(() => {});
+    vi.spyOn(console, "error").mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -362,6 +394,7 @@ describe("debug loggers — production mode (DEV=false)", () => {
     vi.spyOn(console, "log").mockImplementation(() => {});
     vi.spyOn(console, "warn").mockImplementation(() => {});
     vi.spyOn(console, "debug").mockImplementation(() => {});
+    vi.spyOn(console, "error").mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -386,6 +419,7 @@ describe("debug loggers — production mode (DEV=false)", () => {
     expect(console.log).not.toHaveBeenCalled();
     expect(console.warn).not.toHaveBeenCalled();
     expect(console.debug).not.toHaveBeenCalled();
+    expect(console.error).not.toHaveBeenCalled();
 
     vi.unstubAllEnvs();
   });
@@ -404,6 +438,8 @@ describe("debug loggers — production mode (DEV=false)", () => {
     expect(() => prodDebug.mcpBridgeLog("bridge")).not.toThrow();
     expect(() => prodDebug.imageHandlerWarn("handler")).not.toThrow();
     expect(() => prodDebug.orphanCleanupWarn("cleanup")).not.toThrow();
+    expect(() => prodDebug.windowContextError("init failed")).not.toThrow();
+    expect(() => prodDebug.wysiwygAdapterError("transform failed")).not.toThrow();
 
     vi.unstubAllEnvs();
   });

@@ -8,7 +8,7 @@
 import { exists, readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
 import { dirname, join } from "@tauri-apps/api/path";
 import { ASSETS_FOLDER } from "@/utils/imageUtils";
-import { imageHashWarn } from "@/utils/debug";
+import { imageHashWarn, imageHashError } from "@/utils/debug";
 
 const REGISTRY_FILENAME = "image-hashes.json";
 const REGISTRY_VERSION = 1;
@@ -75,7 +75,7 @@ export async function saveHashRegistry(
     const content = JSON.stringify(registry, null, 2);
     await writeTextFile(registryPath, content);
   } catch (error) {
-    console.error("[ImageHashRegistry] Failed to save registry:", error);
+    imageHashError("Failed to save registry:", error);
   }
 }
 

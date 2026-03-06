@@ -330,3 +330,36 @@ export const cleanupWarn = isDev
 export const listClickFixLog = isDev
   ? (...args: unknown[]) => console.warn("[ListClickFix]", ...args)
   : () => {};
+
+export const windowContextError = isDev
+  ? (...args: unknown[]) => console.error("[WindowContext]", ...args)
+  : () => {};
+
+export const sourceLinkError = isDev
+  ? (...args: unknown[]) => console.error("[SourceLink]", ...args)
+  : () => {};
+
+export const resolveMediaError = isDev
+  ? (...args: unknown[]) => console.error("[ResolveMedia]", ...args)
+  : () => {};
+
+export const sourcePeekError = isDev
+  ? (...args: unknown[]) => console.error("[SourcePeek]", ...args)
+  : () => {};
+
+export const saveError = isDev
+  ? (...args: unknown[]) => console.error("[Save]", ...args)
+  : () => {};
+
+export const tableActionsError = isDev
+  ? (...args: unknown[]) => console.error("[TableActions]", ...args)
+  : () => {};
+
+export const imageHashError = isDev
+  ? (...args: unknown[]) => console.error("[ImageHashRegistry]", ...args)
+  : () => {};
+
+export const wysiwygAdapterError = isDev
+  ? (...args: unknown[]) => console.error("[wysiwygAdapter]", ...args)
+  : () => {};
+

@@ -80,13 +80,9 @@ onMounted(async () => {
   <div v-if="stats && stats.total && stats.total.pings > 0" class="user-stats">
     <div class="table-wrapper">
       <div class="stats-grid">
-        <!-- :key prevents VitePress lean-build from stripping this static node -->
-        <div class="stat-header" :key="'h'">
+        <div class="stat-header">
           <span class="header-spacer"></span>
-          <span class="header-label">Today</span>
-          <span class="header-label">This Week</span>
-          <span class="header-label">This Month</span>
-          <span class="header-label">All Time</span>
+          <span v-for="h in ['Today', 'This Week', 'This Month', 'All Time']" :key="h" class="header-label">{{ h }}</span>
         </div>
         <div class="stat-row" v-if="stats.today.devices != null">
           <span class="row-label">Unique Devices</span>

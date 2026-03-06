@@ -80,9 +80,7 @@ export function expandedToggleMark(view: EditorView, markTypeName: string): bool
     const primaryTo = primaryRange.$to.pos;
     let shouldAdd: boolean;
     if (primaryFrom === primaryTo) {
-      const wordRange = findWordAtCursor(
-        primaryRange.$from as unknown as Parameters<typeof findWordAtCursor>[0]
-      );
+      const wordRange = findWordAtCursor(primaryRange.$from);
       shouldAdd = wordRange
         ? !state.doc.rangeHasMark(wordRange.from, wordRange.to, markType)
         : true;
@@ -96,9 +94,7 @@ export function expandedToggleMark(view: EditorView, markTypeName: string): bool
       const rangeFrom = range.$from.pos;
       const rangeTo = range.$to.pos;
       if (rangeFrom === rangeTo) {
-        const wordRange = findWordAtCursor(
-          range.$from as unknown as Parameters<typeof findWordAtCursor>[0]
-        );
+        const wordRange = findWordAtCursor(range.$from);
         if (!wordRange) continue;
         applied = true;
         if (opposingMarkType) {
@@ -146,7 +142,7 @@ export function expandedToggleMark(view: EditorView, markTypeName: string): bool
     from,
     markType.create(),
     $from.start(),
-    $from.parent as unknown as Parameters<typeof findMarkRange>[3]
+    $from.parent
   );
 
   if (markRange) {
@@ -165,7 +161,7 @@ export function expandedToggleMark(view: EditorView, markTypeName: string): bool
       from,
       opposingMarkType.create(),
       $from.start(),
-      $from.parent as unknown as Parameters<typeof findMarkRange>[3]
+      $from.parent
     );
     if (opposingRange) {
       dispatch(state.tr.removeMark(opposingRange.from, opposingRange.to, opposingMarkType));
@@ -184,10 +180,7 @@ export function expandedToggleMark(view: EditorView, markTypeName: string): bool
     return true;
   }
 
-  const inheritedRange = findAnyMarkRangeAtCursor(
-    from,
-    $from as unknown as Parameters<typeof findAnyMarkRangeAtCursor>[1]
-  );
+  const inheritedRange = findAnyMarkRangeAtCursor(from, $from);
 
   if (inheritedRange && !(markTypeName === "code" && inheritedRange.isLink)) {
     clearLastRemoved();

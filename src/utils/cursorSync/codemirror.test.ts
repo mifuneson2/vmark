@@ -559,4 +559,46 @@ describe("restoreCursorInCodeMirror", () => {
     // final = 10 + 2 (marker) = 12
     expect(selection.anchor).toBe(12);
   });
+
+  it("restores cursor in nested blockquote + list (> - item)", () => {
+    const content = "> - the quick brown fox";
+    const view = buildMockView({ content, cursorPos: 0 });
+    const info: CursorInfo = {
+      sourceLine: 1,
+      wordAtCursor: "brown",
+      offsetInWord: 0,
+      nodeType: "list_item",
+      percentInLine: 0.5,
+      contextBefore: "the quick ",
+      contextAfter: "brown fox",
+      blockAnchor: undefined,
+    };
+    restoreCursorInCodeMirror(view as never, info);
+    expect(view.dispatch).toHaveBeenCalled();
+    const selection = view.dispatch.mock.calls[0][0].selection;
+    // "> - " is 4 chars marker (blockquote + list), stripped = "the quick brown fox"
+    // context match at 0, contextBefore length 10 -> 10 + 4 = 14
+    expect(selection.anchor).toBe(14);
+  });
+
+  it("restores cursor in nested blockquote + ordered list (> 1. item)", () => {
+    const content = "> 1. the quick brown fox";
+    const view = buildMockView({ content, cursorPos: 0 });
+    const info: CursorInfo = {
+      sourceLine: 1,
+      wordAtCursor: "brown",
+      offsetInWord: 0,
+      nodeType: "list_item",
+      percentInLine: 0.5,
+      contextBefore: "the quick ",
+      contextAfter: "brown fox",
+      blockAnchor: undefined,
+    };
+    restoreCursorInCodeMirror(view as never, info);
+    expect(view.dispatch).toHaveBeenCalled();
+    const selection = view.dispatch.mock.calls[0][0].selection;
+    // "> " (2) + "1. " (3) = 5 chars marker, stripped = "the quick brown fox"
+    // context match at 0, contextBefore length 10 -> 10 + 5 = 15
+    expect(selection.anchor).toBe(15);
+  });
 });

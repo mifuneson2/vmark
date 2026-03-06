@@ -57,7 +57,7 @@ export function handleEscapeDown(view: EditorView): boolean {
 export function asCommand(fn: (view: EditorView) => boolean): Command {
   return (_state, _dispatch, view) => {
     if (!view) return false;
-    return fn(view as unknown as EditorView);
+    return fn(view);
   };
 }
 

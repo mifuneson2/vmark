@@ -287,6 +287,40 @@ export function smartDelete(view: EditorView): boolean {
     return true;
   }
 
+  // At end of line, forward-deleting would merge with next line —
+  // protect structural markers on the next line by skipping over them
+  if (head === line.to && line.number < state.doc.lines) {
+    const nextLine = state.doc.line(line.number + 1);
+
+    // Check task marker first (more specific than list)
+    const taskMatch = nextLine.text.match(TASK_ITEM_PATTERN);
+    if (taskMatch) {
+      view.dispatch({
+        selection: { anchor: nextLine.from + taskMatch[0].length },
+        scrollIntoView: true,
+      });
+      return true;
+    }
+
+    const listMatch = nextLine.text.match(LIST_ITEM_PATTERN);
+    if (listMatch) {
+      view.dispatch({
+        selection: { anchor: nextLine.from + listMatch[0].length },
+        scrollIntoView: true,
+      });
+      return true;
+    }
+
+    const blockquoteMatch = nextLine.text.match(BLOCKQUOTE_PATTERN);
+    if (blockquoteMatch) {
+      view.dispatch({
+        selection: { anchor: nextLine.from + blockquoteMatch[0].length },
+        scrollIntoView: true,
+      });
+      return true;
+    }
+  }
+
   return false;
 }
 

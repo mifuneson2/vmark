@@ -17,7 +17,6 @@
 import "./block-image.css";
 import { Node } from "@tiptap/core";
 import { NodeSelection } from "@tiptap/pm/state";
-import type { NodeView } from "@tiptap/pm/view";
 import { BlockImageNodeView } from "./BlockImageNodeView";
 import { sourceLineAttr } from "../shared/sourceLineAttr";
 
@@ -78,7 +77,7 @@ export const blockImageExtension = Node.create({
   addNodeView() {
     return ({ node, getPos, editor }) => {
       const safeGetPos = typeof getPos === "function" ? getPos : () => undefined;
-      return new BlockImageNodeView(node, safeGetPos, editor) as unknown as NodeView;
+      return new BlockImageNodeView(node, safeGetPos, editor);
     };
   },
 

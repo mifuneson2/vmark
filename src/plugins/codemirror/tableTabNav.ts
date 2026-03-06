@@ -92,6 +92,9 @@ export function getCellBoundaries(lineText: string): CellBoundary[] {
  * Returns true if handled, false to fall through to other keymaps.
  */
 export function goToNextCell(view: EditorView): boolean {
+  // Bail out with multiple cursors — let CodeMirror handle default behavior
+  if (view.state.selection.ranges.length > 1) return false;
+
   const info = getSourceTableInfo(view);
   if (!info) return false;
 
@@ -171,6 +174,9 @@ export function goToNextCell(view: EditorView): boolean {
  * Returns true if handled, false to fall through to other keymaps.
  */
 export function goToPreviousCell(view: EditorView): boolean {
+  // Bail out with multiple cursors — let CodeMirror handle default behavior
+  if (view.state.selection.ranges.length > 1) return false;
+
   const info = getSourceTableInfo(view);
   if (!info) return false;
 

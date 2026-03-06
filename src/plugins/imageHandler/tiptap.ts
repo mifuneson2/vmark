@@ -76,7 +76,7 @@ async function processClipboardImage(view: EditorView, item: DataTransferItem): 
       return;
     }
 
-    insertBlockImageNode(view as unknown as Parameters<typeof insertBlockImageNode>[0], relativePath);
+    insertBlockImageNode(view, relativePath);
   });
 }
 

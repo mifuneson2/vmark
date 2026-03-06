@@ -59,7 +59,7 @@ import {
 import { resolveWorkspaceRootForExternalFile } from "../utils/openPolicy";
 import { isWithinRoot } from "../utils/paths";
 import type { TabTransferPayload } from "@/types/tabTransfer";
-import { windowCloseWarn } from "@/utils/debug";
+import { windowCloseWarn, windowContextError } from "@/utils/debug";
 
 async function applyTabTransferData(label: string, data: TabTransferPayload): Promise<void> {
   // Set up workspace: prefer transferred root, fall back to file's parent
@@ -202,7 +202,7 @@ export function WindowProvider({ children }: WindowProviderProps) {
                 return;
               }
             } catch (err) {
-              console.error("[WindowContext] Failed to claim tab transfer:", err);
+              windowContextError("Failed to claim tab transfer:", err);
             }
 
             // Check if we have a file path and/or workspace root in the URL query params
@@ -218,7 +218,7 @@ export function WindowProvider({ children }: WindowProviderProps) {
                   filePaths = parsed.filter((value) => typeof value === "string");
                 }
               } catch (error) {
-                console.error("[WindowContext] Failed to parse files param:", error);
+                windowContextError("Failed to parse files param:", error);
               }
             }
 
@@ -227,7 +227,7 @@ export function WindowProvider({ children }: WindowProviderProps) {
               try {
                 await openWorkspaceWithConfig(workspaceRootParam);
               } catch (e) {
-                console.error("[WindowContext] Failed to open workspace from URL param:", e);
+                windowContextError("Failed to open workspace from URL param:", e);
               }
             }
 
@@ -264,7 +264,7 @@ export function WindowProvider({ children }: WindowProviderProps) {
                   useDocumentStore.getState().setLineMetadata(tabId, detectLinebreaks(content));
                   useRecentFilesStore.getState().addFile(path);
                 } catch (error) {
-                  console.error("[WindowContext] Failed to load file:", path, error);
+                  windowContextError("Failed to load file:", path, error);
                   useDocumentStore.getState().initDocument(tabId, "", null);
                   /* v8 ignore next -- @preserve ?? path fallback: pop() only returns undefined for empty arrays */
                   const filename = path.split("/").pop() ?? path;
@@ -283,7 +283,7 @@ export function WindowProvider({ children }: WindowProviderProps) {
                   useDocumentStore.getState().setLineMetadata(tabId, detectLinebreaks(content));
                   useRecentFilesStore.getState().addFile(filePath);
                 } catch (error) {
-                  console.error("[WindowContext] Failed to load file:", filePath, error);
+                  windowContextError("Failed to load file:", filePath, error);
                   // Initialize with empty content if file can't be read
                   useDocumentStore.getState().initDocument(tabId, "", null);
                   /* v8 ignore next -- @preserve ?? filePath fallback: pop() only returns undefined for empty arrays */
@@ -308,7 +308,7 @@ export function WindowProvider({ children }: WindowProviderProps) {
         // Pass the window label so Rust can track which windows are ready.
         setTimeout(() => window.emit("ready", label), READY_EVENT_DELAY_MS);
       } catch (error) {
-        console.error("[WindowContext] Init failed:", error);
+        windowContextError("Init failed:", error);
         // Still set ready to allow error boundary to catch render errors
         setIsReady(true);
         // Notify Rust even on error so waiting handlers don't hang
@@ -319,7 +319,7 @@ export function WindowProvider({ children }: WindowProviderProps) {
 
     /* v8 ignore start -- @preserve reason: .catch() callback on init() only fires on unhandled init errors; not triggered in controlled tests */
     init().catch((e) => {
-      console.error("[WindowContext] Unhandled init error:", e);
+      windowContextError("Unhandled init error:", e);
       setIsReady(true);
       const errorWindow = getCurrentWebviewWindow();
       setTimeout(() => errorWindow.emit("ready", errorWindow.label), READY_EVENT_DELAY_MS);
@@ -340,7 +340,7 @@ export function WindowProvider({ children }: WindowProviderProps) {
       try {
         await applyTabTransferData(windowLabel, event.payload);
       } catch (error) {
-        console.error("[WindowContext] Failed to apply runtime tab transfer:", error);
+        windowContextError("Failed to apply runtime tab transfer:", error);
       }
     }).then((fn) => {
       if (cancelled) {
@@ -349,7 +349,7 @@ export function WindowProvider({ children }: WindowProviderProps) {
         unlisten = fn;
       }
     }).catch((error) => {
-      console.error("[WindowContext] Failed to setup tab transfer listener:", error);
+      windowContextError("Failed to setup tab transfer listener:", error);
     });
 
     let unlistenRemove: (() => void) | null = null;
@@ -364,7 +364,7 @@ export function WindowProvider({ children }: WindowProviderProps) {
         unlistenRemove = fn;
       }
     }).catch((error) => {
-      console.error("[WindowContext] Failed to setup tab removal listener:", error);
+      windowContextError("Failed to setup tab removal listener:", error);
     });
 
     return () => {

@@ -118,11 +118,7 @@ export async function insertImageFromPath(
   }
 
   // Insert the image node with captured alt text
-  insertBlockImageNode(
-    view as unknown as Parameters<typeof insertBlockImageNode>[0],
-    imagePath,
-    capturedAltText
-  );
+  insertBlockImageNode(view, imagePath, capturedAltText);
 }
 
 /**

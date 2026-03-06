@@ -233,26 +233,30 @@ function getLeadingMarkerLength(lineText: string): number {
     return headingMatch[0].length;
   }
 
-  // Check list markers: - * + or numbered (with optional leading whitespace)
-  const listMatch = lineText.match(/^(\s*)([-*+]|\d+\.)\s+/);
-  if (listMatch) {
-    return listMatch[0].length;
-  }
+  let total = 0;
+  let text = lineText;
 
-  // Check blockquote markers: > (can be nested)
-  const quoteMatch = lineText.match(/^(>\s*)+/);
+  // Check blockquote markers first (before list) so nested `> - item` accumulates both
+  const quoteMatch = text.match(/^(>\s*)+/);
   if (quoteMatch) {
-    return quoteMatch[0].length;
+    total += quoteMatch[0].length;
+    text = text.slice(quoteMatch[0].length);
   }
 
-  return 0;
+  // Check list markers: - * + or numbered (with optional leading whitespace)
+  const listMatch = text.match(/^(\s*)([-*+]|\d+\.)\s+/);
+  if (listMatch) {
+    total += listMatch[0].length;
+  }
+
+  return total;
 }
 
 /**
  * Find the best column position in a line using word/context matching.
  */
 function findColumnInLine(lineText: string, cursorInfo: CursorInfo): number {
-  const { text: strippedText } = stripMarkdownSyntax(lineText, 0);
+  const { text: strippedText } = stripMarkdownSyntax(lineText, lineText.length);
 
   // Strategy 1: Context match
   const pattern = cursorInfo.contextBefore + cursorInfo.contextAfter;

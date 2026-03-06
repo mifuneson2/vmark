@@ -5,6 +5,10 @@
  * fit-to-width helpers, setSelectionNear, and edge cases.
  */
 
+vi.mock("@/utils/debug", () => ({
+  tableActionsError: vi.fn(),
+}));
+
 import { describe, it, expect, vi } from "vitest";
 import { Schema, type Node } from "@tiptap/pm/model";
 import { EditorState, TextSelection } from "@tiptap/pm/state";
@@ -961,8 +965,7 @@ describe("formatTable - cursorPos null guard (line 247)", () => {
 // ---------- alignColumn error handling ----------
 
 describe("alignColumn - error handling", () => {
-  it("catches errors and returns false", () => {
-    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+  it("catches errors and returns false", async () => {
     const state = createTableState(2, 2);
     const view = mockView(state);
 
@@ -973,19 +976,18 @@ describe("alignColumn - error handling", () => {
 
     const result = alignColumn(view, "center", false);
     expect(result).toBe(false);
-    expect(consoleErrorSpy).toHaveBeenCalledWith(
-      "[tableActions.tiptap] Align failed:",
+    const debug = await import("@/utils/debug");
+    expect(vi.mocked(debug.tableActionsError)).toHaveBeenCalledWith(
+      "Align failed:",
       expect.any(Error)
     );
-    consoleErrorSpy.mockRestore();
   });
 });
 
 // ---------- formatTable error handling ----------
 
 describe("formatTable - error handling", () => {
-  it("catches errors and returns false", () => {
-    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+  it("catches errors and returns false", async () => {
     const state = createTableState(2, 2);
     const view = mockView(state);
 
@@ -995,11 +997,11 @@ describe("formatTable - error handling", () => {
 
     const result = formatTable(view);
     expect(result).toBe(false);
-    expect(consoleErrorSpy).toHaveBeenCalledWith(
-      "[tableActions.tiptap] Format table failed:",
+    const debug = await import("@/utils/debug");
+    expect(vi.mocked(debug.tableActionsError)).toHaveBeenCalledWith(
+      "Format table failed:",
       expect.any(Error)
     );
-    consoleErrorSpy.mockRestore();
   });
 
   it("returns false when schema has no paragraph node type", () => {

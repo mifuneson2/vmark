@@ -35,7 +35,7 @@ import {
   normalizeLineEndings,
 } from "@/utils/linebreaks";
 import { registerPendingSave, clearPendingSave } from "@/utils/pendingSaves";
-import { historyWarn } from "@/utils/debug";
+import { historyWarn, saveError } from "@/utils/debug";
 
 export async function saveToPath(
   tabId: string,
@@ -65,7 +65,7 @@ export async function saveToPath(
     // CRITICAL: Always clear pending save on failure to prevent stale entries.
     // Token ensures we only clear our own registration, not a newer save's.
     clearPendingSave(path, saveToken);
-    console.error("Failed to save file:", error);
+    saveError("Failed to save file:", error);
     const message = error instanceof Error ? error.message : String(error);
     toast.error(`Failed to save: ${message}`);
     return false;

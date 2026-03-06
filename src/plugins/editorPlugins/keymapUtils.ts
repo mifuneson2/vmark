@@ -29,7 +29,7 @@ export function escapeMarkBoundary(view: EditorView): boolean {
   const pos = $from.pos;
   const anyMarkRange = findAnyMarkRangeAtCursor(
     pos,
-    $from as unknown as Parameters<typeof findAnyMarkRangeAtCursor>[1]
+    $from
   );
 
   if (!anyMarkRange) {

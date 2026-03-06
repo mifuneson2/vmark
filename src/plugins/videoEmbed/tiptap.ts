@@ -18,7 +18,6 @@
 import "./video-embed.css";
 import { Node } from "@tiptap/core";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
-import type { NodeView } from "@tiptap/pm/view";
 import { VideoEmbedNodeView } from "./VideoEmbedNodeView";
 import {
   parseVideoUrl,
@@ -123,7 +122,7 @@ export const videoEmbedExtension = Node.create({
       /* v8 ignore start -- @preserve reason: getPos is always a function in Tiptap NodeView context */
       const safeGetPos = typeof getPos === "function" ? getPos : () => undefined;
       /* v8 ignore stop */
-      return new VideoEmbedNodeView(node, safeGetPos, editor) as unknown as NodeView;
+      return new VideoEmbedNodeView(node, safeGetPos, editor);
     };
   },
 

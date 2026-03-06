@@ -42,6 +42,7 @@ vi.mock("@/plugins/markmap/constants", () => ({
 
 vi.mock("@/utils/debug", () => ({
   wysiwygAdapterWarn: vi.fn(),
+  wysiwygAdapterError: vi.fn(),
 }));
 
 vi.mock("./wysiwygAdapterUtils", () => ({

@@ -18,7 +18,7 @@ import { findWordAtCursor } from "@/plugins/syntaxReveal/marks";
 import { useLinkPopupStore } from "@/stores/linkPopupStore";
 import { useWikiLinkPopupStore } from "@/stores/wikiLinkPopupStore";
 import { readClipboardUrl } from "@/utils/clipboardUrl";
-import { wysiwygAdapterWarn } from "@/utils/debug";
+import { wysiwygAdapterWarn, wysiwygAdapterError } from "@/utils/debug";
 import { isViewConnected } from "./wysiwygAdapterUtils";
 import type { WysiwygToolbarContext } from "./types";
 
@@ -138,7 +138,7 @@ export function openLinkEditor(context: WysiwygToolbarContext): boolean {
       );
       view.focus();
     } catch (error) {
-      console.error("[wysiwygAdapter] Failed to open wiki link popup:", error);
+      wysiwygAdapterError("Failed to open wiki link popup:", error);
     }
     return true;
   }
@@ -184,7 +184,7 @@ export function openLinkEditor(context: WysiwygToolbarContext): boolean {
       });
       view.focus();
     } catch (error) {
-      console.error("[wysiwygAdapter] Failed to open link popup:", error);
+      wysiwygAdapterError("Failed to open link popup:", error);
       expandedToggleMarkTiptap(view, "link");
     }
   /* v8 ignore start -- @preserve reason: .catch() callback only fires on unexpected promise rejections; not triggered in tests */

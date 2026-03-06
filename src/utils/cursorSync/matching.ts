@@ -27,17 +27,18 @@ export function extractCursorContext(
   // Clamp position
   pos = Math.min(pos, text.length);
 
-  // Find word boundaries
+  // Find word boundaries (Unicode-aware for CJK support)
   let start = pos;
   let end = pos;
+  const wordChar = /[\p{L}\p{N}_]/u;
 
   // Move start back to word boundary
-  while (start > 0 && /\w/.test(text[start - 1])) {
+  while (start > 0 && wordChar.test(text[start - 1])) {
     start--;
   }
 
   // Move end forward to word boundary
-  while (end < text.length && /\w/.test(text[end])) {
+  while (end < text.length && wordChar.test(text[end])) {
     end++;
   }
 

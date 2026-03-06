@@ -190,6 +190,31 @@ describe("stripMarkdownSyntax", () => {
       expect(result.adjustedColumn).toBeGreaterThanOrEqual(0);
     });
 
+    it("strips nested blockquote + list markers (> - item)", () => {
+      // "> - item" => blockquote "> " stripped first, then "- " list marker
+      const result = stripMarkdownSyntax("> - item", 8);
+      expect(result.text).toBe("item");
+      expect(result.adjustedColumn).toBe(4);
+    });
+
+    it("strips nested blockquote + ordered list (> 1. item)", () => {
+      const result = stripMarkdownSyntax("> 1. item", 9);
+      expect(result.text).toBe("item");
+      expect(result.adjustedColumn).toBe(4);
+    });
+
+    it("strips deeply nested blockquote (>> nested)", () => {
+      const result = stripMarkdownSyntax(">> nested", 9);
+      expect(result.text).toBe("nested");
+      expect(result.adjustedColumn).toBe(6);
+    });
+
+    it("strips deeply nested blockquote + list (> > - item)", () => {
+      const result = stripMarkdownSyntax("> > - item", 10);
+      expect(result.text).toBe("item");
+      expect(result.adjustedColumn).toBe(4);
+    });
+
     it("returns column 0 when cursor is inside blockquote marker", () => {
       const result = stripMarkdownSyntax("> text", 0);
       expect(result.text).toBe("text");

@@ -117,20 +117,35 @@ describe("extractCursorContext", () => {
     });
   });
 
-  describe("CJK text", () => {
-    it("extracts context around CJK characters", () => {
+  describe("CJK text (Unicode-aware word boundaries)", () => {
+    it("extracts CJK+ASCII as a single word when contiguous", () => {
       const text = "hello你好world";
-      // CJK chars are not \w, so they act as word boundaries
+      // With Unicode-aware \p{L}, CJK chars ARE word chars
       const result = extractCursorContext(text, 5);
-      expect(result.word).toBe("hello");
-      expect(result.contextBefore).toBe("hello");
+      expect(result.word).toBe("hello你好world");
+      expect(result.offsetInWord).toBe(5);
     });
 
-    it("returns empty word when cursor is on CJK character", () => {
-      const text = "hello你好world";
-      const result = extractCursorContext(text, 6);
-      // 你 is not \w
-      expect(result.word).toBe("");
+    it("extracts standalone CJK word", () => {
+      const text = "这是测试";
+      const result = extractCursorContext(text, 2);
+      expect(result.word).toBe("这是测试");
+      expect(result.offsetInWord).toBe(2);
+    });
+
+    it("treats CJK punctuation as word boundary", () => {
+      const text = "你好，世界";
+      // ，(U+FF0C) is not \p{L}\p{N} — acts as boundary
+      const result = extractCursorContext(text, 2);
+      expect(result.word).toBe("你好");
+      expect(result.offsetInWord).toBe(2);
+    });
+
+    it("treats space between CJK and ASCII as word boundary", () => {
+      const text = "hello 你好";
+      const result = extractCursorContext(text, 3);
+      expect(result.word).toBe("hello");
+      expect(result.offsetInWord).toBe(3);
     });
   });
 

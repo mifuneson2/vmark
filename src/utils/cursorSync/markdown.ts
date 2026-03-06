@@ -93,10 +93,10 @@ export function stripMarkdownSyntax(
     }
   }
 
-  // Strip list markers: - * + or numbered
-  const listMatch = text.match(/^(\s*)([-*+]|\d+\.)\s+/);
-  if (listMatch) {
-    const markerLen = listMatch[0].length;
+  // Strip blockquote markers first (before list) so nested `> - item` strips both
+  const quoteMatch = text.match(/^(>\s*)+/);
+  if (quoteMatch) {
+    const markerLen = quoteMatch[0].length;
     text = text.slice(markerLen);
     if (column - offset >= markerLen) {
       offset += markerLen;
@@ -105,10 +105,10 @@ export function stripMarkdownSyntax(
     }
   }
 
-  // Strip blockquote markers: >
-  const quoteMatch = text.match(/^(>\s*)+/);
-  if (quoteMatch) {
-    const markerLen = quoteMatch[0].length;
+  // Strip list markers: - * + or numbered
+  const listMatch = text.match(/^(\s*)([-*+]|\d+\.)\s+/);
+  if (listMatch) {
+    const markerLen = listMatch[0].length;
     text = text.slice(markerLen);
     if (column - offset >= markerLen) {
       offset += markerLen;

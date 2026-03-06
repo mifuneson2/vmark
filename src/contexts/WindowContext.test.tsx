@@ -138,10 +138,13 @@ vi.mock("../utils/linebreakDetection", () => ({
 
 vi.mock("@/utils/debug", () => ({
   windowCloseWarn: vi.fn(),
+  windowContextError: vi.fn(),
 }));
 
 // Now import components under test
 import { WindowProvider, useWindowLabel, useIsDocumentWindow } from "./WindowContext";
+import { windowContextError as _windowContextError } from "@/utils/debug";
+const mockWindowContextError = vi.mocked(_windowContextError);
 
 // Helper wrapper
 function _Wrapper({ children }: { children: ReactNode }) {
@@ -772,7 +775,7 @@ describe("WindowContext", () => {
         },
       });
 
-      expect(errorSpy).toHaveBeenCalledWith(
+      expect(mockWindowContextError).toHaveBeenCalledWith(
         expect.stringContaining("Failed to apply runtime tab transfer"),
         expect.any(Error),
       );
@@ -923,7 +926,7 @@ describe("WindowContext", () => {
 
       await vi.advanceTimersByTimeAsync(200);
 
-      expect(errorSpy).toHaveBeenCalledWith(
+      expect(mockWindowContextError).toHaveBeenCalledWith(
         expect.stringContaining("Failed to claim tab transfer"),
         expect.any(Error),
       );
@@ -1018,7 +1021,7 @@ describe("WindowContext", () => {
       );
 
       await waitFor(() => {
-        expect(errorSpy).toHaveBeenCalledWith(
+        expect(mockWindowContextError).toHaveBeenCalledWith(
           expect.stringContaining("Failed to open workspace from URL param"),
           expect.any(Error),
         );
@@ -1099,7 +1102,7 @@ describe("WindowContext", () => {
       });
 
       // Should have logged the error
-      expect(consoleSpy).toHaveBeenCalledWith(
+      expect(mockWindowContextError).toHaveBeenCalledWith(
         expect.stringContaining("Init failed"),
         expect.any(Error),
       );
@@ -1141,7 +1144,7 @@ describe("WindowContext", () => {
       // Give time for the listen promise to reject
       await new Promise((r) => setTimeout(r, 150));
 
-      expect(consoleSpy).toHaveBeenCalledWith(
+      expect(mockWindowContextError).toHaveBeenCalledWith(
         expect.stringContaining("tab removal listener"),
         expect.any(Error),
       );
@@ -1364,7 +1367,7 @@ describe("WindowContext", () => {
 
       await vi.advanceTimersByTimeAsync(200);
 
-      expect(errorSpy).toHaveBeenCalledWith(
+      expect(mockWindowContextError).toHaveBeenCalledWith(
         expect.stringContaining("Init failed"),
         expect.any(Error),
       );

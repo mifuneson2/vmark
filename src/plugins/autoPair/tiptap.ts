@@ -65,13 +65,7 @@ export const autoPairExtension = Extension.create({
           handleTextInput(view, from, to, text) {
             // Block during IME composition and grace period
             if (isComposingOrGrace(view)) return false;
-            return handleTextInput(
-              view as unknown as Parameters<typeof handleTextInput>[0],
-              from,
-              to,
-              text,
-              getConfig()
-            );
+            return handleTextInput(view, from, to, text, getConfig());
           },
           // Use handleDOMEvents.keydown instead of handleKeyDown to intercept
           // Tab/Backspace before Tiptap's keyboard shortcuts (list indent, etc.)
@@ -79,7 +73,7 @@ export const autoPairExtension = Extension.create({
             keydown(view, event) {
               // Block during IME composition, grace period, or IME key events
               if (isComposingOrGrace(view) || isImeKeyEvent(event)) return false;
-              return keyHandler(view as unknown as Parameters<typeof keyHandler>[0], event);
+              return keyHandler(view, event);
             },
             compositionend(view) {
               // Mark composition end for grace period tracking

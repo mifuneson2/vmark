@@ -21,6 +21,7 @@ import { NodeSelection, Selection, type EditorState } from "@tiptap/pm/state";
 import type { EditorView } from "@tiptap/pm/view";
 import { Fragment, Slice, type Schema, type Node as PMNode, type NodeType } from "@tiptap/pm/model";
 import { parseMarkdown, serializeMarkdown } from "@/utils/markdownPipeline";
+import { sourcePeekError } from "@/utils/debug";
 import type { MarkdownPipelineOptions } from "@/utils/markdownPipeline/types";
 import { type SourcePeekRange } from "@/stores/sourcePeekStore";
 
@@ -169,7 +170,7 @@ export function applySourcePeekMarkdown(
     view.dispatch(tr.scrollIntoView());
     return true;
   } catch (error) {
-    console.error("[SourcePeek] Failed to apply markdown:", error);
+    sourcePeekError("Failed to apply markdown:", error);
     return false;
   }
 }

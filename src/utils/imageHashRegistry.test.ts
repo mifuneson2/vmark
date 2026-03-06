@@ -15,6 +15,7 @@ const mockJoin = vi.mocked(join);
 // Mock debug logger to suppress output
 vi.mock("@/utils/debug", () => ({
   imageHashWarn: vi.fn(),
+  imageHashError: vi.fn(),
 }));
 
 // Mock ASSETS_FOLDER constant
@@ -204,8 +205,9 @@ describe("saveHashRegistry", () => {
       hashes: {},
     });
 
-    expect(consoleErrorSpy).toHaveBeenCalledWith(
-      "[ImageHashRegistry] Failed to save registry:",
+    const debug = await import("@/utils/debug");
+    expect(vi.mocked(debug.imageHashError)).toHaveBeenCalledWith(
+      "Failed to save registry:",
       expect.any(Error)
     );
   });

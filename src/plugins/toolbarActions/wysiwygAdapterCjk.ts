@@ -17,6 +17,7 @@ import { useSettingsStore } from "@/stores/settingsStore";
 import { useTabStore } from "@/stores/tabStore";
 import { collapseNewlines, formatMarkdown, removeTrailingSpaces } from "@/lib/cjkFormatter";
 import { normalizeLineEndings } from "@/utils/linebreaks";
+import { wysiwygAdapterError } from "@/utils/debug";
 import { parseMarkdown, serializeMarkdown } from "@/utils/markdownPipeline";
 import {
   applyFullDocumentTransform,
@@ -88,7 +89,7 @@ function handleFormatCJKBlock(context: WysiwygToolbarContext): boolean {
     view.focus();
     return true;
   } catch (error) {
-    console.error("[wysiwygAdapter] Failed to format CJK block:", error);
+    wysiwygAdapterError("Failed to format CJK block:", error);
     return false;
   }
 }

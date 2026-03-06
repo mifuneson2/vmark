@@ -46,7 +46,7 @@ class TiptapTableUIPluginView {
   constructor(view: EditorView) {
     this.view = view;
     this.contextMenu = new TiptapTableContextMenu(view);
-    this.columnResize = new ColumnResizeManager(view as unknown as EditorView);
+    this.columnResize = new ColumnResizeManager(view);
 
     const tr = view.state.tr.setMeta(tiptapTableUIPluginKey, { contextMenu: this.contextMenu });
     view.dispatch(tr);
@@ -81,8 +81,8 @@ function cmdWhenInTable(fn: (view: EditorView) => boolean): Command {
     /* v8 ignore next -- @preserve reason: commands always receive view in real editor */
     if (!view) return false;
     /* v8 ignore next -- @preserve reason: cmdWhenInTable guards are tested via other table commands */
-    if (!isInTable(view as unknown as EditorView)) return false;
-    return fn(view as unknown as EditorView);
+    if (!isInTable(view)) return false;
+    return fn(view);
   };
 }
 
@@ -115,12 +115,12 @@ export const tableUIExtension = Extension.create({
           },
         },
         view(editorView) {
-          return new TiptapTableUIPluginView(editorView as unknown as EditorView);
+          return new TiptapTableUIPluginView(editorView);
         },
         props: {
           handleDOMEvents: {
             contextmenu: (view, event) => {
-              if (!isInTable(view as unknown as EditorView)) return false;
+              if (!isInTable(view)) return false;
               event.preventDefault();
 
               const pluginState = tiptapTableUIPluginKey.getState(view.state);

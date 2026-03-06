@@ -16,6 +16,7 @@ import { useDocumentStore } from "@/stores/documentStore";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { useTabStore } from "@/stores/tabStore";
 import { resolveHardBreakStyle } from "@/utils/linebreaks";
+import { wysiwygAdapterError } from "@/utils/debug";
 import { parseMarkdown, serializeMarkdown } from "@/utils/markdownPipeline";
 import type { WysiwygToolbarContext } from "./types";
 
@@ -105,7 +106,7 @@ export function applyFullDocumentTransform(
     view.focus();
     return true;
   } catch (error) {
-    console.error("[wysiwygAdapter] Failed to apply document transform:", error);
+    wysiwygAdapterError("Failed to apply document transform:", error);
     return false;
   }
 }

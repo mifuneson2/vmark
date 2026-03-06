@@ -408,7 +408,7 @@ window.addEventListener("error", function(e) {
         msgTarget
       );
     }
-  } catch (_) {}
+  } catch (_e) { console.error("[pdfExport] Failed to notify parent:", _e); }
 });
   </script>
 </body>

@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect, afterEach } from "vitest";
-import { EditorState } from "@codemirror/state";
+import { EditorState, EditorSelection } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
 import {
   getCellBoundaries,
@@ -657,5 +657,47 @@ describe("goToPreviousCell — return false at end", () => {
     const cursor = view.state.selection.main.from;
     const line = view.state.doc.lineAt(cursor);
     expect(line.text).toContain("B"); // last cell of header
+  });
+})
+
+describe("multi-cursor bail-out", () => {
+  it("goToNextCell returns false with multiple cursors", () => {
+    const content = `| A | B |
+|---|---|
+| 1 | 2 |`;
+    const state = EditorState.create({
+      doc: content,
+      extensions: [EditorState.allowMultipleSelections.of(true)],
+      selection: EditorSelection.create([
+        EditorSelection.cursor(2),
+        EditorSelection.cursor(6),
+      ], 0),
+    });
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    const view = new EditorView({ state, parent: container });
+    views.push(view);
+
+    expect(goToNextCell(view)).toBe(false);
+  });
+
+  it("goToPreviousCell returns false with multiple cursors", () => {
+    const content = `| A | B |
+|---|---|
+| 1 | 2 |`;
+    const state = EditorState.create({
+      doc: content,
+      extensions: [EditorState.allowMultipleSelections.of(true)],
+      selection: EditorSelection.create([
+        EditorSelection.cursor(2),
+        EditorSelection.cursor(6),
+      ], 0),
+    });
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    const view = new EditorView({ state, parent: container });
+    views.push(view);
+
+    expect(goToPreviousCell(view)).toBe(false);
   });
 })

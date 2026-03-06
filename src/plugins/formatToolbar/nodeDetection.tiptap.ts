@@ -88,7 +88,7 @@ export function getContextMode(view: EditorView): ContextMode {
   if (!empty) return "format";
 
   const $from = view.state.selection.$from;
-  const wordRange = findWordAtCursor($from as unknown as Parameters<typeof findWordAtCursor>[0]);
+  const wordRange = findWordAtCursor($from);
   if (wordRange) return "format";
 
   const parent = $from.parent;

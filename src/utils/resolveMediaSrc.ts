@@ -28,7 +28,7 @@ import {
   isRelativePath,
   validateImagePath,
 } from "@/plugins/imageView/security";
-import { imageViewWarn } from "@/utils/debug";
+import { imageViewWarn, resolveMediaError } from "@/utils/debug";
 import { decodeMarkdownUrl } from "@/utils/markdownUrl";
 
 /**
@@ -105,7 +105,7 @@ export async function resolveMediaSrc(
       const absolutePath = await join(docDir, cleanPath);
       return convertFileSrc(normalizePathForAsset(absolutePath));
     } catch (error) {
-      console.error("Failed to resolve media path:", error);
+      resolveMediaError("Failed to resolve media path:", error);
       return src;
     }
   }

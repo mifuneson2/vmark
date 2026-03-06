@@ -1,3 +1,7 @@
+vi.mock("@/utils/debug", () => ({
+  wysiwygAdapterError: vi.fn(),
+}));
+
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // Mock all external dependencies
@@ -199,9 +203,9 @@ describe("handleFormatCJK", () => {
     expect(handleFormatCJK(ctx)).toBe(false);
   });
 
-  it("returns false and logs error when block serialization throws", () => {
+  it("returns false and logs error when block serialization throws", async () => {
     const ctx = createMockContext({ selectionEmpty: true });
-    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const debug = await import("@/utils/debug");
 
     vi.mocked(serializeMarkdown).mockImplementation(() => {
       throw new Error("serialize failed");
@@ -209,11 +213,10 @@ describe("handleFormatCJK", () => {
 
     const result = handleFormatCJK(ctx);
     expect(result).toBe(false);
-    expect(consoleSpy).toHaveBeenCalledWith(
+    expect(vi.mocked(debug.wysiwygAdapterError)).toHaveBeenCalledWith(
       expect.stringContaining("Failed to format CJK block"),
       expect.any(Error),
     );
-    consoleSpy.mockRestore();
   });
 });
 
