@@ -98,6 +98,8 @@ import { useCrashRecoveryWriter } from "@/hooks/useCrashRecoveryWriter";
 import { useCrashRecoveryStartup } from "@/hooks/useCrashRecoveryStartup";
 import { useCrashRecoveryCleanup } from "@/hooks/useCrashRecoveryCleanup";
 import { GeniePicker } from "@/components/GeniePicker/GeniePicker";
+import { QuickOpen } from "@/components/QuickOpen/QuickOpen";
+import { useQuickOpenShortcuts } from "@/hooks/useQuickOpenShortcuts";
 
 /** Height of the title bar area in pixels */
 const TITLEBAR_HEIGHT = 40;
@@ -157,6 +159,11 @@ function DocumentWindowHooks() {
 // Wrapper so useGenieShortcuts can be called conditionally via mount/unmount
 function GenieShortcutsRunner() {
   useGenieShortcuts();
+  return null;
+}
+
+function QuickOpenShortcutsRunner() {
+  useQuickOpenShortcuts();
   return null;
 }
 
@@ -239,9 +246,11 @@ function MainLayout() {
       {windowLabel === "main" && <MainWindowHooks />}
       {/* AI Genies hooks */}
       <GenieShortcutsRunner />
+      <QuickOpenShortcutsRunner />
 
       {/* Drop zone indicator for drag-and-drop */}
       <DropOverlay />
+      <QuickOpen windowLabel={windowLabel} />
 
       {/* Title bar with drag region and filename display */}
       <TitleBar />
