@@ -22,18 +22,22 @@
 
 import { useEffect } from "react";
 import { useDocumentStore } from "@/stores/documentStore";
-import { shouldBlockReload, getReloadWarningMessage, isReloadShortcut, isTerminalFocused } from "@/utils/reloadGuard";
+import { shouldBlockReload, getReloadWarningMessage, isReloadShortcut, isTerminalFocused, isCtrlR } from "@/utils/reloadGuard";
 
 /**
- * Production guard: block all reload triggers unconditionally.
+ * Production guard: block reload triggers.
  *
  * Blocks keyboard shortcuts (Cmd+R, Ctrl+R), beforeunload, and the
  * native webview context menu (which includes a "Reload" option on macOS).
+ * Exception: Ctrl+R passes through when the terminal is focused (shell
+ * reverse-i-search). Cmd+R is always blocked.
  */
 function useProductionReloadGuard(): void {
   useEffect(() => {
     const blockKeyboard = (e: KeyboardEvent) => {
-      if (isReloadShortcut(e) && !isTerminalFocused()) {
+      // Allow Ctrl+R through to the terminal for shell reverse-i-search,
+      // but always block Cmd+R (macOS reload shortcut).
+      if (isReloadShortcut(e) && !(isTerminalFocused() && isCtrlR(e))) {
         e.preventDefault();
         e.stopPropagation();
       }

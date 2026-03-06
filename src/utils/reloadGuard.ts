@@ -82,8 +82,21 @@ export function isReloadShortcut(e: Pick<KeyboardEvent, "key" | "metaKey" | "ctr
  * like Ctrl+R should pass through to the shell (e.g., zsh reverse-i-search)
  * instead of being intercepted by the reload guard.
  */
+/** CSS selector for the terminal container — shared with TerminalPanel.tsx className. */
+const TERMINAL_CONTAINER_SELECTOR = ".terminal-container";
+
 export function isTerminalFocused(): boolean {
   const el = document.activeElement;
   if (!el) return false;
-  return el.closest(".terminal-container") !== null;
+  return el.closest(TERMINAL_CONTAINER_SELECTOR) !== null;
+}
+
+/**
+ * Check if a keyboard event is Ctrl+R specifically (not Cmd+R).
+ *
+ * Only Ctrl+R should pass through to the terminal for shell reverse-i-search.
+ * Cmd+R is a reload shortcut on macOS and must always be blocked.
+ */
+export function isCtrlR(e: Pick<KeyboardEvent, "key" | "ctrlKey" | "metaKey">): boolean {
+  return e.ctrlKey && !e.metaKey && e.key.toLowerCase() === "r";
 }

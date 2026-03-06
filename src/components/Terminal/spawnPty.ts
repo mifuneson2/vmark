@@ -137,7 +137,16 @@ export async function spawnPty(options: SpawnOptions): Promise<IPty> {
 
   // Fetch login shell PATH so CLI tools (node, claude, etc.) are discoverable.
   // macOS GUI apps have minimal PATH; this aligns with system terminal behavior.
-  const loginPath = await invoke<string>("get_login_shell_path");
+  // Falls back to basic system paths if IPC fails or returns empty.
+  let loginPath: string;
+  try {
+    loginPath = await invoke<string>("get_login_shell_path");
+  } catch {
+    loginPath = "";
+  }
+  if (!loginPath) {
+    loginPath = "/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin";
+  }
 
   const configuredShell = useSettingsStore.getState().terminal.shell.trim();
   // Reject relative paths (security: prevent CWD/PATH hijack on Windows).

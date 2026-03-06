@@ -183,13 +183,6 @@ async fn atomic_write_file(path: String, content: String) -> Result<(), String> 
     .map_err(|e| format!("Task join error: {}", e))?
 }
 
-/// Return the user's default shell.
-///
-/// Fallback chain:
-/// - macOS/Linux: `getpwuid(getuid())` → `$SHELL` → `/bin/sh`
-///   `getpwuid` reads the login shell from the user database, which is
-///   reliable even in GUI apps where `$SHELL` may not be set.
-/// - Windows: `%COMSPEC%` → `%SystemRoot%\System32\cmd.exe` → `C:\Windows\System32\cmd.exe`
 /// Return the login shell's PATH — needed by the integrated terminal so that
 /// CLI tools (node, claude, etc.) are discoverable, matching system terminal behavior.
 ///
@@ -199,6 +192,13 @@ fn get_login_shell_path() -> String {
     ai_provider::login_shell_path()
 }
 
+/// Return the user's default shell.
+///
+/// Fallback chain:
+/// - macOS/Linux: `getpwuid(getuid())` → `$SHELL` → `/bin/sh`
+///   `getpwuid` reads the login shell from the user database, which is
+///   reliable even in GUI apps where `$SHELL` may not be set.
+/// - Windows: `%COMSPEC%` → `%SystemRoot%\System32\cmd.exe` → `C:\Windows\System32\cmd.exe`
 #[tauri::command]
 fn get_default_shell() -> String {
     if cfg!(target_os = "windows") {

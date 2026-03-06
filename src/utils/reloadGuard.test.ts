@@ -7,6 +7,7 @@ import {
   getReloadWarningMessage,
   isReloadShortcut,
   isTerminalFocused,
+  isCtrlR,
   type ReloadGuardInput,
 } from "./reloadGuard";
 
@@ -123,6 +124,60 @@ describe("reloadGuard", () => {
       // When nothing specific is focused, activeElement is <body>
       (document.activeElement as HTMLElement)?.blur?.();
       expect(isTerminalFocused()).toBe(false);
+    });
+  });
+
+  describe("isCtrlR", () => {
+    it("returns true for Ctrl+R (shell reverse-i-search)", () => {
+      expect(isCtrlR({ key: "r", ctrlKey: true, metaKey: false })).toBe(true);
+    });
+
+    it("returns true for Ctrl+R with uppercase R", () => {
+      expect(isCtrlR({ key: "R", ctrlKey: true, metaKey: false })).toBe(true);
+    });
+
+    it("returns false for Cmd+R (macOS reload — must always be blocked)", () => {
+      expect(isCtrlR({ key: "r", ctrlKey: false, metaKey: true })).toBe(false);
+    });
+
+    it("returns false for Cmd+Ctrl+R (both modifiers)", () => {
+      expect(isCtrlR({ key: "r", ctrlKey: true, metaKey: true })).toBe(false);
+    });
+
+    it("returns false for plain R", () => {
+      expect(isCtrlR({ key: "r", ctrlKey: false, metaKey: false })).toBe(false);
+    });
+  });
+
+  describe("reload guard integration: terminal focus + shortcut interaction", () => {
+    let container: HTMLDivElement;
+    let textarea: HTMLTextAreaElement;
+
+    beforeEach(() => {
+      container = document.createElement("div");
+      container.className = "terminal-container";
+      textarea = document.createElement("textarea");
+      container.appendChild(textarea);
+      document.body.appendChild(container);
+      textarea.focus();
+    });
+
+    afterEach(() => {
+      document.body.removeChild(container);
+    });
+
+    it("Ctrl+R should pass through when terminal is focused", () => {
+      const e = { key: "r", ctrlKey: true, metaKey: false };
+      // Terminal is focused AND it's Ctrl+R — should NOT be blocked
+      const shouldPassThrough = isReloadShortcut(e) && isTerminalFocused() && isCtrlR(e);
+      expect(shouldPassThrough).toBe(true);
+    });
+
+    it("Cmd+R should still be blocked when terminal is focused", () => {
+      const e = { key: "r", ctrlKey: false, metaKey: true };
+      // Terminal is focused BUT it's Cmd+R — should still be blocked
+      const shouldPassThrough = isReloadShortcut(e) && isTerminalFocused() && isCtrlR(e);
+      expect(shouldPassThrough).toBe(false);
     });
   });
 });

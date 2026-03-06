@@ -526,6 +526,38 @@ describe("spawnPty shell selection", () => {
     expect(spawnCallEnv.env.PATH).toBe("/usr/local/bin:/usr/bin:/bin");
   });
 
+  it("falls back to default PATH when get_login_shell_path IPC fails", async () => {
+    vi.mocked(useSettingsStore.getState).mockReturnValue({
+      terminal: { shell: "" },
+    } as ReturnType<typeof useSettingsStore.getState>);
+    vi.mocked(invoke).mockImplementation((cmd: string) => {
+      if (cmd === "get_login_shell_path") return Promise.reject(new Error("IPC error"));
+      if (cmd === "get_default_shell") return Promise.resolve("/bin/zsh");
+      return Promise.resolve(null);
+    });
+
+    await spawnPty({ term: mockTerm, onExit: vi.fn(), disposed: () => false });
+
+    const spawnCallEnv = vi.mocked(spawn).mock.calls[0][2] as { env: Record<string, string> };
+    expect(spawnCallEnv.env.PATH).toBe("/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin");
+  });
+
+  it("falls back to default PATH when get_login_shell_path returns empty", async () => {
+    vi.mocked(useSettingsStore.getState).mockReturnValue({
+      terminal: { shell: "" },
+    } as ReturnType<typeof useSettingsStore.getState>);
+    vi.mocked(invoke).mockImplementation((cmd: string) => {
+      if (cmd === "get_login_shell_path") return Promise.resolve("");
+      if (cmd === "get_default_shell") return Promise.resolve("/bin/zsh");
+      return Promise.resolve(null);
+    });
+
+    await spawnPty({ term: mockTerm, onExit: vi.fn(), disposed: () => false });
+
+    const spawnCallEnv = vi.mocked(spawn).mock.calls[0][2] as { env: Record<string, string> };
+    expect(spawnCallEnv.env.PATH).toBe("/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin");
+  });
+
   it("throws 'disposed before fallback spawn' when disposed becomes true after fallback shell resolved (L168)", async () => {
     // L168: disposed() check AFTER the fallback invoke resolves
     // Need: disposed() returns false at L143 (pre-spawn check) but true at L168 (post-fallback-await)
