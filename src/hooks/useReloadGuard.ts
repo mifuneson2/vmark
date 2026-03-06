@@ -6,9 +6,10 @@
  *   editor instances, store data) even when no documents are dirty.
  *
  * Behavior:
- *   - Production: blocks ALL reload triggers unconditionally
- *     (Cmd+R, Ctrl+R, Ctrl+Shift+R, beforeunload, and the native
- *     webview context menu which includes "Reload").
+ *   - Production: blocks reload triggers (Cmd+R, Ctrl+R, Ctrl+Shift+R,
+ *     beforeunload, and the native webview context menu) UNLESS the
+ *     integrated terminal is focused — in which case Ctrl+R passes
+ *     through to the shell for reverse-i-search.
  *   - Dev: only warns via beforeunload when documents are dirty,
  *     so developers can still use Cmd+R to refresh during development.
  *
