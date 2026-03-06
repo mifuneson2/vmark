@@ -33,6 +33,7 @@ import { getReplaceableTab, findExistingTabForPath } from "@/hooks/useReplaceabl
 import { detectLinebreaks } from "@/utils/linebreakDetection";
 import { openWorkspaceWithConfig } from "@/hooks/openWorkspaceWithConfig";
 import { safeUnlisten } from "@/utils/safeUnlisten";
+import { getFileName } from "@/utils/pathUtils";
 
 /**
  * Opens a file in a new tab (or activates existing tab if already open).
@@ -56,7 +57,7 @@ async function openFileInNewTab(windowLabel: string, path: string): Promise<void
     useRecentFilesStore.getState().addFile(path);
   } catch (error) {
     console.error("[DragDrop] Failed to open file:", path, error);
-    const filename = path.split("/").pop() ?? path;
+    const filename = getFileName(path) || path;
     toast.error(`Failed to open ${filename}`);
   }
 }
@@ -169,7 +170,7 @@ export function useDragDropOpen(): void {
               await invoke("open_file_in_new_window", { path });
             } catch (error) {
               console.error("[DragDrop] Failed to open file in new window:", error);
-              const filename = path.split("/").pop() ?? path;
+              const filename = getFileName(path) || path;
               toast.error(`Failed to open ${filename}`);
             }
           }
@@ -205,7 +206,7 @@ export function useDragDropOpen(): void {
                   continue;
                 } catch (error) {
                   console.error("[DragDrop] Failed to replace tab with file:", path, error);
-                  const filename = path.split("/").pop() ?? path;
+                  const filename = getFileName(path) || path;
                   toast.error(`Failed to open ${filename}`);
                 }
               }
@@ -251,7 +252,7 @@ export function useDragDropOpen(): void {
                 replaceableTabUsed = true;
               } catch (error) {
                 console.error("[DragDrop] Failed to replace tab with file:", path, error);
-                const filename = path.split("/").pop() ?? path;
+                const filename = getFileName(path) || path;
                 toast.error(`Failed to open ${filename}`);
               }
               break;
@@ -263,7 +264,7 @@ export function useDragDropOpen(): void {
                 });
               } catch (error) {
                 console.error("[DragDrop] Failed to open workspace in new window:", path, error);
-                const filename = path.split("/").pop() ?? path;
+                const filename = getFileName(path) || path;
                 toast.error(`Failed to open ${filename}`);
               }
               break;

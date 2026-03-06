@@ -21,10 +21,17 @@ use super::types::{emit_chunk, emit_done, emit_error};
 /// On Windows, `.cmd`/`.bat` shims (created by npm/yarn global installs)
 /// must run through `cmd.exe /c`.  On macOS/Linux this is a plain spawn.
 pub(crate) fn build_command(exe: &str, args: &[&str]) -> Command {
-    if cfg!(target_os = "windows") {
+    #[cfg(target_os = "windows")]
+    {
         let lower = exe.to_lowercase();
         if lower.ends_with(".cmd") || lower.ends_with(".bat") {
-            let mut c = Command::new("cmd");
+            // Use absolute path to cmd.exe to prevent CWD/PATH hijack attacks
+            let system_root =
+                std::env::var("SystemRoot").unwrap_or_else(|_| r"C:\Windows".to_string());
+            let cmd_path = std::path::PathBuf::from(system_root)
+                .join("System32")
+                .join("cmd.exe");
+            let mut c = Command::new(cmd_path);
             c.args(["/c", exe]);
             c.args(args);
             return c;

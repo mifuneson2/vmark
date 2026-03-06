@@ -8,6 +8,7 @@ import { useTabStore } from "@/stores/tabStore";
 import { useWorkspaceStore } from "@/stores/workspaceStore";
 import { fuzzyMatch, type FuzzyMatchResult } from "./fuzzyMatch";
 import type { FileNode } from "@/components/Sidebar/FileExplorer/types";
+import { getFileName } from "@/utils/pathUtils";
 
 export type QuickOpenTier = "recent" | "open" | "workspace";
 
@@ -26,10 +27,6 @@ export interface RankedItem {
 }
 
 const TIER_ORDER: Record<QuickOpenTier, number> = { recent: 0, open: 1, workspace: 2 };
-
-function getFilename(path: string): string {
-  return path.split("/").pop() || path;
-}
 
 function getRelativePath(path: string, rootPath: string | null): string {
   if (rootPath && (path === rootPath || path.startsWith(rootPath + "/"))) {
@@ -73,7 +70,7 @@ export function buildQuickOpenItems(
     seen.add(rf.path);
     items.push({
       path: rf.path,
-      filename: getFilename(rf.path),
+      filename: getFileName(rf.path),
       relPath: getRelativePath(rf.path, rootPath),
       tier: "recent",
       isOpenTab: openPathSet.has(rf.path),
@@ -86,7 +83,7 @@ export function buildQuickOpenItems(
     seen.add(path);
     items.push({
       path,
-      filename: getFilename(path),
+      filename: getFileName(path),
       relPath: getRelativePath(path, rootPath),
       tier: "open",
       isOpenTab: true,
@@ -99,7 +96,7 @@ export function buildQuickOpenItems(
     seen.add(path);
     items.push({
       path,
-      filename: getFilename(path),
+      filename: getFileName(path),
       relPath: getRelativePath(path, rootPath),
       tier: "workspace",
       isOpenTab: openPathSet.has(path),

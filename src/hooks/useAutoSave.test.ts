@@ -175,6 +175,26 @@ describe("useAutoSave", () => {
     expect(saveToPath).not.toHaveBeenCalled();
   });
 
+  it("skips divergent documents (user chose 'keep my changes')", async () => {
+    vi.mocked(useDocumentStore.getState).mockReturnValue({
+      getDocument: vi.fn().mockReturnValue({
+        isDirty: true,
+        filePath: "/tmp/doc.md",
+        content: "Hello",
+        isMissing: false,
+        isDivergent: true,
+      }),
+    } as unknown as ReturnType<typeof useDocumentStore.getState>);
+
+    renderHook(() => useAutoSave());
+
+    await act(async () => {
+      vi.advanceTimersByTime(1000);
+    });
+
+    expect(saveToPath).not.toHaveBeenCalled();
+  });
+
   it("skips when no tabs exist", async () => {
     vi.mocked(useTabStore.getState).mockReturnValue({
       activeTabId: { main: null },

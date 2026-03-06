@@ -60,6 +60,7 @@ import { resolveWorkspaceRootForExternalFile } from "../utils/openPolicy";
 import { isWithinRoot } from "../utils/paths";
 import type { TabTransferPayload } from "@/types/tabTransfer";
 import { windowCloseWarn, windowContextError } from "@/utils/debug";
+import { getFileName } from "@/utils/pathUtils";
 
 async function applyTabTransferData(label: string, data: TabTransferPayload): Promise<void> {
   // Set up workspace: prefer transferred root, fall back to file's parent
@@ -266,8 +267,7 @@ export function WindowProvider({ children }: WindowProviderProps) {
                 } catch (error) {
                   windowContextError("Failed to load file:", path, error);
                   useDocumentStore.getState().initDocument(tabId, "", null);
-                  /* v8 ignore next -- @preserve ?? path fallback: pop() only returns undefined for empty arrays */
-                  const filename = path.split("/").pop() ?? path;
+                  const filename = getFileName(path) || path;
                   toast.error(`Failed to open ${filename}`);
                 }
               }

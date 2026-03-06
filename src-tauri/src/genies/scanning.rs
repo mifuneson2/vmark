@@ -42,12 +42,14 @@ pub(crate) fn scan_genies_dir(
                 .filter(|c| !c.is_control())
                 .collect();
 
-            // Category from subdirectory relative to base
+            // Category from subdirectory relative to base.
+            // Normalize backslashes to forward slashes so Windows paths
+            // produce the same category/key strings as POSIX.
             let category = path
                 .parent()
                 .and_then(|p| p.strip_prefix(base).ok())
                 .filter(|rel| !rel.as_os_str().is_empty())
-                .map(|rel| rel.to_string_lossy().to_string());
+                .map(|rel| rel.to_string_lossy().replace('\\', "/"));
 
             // Key by relative path (e.g. "writing/improve") to avoid collisions
             // between files with the same stem in different categories.
@@ -56,7 +58,7 @@ pub(crate) fn scan_genies_dir(
                 .unwrap_or(&path)
                 .with_extension("")
                 .to_string_lossy()
-                .to_string();
+                .replace('\\', "/");
 
             entries.insert(
                 rel_key,
@@ -112,7 +114,7 @@ fn scan_genies_recursive(dir: &Path, base: &Path, entries: &mut Vec<GenieMenuEnt
                 .parent()
                 .and_then(|p| p.strip_prefix(base).ok())
                 .filter(|rel| !rel.as_os_str().is_empty())
-                .map(|rel| rel.to_string_lossy().to_string());
+                .map(|rel| rel.to_string_lossy().replace('\\', "/"));
 
             entries.push(GenieMenuEntry {
                 title,

@@ -31,6 +31,7 @@ import { getReplaceableTab } from "@/hooks/useReplaceableTab";
 import { detectLinebreaks } from "@/utils/linebreakDetection";
 import { openWorkspaceWithConfig } from "@/hooks/openWorkspaceWithConfig";
 import { safeUnlistenAll } from "@/utils/safeUnlisten";
+import { getFileName } from "@/utils/pathUtils";
 
 export function useRecentFilesMenuEvents(): void {
   const unlistenRefs = useRef<UnlistenFn[]>([]);
@@ -147,7 +148,7 @@ export function useRecentFilesMenuEvents(): void {
                 });
               } catch (error) {
                 console.error("[Menu] Failed to open workspace in new window:", error);
-                const filename = file.path.split("/").pop() ?? file.path;
+                const filename = getFileName(file.path) || file.path;
                 toast.error(`Failed to open ${filename}`);
               }
               break;

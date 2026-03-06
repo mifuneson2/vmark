@@ -5,9 +5,9 @@
  *   skips untitled (no filePath) documents and coordinates with manual save.
  *
  * Pipeline: Interval timer fires → iterate all tabs for window → check
- *   isDirty + hasFilePath → if dirty, call saveToPath() → markAutoSaved()
- *   clears dirty flag without touching savedContent (so external change
- *   detection still works)
+ *   isDirty + hasFilePath + !isDivergent → if dirty, call saveToPath() →
+ *   markAutoSaved() clears dirty flag without touching savedContent (so
+ *   external change detection still works)
  *
  * Key decisions:
  *   - Uses saveToPath() for consistent line ending normalization + history snapshots
@@ -60,8 +60,9 @@ export function useAutoSave() {
 
       for (const tab of tabs) {
         const doc = documentStore.getDocument(tab.id);
-        // Skip if no document, not dirty, no file path (untitled), or file was deleted
-        if (!doc || !doc.isDirty || !doc.filePath || doc.isMissing) continue;
+        // Skip if no document, not dirty, no file path (untitled), file was deleted,
+        // or user chose "keep my changes" after external change (divergent)
+        if (!doc || !doc.isDirty || !doc.filePath || doc.isMissing || doc.isDivergent) continue;
 
         const success = await saveToPath(tab.id, doc.filePath, doc.content, "auto");
         if (success) {
