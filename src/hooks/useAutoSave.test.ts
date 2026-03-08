@@ -37,6 +37,7 @@ vi.mock("@/utils/reentryGuard", () => ({
 
 vi.mock("@/utils/debug", () => ({
   autoSaveLog: vi.fn(),
+  saveError: vi.fn(),
 }));
 
 import { useAutoSave } from "./useAutoSave";
@@ -62,7 +63,6 @@ describe("useAutoSave", () => {
     });
 
     vi.mocked(useTabStore.getState).mockReturnValue({
-      activeTabId: { main: "tab-1" },
       tabs: { main: [{ id: "tab-1" }] },
     } as unknown as ReturnType<typeof useTabStore.getState>);
 
@@ -197,7 +197,6 @@ describe("useAutoSave", () => {
 
   it("skips when no tabs exist", async () => {
     vi.mocked(useTabStore.getState).mockReturnValue({
-      activeTabId: { main: null },
       tabs: { main: [] },
     } as unknown as ReturnType<typeof useTabStore.getState>);
 
@@ -310,7 +309,6 @@ describe("useAutoSave", () => {
 
   it("saves multiple dirty tabs in the same window", async () => {
     vi.mocked(useTabStore.getState).mockReturnValue({
-      activeTabId: { main: "tab-1" },
       tabs: { main: [{ id: "tab-1" }, { id: "tab-2" }] },
     } as unknown as ReturnType<typeof useTabStore.getState>);
 
@@ -341,9 +339,114 @@ describe("useAutoSave", () => {
     expect(saveToPath).toHaveBeenCalledWith("tab-2", "/tmp/doc2.md", "Content 2", "auto");
   });
 
+  it("prevents overlapping save cycles (reentry guard)", async () => {
+    // Make saveToPath take a long time (longer than the interval)
+    let resolveSave: (() => void) | null = null;
+    vi.mocked(saveToPath).mockImplementation(
+      () => new Promise<boolean>((resolve) => {
+        resolveSave = () => resolve(true);
+      })
+    );
+
+    renderHook(() => useAutoSave());
+
+    // First interval fires — starts saving
+    await act(async () => {
+      vi.advanceTimersByTime(1000);
+    });
+    expect(saveToPath).toHaveBeenCalledTimes(1);
+
+    // Second interval fires while first is still pending
+    await act(async () => {
+      vi.advanceTimersByTime(1000);
+    });
+    // Should still be 1 — second call was blocked by reentry guard
+    expect(saveToPath).toHaveBeenCalledTimes(1);
+
+    // Complete the first save
+    await act(async () => {
+      resolveSave?.();
+    });
+
+    // Advance past debounce (5s) so next save can fire
+    await act(async () => {
+      vi.advanceTimersByTime(5000);
+    });
+    // Now a new save should have started
+    expect(saveToPath).toHaveBeenCalledTimes(2);
+  });
+
+  it("re-reads document state per tab (not stale snapshot)", async () => {
+    let callCount = 0;
+    const getDocMock = vi.fn(() => {
+      callCount++;
+      // Simulate content changing between calls (first tab save modifies state)
+      return {
+        isDirty: true,
+        filePath: "/tmp/doc.md",
+        content: `Content v${callCount}`,
+        isMissing: false,
+        isDivergent: false,
+      };
+    });
+
+    vi.mocked(useDocumentStore.getState).mockReturnValue({
+      getDocument: getDocMock,
+    } as unknown as ReturnType<typeof useDocumentStore.getState>);
+
+    vi.mocked(useTabStore.getState).mockReturnValue({
+      tabs: { main: [{ id: "tab-1" }, { id: "tab-2" }] },
+    } as unknown as ReturnType<typeof useTabStore.getState>);
+
+    renderHook(() => useAutoSave());
+
+    await act(async () => {
+      vi.advanceTimersByTime(1000);
+    });
+
+    // getDocument should be called once per tab (2 calls total)
+    expect(getDocMock).toHaveBeenCalledTimes(2);
+    // Each save should get fresh content
+    expect(saveToPath).toHaveBeenCalledWith("tab-1", "/tmp/doc.md", "Content v1", "auto");
+    expect(saveToPath).toHaveBeenCalledWith("tab-2", "/tmp/doc.md", "Content v2", "auto");
+  });
+
+  it("continues saving remaining tabs when one tab throws", async () => {
+    vi.mocked(useTabStore.getState).mockReturnValue({
+      tabs: { main: [{ id: "tab-1" }, { id: "tab-2" }] },
+    } as unknown as ReturnType<typeof useTabStore.getState>);
+
+    const getDocMock = vi.fn((tabId: string) => ({
+      isDirty: true,
+      filePath: tabId === "tab-1" ? "/tmp/bad.md" : "/tmp/good.md",
+      content: "Content",
+      isMissing: false,
+      isDivergent: false,
+    }));
+
+    vi.mocked(useDocumentStore.getState).mockReturnValue({
+      getDocument: getDocMock,
+    } as unknown as ReturnType<typeof useDocumentStore.getState>);
+
+    // First tab throws, second succeeds
+    vi.mocked(saveToPath)
+      .mockRejectedValueOnce(new Error("disk full"))
+      .mockResolvedValueOnce(true);
+
+    renderHook(() => useAutoSave());
+
+    await act(async () => {
+      vi.advanceTimersByTime(1000);
+    });
+
+    // Both tabs should have been attempted
+    expect(saveToPath).toHaveBeenCalledTimes(2);
+    expect(saveToPath).toHaveBeenCalledWith("tab-1", "/tmp/bad.md", "Content", "auto");
+    expect(saveToPath).toHaveBeenCalledWith("tab-2", "/tmp/good.md", "Content", "auto");
+  });
+
   it("handles window with no tabs entry (undefined)", async () => {
     vi.mocked(useTabStore.getState).mockReturnValue({
-      activeTabId: { main: null },
       tabs: {},
     } as unknown as ReturnType<typeof useTabStore.getState>);
 

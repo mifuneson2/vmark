@@ -51,6 +51,28 @@ describe("documentStore", () => {
       expect(doc?.content).toBe("# Test");
       expect(doc?.filePath).toBe("/path/to/file.md");
     });
+
+    it("sets lastDiskContent to savedContent when savedContent is provided", () => {
+      const { initDocument, getDocument } = useDocumentStore.getState();
+
+      initDocument(WINDOW_LABEL, "Current edits", "/path.md", "Disk baseline");
+
+      const doc = getDocument(WINDOW_LABEL);
+      expect(doc?.content).toBe("Current edits");
+      expect(doc?.savedContent).toBe("Disk baseline");
+      expect(doc?.lastDiskContent).toBe("Disk baseline");
+      expect(doc?.isDirty).toBe(true);
+    });
+
+    it("marks clean when savedContent matches content", () => {
+      const { initDocument, getDocument } = useDocumentStore.getState();
+
+      initDocument(WINDOW_LABEL, "Same", "/path.md", "Same");
+
+      const doc = getDocument(WINDOW_LABEL);
+      expect(doc?.isDirty).toBe(false);
+      expect(doc?.lastDiskContent).toBe("Same");
+    });
   });
 
   describe("setContent", () => {
@@ -156,6 +178,35 @@ describe("documentStore", () => {
       expect(doc?.isDirty).toBe(false);
       expect(doc?.savedContent).toBe("Modified");
     });
+
+    it("keeps isDirty true when content diverged during save (TOCTOU)", () => {
+      const { initDocument, setContent, markSaved, getDocument } = useDocumentStore.getState();
+
+      initDocument(WINDOW_LABEL, "Original");
+      // User edits to "Version B"
+      setContent(WINDOW_LABEL, "Version B");
+      // But the save wrote "Version A" (normalized content from before edit)
+      markSaved(WINDOW_LABEL, "Version A");
+
+      const doc = getDocument(WINDOW_LABEL);
+      expect(doc?.isDirty).toBe(true);
+      expect(doc?.lastDiskContent).toBe("Version A");
+      // savedContent should be preserved from before the save
+      expect(doc?.savedContent).toBe("Original");
+    });
+
+    it("clears isDirty when content matches disk content", () => {
+      const { initDocument, setContent, markSaved, getDocument } = useDocumentStore.getState();
+
+      initDocument(WINDOW_LABEL, "Original");
+      setContent(WINDOW_LABEL, "Saved content");
+      markSaved(WINDOW_LABEL, "Saved content");
+
+      const doc = getDocument(WINDOW_LABEL);
+      expect(doc?.isDirty).toBe(false);
+      expect(doc?.savedContent).toBe("Saved content");
+      expect(doc?.lastDiskContent).toBe("Saved content");
+    });
   });
 
   describe("markAutoSaved", () => {
@@ -173,6 +224,132 @@ describe("documentStore", () => {
       expect(doc?.isDirty).toBe(false);
       expect(doc?.lastAutoSave).toBeGreaterThanOrEqual(beforeTime);
       expect(doc?.lastAutoSave).toBeLessThanOrEqual(afterTime);
+    });
+
+    it("keeps isDirty true when content diverged during auto-save (TOCTOU)", () => {
+      const { initDocument, setContent, markAutoSaved, getDocument } = useDocumentStore.getState();
+
+      initDocument(WINDOW_LABEL, "Original");
+      setContent(WINDOW_LABEL, "Edited during save");
+      // Auto-save wrote the pre-edit content
+      markAutoSaved(WINDOW_LABEL, "Pre-edit content");
+
+      const doc = getDocument(WINDOW_LABEL);
+      expect(doc?.isDirty).toBe(true);
+      expect(doc?.lastDiskContent).toBe("Pre-edit content");
+      expect(doc?.lastAutoSave).not.toBeNull();
+    });
+
+    it("clears isDirty when content matches disk content", () => {
+      const { initDocument, setContent, markAutoSaved, getDocument } = useDocumentStore.getState();
+
+      initDocument(WINDOW_LABEL, "Original");
+      setContent(WINDOW_LABEL, "Auto-saved content");
+      markAutoSaved(WINDOW_LABEL, "Auto-saved content");
+
+      const doc = getDocument(WINDOW_LABEL);
+      expect(doc?.isDirty).toBe(false);
+      expect(doc?.savedContent).toBe("Auto-saved content");
+    });
+  });
+
+  describe("markMissing / clearMissing", () => {
+    it("sets isMissing to true", () => {
+      const { initDocument, markMissing, getDocument } = useDocumentStore.getState();
+      initDocument(WINDOW_LABEL, "content", "/file.md");
+
+      markMissing(WINDOW_LABEL);
+      expect(getDocument(WINDOW_LABEL)?.isMissing).toBe(true);
+    });
+
+    it("clears isMissing back to false", () => {
+      const { initDocument, markMissing, clearMissing, getDocument } = useDocumentStore.getState();
+      initDocument(WINDOW_LABEL, "content", "/file.md");
+
+      markMissing(WINDOW_LABEL);
+      expect(getDocument(WINDOW_LABEL)?.isMissing).toBe(true);
+
+      clearMissing(WINDOW_LABEL);
+      expect(getDocument(WINDOW_LABEL)?.isMissing).toBe(false);
+    });
+
+    it("no-ops for non-existent document", () => {
+      const { markMissing, getDocument } = useDocumentStore.getState();
+      markMissing("non-existent");
+      expect(getDocument("non-existent")).toBeUndefined();
+    });
+  });
+
+  describe("markDivergent", () => {
+    it("sets isDivergent to true", () => {
+      const { initDocument, markDivergent, getDocument } = useDocumentStore.getState();
+      initDocument(WINDOW_LABEL, "content", "/file.md");
+
+      markDivergent(WINDOW_LABEL);
+      expect(getDocument(WINDOW_LABEL)?.isDivergent).toBe(true);
+    });
+
+    it("markSaved clears isDivergent", () => {
+      const { initDocument, markDivergent, markSaved, getDocument } = useDocumentStore.getState();
+      initDocument(WINDOW_LABEL, "content", "/file.md");
+
+      markDivergent(WINDOW_LABEL);
+      expect(getDocument(WINDOW_LABEL)?.isDivergent).toBe(true);
+
+      markSaved(WINDOW_LABEL, "content");
+      expect(getDocument(WINDOW_LABEL)?.isDivergent).toBe(false);
+    });
+  });
+
+  describe("setLineMetadata", () => {
+    it("updates lineEnding", () => {
+      const { initDocument, setLineMetadata, getDocument } = useDocumentStore.getState();
+      initDocument(WINDOW_LABEL);
+
+      setLineMetadata(WINDOW_LABEL, { lineEnding: "crlf" });
+      expect(getDocument(WINDOW_LABEL)?.lineEnding).toBe("crlf");
+      expect(getDocument(WINDOW_LABEL)?.hardBreakStyle).toBe("unknown");
+    });
+
+    it("updates hardBreakStyle", () => {
+      const { initDocument, setLineMetadata, getDocument } = useDocumentStore.getState();
+      initDocument(WINDOW_LABEL);
+
+      setLineMetadata(WINDOW_LABEL, { hardBreakStyle: "backslash" });
+      expect(getDocument(WINDOW_LABEL)?.hardBreakStyle).toBe("backslash");
+      expect(getDocument(WINDOW_LABEL)?.lineEnding).toBe("unknown");
+    });
+
+    it("updates both at once", () => {
+      const { initDocument, setLineMetadata, getDocument } = useDocumentStore.getState();
+      initDocument(WINDOW_LABEL);
+
+      setLineMetadata(WINDOW_LABEL, { lineEnding: "lf", hardBreakStyle: "twoSpaces" });
+      const doc = getDocument(WINDOW_LABEL);
+      expect(doc?.lineEnding).toBe("lf");
+      expect(doc?.hardBreakStyle).toBe("twoSpaces");
+    });
+  });
+
+  describe("loadContent filePath handling", () => {
+    it("preserves existing filePath when filePath arg is undefined", () => {
+      const { initDocument, loadContent, getDocument } = useDocumentStore.getState();
+      initDocument(WINDOW_LABEL, "Initial", "/original/path.md");
+
+      loadContent(WINDOW_LABEL, "New content");
+
+      const doc = getDocument(WINDOW_LABEL);
+      expect(doc?.filePath).toBe("/original/path.md");
+      expect(doc?.content).toBe("New content");
+    });
+
+    it("clears filePath when explicitly passed null", () => {
+      const { initDocument, loadContent, getDocument } = useDocumentStore.getState();
+      initDocument(WINDOW_LABEL, "Initial", "/original/path.md");
+
+      loadContent(WINDOW_LABEL, "New content", null);
+
+      expect(getDocument(WINDOW_LABEL)?.filePath).toBeNull();
     });
   });
 

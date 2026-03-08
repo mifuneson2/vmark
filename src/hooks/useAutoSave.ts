@@ -14,6 +14,8 @@
  *   - Checks isOperationInProgress() to avoid conflicting with manual save
  *   - Interval restarts when autoSaveInterval setting changes
  *   - Skips save if document is currently in the middle of an operation
+ *   - Reentry guard prevents overlapping save cycles on slow filesystems
+ *   - Re-reads doc state per tab (not a snapshot) so content is fresh before each save
  *
  * @coordinates-with saveToPath.ts — shared save logic with line ending handling
  * @coordinates-with reentryGuard.ts — prevents concurrent save operations
@@ -28,20 +30,30 @@ import { useTabStore } from "@/stores/tabStore";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { saveToPath } from "@/utils/saveToPath";
 import { isOperationInProgress } from "@/utils/reentryGuard";
-import { autoSaveLog } from "@/utils/debug";
+import { autoSaveLog, saveError } from "@/utils/debug";
+
+const MIN_INTERVAL_MS = 1000;
 
 export function useAutoSave() {
   const windowLabel = useWindowLabel();
   const autoSaveEnabled = useSettingsStore((s) => s.general.autoSaveEnabled);
   const autoSaveInterval = useSettingsStore((s) => s.general.autoSaveInterval);
   const lastSaveRef = useRef<number>(0);
+  const isSavingRef = useRef(false);
 
   useEffect(() => {
     if (!autoSaveEnabled) return;
 
-    const intervalMs = autoSaveInterval * 1000;
+    // Clamp interval to a safe minimum
+    const intervalMs = Math.max(
+      Number.isFinite(autoSaveInterval) ? autoSaveInterval * 1000 : MIN_INTERVAL_MS,
+      MIN_INTERVAL_MS
+    );
 
     const checkAndSave = async () => {
+      // Reentry guard: prevent overlapping save cycles on slow filesystems
+      if (isSavingRef.current) return;
+
       // Skip if manual save is in progress (prevents race condition)
       if (isOperationInProgress(windowLabel, "save")) {
         autoSaveLog("Skipping - manual save in progress");
@@ -50,29 +62,37 @@ export function useAutoSave() {
 
       // Debounce: Prevent saves within 5 seconds of each other.
       const DEBOUNCE_MS = 5000;
-      const now = Date.now();
-      if (now - lastSaveRef.current < DEBOUNCE_MS) return;
+      if (Date.now() - lastSaveRef.current < DEBOUNCE_MS) return;
 
-      // Iterate ALL tabs for this window — not just the active one
-      const tabs = useTabStore.getState().tabs[windowLabel] ?? [];
-      const documentStore = useDocumentStore.getState();
-      let anySaved = false;
+      isSavingRef.current = true;
+      try {
+        // Iterate ALL tabs for this window — not just the active one
+        const tabs = useTabStore.getState().tabs[windowLabel] ?? [];
+        let anySaved = false;
 
-      for (const tab of tabs) {
-        const doc = documentStore.getDocument(tab.id);
-        // Skip if no document, not dirty, no file path (untitled), file was deleted,
-        // or user chose "keep my changes" after external change (divergent)
-        if (!doc || !doc.isDirty || !doc.filePath || doc.isMissing || doc.isDivergent) continue;
+        for (const tab of tabs) {
+          // Re-read doc state per tab to get fresh content (avoids stale snapshot)
+          const doc = useDocumentStore.getState().getDocument(tab.id);
+          // Skip if no document, not dirty, no file path (untitled), file was deleted,
+          // or user chose "keep my changes" after external change (divergent)
+          if (!doc || !doc.isDirty || !doc.filePath || doc.isMissing || doc.isDivergent) continue;
 
-        const success = await saveToPath(tab.id, doc.filePath, doc.content, "auto");
-        if (success) {
-          anySaved = true;
-          autoSaveLog("Saved:", doc.filePath);
+          try {
+            const success = await saveToPath(tab.id, doc.filePath, doc.content, "auto");
+            if (success) {
+              anySaved = true;
+              autoSaveLog("Saved:", doc.filePath);
+            }
+          } catch (error) {
+            saveError("Auto-save failed for", doc.filePath, error);
+          }
         }
-      }
 
-      if (anySaved) {
-        lastSaveRef.current = now;
+        if (anySaved) {
+          lastSaveRef.current = Date.now();
+        }
+      } finally {
+        isSavingRef.current = false;
       }
     };
 

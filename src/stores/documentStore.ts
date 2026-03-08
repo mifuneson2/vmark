@@ -121,6 +121,21 @@ function updateDoc(
   };
 }
 
+/**
+ * Compute post-save state. Compares written disk content against current editor
+ * content to handle TOCTOU races (user edits during async save).
+ */
+function buildPostSaveState(doc: DocumentState, lastDiskContent: string | undefined) {
+  const diskContent = lastDiskContent ?? doc.content;
+  const dirty = doc.content !== diskContent;
+  return {
+    savedContent: dirty ? doc.savedContent : doc.content,
+    lastDiskContent: diskContent,
+    isDirty: dirty,
+    isDivergent: false,
+  };
+}
+
 export const useDocumentStore = create<DocumentStore>((set, get) => ({
   documents: {},
 
@@ -128,6 +143,7 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
     const doc = createInitialDocument(content, filePath);
     if (savedContent !== undefined) {
       doc.savedContent = savedContent;
+      doc.lastDiskContent = savedContent;
       doc.isDirty = savedContent !== content;
     }
     set((state) => ({
@@ -149,7 +165,7 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
         content,
         savedContent: content,
         lastDiskContent: content,
-        filePath: filePath ?? null,
+        filePath: filePath === undefined ? doc.filePath : filePath,
         isDirty: false,
         isDivergent: false, // Reload from disk clears divergent state
         documentId: doc.documentId + 1,
@@ -172,21 +188,13 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
 
   markSaved: (tabId, lastDiskContent) =>
     set((state) =>
-      updateDoc(state, tabId, (doc) => ({
-        savedContent: doc.content,
-        lastDiskContent: lastDiskContent ?? doc.content,
-        isDirty: false,
-        isDivergent: false, // Manual save syncs local with disk
-      }))
+      updateDoc(state, tabId, (doc) => buildPostSaveState(doc, lastDiskContent))
     ),
 
   markAutoSaved: (tabId, lastDiskContent) =>
     set((state) =>
       updateDoc(state, tabId, (doc) => ({
-        savedContent: doc.content,
-        lastDiskContent: lastDiskContent ?? doc.content,
-        isDirty: false,
-        isDivergent: false, // Auto-save syncs local with disk
+        ...buildPostSaveState(doc, lastDiskContent),
         lastAutoSave: Date.now(),
       }))
     ),
