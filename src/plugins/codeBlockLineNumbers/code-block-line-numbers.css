@@ -126,6 +126,10 @@
   box-sizing: border-box;
 }
 
+.code-lang-dropdown .code-lang-search:focus {
+  border-bottom-color: var(--primary-color);
+}
+
 .code-lang-dropdown .code-lang-search::placeholder {
   color: var(--text-tertiary);
 }

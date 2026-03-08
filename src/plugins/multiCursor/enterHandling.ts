@@ -9,7 +9,7 @@ import { SelectionRange } from "@tiptap/pm/state";
 import type { EditorState, Transaction } from "@tiptap/pm/state";
 import { canSplit } from "@tiptap/pm/transform";
 import { MultiSelection } from "./MultiSelection";
-import { sortRangesDescending } from "./rangeUtils";
+import { sortRangesDescending, normalizeRangesWithPrimary } from "./rangeUtils";
 
 /**
  * Handle Enter at all cursor positions.
@@ -79,7 +79,8 @@ export function handleMultiCursorEnter(
     return new SelectionRange($pos, $pos);
   });
 
-  const newSel = new MultiSelection(newRanges, selection.primaryIndex);
+  const normalized = normalizeRangesWithPrimary(newRanges, tr.doc, selection.primaryIndex, true);
+  const newSel = new MultiSelection(normalized.ranges, normalized.primaryIndex);
   tr = tr.setSelection(newSel);
   tr = tr.setMeta("addToHistory", true);
 

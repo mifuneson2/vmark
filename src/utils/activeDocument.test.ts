@@ -6,7 +6,6 @@ import { describe, it, expect, beforeEach } from "vitest";
 import {
   getActiveTabId,
   getActiveDocument,
-  getActiveTabIdOrNull,
 } from "./activeDocument";
 import { useTabStore } from "@/stores/tabStore";
 import { useDocumentStore } from "@/stores/documentStore";
@@ -74,18 +73,6 @@ describe("activeDocument", () => {
       const result = getActiveTabId("main");
       // Should return null because the tab doesn't actually exist
       expect(result).toBeNull();
-    });
-  });
-
-  describe("getActiveTabIdOrNull (alias)", () => {
-    it("behaves the same as getActiveTabId", () => {
-      useTabStore.setState({
-        tabs: { main: [{ id: "tab-1", filePath: null, title: "Untitled", isPinned: false }] },
-        activeTabId: { main: "tab-1" },
-      });
-
-      expect(getActiveTabIdOrNull("main")).toBe("tab-1");
-      expect(getActiveTabIdOrNull("unknown")).toBeNull();
     });
   });
 

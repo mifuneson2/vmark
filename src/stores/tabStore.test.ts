@@ -724,57 +724,6 @@ describe("tabStore", () => {
     });
   });
 
-  describe("moveTabToIndex", () => {
-    it("moves tab to specified index", () => {
-      const store = useTabStore.getState();
-
-      const id1 = store.createTab("main", "/file1.md");
-      store.createTab("main", "/file2.md");
-      store.createTab("main", "/file3.md");
-
-      store.moveTabToIndex("main", id1, 2);
-
-      const tabs = store.getTabsByWindow("main");
-      expect(tabs[2].id).toBe(id1);
-    });
-
-    it("does nothing for non-existent tab", () => {
-      const store = useTabStore.getState();
-
-      store.createTab("main", "/file1.md");
-      store.createTab("main", "/file2.md");
-
-      store.moveTabToIndex("main", "nonexistent", 1);
-
-      // Should not throw, tabs unchanged
-      expect(store.getTabsByWindow("main")).toHaveLength(2);
-    });
-
-    it("does nothing for invalid toIndex (negative)", () => {
-      const store = useTabStore.getState();
-
-      const id1 = store.createTab("main", "/file1.md");
-      store.createTab("main", "/file2.md");
-
-      store.moveTabToIndex("main", id1, -1);
-
-      const tabs = store.getTabsByWindow("main");
-      expect(tabs[0].id).toBe(id1);
-    });
-
-    it("does nothing for invalid toIndex (out of range)", () => {
-      const store = useTabStore.getState();
-
-      const id1 = store.createTab("main", "/file1.md");
-      store.createTab("main", "/file2.md");
-
-      store.moveTabToIndex("main", id1, 10);
-
-      const tabs = store.getTabsByWindow("main");
-      expect(tabs[0].id).toBe(id1);
-    });
-  });
-
   describe("detachTab", () => {
     it("removes tab without adding to closed history", () => {
       const store = useTabStore.getState();

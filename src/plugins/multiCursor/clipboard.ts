@@ -69,7 +69,8 @@ export function handleMultiCursorCut(
   const normalized = normalizeRangesWithPrimary(
     newRanges,
     tr.doc,
-    selection.primaryIndex
+    selection.primaryIndex,
+    true
   );
 
   const newSel = new MultiSelection(normalized.ranges, normalized.primaryIndex);

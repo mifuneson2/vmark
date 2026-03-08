@@ -7,12 +7,4 @@
  *
  * @module hooks/commands
  */
-export {
-  shouldOpenInNewTab,
-  resolveOpenTarget,
-  type OpenInTabOptions,
-  type OpenFileContext,
-  type OpenFileResult,
-} from "./openFileCommand";
-
 export { applyPathReconciliation } from "./applyPathReconciliation";

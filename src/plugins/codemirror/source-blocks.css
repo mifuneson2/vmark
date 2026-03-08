@@ -150,7 +150,7 @@
   border-left: 2px solid var(--border-color);
   padding-left: 8px;
   margin-left: -10px;
-  background-color: var(--details-bg, rgba(0, 0, 0, 0.015));
+  background-color: rgba(0, 0, 0, 0.015);
 }
 
 /* Opening line (<details> or :::details) - shows collapse indicator */
@@ -194,7 +194,7 @@
    Dark Mode - Details Blocks
    =================== */
 .dark-theme .cm-details-line {
-  background-color: var(--details-bg-dark, rgba(255, 255, 255, 0.02));
+  background-color: rgba(255, 255, 255, 0.02);
 }
 
 /* ===================

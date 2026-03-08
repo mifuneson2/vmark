@@ -63,8 +63,3 @@ export function getActiveDocument(windowLabel: string): DocumentState | null {
   const doc = useDocumentStore.getState().getDocument(tabId);
   return doc ?? null;
 }
-
-/**
- * Alias for getActiveTabId for semantic clarity in certain contexts.
- */
-export const getActiveTabIdOrNull = getActiveTabId;

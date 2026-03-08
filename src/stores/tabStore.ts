@@ -70,7 +70,6 @@ interface TabActions {
 
   // Tab order
   reorderTabs: (windowLabel: string, fromIndex: number, toIndex: number) => void;
-  moveTabToIndex: (windowLabel: string, tabId: string, toIndex: number) => void;
 
   // Session
   reopenClosedTab: (windowLabel: string) => Tab | null;
@@ -356,20 +355,6 @@ export const useTabStore = create<TabState & TabActions>((set, get) => ({
     set((state) => {
       const windowTabs = [...(state.tabs[windowLabel] || [])];
       if (fromIndex < 0 || fromIndex >= windowTabs.length) return state;
-      if (toIndex < 0 || toIndex >= windowTabs.length) return state;
-
-      const [moved] = windowTabs.splice(fromIndex, 1);
-      windowTabs.splice(toIndex, 0, moved);
-
-      return { tabs: { ...state.tabs, [windowLabel]: windowTabs } };
-    });
-  },
-
-  moveTabToIndex: (windowLabel, tabId, toIndex) => {
-    set((state) => {
-      const windowTabs = [...(state.tabs[windowLabel] || [])];
-      const fromIndex = windowTabs.findIndex((t) => t.id === tabId);
-      if (fromIndex === -1) return state;
       if (toIndex < 0 || toIndex >= windowTabs.length) return state;
 
       const [moved] = windowTabs.splice(fromIndex, 1);

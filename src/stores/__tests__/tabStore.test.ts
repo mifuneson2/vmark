@@ -325,30 +325,6 @@ describe("tabStore", () => {
     });
   });
 
-  describe("moveTabToIndex", () => {
-    it("moves tab to specific index", () => {
-      useTabStore.getState().createTab(WINDOW, "/file1.md");
-      const id2 = useTabStore.getState().createTab(WINDOW, "/file2.md");
-      useTabStore.getState().createTab(WINDOW, "/file3.md");
-
-      useTabStore.getState().moveTabToIndex(WINDOW, id2, 0);
-
-      const tabs = useTabStore.getState().getTabsByWindow(WINDOW);
-      expect(tabs[0].id).toBe(id2);
-    });
-
-    it("returns early when tab not found", () => {
-      useTabStore.getState().createTab(WINDOW, "/file.md");
-      useTabStore.getState().moveTabToIndex(WINDOW, "nonexistent", 0);
-    });
-
-    it("returns early for out-of-bounds toIndex", () => {
-      const id = useTabStore.getState().createTab(WINDOW, "/file.md");
-      useTabStore.getState().moveTabToIndex(WINDOW, id, -1);
-      useTabStore.getState().moveTabToIndex(WINDOW, id, 99);
-    });
-  });
-
   describe("reopenClosedTab", () => {
     it("reopens most recently closed tab", () => {
       const id = useTabStore.getState().createTab(WINDOW, "/file.md");
@@ -494,13 +470,6 @@ describe("tabStore", () => {
   });
 
   describe("fallback branches for non-existent windows", () => {
-    it("moveTabToIndex returns state unchanged for non-existent window (line 369)", () => {
-      const id = useTabStore.getState().createTab(WINDOW, "/a.md");
-      useTabStore.getState().moveTabToIndex("no-such-window", id, 0);
-      // No crash, state unchanged
-      expect(useTabStore.getState().getTabsByWindow(WINDOW)).toHaveLength(1);
-    });
-
     it("reopenClosedTab falls back to empty array for non-existent window (line 390)", () => {
       const result = useTabStore.getState().reopenClosedTab("no-such-window");
       expect(result).toBeNull();
