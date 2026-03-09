@@ -26,15 +26,67 @@
  */
 
 import { Extension } from "@tiptap/core";
-import { Plugin, PluginKey, type EditorState, TextSelection } from "@tiptap/pm/state";
+import { Plugin, PluginKey, type EditorState, TextSelection, type Transaction } from "@tiptap/pm/state";
 import { goToNextCell, addRowAfter } from "@tiptap/pm/tables";
 import { liftListItem, sinkListItem } from "@tiptap/pm/schema-list";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { isInTable, getTableInfo } from "@/plugins/tableUI/tableActions.tiptap";
-import { canTabEscape } from "./tabEscape";
+import { canTabEscape, type TabEscapeResult } from "./tabEscape";
+import { canShiftTabEscape, type ShiftTabEscapeResult } from "./shiftTabEscape";
 import { MultiSelection } from "@/plugins/multiCursor/MultiSelection";
 
 const tabIndentPluginKey = new PluginKey("tabIndent");
+
+/** Escapable mark type names — only these are cleared from stored marks */
+const ESCAPABLE_MARK_NAMES = new Set(["bold", "italic", "code", "strike", "link"]);
+
+/**
+ * Apply an escape result: set selection and clear stored marks.
+ * Shared by both Tab (forward) and Shift+Tab (backward) escape paths.
+ */
+function applyEscapeResult(
+  state: EditorState,
+  dispatch: (tr: Transaction) => void,
+  escapeResult: TabEscapeResult | ShiftTabEscapeResult | MultiSelection,
+): void {
+  if (escapeResult instanceof MultiSelection) {
+    const tr = state.tr.setSelection(escapeResult);
+    // Clear all escapable mark types present in the schema.
+    // Different cursors may be in different marks, so we can't rely
+    // on the primary cursor's marks alone (#10).
+    for (const name of ESCAPABLE_MARK_NAMES) {
+      const markType = state.schema.marks[name];
+      if (markType) {
+        tr.removeStoredMark(markType);
+      }
+    }
+    dispatch(tr);
+    return;
+  }
+
+  const tr = state.tr.setSelection(
+    TextSelection.create(state.doc, escapeResult.targetPos)
+  );
+
+  if (escapeResult.type === "link") {
+    const linkMarkType = state.schema.marks.link;
+    if (linkMarkType) {
+      tr.removeStoredMark(linkMarkType);
+    }
+  }
+
+  if (escapeResult.type === "mark") {
+    // Clear only escapable marks from stored marks
+    const { $from } = state.selection;
+    for (const mark of $from.marks()) {
+      if (ESCAPABLE_MARK_NAMES.has(mark.type.name)) {
+        tr.removeStoredMark(mark.type);
+      }
+    }
+  }
+
+  dispatch(tr);
+}
 
 /**
  * Get the configured tab size (number of spaces).
@@ -55,6 +107,75 @@ function isInListItem(state: EditorState): boolean {
     if ($from.node(d).type === listItemType) return true;
   }
   return false;
+}
+
+/**
+ * Handle Tab/Shift+Tab in table context.
+ * Returns true if handled (always — Tab is consumed in tables).
+ */
+function handleTableTab(view: import("@tiptap/pm/view").EditorView, shiftKey: boolean): boolean {
+  const direction = shiftKey ? -1 : 1;
+  const moved = goToNextCell(direction)(view.state, view.dispatch, view);
+
+  // If Tab (not Shift+Tab) couldn't move, we're at last cell — add new row
+  if (!moved && direction === 1) {
+    const info = getTableInfo(view);
+    if (info && info.rowIndex === info.numRows - 1 && info.colIndex === info.numCols - 1) {
+      addRowAfter(view.state, view.dispatch);
+      goToNextCell(1)(view.state, view.dispatch, view);
+    }
+  }
+  return true;
+}
+
+/**
+ * Handle Tab/Shift+Tab in list item context.
+ * Returns true if handled (always — Tab is consumed in lists).
+ */
+function handleListTab(state: EditorState, dispatch: (tr: Transaction) => void, shiftKey: boolean): boolean {
+  const listItemType = state.schema.nodes.listItem;
+  /* v8 ignore next -- @preserve reason: schema always defines listItem in test environment */
+  if (listItemType) {
+    if (shiftKey) {
+      liftListItem(listItemType)(state, dispatch);
+    } else {
+      sinkListItem(listItemType)(state, dispatch);
+    }
+  }
+  return true;
+}
+
+/**
+ * Handle Shift+Tab outdent: remove up to tabSize leading spaces.
+ */
+function handleShiftTabOutdent(state: EditorState, dispatch: (tr: Transaction) => void): boolean {
+  const { from } = state.selection;
+  const $from = state.doc.resolve(from);
+  const lineStart = $from.start();
+  const textBefore = state.doc.textBetween(lineStart, from, "\n");
+
+  /* v8 ignore start -- leading-space regex always matches (never null); optional chain is defensive */
+  const leadingSpaces = textBefore.match(/^[ ]*/)?.[0].length ?? 0;
+  /* v8 ignore stop */
+  if (leadingSpaces === 0) return true;
+
+  const spacesToRemove = Math.min(leadingSpaces, getTabSize());
+  dispatch(state.tr.delete(lineStart, lineStart + spacesToRemove));
+  return true;
+}
+
+/**
+ * Handle Tab: insert spaces (or replace selection with spaces).
+ */
+function handleTabInsertSpaces(state: EditorState, dispatch: (tr: Transaction) => void): boolean {
+  const spaces = " ".repeat(getTabSize());
+
+  if (!state.selection.empty) {
+    dispatch(state.tr.replaceSelectionWith(state.schema.text(spaces), true));
+  } else {
+    dispatch(state.tr.insertText(spaces));
+  }
+  return true;
 }
 
 export const tabIndentExtension = Extension.create({
@@ -78,126 +199,45 @@ export const tabIndentExtension = Extension.create({
 
               const { state, dispatch } = view;
 
-              // Tab escape from marks/links (only for forward Tab, not Shift+Tab)
+              // 1. Tab/Shift+Tab escape from marks/links
               if (!event.shiftKey) {
                 const escapeResult = canTabEscape(state);
                 if (escapeResult) {
                   event.preventDefault();
-
-                  // Handle multi-cursor
-                  if (escapeResult instanceof MultiSelection) {
-                    const tr = state.tr.setSelection(escapeResult);
-                    // Clear link from stored marks for all cursors
-                    const linkMarkType = state.schema.marks.link;
-                    if (linkMarkType) {
-                      tr.removeStoredMark(linkMarkType);
-                    }
-                    dispatch(tr);
-                    return true;
-                  }
-
-                  // Handle single cursor
-                  const tr = state.tr.setSelection(
-                    TextSelection.create(state.doc, escapeResult.targetPos)
-                  );
-                  // When escaping a link, clear the link from stored marks
-                  // so subsequent typing produces normal (unlinked) text.
-                  // This is essential when the link is at end of paragraph
-                  // where there's no un-marked position to jump to.
-                  if (escapeResult.type === "link") {
-                    const linkMarkType = state.schema.marks.link;
-                    if (linkMarkType) {
-                      tr.removeStoredMark(linkMarkType);
-                    }
-                  }
-                  // When escaping an inline mark, clear it from stored marks
-                  // so subsequent typing produces unmarked text.
-                  if (escapeResult.type === "mark") {
-                    const { $from } = state.selection;
-                    for (const mark of $from.marks()) {
-                      tr.removeStoredMark(mark.type);
-                    }
-                  }
-                  dispatch(tr);
+                  applyEscapeResult(state, dispatch, escapeResult);
+                  return true;
+                }
+              }
+              if (event.shiftKey) {
+                const escapeResult = canShiftTabEscape(state);
+                if (escapeResult) {
+                  event.preventDefault();
+                  applyEscapeResult(state, dispatch, escapeResult);
                   return true;
                 }
               }
 
-              // In table: delegate to table cell navigation
+              // 2. Table navigation
               if (isInTable(view)) {
                 event.preventDefault();
-                const direction = event.shiftKey ? -1 : 1;
-                const moved = goToNextCell(direction)(view.state, view.dispatch, view);
-
-                // If Tab (not Shift+Tab) couldn't move, we're at last cell - add new row
-                if (!moved && direction === 1) {
-                  const info = getTableInfo(view);
-                  if (info && info.rowIndex === info.numRows - 1 && info.colIndex === info.numCols - 1) {
-                    // Add row below, then move to first cell of new row
-                    addRowAfter(view.state, view.dispatch);
-                    // After adding row, move to first cell
-                    goToNextCell(1)(view.state, view.dispatch, view);
-                  }
-                }
-                return true;
+                return handleTableTab(view, event.shiftKey);
               }
 
-              const { selection } = state;
-
-              // In list item: indent/outdent
+              // 3. List indent/outdent
               if (isInListItem(state)) {
                 event.preventDefault();
-                const listItemType = state.schema.nodes.listItem;
-                /* v8 ignore next -- @preserve reason: schema always defines listItem in test environment */
-                if (listItemType) {
-                  if (event.shiftKey) {
-                    liftListItem(listItemType)(state, dispatch);
-                  } else {
-                    sinkListItem(listItemType)(state, dispatch);
-                  }
-                }
-                return true;
+                return handleListTab(state, dispatch, event.shiftKey);
               }
 
-              // Handle Shift+Tab: outdent (remove up to tabSize spaces before cursor)
+              // 4. Shift+Tab outdent (remove leading spaces)
               if (event.shiftKey) {
                 event.preventDefault();
-                const { from } = selection;
-                const $from = state.doc.resolve(from);
-                const lineStart = $from.start();
-                const textBefore = state.doc.textBetween(lineStart, from, "\n");
-
-                // Count leading spaces
-                /* v8 ignore start -- leading-space regex always matches (never null); optional chain is defensive */
-                const leadingSpaces = textBefore.match(/^[ ]*/)?.[0].length ?? 0;
-                /* v8 ignore stop */
-                if (leadingSpaces === 0) return true;
-
-                // Remove up to tabSize spaces
-                const spacesToRemove = Math.min(leadingSpaces, getTabSize());
-                const tr = state.tr.delete(lineStart, lineStart + spacesToRemove);
-                dispatch(tr);
-                return true;
+                return handleShiftTabOutdent(state, dispatch);
               }
 
-              // Handle Tab: insert spaces
+              // 5. Tab: insert spaces
               event.preventDefault();
-              const spaces = " ".repeat(getTabSize());
-
-              // If there's a selection, replace it with spaces
-              if (!selection.empty) {
-                const tr = state.tr.replaceSelectionWith(
-                  state.schema.text(spaces),
-                  true
-                );
-                dispatch(tr);
-                return true;
-              }
-
-              // Insert spaces at cursor
-              const tr = state.tr.insertText(spaces);
-              dispatch(tr);
-              return true;
+              return handleTabInsertSpaces(state, dispatch);
             },
           },
         },

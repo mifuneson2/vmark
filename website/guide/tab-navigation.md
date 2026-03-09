@@ -1,22 +1,22 @@
 # Smart Tab Navigation
 
-VMark's Tab key is context-aware — it helps you navigate efficiently through formatted text, brackets, and links without reaching for arrow keys.
+VMark's Tab and Shift+Tab keys are context-aware — they help you navigate efficiently through formatted text, brackets, and links without reaching for arrow keys.
 
 ## Quick Overview
 
-| Context | Tab Action |
-|---------|------------|
-| Inside brackets `()` `[]` `{}` | Jump past closing bracket |
-| Inside quotes `""` `''` | Jump past closing quote |
-| Inside CJK brackets `「」` `『』` | Jump past closing bracket |
-| Inside **bold**, *italic*, `code`, ~~strike~~ | Jump after the formatting |
-| Inside a link | Jump after the link |
-| In a table cell | Move to next cell |
-| In a list item | Indent the item |
+| Context | Tab Action | Shift+Tab Action |
+|---------|------------|------------------|
+| Inside brackets `()` `[]` `{}` | Jump past closing bracket | Jump before opening bracket |
+| Inside quotes `""` `''` | Jump past closing quote | Jump before opening quote |
+| Inside CJK brackets `「」` `『』` | Jump past closing bracket | Jump before opening bracket |
+| Inside **bold**, *italic*, `code`, ~~strike~~ | Jump after the formatting | Jump before the formatting |
+| Inside a link | Jump after the link | Jump before the link |
+| In a table cell | Move to next cell | Move to previous cell |
+| In a list item | Indent the item | Outdent the item |
 
 ## Bracket & Quote Escape
 
-When your cursor is right before a closing bracket or quote, pressing Tab jumps over it instead of inserting spaces.
+When your cursor is right before a closing bracket or quote, pressing Tab jumps over it. When your cursor is right after an opening bracket or quote, pressing Shift+Tab jumps back before it.
 
 ### Supported Characters
 
@@ -56,6 +56,20 @@ function hello(world)|
 
 This works with nested brackets too — Tab jumps over the immediately adjacent closing character.
 
+Press **Shift+Tab** reverses the action — if cursor is right after an opening character:
+
+```
+function hello(|world)
+               ↑ cursor after (
+```
+
+Press **Shift+Tab**:
+
+```
+function hello|(world)
+              ↑ cursor before (
+```
+
 ### CJK Example
 
 ```
@@ -72,7 +86,7 @@ Press **Tab**:
 
 ## Formatting Escape (WYSIWYG Mode)
 
-In WYSIWYG mode, Tab can escape from inline formatting marks.
+In WYSIWYG mode, Tab and Shift+Tab can escape from inline formatting marks.
 
 ### Supported Formats
 
@@ -98,9 +112,23 @@ This is **bold text**| here
                      ↑ cursor after bold
 ```
 
+Shift+Tab works in reverse — it jumps to the start of the formatting:
+
+```
+This is **bold te|xt** here
+                 ↑ cursor inside bold
+```
+
+Press **Shift+Tab**:
+
+```
+This is |**bold text** here
+        ↑ cursor before bold
+```
+
 ### Link Escape
 
-Tab also escapes from links:
+Tab and Shift+Tab also escape from links:
 
 ```
 Check out [VMark|](https://vmark.app)
@@ -112,6 +140,13 @@ Press **Tab**:
 ```
 Check out [VMark](https://vmark.app)| and...
                                     ↑ cursor after link
+```
+
+Press **Shift+Tab** inside a link moves to the start:
+
+```
+Check out |[VMark](https://vmark.app) and...
+          ↑ cursor before link
 ```
 
 ## Link Navigation (Source Mode)
@@ -228,17 +263,17 @@ If Tab escape conflicts with your workflow, you can disable auto-pair brackets e
 
 ## Comparison: WYSIWYG vs Source Mode
 
-| Feature | WYSIWYG | Source |
-|---------|---------|--------|
-| Bracket escape | ✓ | ✓ |
-| CJK bracket escape | ✓ | ✓ |
-| Curly quote escape | ✓ | ✓ |
-| Mark escape (bold, etc.) | ✓ | N/A |
-| Link escape | ✓ | ✓ |
-| Markdown char escape (`*`, `_`) | N/A | ✓ |
-| Table navigation | ✓ | N/A |
-| List indentation | ✓ | ✓ |
-| Multi-cursor support | ✓ | ✓ |
+| Feature | Tab (WYSIWYG) | Shift+Tab (WYSIWYG) | Source |
+|---------|---------------|---------------------|--------|
+| Bracket escape | ✓ (forward) | ✓ (backward) | ✓ |
+| CJK bracket escape | ✓ (forward) | ✓ (backward) | ✓ |
+| Curly quote escape | ✓ (forward) | ✓ (backward) | ✓ |
+| Mark escape (bold, etc.) | ✓ (forward) | ✓ (backward) | N/A |
+| Link escape | ✓ (forward) | ✓ (backward) | ✓ |
+| Markdown char escape (`*`, `_`) | N/A | N/A | ✓ |
+| Table navigation | Next cell | Previous cell | N/A |
+| List indentation | Indent | Outdent | ✓ |
+| Multi-cursor support | ✓ | ✓ | ✓ |
 
 ## Multi-Cursor Support
 
@@ -246,10 +281,9 @@ Tab escape works with multiple cursors — each cursor is processed independentl
 
 ### How It Works
 
-When you have multiple cursors and press Tab:
-- Cursors inside formatting (bold, italic, etc.) escape to the end of that formatting
-- Cursors inside links escape from the link
-- Cursors before closing brackets jump over them
+When you have multiple cursors and press Tab or Shift+Tab:
+- **Tab**: Cursors inside formatting escape to the end; cursors before closing brackets jump over them
+- **Shift+Tab**: Cursors inside formatting escape to the start; cursors after opening brackets jump before them
 - Cursors in plain text stay in place
 
 ### Example
@@ -280,6 +314,6 @@ This is particularly powerful for bulk editing — select multiple occurrences w
 
 3. **Nested structures** — Tab escapes one level at a time. For `((nested))`, you need two Tabs to fully exit.
 
-4. **Shift + Tab** — In tables and lists, Shift + Tab moves backward or outdents. In other contexts, it removes leading spaces.
+4. **Shift + Tab** — The mirror of Tab. Escapes backward from marks, links, and opening brackets. In tables, moves to the previous cell. In lists, outdents the item.
 
 5. **Multi-cursor** — Tab escape works with all your cursors simultaneously, making bulk edits even faster.

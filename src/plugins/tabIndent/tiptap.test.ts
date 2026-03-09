@@ -40,6 +40,12 @@ vi.mock("./tabEscape", () => ({
   canTabEscape: (...args: unknown[]) => mockCanTabEscape(...args),
 }));
 
+// Mock shiftTabEscape
+const mockCanShiftTabEscape = vi.fn(() => null);
+vi.mock("./shiftTabEscape", () => ({
+  canShiftTabEscape: (...args: unknown[]) => mockCanShiftTabEscape(...args),
+}));
+
 // Mock multiCursor
 vi.mock("@/plugins/multiCursor/MultiSelection", () => ({
   MultiSelection: class MockMultiSelection {
@@ -108,6 +114,7 @@ describe("tabIndentExtension", () => {
     mockIsInTable.mockReturnValue(false);
     mockGetTableInfo.mockReturnValue(null);
     mockCanTabEscape.mockReturnValue(null);
+    mockCanShiftTabEscape.mockReturnValue(null);
     vi.clearAllMocks();
   });
 
@@ -454,6 +461,7 @@ describe("tabIndent plugin handler integration", () => {
     mockIsInTable.mockReturnValue(false);
     mockGetTableInfo.mockReturnValue(null);
     mockCanTabEscape.mockReturnValue(null);
+    mockCanShiftTabEscape.mockReturnValue(null);
     vi.clearAllMocks();
 
     // Extract the actual plugin from the extension
@@ -624,6 +632,87 @@ describe("tabIndent plugin handler integration", () => {
     const event = makeTabEvent({ shiftKey: true });
     keydownHandler(view, event);
     expect(mockCanTabEscape).not.toHaveBeenCalled();
+  });
+
+  it("delegates to canShiftTabEscape on Shift+Tab and dispatches escape", () => {
+    mockCanShiftTabEscape.mockReturnValue({ type: "mark", targetPos: 1 });
+    const state = createState("hello", 3);
+    const view = createMockView(state);
+    const event = makeTabEvent({ shiftKey: true });
+    const result = keydownHandler(view, event);
+    expect(result).toBe(true);
+    expect(mockCanShiftTabEscape).toHaveBeenCalledWith(state);
+    expect(view.dispatch).toHaveBeenCalledTimes(1);
+  });
+
+  it("dispatches Shift+Tab link escape and clears link stored mark", () => {
+    mockCanShiftTabEscape.mockReturnValue({ type: "link", targetPos: 1 });
+    const state = createState("hello", 3);
+    const view = createMockView(state);
+    const event = makeTabEvent({ shiftKey: true });
+    const result = keydownHandler(view, event);
+    expect(result).toBe(true);
+    expect(view.dispatch).toHaveBeenCalledTimes(1);
+  });
+
+  it("handles MultiSelection from canShiftTabEscape", async () => {
+    const { MultiSelection } = await import("@/plugins/multiCursor/MultiSelection");
+    const ms = new MultiSelection([], 0);
+    mockCanShiftTabEscape.mockReturnValue(ms);
+
+    const schemaWithMarks = new Schema({
+      nodes: {
+        doc: { content: "paragraph+" },
+        paragraph: { content: "inline*" },
+        text: { group: "inline", inline: true },
+      },
+      marks: {
+        bold: {},
+        link: { attrs: { href: { default: "" } } },
+      },
+    });
+    const doc = schemaWithMarks.node("doc", null, [
+      schemaWithMarks.node("paragraph", null, [schemaWithMarks.text("hello")]),
+    ]);
+    const state = EditorState.create({ doc, schema: schemaWithMarks });
+
+    const mockTr = {
+      setSelection: vi.fn().mockReturnThis(),
+      removeStoredMark: vi.fn().mockReturnThis(),
+    };
+    const view = {
+      state: { ...state, tr: mockTr, schema: schemaWithMarks },
+      dispatch: vi.fn(),
+      dom: document.createElement("div"),
+    };
+
+    const result = keydownHandler(view, makeTabEvent({ shiftKey: true }));
+    expect(result).toBe(true);
+    expect(mockTr.setSelection).toHaveBeenCalledWith(ms);
+    // Should clear all escapable mark types present in schema
+    expect(mockTr.removeStoredMark).toHaveBeenCalledWith(schemaWithMarks.marks.bold);
+    expect(mockTr.removeStoredMark).toHaveBeenCalledWith(schemaWithMarks.marks.link);
+    expect(view.dispatch).toHaveBeenCalled();
+  });
+
+  it("does not call canShiftTabEscape on forward Tab", () => {
+    mockCanShiftTabEscape.mockReturnValue({ type: "mark", targetPos: 1 });
+    const state = createState("hello", 3);
+    const view = createMockView(state);
+    const event = makeTabEvent();
+    keydownHandler(view, event);
+    expect(mockCanShiftTabEscape).not.toHaveBeenCalled();
+  });
+
+  it("falls through to table/list/outdent when Shift+Tab escape returns null", () => {
+    mockCanShiftTabEscape.mockReturnValue(null);
+    const state = createState("  hello", 3);
+    const view = createMockView(state);
+    const event = makeTabEvent({ shiftKey: true });
+    const result = keydownHandler(view, event);
+    expect(result).toBe(true);
+    // Should have handled as outdent since escape returned null
+    expect(view.dispatch).toHaveBeenCalledTimes(1);
   });
 
   it("delegates to table navigation when in table", () => {

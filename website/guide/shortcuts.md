@@ -232,7 +232,7 @@ This is a native macOS system shortcut that searches all menu items. Type a keyw
 
 ## Smart Tab Navigation
 
-Tab is context-aware — it escapes brackets, quotes, formatting marks, and navigates links.
+Tab and Shift+Tab are context-aware — they escape brackets, quotes, formatting marks, and links.
 
 | Context | Tab Action |
 |---------|------------|
@@ -240,6 +240,13 @@ Tab is context-aware — it escapes brackets, quotes, formatting marks, and navi
 | Before CJK brackets `」`, `』`, etc. | Jump past closing bracket |
 | Inside **bold**, *italic*, `code` | Jump after formatting |
 | Inside a link | Jump after link |
+
+| Context | Shift+Tab Action |
+|---------|------------------|
+| After `(`, `[`, `{`, quotes | Jump before opening character |
+| After CJK brackets `「`, `『`, etc. | Jump before opening bracket |
+| Inside **bold**, *italic*, `code` | Jump before formatting |
+| Inside a link | Jump before link |
 
 ::: tip
 See [Smart Tab Navigation](/guide/tab-navigation) for the complete guide including CJK brackets, curly quotes, and settings.

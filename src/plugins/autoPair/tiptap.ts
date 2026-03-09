@@ -25,7 +25,8 @@ import {
   markProseMirrorCompositionEnd,
   isImeKeyEvent,
 } from "@/utils/imeGuard";
-import { handleTextInput, createKeyHandler, type AutoPairConfig } from "./handlers";
+import { handleTextInput, type AutoPairConfig } from "./handlers";
+import { createKeyHandler } from "./keyHandler";
 
 const autoPairPluginKey = new PluginKey("autoPair");
 

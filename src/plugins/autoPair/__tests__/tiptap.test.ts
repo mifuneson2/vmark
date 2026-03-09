@@ -38,6 +38,9 @@ const mockCreateKeyHandler = vi.fn(() => vi.fn(() => false));
 
 vi.mock("../handlers", () => ({
   handleTextInput: (...args: unknown[]) => mockHandleTextInput(...args),
+}));
+
+vi.mock("../keyHandler", () => ({
   createKeyHandler: (...args: unknown[]) => mockCreateKeyHandler(...args),
 }));
 

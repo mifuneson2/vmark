@@ -21,14 +21,13 @@ import { TextSelection } from "@tiptap/pm/state";
 import type { EditorState } from "@tiptap/pm/state";
 import {
   getClosingChar,
-  isClosingChar,
   getOpeningChar,
   normalizeForPairing,
   straightToCurlyOpening,
-  straightToCurlyClosing,
   type PairConfig,
 } from "./pairs";
-import { shouldAutoPair, isInCodeBlock, getCharAt, getCharBefore } from "./utils";
+import { shouldAutoPair, getCharAt, getCharBefore } from "./utils";
+import { handleBacktickCodeToggle } from "./backtickToggle";
 
 export interface AutoPairConfig {
   enabled: boolean;
@@ -54,99 +53,6 @@ function isAllowedClosingChar(char: string, config: AutoPairConfig): boolean {
   if (!openingChar) return false;
   // Re-use getClosingChar which already centralizes config gating
   return getClosingChar(openingChar, toPairConfig(config)) === char;
-}
-
-/**
- * Handle backtick as code mark toggle in WYSIWYG mode.
- * - Outside code: activate code mark (or wrap selection)
- * - Inside code: escape to end of code mark
- * Returns true if handled.
- */
-function handleBacktickCodeToggle(
-  view: EditorView,
-  from: number,
-  to: number
-): boolean {
-  const { state, dispatch } = view;
-
-  // Don't handle if preceded by backslash (escaped)
-  /* v8 ignore next -- @preserve reason: from is always >= 1 in ProseMirror (cursor is inside the doc node); the else branch (from === 0) is unreachable during normal editing */
-  if (from > 0) {
-    const $pos = state.doc.resolve(from);
-    const textBefore = $pos.parent.textBetween(
-      Math.max(0, $pos.parentOffset - 1),
-      $pos.parentOffset,
-      ""
-    );
-    if (textBefore === "\\") return false;
-  }
-
-  // Don't handle in code blocks
-  if (isInCodeBlock(state)) return false;
-
-  const codeMarkType = state.schema.marks.code;
-  if (!codeMarkType) return false;
-
-  // Check if cursor is in inline code
-  const $from = state.doc.resolve(from);
-  const inCode = $from.marks().some((m) => m.type === codeMarkType);
-
-  if (inCode) {
-    // Escape: move cursor to end of code mark
-    const endPos = findCodeMarkEnd(state, from, codeMarkType);
-    // findCodeMarkEnd returns null only if no code-marked child contains `from`,
-    // which is structurally impossible when inCode is true (marks come from text nodes).
-    // findCodeMarkEnd always returns non-null when inCode is true — use non-null assertion
-    // (the null guard above exists as a type-safety guarantee only)
-    /* v8 ignore next -- @preserve reason: endPos is always non-null when inCode is true; the ?? from fallback is structurally unreachable */
-    const pos = endPos ?? from; // fallback to from keeps selection stable if null (unreachable)
-    const tr = state.tr.setSelection(TextSelection.create(state.doc, pos));
-    tr.removeStoredMark(codeMarkType);
-    dispatch(tr);
-    return true;
-  }
-
-  // Outside code: toggle code mark
-  if (from !== to) {
-    // Selection: wrap with code mark
-    const tr = state.tr.addMark(from, to, codeMarkType.create());
-    dispatch(tr);
-    return true;
-  }
-
-  // No selection: activate code mark for subsequent typing
-  const tr = state.tr.addStoredMark(codeMarkType.create());
-  dispatch(tr);
-  return true;
-}
-
-/**
- * Find the end position of the code mark containing the given position.
- */
-function findCodeMarkEnd(
-  state: EditorState,
-  pos: number,
-  codeMarkType: ReturnType<EditorState["schema"]["marks"]["code"]["create"]>["type"]
-): number | null {
-  const $pos = state.doc.resolve(pos);
-  const parent = $pos.parent;
-  const parentStart = $pos.start();
-
-  let offset = 0;
-  for (let i = 0; i < parent.childCount; i++) {
-    const child = parent.child(i);
-    const childStart = parentStart + offset;
-    const childEnd = childStart + child.nodeSize;
-
-    if (pos >= childStart && pos <= childEnd) {
-      /* v8 ignore next 3 -- @preserve reason: when inCode is true the cursor lies inside a code-marked text node; any sibling that satisfies the range check but lacks the code mark is only reachable at a mark boundary where $from.marks() already returns [] (inCode=false), making this else path structurally unreachable */
-      if (child.marks.some((m) => m.type === codeMarkType)) {
-        return childEnd;
-      }
-    }
-    offset += child.nodeSize;
-  }
-  return null;
 }
 
 /**
@@ -281,81 +187,66 @@ export function handleBackspacePair(
 }
 
 /**
- * Handle Tab key - jump over closing bracket if cursor is right before one.
- * Returns true if jumped, false to allow normal Tab behavior.
+ * Check if an opening character is allowed by the current config.
+ * Verifies the char has a known closing pair and that pair is enabled.
  */
-export function handleTabJump(
+function isAllowedOpeningChar(char: string, config: AutoPairConfig): boolean {
+  return getClosingChar(char, toPairConfig(config)) !== null;
+}
+
+/**
+ * Directional bracket jump — shared logic for Tab (forward) and Shift+Tab (backward).
+ * Checks the adjacent character and jumps over it if it matches the predicate.
+ *
+ * Tab: checks char at cursor (closing bracket), jumps forward (+1).
+ * Shift+Tab: checks char before cursor (opening bracket), jumps backward (-1).
+ *
+ * Both are navigation-only (not content changes), so addToHistory is false.
+ * Neither verifies full pair context (matching counterpart) — this mirrors
+ * the auto-pair convention where bracket skip operates on individual characters.
+ */
+function handleDirectionalJump(
   view: EditorView,
-  config: AutoPairConfig
+  config: AutoPairConfig,
+  getChar: (state: EditorState, pos: number) => string,
+  isAllowed: (char: string, config: AutoPairConfig) => boolean,
+  offset: 1 | -1,
 ): boolean {
   if (!config.enabled) return false;
 
   const { state } = view;
   const { from, to } = state.selection;
 
-  // Only handle when no selection
   if (from !== to) return false;
 
-  // Check if next character is an allowed closing bracket
-  const nextChar = getCharAt(state, from);
-  if (!isAllowedClosingChar(nextChar, config)) return false;
+  const char = getChar(state, from);
+  if (!char || !isAllowed(char, config)) return false;
 
-  // Jump over the closing bracket (navigation, not content change)
-  const tr = state.tr.setSelection(TextSelection.create(state.doc, from + 1));
+  const tr = state.tr.setSelection(TextSelection.create(state.doc, from + offset));
   view.dispatch(tr.setMeta("addToHistory", false));
   return true;
 }
 
 /**
- * Create keyboard event handler.
- * Accepts a config getter so the handler always reads fresh settings
- * without allocating a new closure on every keydown.
+ * Handle Tab key — jump over closing bracket if cursor is right before one.
+ * Returns true if jumped, false to allow normal Tab behavior.
  */
-export function createKeyHandler(getConfig: () => AutoPairConfig) {
-  return function handleKeyDown(view: EditorView, event: KeyboardEvent): boolean {
-    // Skip if modifiers are pressed (except Shift)
-    if (event.ctrlKey || event.altKey || event.metaKey) {
-      return false;
-    }
-
-    const config = getConfig();
-
-    // Handle Tab to jump over closing bracket
-    if (event.key === "Tab" && !event.shiftKey) {
-      if (handleTabJump(view, config)) {
-        event.preventDefault();
-        return true;
-      }
-      // Let normal Tab behavior happen (indent)
-      return false;
-    }
-
-    // Handle backspace for pair deletion
-    if (event.key === "Backspace") {
-      if (handleBackspacePair(view, config)) {
-        event.preventDefault();
-        return true;
-      }
-      return false;
-    }
-
-    // Handle closing bracket skip
-    if (event.key.length === 1 && isClosingChar(event.key)) {
-      if (handleClosingBracket(view, event.key, config)) {
-        event.preventDefault();
-        return true;
-      }
-      // When curly quotes are enabled, also try the curly closing equivalent.
-      // event.key is always the physical key (" straight) even when the document
-      // contains curly quotes from auto-pair or macOS Smart Quotes.
-      const pairConfig = toPairConfig(config);
-      const curlyClosing = straightToCurlyClosing(event.key, pairConfig);
-      if (curlyClosing !== event.key && handleClosingBracket(view, curlyClosing, config)) {
-        event.preventDefault();
-        return true;
-      }
-    }
-
-    return false;
-  };
+export function handleTabJump(
+  view: EditorView,
+  config: AutoPairConfig
+): boolean {
+  return handleDirectionalJump(view, config, getCharAt, isAllowedClosingChar, 1);
 }
+
+/**
+ * Handle Shift+Tab key — jump before opening bracket if cursor is right after one.
+ * Mirrors handleTabJump (which jumps over closing brackets).
+ * Returns true if jumped, false to allow normal Shift+Tab behavior.
+ */
+export function handleShiftTabJump(
+  view: EditorView,
+  config: AutoPairConfig
+): boolean {
+  return handleDirectionalJump(view, config, getCharBefore, isAllowedOpeningChar, -1);
+}
+

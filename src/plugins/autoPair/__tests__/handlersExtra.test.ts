@@ -14,9 +14,9 @@ import {
   handleTabJump,
   handleClosingBracket,
   handleBackspacePair,
-  createKeyHandler,
   type AutoPairConfig,
 } from "../handlers";
+import { createKeyHandler } from "../keyHandler";
 
 /* ------------------------------------------------------------------ */
 /*  Minimal schema & helpers                                           */
@@ -354,9 +354,21 @@ describe("createKeyHandler", () => {
     expect(event.preventDefault).toHaveBeenCalled();
   });
 
-  it("does not handle Shift+Tab", () => {
+  it("handles Shift+Tab to jump before opening bracket", () => {
     const handler = createKeyHandler(() => ENABLED);
-    const state = createState("()", 1);
+    const state = createState("()", 1); // cursor after (
+    const view = createMockView(state);
+    const event = createKeyEvent("Tab", { shiftKey: true });
+
+    const result = handler(view, event);
+    expect(result).toBe(true);
+    expect(event.preventDefault).toHaveBeenCalled();
+    expect(getCursorOffset(view.state)).toBe(0);
+  });
+
+  it("returns false for Shift+Tab when not after opening bracket", () => {
+    const handler = createKeyHandler(() => ENABLED);
+    const state = createState("hello", 3); // cursor in plain text
     const view = createMockView(state);
     const event = createKeyEvent("Tab", { shiftKey: true });
 
