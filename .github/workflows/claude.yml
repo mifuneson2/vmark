@@ -39,11 +39,15 @@ jobs:
         with:
           node-version: 22
 
+      - name: Install dependencies
+        run: npm install -g pnpm && pnpm install --frozen-lockfile
+
       - uses: anthropics/claude-code-action@v1
         env:
           ISSUE_NUMBER: ${{ github.event.issue.number }}
         with:
           allowed_bots: "claude[bot]"
+          allowed_tools: "Bash,Read,Write,Edit,Glob,Grep,MultiEdit"
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           claude_args: "--model opus"
           prompt: |
@@ -51,7 +55,7 @@ jobs:
 
             1. Read issue #$ISSUE_NUMBER body with `gh issue view $ISSUE_NUMBER`
             2. Apply the suggested fix
-            3. Run `pnpm install && pnpm check:all` to verify all gates pass
+            3. Run `pnpm check:all` to verify all gates pass
             4. Create a PR that includes `Closes #$ISSUE_NUMBER` in the body
             5. Enable auto-merge: `gh pr merge --auto --squash`
 
