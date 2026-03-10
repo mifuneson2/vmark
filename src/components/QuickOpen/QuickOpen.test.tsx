@@ -349,6 +349,41 @@ describe("QuickOpen with file items", () => {
     expect(anySelected).toBe(true);
   });
 
+  it("mouseEnter on Browse row selects it", () => {
+    useQuickOpenStore.setState({ isOpen: true });
+    render(<QuickOpen windowLabel="main" />);
+    const browseRow = screen.getByText("Browse...").closest("[role='option']")!;
+    fireEvent.mouseEnter(browseRow);
+    expect(browseRow).toHaveAttribute("aria-selected", "true");
+  });
+
+  it("clamps selectedIndex when filter shrinks results below current index", async () => {
+    useQuickOpenStore.setState({ isOpen: true });
+    const { rerender } = render(<QuickOpen windowLabel="main" />);
+    const dialog = screen.getByRole("dialog");
+
+    // Move selection to Browse row (index 2 — last of 3 items)
+    fireEvent.keyDown(dialog, { key: "ArrowDown" });
+    fireEvent.keyDown(dialog, { key: "ArrowDown" });
+    const browseRow = screen.getByText("Browse...").closest("[role='option']")!;
+    expect(browseRow).toHaveAttribute("aria-selected", "true");
+
+    // Type filter that leaves only 1 file match + Browse = 2 items (indices 0-1)
+    // selectedIndex is 2 which is >= totalCount(2), so clamp effect fires
+    const input = screen.getByRole("combobox");
+    await userEvent.setup().type(input, "read");
+
+    // Wait for the clamp useEffect to run
+    await act(async () => {
+      rerender(<QuickOpen windowLabel="main" />);
+    });
+
+    // After clamping, some option should be selected (index clamped to 1 = Browse)
+    const options = screen.getAllByRole("option");
+    const selectedOption = options.find((o) => o.getAttribute("aria-selected") === "true");
+    expect(selectedOption).toBeDefined();
+  });
+
   it("restores focus to previously focused element on close", () => {
     // Create and focus a button to simulate prior focus
     const button = document.createElement("button");

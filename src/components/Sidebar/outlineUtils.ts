@@ -158,37 +158,3 @@ export function getHeadingLinesKey(content: string): string {
   return headingLines.join("\n");
 }
 
-/**
- * Count total nodes in a heading tree (including all nested children).
- */
-export function countTreeNodes(tree: HeadingNode[]): number {
-  let count = 0;
-  for (const node of tree) {
-    count += 1 + countTreeNodes(node.children);
-  }
-  return count;
-}
-
-/**
- * Build a limited tree that includes only the first N nodes in document order.
- * Preserves tree structure but truncates at the limit.
- */
-export function buildLimitedTree(tree: HeadingNode[], limit: number): HeadingNode[] {
-  let remaining = limit;
-
-  function cloneWithLimit(nodes: HeadingNode[]): HeadingNode[] {
-    const result: HeadingNode[] = [];
-
-    for (const node of nodes) {
-      if (remaining <= 0) break;
-      remaining--;
-
-      const clonedChildren = cloneWithLimit(node.children);
-      result.push({ ...node, children: clonedChildren });
-    }
-
-    return result;
-  }
-
-  return cloneWithLimit(tree);
-}

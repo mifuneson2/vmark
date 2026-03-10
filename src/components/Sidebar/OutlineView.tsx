@@ -14,8 +14,6 @@ import {
   extractHeadings,
   buildHeadingTree,
   getHeadingLinesKey,
-  countTreeNodes,
-  buildLimitedTree,
   type HeadingItem,
   type HeadingNode,
 } from "./outlineUtils";
@@ -89,7 +87,7 @@ function OutlineItem({
 
 // Size thresholds for performance
 const MAX_CONTENT_FOR_OUTLINE = 100000; // 100KB threshold
-const MAX_OUTLINE_ITEMS = 100; // Limit total visible items
+const MAX_HEADING_COUNT = 1000; // Safety cap for heading count
 
 export function OutlineView() {
   const content = useDocumentContent();
@@ -117,7 +115,8 @@ export function OutlineView() {
       return prevHeadingsRef.current;
     }
     perfStart("OutlineView:extractHeadings");
-    const newHeadings = extractHeadings(deferredContent);
+    const extracted = extractHeadings(deferredContent);
+    const newHeadings = extracted.length > MAX_HEADING_COUNT ? extracted.slice(0, MAX_HEADING_COUNT) : extracted;
     perfEnd("OutlineView:extractHeadings", { count: newHeadings.length });
     prevHeadingsRef.current = newHeadings;
     prevKeyRef.current = headingLinesKey;
@@ -131,15 +130,6 @@ export function OutlineView() {
     perfEnd("OutlineView:buildHeadingTree", { rootNodes: result.length });
     return result;
   }, [headings, isTooLarge]);
-
-  // Count total nodes and build limited tree if needed
-  const totalNodes = useMemo(() => countTreeNodes(tree), [tree]);
-  const isTruncated = totalNodes > MAX_OUTLINE_ITEMS;
-
-  const limitedTree = useMemo(() => {
-    if (!isTruncated) return tree;
-    return buildLimitedTree(tree, MAX_OUTLINE_ITEMS);
-  }, [tree, isTruncated]);
 
   const activeIndex = activeHeadingIndex ?? -1;
 
@@ -192,25 +182,18 @@ export function OutlineView() {
   return (
     <div className="sidebar-view outline-view">
       {headings.length > 0 ? (
-        <>
-          <ul className="outline-tree" role="tree" aria-label="Document outline">
-            {limitedTree.map((node) => (
-              <OutlineItem
-                key={node.index}
-                node={node}
-                activeIndex={activeIndex}
-                collapsedSet={collapsedSet}
-                onToggle={handleToggle}
-                onClick={handleClick}
-              />
-            ))}
-          </ul>
-          {isTruncated && (
-            <div className="outline-truncated">
-              + {totalNodes - MAX_OUTLINE_ITEMS} more headings
-            </div>
-          )}
-        </>
+        <ul className="outline-tree" role="tree" aria-label="Document outline">
+          {tree.map((node) => (
+            <OutlineItem
+              key={node.index}
+              node={node}
+              activeIndex={activeIndex}
+              collapsedSet={collapsedSet}
+              onToggle={handleToggle}
+              onClick={handleClick}
+            />
+          ))}
+        </ul>
       ) : (
         <div className="sidebar-empty">No headings</div>
       )}

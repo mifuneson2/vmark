@@ -7,8 +7,6 @@ import {
   extractHeadings,
   buildHeadingTree,
   getHeadingLinesKey,
-  countTreeNodes,
-  buildLimitedTree,
   type HeadingItem,
 } from "../outlineUtils";
 
@@ -365,125 +363,6 @@ Some text
 
   it("returns empty string for empty content", () => {
     expect(getHeadingLinesKey("")).toBe("");
-  });
-});
-
-describe("countTreeNodes", () => {
-  it("counts single node", () => {
-    const tree = [{ text: "A", level: 1, line: 0, index: 0, children: [] }];
-    expect(countTreeNodes(tree)).toBe(1);
-  });
-
-  it("counts flat tree", () => {
-    const tree = [
-      { text: "A", level: 1, line: 0, index: 0, children: [] },
-      { text: "B", level: 1, line: 1, index: 1, children: [] },
-      { text: "C", level: 1, line: 2, index: 2, children: [] },
-    ];
-    expect(countTreeNodes(tree)).toBe(3);
-  });
-
-  it("counts nested tree", () => {
-    const tree = [
-      {
-        text: "A",
-        level: 1,
-        line: 0,
-        index: 0,
-        children: [
-          { text: "B", level: 2, line: 1, index: 1, children: [] },
-          {
-            text: "C",
-            level: 2,
-            line: 2,
-            index: 2,
-            children: [{ text: "D", level: 3, line: 3, index: 3, children: [] }],
-          },
-        ],
-      },
-    ];
-    expect(countTreeNodes(tree)).toBe(4);
-  });
-
-  it("returns 0 for empty tree", () => {
-    expect(countTreeNodes([])).toBe(0);
-  });
-});
-
-describe("buildLimitedTree", () => {
-  it("returns full tree when under limit", () => {
-    const tree = [
-      { text: "A", level: 1, line: 0, index: 0, children: [] },
-      { text: "B", level: 1, line: 1, index: 1, children: [] },
-    ];
-
-    const limited = buildLimitedTree(tree, 10);
-
-    expect(countTreeNodes(limited)).toBe(2);
-  });
-
-  it("limits total nodes, not just root nodes", () => {
-    const tree = [
-      {
-        text: "A",
-        level: 1,
-        line: 0,
-        index: 0,
-        children: [
-          { text: "B", level: 2, line: 1, index: 1, children: [] },
-          { text: "C", level: 2, line: 2, index: 2, children: [] },
-          { text: "D", level: 2, line: 3, index: 3, children: [] },
-        ],
-      },
-      { text: "E", level: 1, line: 4, index: 4, children: [] },
-    ];
-
-    // Limit to 3 nodes: A, B, C (D and E excluded)
-    const limited = buildLimitedTree(tree, 3);
-
-    expect(countTreeNodes(limited)).toBe(3);
-    expect(limited[0].text).toBe("A");
-    expect(limited[0].children).toHaveLength(2);
-    expect(limited[0].children[0].text).toBe("B");
-    expect(limited[0].children[1].text).toBe("C");
-    expect(limited).toHaveLength(1); // E not included
-  });
-
-  it("preserves tree structure when limiting", () => {
-    const tree = [
-      {
-        text: "A",
-        level: 1,
-        line: 0,
-        index: 0,
-        children: [
-          {
-            text: "B",
-            level: 2,
-            line: 1,
-            index: 1,
-            children: [{ text: "C", level: 3, line: 2, index: 2, children: [] }],
-          },
-        ],
-      },
-    ];
-
-    const limited = buildLimitedTree(tree, 2);
-
-    expect(countTreeNodes(limited)).toBe(2);
-    expect(limited[0].text).toBe("A");
-    expect(limited[0].children[0].text).toBe("B");
-    expect(limited[0].children[0].children).toHaveLength(0); // C excluded
-  });
-
-  it("returns empty array for limit 0", () => {
-    const tree = [{ text: "A", level: 1, line: 0, index: 0, children: [] }];
-
-    expect(buildLimitedTree(tree, 0)).toEqual([]);
-  });
-
-  it("handles empty tree", () => {
-    expect(buildLimitedTree([], 10)).toEqual([]);
   });
 });
 

@@ -2,8 +2,12 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook } from "@testing-library/react";
 import { useQuickOpenStore } from "@/components/QuickOpen/quickOpenStore";
 
+const listenCallbacks = new Map<string, (...args: unknown[]) => void>();
 vi.mock("@tauri-apps/api/event", () => ({
-  listen: vi.fn(() => Promise.resolve(vi.fn())),
+  listen: vi.fn((event: string, cb: (...args: unknown[]) => void) => {
+    listenCallbacks.set(event, cb);
+    return Promise.resolve(vi.fn());
+  }),
 }));
 
 vi.mock("@/stores/shortcutsStore", () => ({
@@ -30,6 +34,7 @@ import { useQuickOpenShortcuts } from "./useQuickOpenShortcuts";
 
 beforeEach(() => {
   useQuickOpenStore.setState({ isOpen: false });
+  listenCallbacks.clear();
 });
 
 describe("useQuickOpenShortcuts", () => {
@@ -59,6 +64,18 @@ describe("useQuickOpenShortcuts", () => {
     window.dispatchEvent(event);
 
     expect(useQuickOpenStore.getState().isOpen).toBe(false);
+  });
+
+  it("opens Quick Open on menu:quick-open event", async () => {
+    renderHook(() => useQuickOpenShortcuts());
+
+    // Wait for listen promise to resolve and register callback
+    await vi.waitFor(() => {
+      expect(listenCallbacks.has("menu:quick-open")).toBe(true);
+    });
+
+    listenCallbacks.get("menu:quick-open")!();
+    expect(useQuickOpenStore.getState().isOpen).toBe(true);
   });
 
   it("removes listener on unmount", () => {
