@@ -2,8 +2,8 @@ name: Claude Periodic Audit
 
 on:
   schedule:
-    # Every 12 hours (9am and 9pm UTC)
-    - cron: "0 9,21 * * *"
+    # Once daily at 9am UTC
+    - cron: "0 9 * * *"
 
   # Allow manual trigger from Actions tab
   workflow_dispatch:
@@ -35,7 +35,7 @@ jobs:
             desktop Markdown editor with a ProseMirror/Tiptap WYSIWYG mode, a CodeMirror
             source mode, and a Node.js MCP sidecar. The entire codebase is written by AI.
 
-            Use the run ID (${{ github.run_id }}) as a seed to **randomly pick 3–4 dimensions**
+            Use the run ID (${{ github.run_id }}) as a seed to **randomly pick 5–6 dimensions**
             from the list below. Also rotate the target directories so successive runs cover
             different parts of the codebase.
 
@@ -118,7 +118,7 @@ jobs:
             - Missing `.cmd` shim handling for Windows subprocess spawning
 
             ### 11. Test coverage & quality
-            145 test files, thresholds: statements 43%, branches 37%, functions 50%, lines 44%.
+            603 test files, thresholds: statements 99.89%, branches 99.6%, functions 99.97%, lines 99.92%.
             Check for:
             - Untested stores or hooks (every store/hook needs tests)
             - `any` usage in test files hiding type errors
@@ -162,6 +162,32 @@ jobs:
             - Orphaned files (not imported by anything)
             - Stale feature flags or commented-out code blocks
 
+            ### 17. Export & network resilience
+            `src/export/` (4600+ LoC) + `src-tauri/src/ai_provider/`. Check for:
+            - Font downloads from CDN without retry/timeout (`fontEmbedder.ts`)
+            - REST API calls using `unwrap_or_default()` on response parsing
+            - Image/resource resolution without symlink or permission handling
+            - Partial failure recovery (1 of N assets fails — does export abort or corrupt?)
+            - Missing timeout handling on network requests
+
+            ### 18. Terminal subsystem correctness
+            `src/components/Terminal/` (6K+ LoC). Check for:
+            - PTY spawn fallback chains (configured shell → default → failure)
+            - IME composition grace period edge cases (80ms timer in `createTerminalInstance.ts`)
+            - Flow control watermark thresholds (HIGH=5, LOW=2 in `spawnPty.ts`)
+            - Shell detection failures on both primary and fallback shells
+            - File link provider size guard (10MB) and permission error handling
+            - ANSI color contrast regressions (all light theme colors must be ≥ 4.5:1 WCAG AA)
+
+            ### 19. Accessibility & link security
+            Check across `src/components/` and `src/plugins/` for:
+            - External links missing `rel="noopener noreferrer"` (window.opener hijack risk)
+            - Missing `aria-label` on icon-only buttons
+            - Missing `aria-live` regions for async status updates (file changes, AI responses)
+            - Missing `aria-expanded` on collapsible panels (sidebar, outline, terminal)
+            - Keyboard navigation gaps: roving tabindex in QuickOpen, file explorer, outline
+            - Focus trapping in modal dialogs (Tab should cycle within dialog)
+
             ---
 
             ## Rules
@@ -174,6 +200,7 @@ jobs:
               - Body: file path + line, impact explanation, suggested fix
               - Labels: `audit` + one of: `bug`, `security`, `dead-code`, `convention`,
                 `test-gap`, `performance`, `accessibility`, `type-safety`, `error-handling`,
-                `dependency`, `menu-sync`, `hot-exit`, `mcp-bridge`, `cross-platform`
+                `dependency`, `menu-sync`, `hot-exit`, `mcp-bridge`, `cross-platform`,
+                `export`, `terminal`
             - **If nothing found, create no issues**
 
