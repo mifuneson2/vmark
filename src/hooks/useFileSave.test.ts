@@ -225,6 +225,20 @@ describe("moveTabToNewWorkspaceWindow", () => {
     expect(mockClose).not.toHaveBeenCalled();
   });
 
+  it("shows error toast when invoke throws", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.mocked(isWithinRoot).mockReturnValue(false);
+    mockInvoke.mockRejectedValueOnce(new Error("IPC failed"));
+
+    await moveTabToNewWorkspaceWindow("main", "tab-1", "/other/file.md");
+
+    expect(toast.error).toHaveBeenCalledWith("Failed to move file to new window");
+    // Should not close tab or window
+    expect(mockCloseTab).not.toHaveBeenCalled();
+    expect(mockClose).not.toHaveBeenCalled();
+    errorSpy.mockRestore();
+  });
+
   it("closes entire window when it is the last tab", async () => {
     vi.mocked(isWithinRoot).mockReturnValue(false);
     vi.mocked(useTabStore.getState).mockReturnValue({

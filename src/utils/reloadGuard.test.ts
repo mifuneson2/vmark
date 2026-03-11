@@ -1,7 +1,7 @@
 /**
  * Unit tests for reload guard logic
  */
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import {
   shouldBlockReload,
   getReloadWarningMessage,
@@ -124,6 +124,13 @@ describe("reloadGuard", () => {
       // When nothing specific is focused, activeElement is <body>
       (document.activeElement as HTMLElement)?.blur?.();
       expect(isTerminalFocused()).toBe(false);
+    });
+
+    it("returns false when document.activeElement is null", () => {
+      // Simulate activeElement being null (e.g., no focusable element in DOM)
+      const spy = vi.spyOn(document, "activeElement", "get").mockReturnValue(null);
+      expect(isTerminalFocused()).toBe(false);
+      spy.mockRestore();
     });
   });
 

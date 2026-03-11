@@ -150,6 +150,22 @@ describe("dateUtils", () => {
       expect(groups.has("Today")).toBe(true);
     });
 
+    it("groups items from 5 days ago under a date label (not Today/Yesterday)", () => {
+      const fiveDaysAgo = new Date();
+      fiveDaysAgo.setDate(fiveDaysAgo.getDate() - 5);
+
+      const items: TestItem[] = [{ id: 1, timestamp: fiveDaysAgo.getTime() }];
+      const groups = groupByDay(items, (item) => item.timestamp);
+
+      expect(groups.size).toBe(1);
+      // The key should NOT be "Today" or "Yesterday"
+      const key = [...groups.keys()][0];
+      expect(key).not.toBe("Today");
+      expect(key).not.toBe("Yesterday");
+      // Should contain a weekday name (from toLocaleDateString with weekday: "long")
+      expect(key.length).toBeGreaterThan(0);
+    });
+
     it("preserves item order within groups", () => {
       const now = Date.now();
       const items: TestItem[] = [

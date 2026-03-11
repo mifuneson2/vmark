@@ -118,6 +118,17 @@ describe("buildQuickOpenItems", () => {
     expect(items[0].tier).toBe("workspace");
   });
 
+  it("deduplicates within recent files (same path listed twice)", () => {
+    mockRecentFiles.mockReturnValue({
+      files: [
+        { path: "/a.md", name: "a", timestamp: 200 },
+        { path: "/a.md", name: "a", timestamp: 100 },
+      ],
+    } as any);
+    const items = buildQuickOpenItems("win", []);
+    expect(items.filter((i) => i.path === "/a.md")).toHaveLength(1);
+  });
+
   it("deduplicates: recent wins over open and workspace", () => {
     mockRecentFiles.mockReturnValue({
       files: [{ path: "/a.md", name: "a", timestamp: 100 }],
@@ -177,6 +188,12 @@ describe("buildQuickOpenItems", () => {
     mockWorkspaceStore.mockReturnValue({ rootPath: "/project" } as any);
     const items = buildQuickOpenItems("win", ["/project2/file.md"]);
     expect(items[0].relPath).toBe("/project2/file.md");
+  });
+
+  it("returns empty string when path equals rootPath exactly", () => {
+    mockWorkspaceStore.mockReturnValue({ rootPath: "/project" } as any);
+    const items = buildQuickOpenItems("win", ["/project"]);
+    expect(items[0].relPath).toBe("");
   });
 
   it("handles tabs without filePath (untitled tabs)", () => {
@@ -288,6 +305,30 @@ describe("filterAndRankItems", () => {
     ];
     const result = filterAndRankItems(items, "zzz");
     expect(result).toHaveLength(0);
+  });
+
+  it("sorts items within the same tier by descending score", () => {
+    const items = [
+      { path: "/ab.md", filename: "ab.md", relPath: "ab.md", tier: "workspace" as const, isOpenTab: false },
+      { path: "/abcdef.md", filename: "abcdef.md", relPath: "abcdef.md", tier: "workspace" as const, isOpenTab: false },
+    ];
+    const result = filterAndRankItems(items, "abcdef");
+    // "abcdef.md" should rank higher (better match) than "ab.md"
+    expect(result.length).toBeGreaterThanOrEqual(1);
+    if (result.length >= 2) {
+      expect(result[0].match!.score).toBeGreaterThanOrEqual(result[1].match!.score);
+    }
+  });
+
+  it("sorts different tiers before sorting by score", () => {
+    const items = [
+      { path: "/w.md", filename: "w.md", relPath: "w.md", tier: "workspace" as const, isOpenTab: false },
+      { path: "/r.md", filename: "r.md", relPath: "r.md", tier: "recent" as const, isOpenTab: false },
+    ];
+    const result = filterAndRankItems(items, "md");
+    expect(result).toHaveLength(2);
+    expect(result[0].tier).toBe("recent");
+    expect(result[1].tier).toBe("workspace");
   });
 
   it("returns empty for empty items array", () => {

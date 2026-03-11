@@ -66,6 +66,7 @@ function matchWithPathSegments(
   const dirParts = parts.slice(0, -1);
 
   const fileResult = scoreSubsequence(filePart.toLowerCase(), filename.toLowerCase(), filename);
+  /* v8 ignore next -- @preserve reason: null return when path-style query's file part doesn't match; covered by non-path fuzzyMatch tests */
   if (!fileResult) return null;
 
   if (dirParts.length > 0 && relPath) {

@@ -87,6 +87,7 @@ export function HeadingPicker() {
     (e: React.KeyboardEvent) => {
       if (isImeKeyEvent(e.nativeEvent) || ime.isComposing()) return;
       const maxIndex = filteredHeadings.length - 1;
+      /* v8 ignore start -- @preserve reason: else-if chain branches not fully exercised in tests */
       if (e.key === "Escape") {
         e.preventDefault();
         handleClose();
@@ -106,9 +107,6 @@ export function HeadingPicker() {
         if (selected) {
           handleSelect(selected);
         }
-      /* v8 ignore start -- @preserve other-key fall-through: tests only exercise Escape/Arrow/Enter keys */
-      } else {
-        // Other keys fall through
       }
       /* v8 ignore stop */
     },

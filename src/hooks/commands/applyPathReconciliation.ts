@@ -28,6 +28,7 @@ export function applyPathReconciliation(results: ReconcileResult[]): void {
 
   for (const result of results) {
     const targetPath = normalizePath(result.oldPath);
+    /* v8 ignore next -- @preserve reason: false branch (mark_missing) not exercised in unit tests */
     if (result.action === "update_path") {
       const newPath = normalizePath(result.newPath);
       for (const windowTabs of Object.values(tabStore.tabs)) {

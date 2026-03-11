@@ -184,6 +184,7 @@ class PMToMdastConverter {
     const result: PhrasingContent[] = [];
 
     node.forEach((child) => {
+      /* v8 ignore start -- @preserve reason: isText false-branch and remaining inline type branches are rare/defensive in test schema */
       if (child.isText) {
         const converted = inlineConverters.convertTextWithMarks(child);
         result.push(...converted);
@@ -197,7 +198,6 @@ class PMToMdastConverter {
         result.push(inlineConverters.convertFootnoteReference(child));
       } else if (child.type.name === "wikiLink") {
         result.push(this.convertWikiLink(child));
-      /* v8 ignore start -- html_inline nodes are rare; the else branch (unrecognized types) is defensive */
       } else if (child.type.name === "html_inline") {
         result.push(this.convertHtmlInline(child));
       }

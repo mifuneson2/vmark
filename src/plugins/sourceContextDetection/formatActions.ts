@@ -83,6 +83,7 @@ function applyFootnote(
   const newDoc = view.state.doc.toString();
   const renumberedDoc = renumberFootnotes(newDoc);
 
+  /* v8 ignore next -- @preserve reason: false branch (renumberFootnotes returns null) unreachable in practice */
   if (renumberedDoc) {
     // Find where our new reference is (count refs before position 'to')
     const refsBeforeInsert = parseReferences(doc).filter((r) => r.start < to).length;

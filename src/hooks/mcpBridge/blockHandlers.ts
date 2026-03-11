@@ -125,6 +125,7 @@ export async function handleResolveTargets(
     const query = requireObject<BlockQuery>(args, "query");
     const maxResults = optionalNumber(args, "maxResults") ?? 10;
 
+    /* v8 ignore next 3 -- @preserve defensive guard: requireObject already validates query */
     if (!query) {
       throw new Error("query is required");
     }

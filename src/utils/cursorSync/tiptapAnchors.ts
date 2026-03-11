@@ -34,9 +34,10 @@ export function getBlockAnchor($pos: ResolvedPos): BlockAnchor | undefined {
       let col = 0;
       for (let pd = d - 1; pd >= 0; pd--) {
         const parentName = $pos.node(pd).type.name;
+        /* v8 ignore next -- @preserve reason: false branch ("table" parent) always follows "tableRow" in ProseMirror structure */
         if (parentName === "tableRow") {
           col = $pos.index(pd + 1);
-        /* v8 ignore start -- "table" ancestor always follows "tableRow" in ProseMirror table structure */
+        /* v8 ignore start -- @preserve "table" ancestor branch not separately exercised in tests */
         } else if (parentName === "table") {
           row = $pos.index(pd + 1);
           break;

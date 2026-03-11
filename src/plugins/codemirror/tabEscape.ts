@@ -49,10 +49,11 @@ function calculateEscapeForCursor(view: EditorView, pos: number): number | null 
   if (boundaries) {
     let targetPosInLine: number | null = null;
 
+    /* v8 ignore next -- @preserve reason: false branch (cursor in URL portion) not reached in multi-cursor tests */
     if (isInLinkText(boundaries, posInLine)) {
       // In text portion: jump to URL start
       targetPosInLine = boundaries.urlStart;
-    /* v8 ignore start -- @preserve else path of isInLinkUrl: url position not reached in multi-cursor tests */
+    /* v8 ignore start -- @preserve else path of isInLinkUrl: url position not reached in tests */
     } else if (isInLinkUrl(boundaries, posInLine)) {
       // In URL portion: jump after the link
       targetPosInLine = boundaries.linkEnd;

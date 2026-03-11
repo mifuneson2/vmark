@@ -215,17 +215,14 @@ export function TabContextMenu({ tab, position, windowLabel, onClose }: TabConte
         return;
       }
 
+      /* v8 ignore next -- @preserve reason: false branch (other keys) is a no-op fall-through */
       if ((event.key === "Enter" || event.key === " ") && focusedIndex >= 0) {
         const item = menuItems[focusedIndex];
         /* v8 ignore next -- @preserve reason: null item or separator/disabled guards; always a valid enabled item at focusedIndex in keyboard tests */
         if (!item || item.separator || item.disabled) return;
         event.preventDefault();
         void item.action();
-      /* v8 ignore start -- @preserve other-key fall-through: Enter/Space with valid focusedIndex always satisfied in keyboard tests */
-      } else {
-        // other keys or no focused item — fall through
       }
-      /* v8 ignore stop */
     },
     [focusableIndices, focusedIndex, menuItems, onClose]
   );

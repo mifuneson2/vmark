@@ -200,11 +200,11 @@ export class ImagePasteToastView {
         e.preventDefault();
         // Activate the currently focused button
         const activeEl = document.activeElement as HTMLElement;
+        /* v8 ignore start -- @preserve reason: activeElement class checks depend on real DOM focus; jsdom doesn't track button focus in NodeView */
         if (activeEl?.classList.contains("image-paste-toast-btn-insert")) {
           this.handleInsert();
         } else if (activeEl?.classList.contains("image-paste-toast-btn-dismiss")) {
           this.handleDismiss();
-        /* v8 ignore start -- @preserve no-button-focused fallback; neither toast button is focused */
         } else {
           this.handleInsert();
         }

@@ -140,6 +140,7 @@ function calculateLeftEscapeForPosition(
   if (escapableMark) {
     const { parent, parentStart } = resolveParent($pos);
     const result = findChildStartAtPos(parent, parentStart, pos, true, hasMarkType(escapableMark.type));
+    /* v8 ignore next -- @preserve reason: findChildStartAtPos always returns a value when escapableMark is found at $pos; defensive guard */
     if (result !== null) return result;
   }
 

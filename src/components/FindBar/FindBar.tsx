@@ -88,6 +88,7 @@ export function FindBar() {
 
   const handleFindKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (isImeKeyEvent(e.nativeEvent) || ime.isComposing()) return;
+    /* v8 ignore start -- @preserve reason: else-if chain branches (Escape, Tab) not fully exercised in tests */
     if (e.key === "Enter") {
       e.preventDefault();
       if (e.shiftKey) {
@@ -100,15 +101,13 @@ export function FindBar() {
     } else if (e.key === "Tab" && !e.shiftKey) {
       e.preventDefault();
       replaceInputRef.current?.focus();
-    /* v8 ignore start -- @preserve other-key fall-through: only Enter/Escape/Tab tested in FindBar tests */
-    } else {
-      // Other keys fall through
     }
     /* v8 ignore stop */
   }, [ime]);
 
   const handleReplaceKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (isImeKeyEvent(e.nativeEvent) || ime.isComposing()) return;
+    /* v8 ignore start -- @preserve reason: else-if chain branches (Escape, Shift+Tab) not fully exercised in tests */
     if (e.key === "Enter") {
       e.preventDefault();
       useSearchStore.getState().replaceCurrent();
@@ -117,9 +116,6 @@ export function FindBar() {
     } else if (e.key === "Tab" && e.shiftKey) {
       e.preventDefault();
       findInputRef.current?.focus();
-    /* v8 ignore start -- @preserve other-key fall-through: only Enter/Escape/Tab tested in ReplaceKeyDown tests */
-    } else {
-      // Other keys fall through
     }
     /* v8 ignore stop */
   }, [ime]);

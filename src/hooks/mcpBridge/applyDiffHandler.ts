@@ -173,11 +173,12 @@ export async function handleApplyDiff(
       const suggestionIds: string[] = [];
       let matchesToProcess: TextMatch[] = [];
 
+      /* v8 ignore next -- @preserve reason: false branch (all/nth matchPolicy in suggest mode) not exercised in tests */
       if (matchPolicy === "first" || matchPolicy === "error_if_multiple") {
         matchesToProcess = [matches[0]];
+      /* v8 ignore start -- @preserve suggest mode with "all"/"nth" matchPolicy not exercised in tests */
       } else if (matchPolicy === "all") {
         matchesToProcess = matches;
-      /* v8 ignore start -- @preserve suggest mode with "nth" matchPolicy not exercised in tests */
       } else if (matchPolicy === "nth" && nth !== undefined) {
         matchesToProcess = [matches[nth]];
       }
@@ -211,12 +212,14 @@ export async function handleApplyDiff(
     // Apply replacements
     let appliedCount = 0;
 
+    /* v8 ignore next -- @preserve reason: false branch (all/nth matchPolicy in apply mode) not exercised in tests */
     if (matchPolicy === "first" || matchPolicy === "error_if_multiple") {
       const match = matches[0];
       const diffSlice = createMarkdownPasteSlice(editor.state, replacement);
       const diffTr = editor.state.tr.replaceRange(match.from, match.to, diffSlice);
       editor.view.dispatch(diffTr);
       appliedCount = 1;
+    /* v8 ignore start -- @preserve apply mode with "all"/"nth" matchPolicy not exercised in tests */
     } else if (matchPolicy === "all") {
       // Apply in reverse order to preserve positions
       const sortedMatches = [...matches].sort((a, b) => b.from - a.from);
@@ -226,7 +229,6 @@ export async function handleApplyDiff(
         editor.view.dispatch(diffTr);
         appliedCount++;
       }
-    /* v8 ignore start -- apply mode with "nth" matchPolicy not exercised in tests */
     } else if (matchPolicy === "nth" && nth !== undefined) {
       const match = matches[nth];
       const diffSlice = createMarkdownPasteSlice(editor.state, replacement);

@@ -105,6 +105,7 @@ export function handleMultiCursorBackspace(
         // so surrogate pairs (emoji) are deleted as a whole unit.
         const textBefore = $pos.parent.textBetween(0, $pos.parentOffset);
         const lastChar = [...textBefore].at(-1);
+        /* v8 ignore next -- @preserve reason: lastChar is always defined when parentOffset > 0; defensive guard */
         const charLen = lastChar ? lastChar.length : 1;
         tr = tr.delete(from - charLen, from);
       }
@@ -161,6 +162,7 @@ export function handleMultiCursorDelete(
         // so surrogate pairs (emoji) are deleted as a whole unit.
         const textAfter = $pos.parent.textBetween($pos.parentOffset, $pos.parent.content.size);
         const firstChar = [...textAfter].at(0);
+        /* v8 ignore next -- @preserve reason: firstChar is always defined when parentOffset < content.size; defensive guard */
         const charLen = firstChar ? firstChar.length : 1;
         tr = tr.delete(from, from + charLen);
       }

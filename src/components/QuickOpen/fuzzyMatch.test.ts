@@ -70,6 +70,11 @@ describe("fuzzyMatch", () => {
       expect(fuzzyMatch("lib/ft", "fileTree.ts", "src/fileTree.ts")).toBeNull();
     });
 
+    it("returns null when query has dir separator but file has no relPath", () => {
+      // dirParts.length > 0 but relPath is undefined → else branch returns null
+      expect(fuzzyMatch("src/file", "file.ts")).toBeNull();
+    });
+
     it("weights filename matches higher than path matches", () => {
       const nameMatch = fuzzyMatch("tab", "tabStore.ts", "src/stores/tabStore.ts")!;
       const pathMatch = fuzzyMatch("tab", "other.ts", "src/tabs/other.ts")!;

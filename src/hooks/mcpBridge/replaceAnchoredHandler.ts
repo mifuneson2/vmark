@@ -86,6 +86,7 @@ export async function handleReplaceAnchored(
       throw new Error("No active editor");
     }
 
+    /* v8 ignore next 3 -- @preserve defensive guard: requireObject with requiredKeys already validates anchor.text */
     if (!anchor || !anchor.text) {
       throw new Error("anchor.text is required");
     }

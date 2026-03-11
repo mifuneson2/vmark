@@ -445,6 +445,27 @@ describe("useAutoSave", () => {
     expect(saveToPath).toHaveBeenCalledWith("tab-2", "/tmp/good.md", "Content", "auto");
   });
 
+  it("falls back to MIN_INTERVAL_MS when autoSaveInterval is NaN", async () => {
+    vi.mocked(useSettingsStore).mockImplementation((selector) => {
+      const state = {
+        general: {
+          autoSaveEnabled: true,
+          autoSaveInterval: NaN, // non-finite
+        },
+      };
+      return selector(state as Parameters<typeof selector>[0]);
+    });
+
+    renderHook(() => useAutoSave());
+
+    // Advance past the fallback interval (1000ms = MIN_INTERVAL_MS)
+    await act(async () => {
+      vi.advanceTimersByTime(1000);
+    });
+
+    expect(saveToPath).toHaveBeenCalled();
+  });
+
   it("handles window with no tabs entry (undefined)", async () => {
     vi.mocked(useTabStore.getState).mockReturnValue({
       tabs: {},

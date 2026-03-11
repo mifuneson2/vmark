@@ -52,6 +52,7 @@ const VIMEO_VIDEO_ID_RE = /^\d+$/;
 const VIMEO_NON_VIDEO_PREFIXES = /^\/(channels|groups|user\d*|showcase|manage|settings|ondemand|categories)\b/i;
 
 function parseVimeoUrl(url: string): string | null {
+  /* v8 ignore next -- @preserve reason: parseVideoUrl guards empty strings before calling provider parsers */
   if (!url) return null;
   let parsed: URL;
   try {
@@ -86,6 +87,7 @@ function parseVimeoUrl(url: string): string | null {
 const BILIBILI_BV_RE = /^BV[a-zA-Z0-9]{10}$/;
 
 function parseBilibiliUrl(url: string): string | null {
+  /* v8 ignore next -- @preserve reason: parseVideoUrl guards empty strings before calling provider parsers */
   if (!url) return null;
   let parsed: URL;
   try {

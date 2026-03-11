@@ -268,6 +268,24 @@ describe("applyFormat — unwrapOppositeFormat with surrounding markers", () => 
   });
 });
 
+describe("applyFormat — footnote renumber path (line 86)", () => {
+  it("renumbers footnotes when inserting before an existing footnote", () => {
+    // Doc has [^1] already. Selecting "hello" (before the ref) and inserting a footnote
+    // creates [^999] at pos 5 which appears before [^1]. renumberFootnotes returns
+    // a non-null value (999 -> 1, 1 -> 2), exercising the if(renumberedDoc) branch.
+    const doc = "hello[^1] text\n\n[^1]: existing note";
+    const view = createView(doc, 0, 5); // select "hello"
+    applyFormat(view, "footnote");
+    const result = view.state.doc.toString();
+    // After renumbering, the newly inserted ref becomes [^1] and the old [^1] becomes [^2]
+    expect(result).toContain("[^1]");
+    expect(result).toContain("[^2]");
+    expect(result).toContain("]: hello");
+    expect(result).toContain("]: existing note");
+    view.destroy();
+  });
+});
+
 describe("applyFormat — footnote no-renumber path (line 98)", () => {
   it("sets cursor after ref when renumberFootnotes returns null (already sequential)", () => {
     // Start with a doc that already has a footnote [^1] so inserting [^2] stays sequential

@@ -128,6 +128,7 @@ export function filterAndRankItems(
   scored.sort((a, b) => {
     const tierDiff = TIER_ORDER[a.tier] - TIER_ORDER[b.tier];
     if (tierDiff !== 0) return tierDiff;
+    /* v8 ignore next -- @preserve reason: match?.score nullish coalesce branch; match is always present when items are in scored array */
     return (b.match?.score ?? 0) - (a.match?.score ?? 0);
   });
 

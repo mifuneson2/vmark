@@ -78,6 +78,16 @@ describe("useQuickOpenShortcuts", () => {
     expect(useQuickOpenStore.getState().isOpen).toBe(true);
   });
 
+  it("does nothing when shortcut does not match", () => {
+    renderHook(() => useQuickOpenShortcuts());
+
+    // Key that doesn't match the quickOpen shortcut
+    const event = new KeyboardEvent("keydown", { key: "x" });
+    window.dispatchEvent(event);
+
+    expect(useQuickOpenStore.getState().isOpen).toBe(false);
+  });
+
   it("removes listener on unmount", () => {
     const { unmount } = renderHook(() => useQuickOpenShortcuts());
     unmount();

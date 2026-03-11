@@ -291,6 +291,34 @@ describe("blockHandlers", () => {
       });
     });
 
+    it("returns error when heading is an array (invalid type)", async () => {
+      mockGetEditor.mockReturnValue({
+        state: { doc: { descendants: vi.fn() } },
+      });
+
+      await handleGetSection("req-heading-arr", { heading: ["invalid"] });
+
+      expect(mockRespond).toHaveBeenCalledWith({
+        id: "req-heading-arr",
+        success: false,
+        error: "heading must be a string or object with level and index",
+      });
+    });
+
+    it("returns error when heading is a number (invalid type)", async () => {
+      mockGetEditor.mockReturnValue({
+        state: { doc: { descendants: vi.fn() } },
+      });
+
+      await handleGetSection("req-heading-num", { heading: 42 });
+
+      expect(mockRespond).toHaveBeenCalledWith({
+        id: "req-heading-num",
+        success: false,
+        error: "heading must be a string or object with level and index",
+      });
+    });
+
     it("finds section by level and index", async () => {
       const headings = [
         {

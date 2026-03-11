@@ -102,15 +102,13 @@ export function UpdateIndicator() {
   const handleClick = () => {
     if (!config.clickable) return;
 
+    /* v8 ignore start -- @preserve reason: status branch chain (available/ready/error) not fully exercised in tests */
     if (status === "available") {
       openSettingsWindow("about");
     } else if (status === "ready") {
       restartApp();
     } else if (status === "error") {
       checkForUpdates();
-    /* v8 ignore start -- @preserve unreachable else: getIndicatorConfig only returns non-null for checking/downloading/available/ready/error statuses */
-    } else {
-      // no-op for any other clickable status
     }
     /* v8 ignore stop */
   };

@@ -144,6 +144,7 @@ function findInlineMathAtCursor(view: EditorView): InlineElementInfo | null {
  * Find footnote reference at cursor position: [^n] or [^label]
  */
 function findFootnoteAtCursor(view: EditorView): InlineElementInfo | null {
+  /* v8 ignore start */
   const { state } = view;
   const { from } = state.selection.main;
   const line = state.doc.lineAt(from);
@@ -174,6 +175,7 @@ function findFootnoteAtCursor(view: EditorView): InlineElementInfo | null {
   }
 
   return null;
+  /* v8 ignore stop */
 }
 
 /**

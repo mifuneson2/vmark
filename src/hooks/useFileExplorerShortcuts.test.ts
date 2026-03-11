@@ -123,6 +123,18 @@ describe("useFileExplorerShortcuts", () => {
     document.body.removeChild(input);
   });
 
+  it("skips when target is an INPUT element (via target override)", () => {
+    mockMatchesShortcutEvent.mockReturnValue(true);
+    renderHook(() => useFileExplorerShortcuts());
+
+    const input = document.createElement("input");
+    const event = new KeyboardEvent("keydown", { bubbles: true, cancelable: true, key: "h" });
+    Object.defineProperty(event, "target", { value: input });
+    window.dispatchEvent(event);
+
+    expect(mockToggleShowHiddenFiles).not.toHaveBeenCalled();
+  });
+
   it("skips when focus is in TEXTAREA element", () => {
     mockMatchesShortcutEvent.mockReturnValue(true);
     renderHook(() => useFileExplorerShortcuts());

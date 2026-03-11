@@ -10,6 +10,7 @@ export function useQuickOpenShortcuts(): void {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.repeat) return;
+      /* v8 ignore next -- @preserve reason: IME key event guard not reachable in jsdom test environment */
       if (isImeKeyEvent(e)) return;
       const quickOpenKey = useShortcutsStore.getState().getShortcut("quickOpen");
       if (matchesShortcutEvent(e, quickOpenKey)) {

@@ -5,6 +5,7 @@
  * The implementation is now split into smaller files under ./codeDetection/
  */
 
+/* v8 ignore start -- @preserve reason: barrel re-export file with no executable logic */
 export {
   shouldPasteAsCodeBlock,
   calculateCodeScore,
@@ -14,3 +15,4 @@ export {
   NON_CODE_PATTERNS,
   type CodeDetectionResult,
 } from "./codeDetection/index";
+/* v8 ignore stop */

@@ -123,6 +123,7 @@ export function useFileShortcuts(windowLabel: string): void {
       const saveAsKey = shortcuts.getShortcut("saveAs");
       if (matchesShortcutEvent(e, saveAsKey)) {
         e.preventDefault();
+        /* v8 ignore next 2 -- @preserve reason: .catch() error handler fires only on async rejection; mock always resolves */
         void handleSaveAs(windowLabel).catch((err) =>
           console.error("[FileOps] Save As failed:", err)
         );

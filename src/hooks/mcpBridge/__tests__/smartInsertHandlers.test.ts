@@ -164,6 +164,38 @@ describe("smartInsertHandlers", () => {
     });
   });
 
+  it("returns error when destination is an invalid type (number)", async () => {
+    mockGetEditor.mockReturnValue(createMockEditor());
+
+    await handleSmartInsert("req-dest-num", {
+      baseRevision: "rev-1",
+      destination: 42,
+      content: "text",
+    });
+
+    expect(mockRespond).toHaveBeenCalledWith({
+      id: "req-dest-num",
+      success: false,
+      error: "destination must be a string or object",
+    });
+  });
+
+  it("returns error when destination is an array", async () => {
+    mockGetEditor.mockReturnValue(createMockEditor());
+
+    await handleSmartInsert("req-dest-arr", {
+      baseRevision: "rev-1",
+      destination: ["invalid"],
+      content: "text",
+    });
+
+    expect(mockRespond).toHaveBeenCalledWith({
+      id: "req-dest-arr",
+      success: false,
+      error: "destination must be a string or object",
+    });
+  });
+
   it("returns error when destination is missing", async () => {
     mockGetEditor.mockReturnValue(createMockEditor());
 

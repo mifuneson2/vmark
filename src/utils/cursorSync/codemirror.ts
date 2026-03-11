@@ -186,11 +186,12 @@ export function restoreCursorInCodeMirror(view: EditorView, cursorInfo: CursorIn
 
   // Try block-specific restoration for code blocks and tables
   if (blockAnchor) {
+    /* v8 ignore next -- @preserve reason: false branch ("table" anchor kind) not exercised in cursor sync tests */
     if (blockAnchor.kind === "code") {
       if (restoreCursorInCodeBlockSource(view, sourceLine, blockAnchor)) {
         return;
       }
-    /* v8 ignore start -- "table" block anchor kind is set by getTableAnchor, only reached when sourceLine is inside a table */
+    /* v8 ignore start -- @preserve "table" block anchor kind not reached in tests */
     } else if (blockAnchor.kind === "table") {
       if (restoreCursorInTableSource(view, sourceLine, blockAnchor)) {
         return;

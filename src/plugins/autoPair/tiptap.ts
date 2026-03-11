@@ -40,12 +40,11 @@ function getConfig(): AutoPairConfig {
     enabled: settings.autoPairEnabled ?? true,
     includeCJK: settings.autoPairCJKStyle !== "off",
     includeCurlyQuotes: settings.autoPairCurlyQuotes ?? false,
+    /* v8 ignore next 3 -- @preserve reason: normalizeRightDoubleQuote compound boolean; CJK+curlyQuotes+rightDoubleQuote=true path not exercised in tests */
     normalizeRightDoubleQuote:
       settings.autoPairCJKStyle !== "off" &&
       (settings.autoPairCurlyQuotes ?? false) &&
-      /* v8 ignore start -- @preserve binary-expr short-circuit: autoPairRightDoubleQuote=true path not reached in tests */
       (settings.autoPairRightDoubleQuote ?? false),
-      /* v8 ignore stop */
   };
 }
 

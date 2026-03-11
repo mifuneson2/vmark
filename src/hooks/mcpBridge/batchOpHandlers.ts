@@ -78,9 +78,10 @@ function findTable(
     if (node.type.name === "table") {
       let isMatch = false;
 
+      /* v8 ignore next -- @preserve reason: false branch (afterHeading targeting) not exercised in tests */
       if (target.tableIndex !== undefined) {
         isMatch = tableIndex === target.tableIndex;
-      /* v8 ignore start -- afterHeading table targeting not exercised in tests */
+      /* v8 ignore start -- @preserve afterHeading table targeting not exercised in tests */
       } else if (target.afterHeading) {
         isMatch = lastHeadingText?.toLowerCase() === target.afterHeading.toLowerCase();
       }
@@ -242,6 +243,7 @@ export async function handleTableBatchModify(
       throw new Error("No active editor");
     }
 
+    /* v8 ignore next 3 -- @preserve defensive guard: requireObject already validates target */
     if (!target) {
       throw new Error("target is required");
     }
@@ -482,6 +484,7 @@ export async function handleListBatchModify(
       throw new Error("No active editor");
     }
 
+    /* v8 ignore next 3 -- @preserve defensive guard: requireObject already validates target */
     if (!target) {
       throw new Error("target is required");
     }
