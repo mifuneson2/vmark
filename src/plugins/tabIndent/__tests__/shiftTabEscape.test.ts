@@ -363,6 +363,58 @@ describe("canShiftTabEscape", () => {
 
     expect(canShiftTabEscape(state)).toBeNull();
   });
+
+  it("returns mark escape when cursor is at left boundary of code with plain text before (storedMarks fallback)", () => {
+    // doc(p("plain ", code("this is an example")))
+    // "plain " = 6 chars → code text starts at 1 + 6 = 7
+    // $from.marks() at pos 7 returns [] — preceding node is plain text
+    // state.storedMarks = [codeMark] — as set by inlineCodeBoundary plugin
+    const codeMark = schema.marks.code.create();
+    const doc = makeDoc([
+      schema.text("plain "),
+      schema.text("this is an example", [codeMark]),
+    ]);
+    const base = EditorState.create({ doc });
+    const state = base.apply(
+      base.tr.setSelection(TextSelection.create(doc, 7)).setStoredMarks([codeMark]),
+    );
+
+    const result = canShiftTabEscape(state);
+    expect(result).not.toBeNull();
+    expect(result).toHaveProperty("type", "mark");
+    // targetPos = 6 (one left, inside "plain ") to exit the code boundary
+    expect(result).toHaveProperty("targetPos", 6);
+  });
+
+  it("does not escape when storedMarks has code but cursor is not at a code node left boundary", () => {
+    // Cursor is in plain text — storedMarks may have code (e.g. user toggled)
+    // but $from.nodeAfter is plain text, not code → should not trigger
+    const codeMark = schema.marks.code.create();
+    const doc = makeDoc([schema.text("plain text")]);
+    const base = EditorState.create({ doc });
+    const state = base.apply(
+      base.tr.setSelection(TextSelection.create(doc, 5)).setStoredMarks([codeMark]),
+    );
+
+    expect(canShiftTabEscape(state)).toBeNull();
+  });
+
+  it("does not trigger storedMarks fallback when code is at paragraph start (normal path handles it)", () => {
+    // For code at paragraph start, $from.marks() already returns [codeMark]
+    // (ProseMirror uses first child's marks when there's no preceding sibling)
+    // → normal path handles it; storedMarks fallback should not interfere
+    const codeMark = schema.marks.code.create();
+    const doc = makeDoc([schema.text("code text", [codeMark])]);
+    const base = EditorState.create({ doc });
+    const state = base.apply(
+      base.tr.setSelection(TextSelection.create(doc, 1)).setStoredMarks([codeMark]),
+    );
+
+    const result = canShiftTabEscape(state);
+    expect(result).not.toBeNull();
+    expect(result).toHaveProperty("type", "mark");
+    expect(result).toHaveProperty("targetPos", 1); // escape-in-place, from normal path
+  });
 });
 
 /* ------------------------------------------------------------------ */

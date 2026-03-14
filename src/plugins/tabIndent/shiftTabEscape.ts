@@ -189,6 +189,25 @@ export function canShiftTabEscape(state: EditorState): ShiftTabEscapeResult | Mu
     }
   }
 
+  // Fallback: check storedMarks for the left-boundary-of-code case.
+  // $from.marks() returns the preceding node's marks. When cursor is at the exact
+  // left boundary of a code span with non-code content before it, marks() returns []
+  // even though the code mark applies to the next node. The inlineCodeBoundary plugin
+  // detects this and sets state.storedMarks — check that here.
+  if (state.storedMarks) {
+    const storedEscapable = state.storedMarks.find((m) => ESCAPABLE_MARKS.has(m.type.name));
+    if (
+      storedEscapable &&
+      $from.textOffset === 0 &&
+      $from.nodeAfter?.marks.some((m) => m.type === storedEscapable.type) &&
+      from > $from.start()
+    ) {
+      // Move one position left (into preceding content) to exit the code boundary.
+      // Staying at `from` would re-trigger inlineCodeBoundary and re-add the mark.
+      return { type: "mark", targetPos: from - 1 };
+    }
+  }
+
   // Check for link
   const linkMark = $from.marks().find((m) => m.type.name === "link");
   if (linkMark) {
