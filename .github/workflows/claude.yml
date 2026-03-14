@@ -53,21 +53,19 @@ jobs:
         run: npm install -g pnpm && pnpm install --frozen-lockfile
 
       - uses: anthropics/claude-code-action@v1
-        env:
-          ISSUE_NUMBER: ${{ github.event.issue.number }}
         with:
           allowed_bots: "claude[bot]"
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           claude_args: "--model opus --allowedTools Bash Read Write Edit Glob Grep MultiEdit Skill Agent"
           show_full_output: true
           prompt: |
-            Fix the audit issue described in this GitHub issue.
+            Fix the audit issue described in GitHub issue #${{ github.event.issue.number }}.
 
-            1. Read issue #$ISSUE_NUMBER body with `gh issue view $ISSUE_NUMBER`
+            1. Read issue #${{ github.event.issue.number }} body with `gh issue view ${{ github.event.issue.number }}`
             2. Apply the suggested fix
             3. Run `pnpm check:all` to verify frontend gates pass
             4. If the fix touches Rust code (src-tauri/), also run `cargo check --manifest-path src-tauri/Cargo.toml`
-            5. Create a PR that includes `Closes #$ISSUE_NUMBER` in the body
+            5. Create a PR that includes `Closes #${{ github.event.issue.number }}` in the body
             6. Enable auto-merge: `gh pr merge --auto --squash`
 
             If the fix causes test or compilation failures, adjust until gates pass.
