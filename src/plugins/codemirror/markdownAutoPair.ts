@@ -11,6 +11,7 @@
  *   - Triple backtick inserts a full code fence with newlines
  *   - Backspace deletes both halves of a pair when cursor is between them
  *   - IME composition is fully guarded to avoid corrupting CJK input
+ *   - All pairing is disabled inside fenced code blocks (via getCodeFenceInfo guard)
  *
  * @coordinates-with autoPair/tiptap.ts — WYSIWYG counterpart (handles ASCII/CJK bracket pairs)
  * @module plugins/codemirror/markdownAutoPair
