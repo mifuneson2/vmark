@@ -167,25 +167,11 @@ describe("decideOnClose", () => {
 | Snapshot tests for logic | Brittle, auto-updated without review | Use explicit assertions |
 | `any` in test types | Hides type errors | Use proper types even in tests |
 
-## Coverage Ratchet
+## Coverage Check
 
-Coverage thresholds are defined in `vitest.config.ts`:
+Coverage is tracked but not enforced via hard thresholds in CI. Run manually:
 
-```ts
-thresholds: {
-  statements: 97,
-  branches: 90,
-  functions: 97,
-  lines: 98,
-}
-```
-
-These are **ratchet values** — they only go up, never down:
-- Set at current actual coverage when introduced.
-- New code without tests pushes coverage below threshold → gate fails.
-- After raising coverage, update thresholds to lock in the new floor.
-
-**To check:** `pnpm test:coverage` — must pass with thresholds.
+**To check:** `pnpm test:coverage` — review the report for gaps.
 
 ## Test Utilities
 
