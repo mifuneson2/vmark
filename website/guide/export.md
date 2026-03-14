@@ -37,7 +37,7 @@ All images are embedded as data URIs, making it completely portable but larger i
 
 ### Export HTML
 
-1. Press `Cmd/Ctrl + Shift + E` or use **File → Export HTML**
+1. Use **File → Export HTML**
 2. Choose export location
 3. For folder mode: Enter folder name (e.g., `MyDocument`)
 4. For single mode: Enter filename with `.html` extension
@@ -152,7 +152,7 @@ Footnotes are fully interactive:
 
 | Action | Shortcut |
 |--------|----------|
-| Export HTML | `Alt + Mod + E` |
+| Export HTML | _(menu only)_ |
 | Print | `Mod + P` |
 | Copy as HTML | `Mod + Shift + C` |
 

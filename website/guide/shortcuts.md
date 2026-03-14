@@ -49,7 +49,7 @@ If you prefer keeping system functions on F-keys, you can customize VMark shortc
 | Italic | `Mod + I` |
 | Underline | `Mod + U` |
 | Strikethrough | `Mod + Shift + X` |
-| Inline Code | `Mod + Shift + `` ` `` |
+| Inline Code | Mod + Shift + `` ` `` |
 | Highlight | `Mod + Shift + M` |
 | Subscript | `Alt + Mod + =` |
 | Superscript | `Alt + Mod + Shift + =` |
@@ -157,7 +157,7 @@ If you prefer keeping system functions on F-keys, you can customize VMark shortc
 | Toggle File Explorer | `Ctrl + Shift + 2` |
 | Toggle History | `Ctrl + Shift + 3` |
 | Toggle Line Numbers | `Alt + Mod + L` |
-| Toggle Terminal | `Ctrl + `` ` |
+| Toggle Terminal | Ctrl + `` ` `` |
 | Toggle Diagram Preview | `Alt + Mod + P` |
 | Fit Tables to Width | _(customizable)_ |
 | Universal Toolbar | `Mod + Shift + P` |

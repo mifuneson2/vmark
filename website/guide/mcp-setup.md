@@ -180,7 +180,7 @@ The dialog shows:
 - Connection health (Healthy / Error / Stopped)
 - Bridge running state and port
 - Server version
-- Available tools (76) and resources (4)
+- Available tools (12) and resources (4)
 - Last health check time
 - Full list of available tools with copy button
 

@@ -14,8 +14,8 @@ VMark is a local-first Markdown editor with dual editing modes, rich formatting 
 ### Main Areas
 
 - **Editor**: The main writing area where you compose your documents
-- **Sidebar**: File tree navigation (toggle with `Cmd/Ctrl + Shift + B`)
-- **Outline**: Document structure view (toggle with `Cmd/Ctrl + Alt + 1`)
+- **Sidebar**: File tree navigation (toggle with `Ctrl + Shift + 2`)
+- **Outline**: Document structure view (toggle with `Ctrl + Shift + 1`)
 - **Status Bar**: Word count, character count, and auto-save status (toggle with `F7`)
 - **Terminal**: Integrated shell panel (toggle with `` Ctrl + ` ``)
 
@@ -82,7 +82,7 @@ Enhance your writing focus with these view modes:
 
 ### Exporting
 
-- **Export HTML**: `Cmd/Ctrl + Shift + E` — includes interactive VMark Reader
+- **Export HTML**: Use **File → Export HTML** — includes interactive VMark Reader
 - **Export PDF**: Use Print (`Cmd/Ctrl + P`) and save as PDF
 - **Copy as HTML**: `Cmd/Ctrl + Shift + C`
 
@@ -94,9 +94,12 @@ Open settings with `Cmd/Ctrl + ,` to customize:
 
 - **Appearance**: Theme, fonts, font size, line height
 - **Editor**: Auto-save interval, default behaviors
+- **Files & Images**: Asset management, document tools
+- **Integrations**: AI providers, MCP server
+- **Language**: CJK formatting rules
 - **Markdown**: Export options, formatting preferences
-- **Terminal**: Terminal font size and line height
 - **Shortcuts**: Customize keyboard shortcuts
+- **Terminal**: Terminal font size and line height
 
 ## AI Writing Assistance
 
@@ -106,11 +109,10 @@ VMark includes built-in AI Genies — select text and press `Mod + Y` to polish,
 
 ## Tips for Getting Started
 
-1. **Use the slash menu**: Type `/` to quickly insert blocks, headings, lists, and more
-2. **Navigate with outline**: Click outline items to jump to sections
-3. **Try AI Genies**: Select text and press `Mod + Y` to polish, rephrase, or expand
-4. **Try focus mode**: `F8` helps you concentrate on current paragraph
-5. **Learn shortcuts**: Check the [shortcuts guide](/guide/shortcuts) for efficiency
+1. **Navigate with outline**: Click outline items to jump to sections
+2. **Try AI Genies**: Select text and press `Mod + Y` to polish, rephrase, or expand
+3. **Try focus mode**: `F8` helps you concentrate on current paragraph
+4. **Learn shortcuts**: Check the [shortcuts guide](/guide/shortcuts) for efficiency
 
 ## Next Steps
 

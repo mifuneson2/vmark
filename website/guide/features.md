@@ -88,10 +88,12 @@ Backspace deletes both characters when the pair is empty. Auto-pair and Tab brac
 
 ### Basic Styles
 
-- **Bold**, *Italic*, ~~Strikethrough~~
-- `Inline code`
+- **Bold**, *Italic*, <u>Underline</u>, ~~Strikethrough~~
+- `Inline code`, ==Highlight==
 - Subscript and Superscript
-- Links with preview popups
+- Links, Wiki Links, and Bookmark Links with preview popups
+- Footnotes with inline editing
+- HTML comment toggle (`Mod + /`)
 - Clear formatting command
 
 ### Text Transformations
@@ -107,7 +109,7 @@ Quickly change text case via Format → Transform:
 
 ### Block Elements
 
-- Headings 1-6 with easy shortcuts
+- Headings 1-6 with easy shortcuts (increase/decrease level with `Mod + Alt + ]`/`[`)
 - Blockquotes (nested supported)
 - Code blocks with syntax highlighting
 - Ordered, unordered, and task lists

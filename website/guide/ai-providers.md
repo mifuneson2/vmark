@@ -47,7 +47,7 @@ If you're also using these tools for vibe-coding (Claude Code, Codex CLI, Gemini
 
 ### Setup: Gemini CLI
 
-1. Install Gemini CLI: `npm install -g @anthropic-ai/gemini-cli` (or via the [official repo](https://github.com/google-gemini/gemini-cli))
+1. Install Gemini CLI: `npm install -g @google/gemini-cli` (or via the [official repo](https://github.com/google-gemini/gemini-cli))
 2. Run `gemini` once to authenticate with your Google account
 3. In VMark, click **Detect**, then select **Gemini**
 
