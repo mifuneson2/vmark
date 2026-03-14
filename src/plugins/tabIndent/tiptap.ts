@@ -76,10 +76,18 @@ function applyEscapeResult(
   }
 
   if (escapeResult.type === "mark") {
-    // Clear only escapable marks from stored marks
+    // Clear escapable marks from cursor position's marks
     const { $from } = state.selection;
     for (const mark of $from.marks()) {
       /* v8 ignore next 2 -- @preserve reason: mark escape clears all stored marks; testing individual mark.type.name filtering requires real PM editor with stored marks, untestable in jsdom */
+      if (ESCAPABLE_MARK_NAMES.has(mark.type.name)) {
+        tr.removeStoredMark(mark.type);
+      }
+    }
+    // Also clear from state.storedMarks — handles the left-boundary case where
+    // $from.marks() is empty but inlineCodeBoundary set storedMarks to [codeMark].
+    /* v8 ignore next 5 -- @preserve reason: state.storedMarks path requires real PM editor with storedMarks state, untestable in jsdom */
+    for (const mark of (state.storedMarks ?? [])) {
       if (ESCAPABLE_MARK_NAMES.has(mark.type.name)) {
         tr.removeStoredMark(mark.type);
       }

@@ -5,16 +5,17 @@
  * or a link, and provides target position for Shift+Tab to jump to the start.
  * Mirrors tabEscape.ts (right-escape) in reverse direction.
  *
- * Pipeline: Shift+Tab pressed → check marks first (innermost-first) → nodeAfter fallback
- *   for left-boundary detection → then links → return start position
+ * Pipeline: Shift+Tab pressed → check marks first (innermost-first) → storedMarks/nodeAfter
+ *   fallback for left-boundary detection → then links → return start position
  *
  * Key decisions:
  *   - Marks checked before links (innermost-first principle — opposite of Tab)
  *   - Works from anywhere inside a mark/link (not just boundary)
  *   - Left-boundary fallback: $pos.marks() returns preceding node's marks, so at the
  *     left boundary of a code span with non-code content before it, marks() returns [].
- *     Both single-cursor (via state.storedMarks) and multi-cursor (via nodeAfter.marks)
- *     paths detect this and escape to pos - 1 to avoid re-triggering inlineCodeBoundary.
+ *     Single-cursor uses state.storedMarks (set by inlineCodeBoundary plugin);
+ *     multi-cursor uses nodeAfter.marks directly (storedMarks is per-state, not per-cursor).
+ *     Both escape to pos - 1 to avoid re-triggering inlineCodeBoundary.
  *   - Multi-cursor support: each cursor processed independently
  *   - Shares ESCAPABLE_MARKS set with tabEscape.ts
  *   - Mark boundary uses `<=` (cursor at mark end still has mark active)
@@ -206,6 +207,25 @@ export function canShiftTabEscape(state: EditorState): ShiftTabEscapeResult | Mu
     /* v8 ignore next -- @preserve false branch unreachable: when escapableMark is found, getMarkStartPos always returns non-null */
     if (startPos !== null) {
       return { type: "mark", targetPos: startPos };
+    }
+  }
+
+  // Fallback: check storedMarks for the left-boundary-of-code case.
+  // $from.marks() returns the preceding node's marks. When cursor is at the exact
+  // left boundary of a code span with non-code content before it, marks() returns []
+  // even though the code mark applies to the next node. The inlineCodeBoundary plugin
+  // detects this and sets state.storedMarks — check that here.
+  if (state.storedMarks) {
+    const storedEscapable = state.storedMarks.find((m) => ESCAPABLE_MARKS.has(m.type.name));
+    if (
+      storedEscapable &&
+      $from.textOffset === 0 &&
+      $from.nodeAfter?.marks.some((m) => m.type === storedEscapable.type) &&
+      from > $from.start()
+    ) {
+      // Move one position left (into preceding content) to exit the code boundary.
+      // Staying at `from` would re-trigger inlineCodeBoundary and re-add the mark.
+      return { type: "mark", targetPos: from - 1 };
     }
   }
 
