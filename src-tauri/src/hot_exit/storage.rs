@@ -68,14 +68,30 @@ pub async fn write_session_atomic(
             .sync_all()
             .map_err(|e| format!("Failed to sync temp file: {}", e))?;
 
-        // Backup existing session (attempt copy, ignore NotFound errors)
-        // This avoids TOCTOU race from exists() check
-        match std::fs::copy(&session_path, &backup_path) {
-            Ok(_) => {},
+        // Backup existing session atomically (tmp + rename) to prevent
+        // a corrupt backup if the app crashes mid-write.
+        // Ignore NotFound errors — no existing session to backup is fine.
+        match std::fs::read(&session_path) {
+            Ok(existing_data) => {
+                let backup_dir = backup_path
+                    .parent()
+                    .ok_or("Backup path has no parent")?;
+                let mut backup_tmp = NamedTempFile::new_in(backup_dir)
+                    .map_err(|e| format!("Failed to create backup temp file: {}", e))?;
+                backup_tmp
+                    .write_all(&existing_data)
+                    .map_err(|e| format!("Failed to write backup temp file: {}", e))?;
+                backup_tmp
+                    .flush()
+                    .map_err(|e| format!("Failed to flush backup temp file: {}", e))?;
+                backup_tmp
+                    .persist(&backup_path)
+                    .map_err(|e| format!("Failed to persist backup: {}", e))?;
+            }
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
                 // No existing session to backup - this is fine
-            },
-            Err(e) => return Err(format!("Failed to backup session: {}", e)),
+            }
+            Err(e) => return Err(format!("Failed to read session for backup: {}", e)),
         }
 
         // Atomic rename (overwrites existing session.json)
@@ -166,10 +182,15 @@ pub async fn delete_session(app: &tauri::AppHandle) -> Result<(), String> {
         Err(e) => return Err(format!("Failed to delete session: {}", e)),
     }
 
-    // Also clean up backup file
+    // Also clean up backup file — ignore NotFound, but log other failures
+    // to avoid silently leaving stale backups that could cause wrong restores
     let backup_path = get_backup_session_path(app)?;
     match tokio::fs::remove_file(&backup_path).await {
-        Ok(()) | Err(_) => {} // Best effort
+        Ok(()) => {}
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+        Err(e) => {
+            eprintln!("[HotExit] Failed to delete backup session: {}", e);
+        }
     }
 
     Ok(())

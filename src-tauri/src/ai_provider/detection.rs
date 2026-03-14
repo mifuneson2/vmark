@@ -84,14 +84,45 @@ pub(crate) fn login_shell_path() -> String {
                 .stderr(std::process::Stdio::null())
                 .spawn()
                 .ok()
-                .and_then(|child| {
-                    // stdin(null) + stderr(null) prevent the shell from blocking
-                    // on interactive prompts; wait_with_output itself has no timeout.
-                    let output = child.wait_with_output().ok()?;
-                    if output.status.success() {
-                        Some(String::from_utf8_lossy(&output.stdout).to_string())
-                    } else {
-                        None
+                .and_then(|mut child| {
+                    // Drain stdout in a background thread to prevent pipe-buffer deadlock.
+                    // If the shell writes more than the OS pipe buffer (~64 KB), it blocks
+                    // on write while we block on try_wait() — a classic deadlock.
+                    let stdout_pipe = child.stdout.take();
+                    let reader = std::thread::spawn(move || -> Vec<u8> {
+                        let mut buf = Vec::new();
+                        if let Some(mut pipe) = stdout_pipe {
+                            use std::io::Read;
+                            let _ = pipe.read_to_end(&mut buf);
+                        }
+                        buf
+                    });
+
+                    // Wait with a 5-second timeout to avoid blocking indefinitely
+                    // if the shell hangs (broken .zshrc, password prompt, etc.)
+                    let timeout = std::time::Duration::from_secs(5);
+                    let start = std::time::Instant::now();
+                    loop {
+                        match child.try_wait() {
+                            Ok(Some(status)) => {
+                                let buf = reader.join().ok()?;
+                                if status.success() {
+                                    return Some(String::from_utf8_lossy(&buf).to_string());
+                                }
+                                return None;
+                            }
+                            Ok(None) => {
+                                if start.elapsed() > timeout {
+                                    let _ = child.kill();
+                                    let _ = child.wait();
+                                    // Reader thread will see broken pipe and exit
+                                    eprintln!("[VMark] login_shell_path timed out after {}s", timeout.as_secs());
+                                    return None;
+                                }
+                                std::thread::sleep(std::time::Duration::from_millis(50));
+                            }
+                            Err(_) => return None,
+                        }
                     }
                 });
 
@@ -108,6 +139,11 @@ pub(crate) fn login_shell_path() -> String {
         .clone()
 }
 
+/// Check if a command exists on the system PATH.
+///
+/// Uses `which` (Unix) or `where` (Windows) directly via `Command::new` —
+/// intentionally bypasses `build_command()` because `which`/`where` are
+/// system lookup utilities, not AI tools that need `.cmd` shim handling.
 fn check_command(cmd: &str) -> (bool, Option<String>) {
     let which_cmd = if cfg!(target_os = "windows") {
         "where"

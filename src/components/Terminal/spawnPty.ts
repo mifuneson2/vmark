@@ -56,7 +56,9 @@ export function resolveTerminalCwd(): string | undefined {
     const doc = useDocumentStore.getState().getDocument(activeTabId);
     if (doc?.filePath) {
       const lastSlash = doc.filePath.lastIndexOf("/");
-      /* v8 ignore next 2 -- @preserve lastSlash <= 0 means file is at root or has no directory; not exercised in spawnPty tests */
+      // lastSlash === 0 means file is at filesystem root (e.g. /foo.md) → return "/"
+      /* v8 ignore next 3 -- @preserve root-level or missing-slash paths not exercised in spawnPty tests */
+      if (lastSlash === 0) return "/";
       if (lastSlash > 0) return doc.filePath.substring(0, lastSlash);
     }
   }
@@ -186,7 +188,11 @@ export async function spawnPty(options: SpawnOptions): Promise<IPty> {
     if (safeShell) {
       const fallback = await invoke<string>("get_default_shell");
       if (disposed()) throw new Error("disposed before fallback spawn");
-      pty = spawn(fallback, [], spawnOpts);
+      // Validate fallback shell is an absolute path (same check as primary shell)
+      const fallbackIsAbsolute = fallback.startsWith("/") || /^[a-zA-Z]:[/\\]/.test(fallback);
+      /* v8 ignore next -- @preserve defense-in-depth: get_default_shell always returns absolute path; /bin/sh fallback is unreachable in tests */
+      const safeFallback = fallbackIsAbsolute ? fallback : "/bin/sh";
+      pty = spawn(safeFallback, [], spawnOpts);
     } else {
       throw err;
     }

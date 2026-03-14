@@ -320,6 +320,11 @@ export const cleanupWarn = isDev
   ? (...args: unknown[]) => console.warn("[Cleanup]", ...args)
   : () => {};
 
+/* v8 ignore next 3 -- @preserve debug logger: production branch tree-shakes to no-op */
+export const statusBarWarn = isDev
+  ? (...args: unknown[]) => console.warn("[StatusBar]", ...args)
+  : () => {};
+
 export const listClickFixLog = isDev
   ? (...args: unknown[]) => console.warn("[ListClickFix]", ...args)
   : () => {};

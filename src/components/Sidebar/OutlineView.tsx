@@ -6,7 +6,8 @@
 
 import { useState, useDeferredValue, useMemo, useRef } from "react";
 import { ChevronRight, ChevronDown } from "lucide-react";
-import { emit } from "@tauri-apps/api/event";
+import { emitTo } from "@tauri-apps/api/event";
+import { getCurrentWindowLabel } from "@/utils/workspaceStorage";
 import { useUIStore } from "@/stores/uiStore";
 import { useDocumentContent } from "@/hooks/useDocumentState";
 import { perfStart, perfEnd } from "@/utils/perfLog";
@@ -133,15 +134,15 @@ export function OutlineView() {
 
   const activeIndex = activeHeadingIndex ?? -1;
 
-  // Track collapsed state by heading text + level (preserves state across edits)
-  // Using level:text as key to handle duplicate heading texts
+  // Track collapsed state by heading identity (level:line:text).
+  // Including line number prevents duplicate headings from collapsing together.
   const [collapsedKeys, setCollapsedKeys] = useState<Set<string>>(new Set());
 
   // Convert key-based collapsed state to index-based for rendering
   const collapsedSet = useMemo(() => {
     const set = new Set<number>();
     headings.forEach((h, i) => {
-      const key = `${h.level}:${h.text}`;
+      const key = `${h.level}:${h.line}:${h.text}`;
       if (collapsedKeys.has(key)) set.add(i);
     });
     return set;
@@ -151,7 +152,7 @@ export function OutlineView() {
     const heading = headings[index];
     if (!heading) return;
 
-    const key = `${heading.level}:${heading.text}`;
+    const key = `${heading.level}:${heading.line}:${heading.text}`;
     setCollapsedKeys((prev) => {
       const next = new Set(prev);
       if (next.has(key)) {
@@ -164,8 +165,8 @@ export function OutlineView() {
   };
 
   const handleClick = (headingIndex: number) => {
-    // Emit event to scroll editor to this heading
-    void emit("outline:scroll-to-heading", { headingIndex });
+    // Emit to current window only — prevents cross-window scroll in multi-window mode
+    emitTo(getCurrentWindowLabel(), "outline:scroll-to-heading", { headingIndex }).catch(() => {/* event emission is best-effort */});
     // Update active heading immediately for responsive UI
     useUIStore.getState().setActiveHeadingLine(headingIndex);
   };

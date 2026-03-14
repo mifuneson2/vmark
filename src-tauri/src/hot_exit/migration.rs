@@ -1,7 +1,13 @@
-//! Schema Migration for Hot Exit Sessions
+//! Schema Migration for Hot Exit Sessions (Rust side)
 //!
 //! Provides migration functions to upgrade old session formats to the current schema.
 //! This ensures users don't lose their session data when the app updates.
+//!
+//! **Dual migration by design**: Both Rust (this file) and TypeScript
+//! (`src/utils/hotExit/schemaMigration.ts`) implement the same migrations.
+//! Rust handles sessions read from disk at startup; TypeScript handles
+//! in-memory session data from the frontend hot-exit capture flow.
+//! Both must be kept in sync when adding new schema versions.
 //!
 //! Migration Strategy:
 //! - Sessions at current version pass through unchanged

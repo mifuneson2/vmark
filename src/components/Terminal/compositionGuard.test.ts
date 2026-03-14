@@ -19,6 +19,7 @@ const GRACE_MS = 80;
 function createCompositionGuard() {
   let composing = false;
   let graceTimer: ReturnType<typeof setTimeout> | null = null;
+  let pendingCommitText: string | null = null;
   let commitCallback: ((text: string) => void) | null = null;
 
   return {
@@ -26,20 +27,29 @@ function createCompositionGuard() {
     set onCompositionCommit(cb: ((text: string) => void) | null) { commitCallback = cb; },
 
     compositionStart() {
-      composing = true;
+      // Flush any pending committed text from a previous compositionend before
+      // starting a new composition — prevents input loss in rapid back-to-back
+      // IME commits (mirrors createTerminalInstance.ts flush logic).
       if (graceTimer) {
         clearTimeout(graceTimer);
         graceTimer = null;
+        if (pendingCommitText && commitCallback) {
+          commitCallback(pendingCommitText);
+        }
+        pendingCommitText = null;
       }
+      composing = true;
     },
 
     compositionEnd(data: string) {
+      pendingCommitText = data;
       graceTimer = setTimeout(() => {
         graceTimer = null;
         composing = false;
-        if (data && commitCallback) {
-          commitCallback(data);
+        if (pendingCommitText && commitCallback) {
+          commitCallback(pendingCommitText);
         }
+        pendingCommitText = null;
       }, GRACE_MS);
     },
 
@@ -118,7 +128,7 @@ describe("terminal IME composition grace period", () => {
     expect(guard.composing).toBe(false);
   });
 
-  it("new compositionstart cancels pending grace timer", () => {
+  it("new compositionstart flushes pending text then starts new composition", () => {
     const guard = createCompositionGuard();
     const commit = vi.fn();
     guard.onCompositionCommit = commit;
@@ -126,19 +136,19 @@ describe("terminal IME composition grace period", () => {
     guard.compositionStart();
     guard.compositionEnd("ni");
 
-    // Start a new composition before grace expires
+    // Start a new composition before grace expires — flushes "ni" immediately
     vi.advanceTimersByTime(GRACE_MS / 2);
     guard.compositionStart();
 
-    // Grace timer for "ni" should be cancelled
-    vi.advanceTimersByTime(GRACE_MS);
-    expect(commit).not.toHaveBeenCalled();
+    // "ni" should have been flushed immediately by compositionStart
+    expect(commit).toHaveBeenCalledTimes(1);
+    expect(commit).toHaveBeenCalledWith("ni");
     expect(guard.composing).toBe(true);
 
     // Now finish second composition
     guard.compositionEnd("你好");
     vi.advanceTimersByTime(GRACE_MS);
-    expect(commit).toHaveBeenCalledTimes(1);
+    expect(commit).toHaveBeenCalledTimes(2);
     expect(commit).toHaveBeenCalledWith("你好");
   });
 

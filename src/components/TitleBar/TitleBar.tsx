@@ -24,7 +24,8 @@
  * @module components/TitleBar/TitleBar
  */
 import { useState, useRef, useEffect, useCallback } from "react";
-import { emit } from "@tauri-apps/api/event";
+import { emitTo } from "@tauri-apps/api/event";
+import { getCurrentWindowLabel } from "@/utils/workspaceStorage";
 import { useDocumentFilePath, useDocumentIsDirty, useDocumentIsMissing, useActiveTabId } from "@/hooks/useDocumentState";
 import { useTabStore } from "@/stores/tabStore";
 import { useSettingsStore } from "@/stores/settingsStore";
@@ -66,7 +67,9 @@ export function TitleBar() {
   const handleDoubleClick = useCallback(() => {
     if (isUnsaved) {
       // For unsaved files, open save dialog
-      void emit("menu:save");
+      // Include windowLabel payload — the listener filters by it
+      const windowLabel = getCurrentWindowLabel();
+      emitTo(windowLabel, "menu:save", windowLabel).catch(() => {/* event emission is best-effort */});
       return;
     }
 
@@ -134,9 +137,12 @@ export function TitleBar() {
     );
   }
 
+  // Remove drag region during edit to prevent interference with text selection/caret
+  const dragRegion = isEditing ? {} : { "data-tauri-drag-region": true };
+
   return (
-    <div className="title-bar" data-tauri-drag-region>
-      <div className="title-bar-content" data-tauri-drag-region>
+    <div className="title-bar" {...dragRegion}>
+      <div className="title-bar-content" {...dragRegion}>
         {isEditing ? (
           <input
             ref={inputRef}

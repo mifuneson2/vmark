@@ -70,6 +70,7 @@ interface SessionEntry {
   spawnedCwd: string | undefined;
   shellStarted: boolean;
   shellExited: boolean;
+  shellSpawning: boolean;
   disposed: boolean;
   pendingRafId: number | null;
 }
@@ -137,10 +138,14 @@ export function useTerminalSessions(
     return { term: entry.instance.term, ptyRef: entry.ptyRefForKeys };
   }, []);
 
-  /** Spawn shell for a session entry. */
+  /** Spawn shell for a session entry. Guarded against re-entrance. */
   const startShell = useCallback(async (sessionId: string) => {
     const entry = sessionsRef.current.get(sessionId);
     if (!entry || entry.disposed) return;
+
+    // Re-entrance guard: prevent concurrent spawns for the same session
+    if (entry.shellSpawning) return;
+    entry.shellSpawning = true;
 
     entry.shellExited = false;
     const cwd = resolveTerminalCwd();
@@ -170,11 +175,13 @@ export function useTerminalSessions(
       const currentEntry = sessionsRef.current.get(sessionId);
       if (!currentEntry || currentEntry.disposed) {
         try { pty.kill(); } catch { /* ignore */ }
+        if (currentEntry) currentEntry.shellSpawning = false;
         return;
       }
       currentEntry.pty = pty;
       currentEntry.ptyRefForKeys.current = pty;
       currentEntry.spawnedCwd = cwd;
+      currentEntry.shellSpawning = false;
       useTerminalSessionStore.getState().markSessionAlive(sessionId);
 
       // If workspace changed while spawning, cd to the current root
@@ -186,6 +193,7 @@ export function useTerminalSessions(
     } catch (err) {
       const e = sessionsRef.current.get(sessionId);
       if (e && !e.disposed) {
+        e.shellSpawning = false;
         const errMsg = err instanceof Error ? err.message : String(err);
         e.instance.term.write(`\r\nFailed to start shell: ${errMsg}\r\n`);
         e.instance.term.write("Press any key to retry...\r\n");
@@ -249,6 +257,7 @@ export function useTerminalSessions(
         spawnedCwd: undefined,
         shellStarted: false,
         shellExited: false,
+        shellSpawning: false,
         disposed: false,
         pendingRafId: null,
       };
@@ -256,11 +265,17 @@ export function useTerminalSessions(
 
       // IME composition commit: write clean committed text directly to PTY,
       // bypassing xterm's onData which may inject spaces (macOS Chinese IME).
+      // If the shell is dead/spawning, restart it — don't silently drop CJK input.
       instance.onCompositionCommit = (text: string) => {
         const e = sessionsRef.current.get(sessionId);
         if (!e) return;
         if (e.pty) {
           e.pty.write(text);
+        } else if (e.shellExited) {
+          // "Press any key to restart" — treat IME commit as that key
+          e.shellExited = false;
+          e.instance.term.clear();
+          startShell(sessionId);
         }
       };
 
@@ -314,6 +329,11 @@ export function useTerminalSessions(
       } else {
         entry.instance.container.style.display = "none";
         entry.instance.searchAddon.clearDecorations();
+        // Cancel pending RAF to prevent spawning a shell while hidden
+        if (entry.pendingRafId !== null) {
+          cancelAnimationFrame(entry.pendingRafId);
+          entry.pendingRafId = null;
+        }
       }
     }
     if (activeId) {

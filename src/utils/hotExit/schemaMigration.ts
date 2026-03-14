@@ -1,8 +1,14 @@
 /**
- * Schema Migration for Hot Exit Sessions
+ * Schema Migration for Hot Exit Sessions (TypeScript side)
  *
  * Provides migration functions to upgrade old session formats to the current schema.
  * This ensures users don't lose their session data when the app updates.
+ *
+ * **Dual migration by design**: Both TypeScript (this file) and Rust
+ * (`src-tauri/src/hot_exit/migration.rs`) implement the same migrations.
+ * TypeScript handles in-memory session data from the frontend hot-exit
+ * capture flow; Rust handles sessions read from disk at startup.
+ * Both must be kept in sync when adding new schema versions.
  *
  * Migration Strategy:
  * - Sessions at current version pass through unchanged

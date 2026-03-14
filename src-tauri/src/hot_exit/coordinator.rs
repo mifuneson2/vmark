@@ -264,12 +264,21 @@ pub async fn capture_session(app: &AppHandle) -> Result<CaptureResult, String> {
             return Err("Capture timeout: no windows responded".to_string());
         }
 
-        // Partial capture — log warning so it's traceable
+        // Partial capture — log warning and notify frontend
         eprintln!(
             "[HotExit] WARNING: Saving partial session ({}/{} windows). State for {:?} was lost.",
             got_responses,
             expected_responses,
             missing
+        );
+        // Surface partial capture warning to frontend so it can inform the user
+        let _ = app.emit(
+            "hot-exit:partial-capture",
+            serde_json::json!({
+                "captured": got_responses,
+                "expected": expected_responses,
+                "missing": missing,
+            }),
         );
     }
 
@@ -398,9 +407,11 @@ pub fn restore_session(
     spawn_restore_timeout(gen);
 
     // Emit restore signal to target window (signal only, state is pulled)
-    target_window
-        .emit(EVENT_RESTORE_START, ())
-        .map_err(|e| format!("Failed to emit restore event: {}", e))?;
+    if let Err(e) = target_window.emit(EVENT_RESTORE_START, ()) {
+        // Clean up pending state to avoid memory leak since no window will pull it
+        clear_pending_restore();
+        return Err(format!("Failed to emit restore event: {}", e));
+    }
 
     Ok(())
 }
@@ -451,11 +462,12 @@ pub fn restore_session_multi_window(
     let mut window_states_to_store: Vec<(String, WindowState)> = Vec::with_capacity(secondary_count + 1);
     let mut expected_labels = HashSet::with_capacity(secondary_count + 1);
 
-    // Always include main in expected_labels (even if session doesn't have main state)
-    expected_labels.insert(MAIN_WINDOW_LABEL.to_string());
-
-    // Prepare main window state
+    // Prepare main window state — only include in expected_labels if state exists.
+    // Without state, adding main to expected_labels blocks all_complete forever
+    // because the frontend gets None from get_window_restore_state and never
+    // calls mark_window_restore_complete.
     if let Some(state) = main_state {
+        expected_labels.insert(MAIN_WINDOW_LABEL.to_string());
         let normalized = WindowState {
             window_label: MAIN_WINDOW_LABEL.to_string(),
             is_main_window: true,
@@ -514,9 +526,16 @@ pub fn restore_session_multi_window(
     }
 
     // Emit restore signal to main window (signal only, state is pulled)
-    main_window
-        .emit(EVENT_RESTORE_START, ())
-        .map_err(|e| format!("Failed to emit restore event to main: {}", e))?;
+    if let Err(e) = main_window.emit(EVENT_RESTORE_START, ()) {
+        // Clean up: pending state + orphaned secondary windows
+        clear_pending_restore();
+        for label in &windows_created {
+            if let Some(w) = app.get_webview_window(label) {
+                let _ = w.close();
+            }
+        }
+        return Err(format!("Failed to emit restore event to main: {}", e));
+    }
 
     Ok(RestoreMultiWindowResult { windows_created })
 }

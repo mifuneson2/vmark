@@ -29,6 +29,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, 
 import { invoke } from "@tauri-apps/api/core";
 import { emit, listen } from "@tauri-apps/api/event";
 import { toast } from "sonner";
+import { statusBarWarn } from "@/utils/debug";
 import { useTabStore, type Tab } from "@/stores/tabStore";
 import { useTabDragOut, type DragOutPoint } from "@/hooks/useTabDragOut";
 import { handleTabKeyboard } from "./tabKeyboard";
@@ -76,6 +77,7 @@ export function useStatusBarTabDrag({ tabs, windowLabel, tabBarRef, onActivateTa
   const springFocusedWindowRef = useRef<string | null>(null);
   const previewProbeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latestDragPointRef = useRef<DragOutPoint | null>(null);
+  const dragGenerationRef = useRef(0);
 
   const announce = useCallback((message: string) => {
     setAriaAnnouncement(message);
@@ -97,10 +99,10 @@ export function useStatusBarTabDrag({ tabs, windowLabel, tabBarRef, onActivateTa
 
   const clearDropPreviewBroadcast = useCallback(() => {
     setDragTargetWindowLabel(null);
-    void emit("tab:drop-preview", {
+    emit("tab:drop-preview", {
       sourceWindowLabel: windowLabel,
       targetWindowLabel: null,
-    } satisfies TabDropPreviewEvent);
+    } satisfies TabDropPreviewEvent).catch(() => {/* best-effort */});
 
     if (springFocusTimerRef.current) {
       clearTimeout(springFocusTimerRef.current);
@@ -180,6 +182,9 @@ export function useStatusBarTabDrag({ tabs, windowLabel, tabBarRef, onActivateTa
       if (mode !== "dragout") return;
       latestDragPointRef.current = point;
       if (previewProbeTimerRef.current) return;
+      // Tag each probe with the current drag generation so stale responses
+      // (arriving after drag ends or moves on) are discarded.
+      const probeGen = dragGenerationRef.current;
       previewProbeTimerRef.current = setTimeout(() => {
         previewProbeTimerRef.current = null;
         const currentPoint = latestDragPointRef.current;
@@ -190,13 +195,15 @@ export function useStatusBarTabDrag({ tabs, windowLabel, tabBarRef, onActivateTa
           screenX: currentPoint.screenX,
           screenY: currentPoint.screenY,
         }).then((targetWindowLabel) => {
+          // Discard stale probe result — drag may have ended or restarted
+          if (probeGen !== dragGenerationRef.current) return;
           setDragTargetWindowLabel(targetWindowLabel);
-          void emit("tab:drop-preview", {
+          emit("tab:drop-preview", {
             sourceWindowLabel: windowLabel,
             targetWindowLabel,
-          } satisfies TabDropPreviewEvent);
+          } satisfies TabDropPreviewEvent).catch(() => {/* best-effort */});
         }).catch((error) => {
-          console.error("[StatusBar] Failed to probe drop target:", error);
+          statusBarWarn("Failed to probe drop target:", error instanceof Error ? error.message : String(error));
         });
       }, PREVIEW_PROBE_MS);
     },
@@ -237,7 +244,7 @@ export function useStatusBarTabDrag({ tabs, windowLabel, tabBarRef, onActivateTa
         unlisten = fn;
       }
     }).catch((error) => {
-      console.error("[StatusBar] Failed to listen for drop preview events:", error);
+      statusBarWarn("Failed to listen for drop preview events:", error instanceof Error ? error.message : String(error));
     });
 
     return () => {
@@ -264,16 +271,18 @@ export function useStatusBarTabDrag({ tabs, windowLabel, tabBarRef, onActivateTa
     springFocusTimerRef.current = setTimeout(() => {
       springFocusTimerRef.current = null;
       springFocusedWindowRef.current = dragTargetWindowLabel;
-      void invoke("focus_existing_window", {
+      invoke("focus_existing_window", {
         windowLabel: dragTargetWindowLabel,
       }).catch((error) => {
-        console.error("[StatusBar] Failed to focus spring-loaded target:", error);
+        statusBarWarn("Failed to focus spring-loaded target:", error instanceof Error ? error.message : String(error));
       });
     }, SPRING_LOAD_FOCUS_MS);
   }, [dragMode, dragTargetWindowLabel]);
 
   useEffect(() => {
     if (dragMode !== "idle") return;
+    // Advance generation so in-flight probe responses are discarded
+    dragGenerationRef.current++;
     clearDropPreviewBroadcast();
   }, [clearDropPreviewBroadcast, dragMode]);
 
