@@ -854,9 +854,12 @@ describe("WindowContext", () => {
         </WindowProvider>,
       );
 
+      // Wait for listen() promises to resolve so unlisten refs are stored
       await waitFor(() => {
-        expect(screen.getByTestId("child")).toBeInTheDocument();
+        expect(mockListen).toHaveBeenCalledTimes(2);
       });
+      // Flush microtasks so .then() callbacks assign unlisten/unlistenRemove
+      await new Promise((r) => setTimeout(r, 0));
 
       unmount();
 

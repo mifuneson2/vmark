@@ -1,5 +1,5 @@
-import { render, waitFor } from "@testing-library/react";
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { render, waitFor, cleanup } from "@testing-library/react";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { useUnifiedMenuCommands } from "./useUnifiedMenuCommands";
 import { performWysiwygToolbarAction } from "@/plugins/toolbarActions/wysiwygAdapter";
 import { performSourceToolbarAction } from "@/plugins/toolbarActions/sourceAdapter";
@@ -211,6 +211,11 @@ function TestHarness() {
 }
 
 describe("useUnifiedMenuCommands", () => {
+  afterEach(() => {
+    // Force unmount before clearing state to prevent stale listener leaks
+    cleanup();
+  });
+
   beforeEach(() => {
     listeners.clear();
     vi.clearAllMocks();
@@ -746,6 +751,10 @@ describe("useUnifiedMenuCommands", () => {
     render(<TestHarness />);
     await waitFor(() => expect(listeners.has("menu:source-only")).toBe(true));
 
+    // Clear any stale calls from listener setup before asserting
+    vi.mocked(performWysiwygToolbarAction).mockClear();
+    vi.mocked(performSourceToolbarAction).mockClear();
+
     listeners.get("menu:source-only")?.({ payload: "main" });
 
     expect(performWysiwygToolbarAction).not.toHaveBeenCalled();
@@ -760,6 +769,10 @@ describe("useUnifiedMenuCommands", () => {
 
     render(<TestHarness />);
     await waitFor(() => expect(listeners.has("menu:wysiwyg-only")).toBe(true));
+
+    // Clear any stale calls from listener setup before asserting
+    vi.mocked(performSourceToolbarAction).mockClear();
+    vi.mocked(performWysiwygToolbarAction).mockClear();
 
     listeners.get("menu:wysiwyg-only")?.({ payload: "main" });
 
