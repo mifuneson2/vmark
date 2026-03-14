@@ -73,7 +73,7 @@ jobs:
           rm vmark-intel.dmg
 
       - name: Checkout homebrew-tap
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: xiaolai/homebrew-tap
           token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
