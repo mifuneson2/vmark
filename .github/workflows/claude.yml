@@ -96,3 +96,10 @@ jobs:
           # PR review: consolidate into one comment, add "Fix this" links
           use_sticky_comment: true
           include_fix_links: true
+
+      - name: Enable auto-merge for PRs
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: gh pr merge "$PR_NUMBER" --auto --squash
