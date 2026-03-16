@@ -1,0 +1,176 @@
+import type { DefaultTheme, LocaleSpecificConfig } from "vitepress";
+
+export const de: LocaleSpecificConfig<DefaultTheme.Config> = {
+  label: "Deutsch",
+  lang: "de",
+  themeConfig: {
+    nav: [
+      { text: "Startseite", link: "/de/" },
+      { text: "Herunterladen", link: "/de/download" },
+      { text: "Anleitung", link: "/de/guide/" },
+    ],
+
+    sidebar: {
+      "/de/guide/": [
+        {
+          text: "Anleitung",
+          items: [
+            { text: "Erste Schritte", link: "/de/guide/" },
+            { text: "Funktionen", link: "/de/guide/features" },
+            {
+              text: "Export und Drucken",
+              link: "/de/guide/export",
+            },
+            {
+              text: "Tastaturkürzel",
+              link: "/de/guide/shortcuts",
+            },
+            {
+              text: "Intelligente Tab-Navigation",
+              link: "/de/guide/tab-navigation",
+            },
+            {
+              text: "Mehrfachcursor-Bearbeitung",
+              link: "/de/guide/multi-cursor",
+            },
+            {
+              text: "Inline-Popups",
+              link: "/de/guide/popups",
+            },
+            {
+              text: "Mermaid-Diagramme",
+              link: "/de/guide/mermaid",
+            },
+            {
+              text: "Markmap-Mindmaps",
+              link: "/de/guide/markmap",
+            },
+            { text: "SVG-Grafiken", link: "/de/guide/svg" },
+            {
+              text: "Medien (Video/Audio)",
+              link: "/de/guide/media-support",
+            },
+            {
+              text: "Integriertes Terminal",
+              link: "/de/guide/terminal",
+            },
+            {
+              text: "Arbeitsbereichsverwaltung",
+              link: "/de/guide/workspace-management",
+            },
+            {
+              text: "CJK-Formatierung",
+              link: "/de/guide/cjk-formatting",
+            },
+            { text: "Einstellungen", link: "/de/guide/settings" },
+            { text: "Datenschutz", link: "/de/guide/privacy" },
+            { text: "Lizenz", link: "/de/guide/license" },
+          ],
+        },
+        {
+          text: "KI-Integration",
+          items: [
+            { text: "AI Genies", link: "/de/guide/ai-genies" },
+            {
+              text: "KI-Anbieter",
+              link: "/de/guide/ai-providers",
+            },
+            {
+              text: "MCP-Einrichtung",
+              link: "/de/guide/mcp-setup",
+            },
+            {
+              text: "MCP-Tools-Referenz",
+              link: "/de/guide/mcp-tools",
+            },
+            {
+              text: "Benutzer als Entwickler",
+              link: "/de/guide/users-as-developers/",
+              items: [
+                {
+                  text: "Warum ich VMark entwickelt habe",
+                  link: "/de/guide/users-as-developers/why-i-built-vmark",
+                },
+                {
+                  text: "Fünf Fähigkeiten, die KI nicht ersetzen kann",
+                  link: "/de/guide/users-as-developers/what-are-indispensable",
+                },
+                {
+                  text: "Warum teure Modelle günstiger sind",
+                  link: "/de/guide/users-as-developers/why-expensive-models-are-cheaper",
+                },
+                {
+                  text: "Abonnement vs API-Preise",
+                  link: "/de/guide/users-as-developers/subscription-vs-api",
+                },
+                {
+                  text: "Englische Prompts funktionieren besser",
+                  link: "/de/guide/users-as-developers/prompt-refinement",
+                },
+                {
+                  text: "Modellübergreifende Verifizierung",
+                  link: "/de/guide/users-as-developers/cross-model-verification",
+                },
+                {
+                  text: "Warum Issues statt PRs",
+                  link: "/de/guide/users-as-developers/why-issues-not-prs",
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+
+    footer: {
+      copyright:
+        'Copyright © 2026 VMark · <a href="/de/guide/license">ISC-Lizenz</a>',
+    },
+
+    lastUpdated: {
+      text: "Aktualisiert am",
+      formatOptions: {
+        dateStyle: "medium",
+        timeStyle: "short",
+      },
+    },
+
+    outline: {
+      label: "Auf dieser Seite",
+    },
+
+    docFooter: {
+      prev: "Zurück",
+      next: "Weiter",
+    },
+
+    sidebarMenuLabel: "Menü",
+    returnToTopLabel: "Nach oben",
+
+    search: {
+      provider: "local",
+      options: {
+        locales: {
+          de: {
+            translations: {
+              button: {
+                buttonText: "Suchen",
+                buttonAriaLabel: "Dokumentation durchsuchen",
+              },
+              modal: {
+                noResultsText: "Keine Ergebnisse gefunden",
+                resetButtonTitle: "Suche zurücksetzen",
+                displayDetails: "Details anzeigen",
+                footer: {
+                  selectText: "Auswählen",
+                  navigateText: "Navigieren",
+                  closeText: "Schließen",
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+};
