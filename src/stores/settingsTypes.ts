@@ -157,6 +157,7 @@ export interface MarkdownSettings {
   copyFormat: CopyFormat; // What to put in text/plain on copy (default = plain text, markdown = markdown syntax)
   copyOnSelect: boolean; // Auto-copy selected text to clipboard
   tableFitToWidth: boolean; // Force tables to fit editor width (word-wrap cells)
+  lintEnabled: boolean; // Run markdown lint checks and show diagnostics
 }
 
 // ---------------------------------------------------------------------------

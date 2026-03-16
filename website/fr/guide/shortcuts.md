@@ -26,6 +26,8 @@ Si vous préférez conserver les fonctions système sur les touches F, vous pouv
 
 | Touche | Action |
 |--------|--------|
+| `F2` | Problème suivant |
+| `Shift + F2` | Problème précédent |
 | `F4` | Trier les lignes croissant |
 | `Shift + F4` | Trier les lignes décroissant |
 | `F5` | Aperçu source |
@@ -162,6 +164,9 @@ Si vous préférez conserver les fonctions système sur les touches F, vous pouv
 | Ajuster les tableaux à la largeur | _(personnalisable)_ |
 | Barre d'outils universelle | `Mod + Shift + P` |
 | Aperçu source | `F5` |
+| Vérifier le Markdown | `Alt + Mod + V` |
+| Problème suivant | `F2` |
+| Problème précédent | `Shift + F2` |
 
 ## Opérations sur les fichiers
 

@@ -6,7 +6,6 @@
   "toolbar.group.blockquote": "Cita en bloque",
   "toolbar.group.insert": "Insertar",
   "toolbar.group.link": "Enlace",
-
   "toolbar.heading.paragraph": "Párrafo",
   "toolbar.heading.h1": "Encabezado 1",
   "toolbar.heading.h2": "Encabezado 2",
@@ -14,7 +13,6 @@
   "toolbar.heading.h4": "Encabezado 4",
   "toolbar.heading.h5": "Encabezado 5",
   "toolbar.heading.h6": "Encabezado 6",
-
   "toolbar.inline.bold": "Negrita",
   "toolbar.inline.italic": "Cursiva",
   "toolbar.inline.underline": "Subrayado",
@@ -24,14 +22,12 @@
   "toolbar.inline.subscript": "Subíndice",
   "toolbar.inline.code": "Código en línea",
   "toolbar.inline.clearFormatting": "Borrar formato",
-
   "toolbar.list.bullet": "Lista con viñetas",
   "toolbar.list.ordered": "Lista ordenada",
   "toolbar.list.task": "Lista de tareas",
   "toolbar.list.indent": "Aumentar sangría",
   "toolbar.list.outdent": "Reducir sangría",
   "toolbar.list.remove": "Eliminar lista",
-
   "toolbar.table.insert": "Insertar tabla",
   "toolbar.table.rowAbove": "Fila arriba",
   "toolbar.table.rowBelow": "Fila abajo",
@@ -47,11 +43,9 @@
   "toolbar.table.alignAllCenter": "Alinear todo al centro",
   "toolbar.table.alignAllRight": "Alinear todo a la derecha",
   "toolbar.table.format": "Dar formato a la tabla",
-
   "toolbar.blockquote.blockquote": "Cita en bloque",
   "toolbar.blockquote.nestDeeper": "Anidar más",
   "toolbar.blockquote.unnest": "Desanidar",
-
   "toolbar.insert.image": "Imagen",
   "toolbar.insert.video": "Vídeo",
   "toolbar.insert.audio": "Audio",
@@ -66,25 +60,20 @@
   "toolbar.insert.alertWarning": "Advertencia de alerta",
   "toolbar.insert.alertCaution": "Precaución de alerta",
   "toolbar.insert.divider": "Divisor",
-
   "toolbar.link.hyperlink": "Hipervínculo",
   "toolbar.link.bookmark": "Marcador",
   "toolbar.link.wikiLink": "Enlace wiki",
   "toolbar.link.footnote": "Nota al pie",
-
   "toolbar.notAvailable": "{{label}} — Aún no disponible",
   "toolbar.aria.headingLevels": "Niveles de encabezado",
   "toolbar.aria.groupOptions": "Opciones de {{group}}",
-
   "headingPicker.filter.placeholder": "Filtrar encabezados...",
   "headingPicker.empty.heading": "(encabezado vacío)",
   "headingPicker.empty.noHeadings": "No hay encabezados en el documento",
   "headingPicker.empty.noMatch": "Ningún encabezado coincide con el filtro",
-
   "imageMenu.changeImage": "Cambiar imagen...",
   "imageMenu.deleteImage": "Eliminar imagen",
   "imageMenu.copyPath": "Copiar ruta de imagen",
-
   "findbar.toggleRegex": "Usar expresión regular",
   "findbar.toggleCase": "Distinguir mayúsculas",
   "findbar.toggleWholeWord": "Palabra completa",
@@ -97,41 +86,34 @@
   "findbar.close": "Cerrar (Esc)",
   "findbar.noResults": "Sin resultados",
   "findbar.matchCount": "{{current}} de {{total}}",
-
   "dropZone.single": "Suelta para insertar imagen",
   "dropZone.multiple": "Suelta para insertar {{count}} imágenes",
-
   "popup.link.url.placeholder": "URL...",
   "popup.link.openLink": "Abrir enlace",
   "popup.link.goToHeading": "Ir al encabezado",
   "popup.link.copyUrl": "Copiar URL",
   "popup.link.save": "Guardar",
   "popup.link.remove": "Eliminar enlace",
-
   "popup.linkCreate.text.placeholder": "Texto del enlace...",
   "popup.linkCreate.url.placeholder": "URL...",
   "popup.linkCreate.create": "Crear enlace",
   "popup.linkCreate.cancel": "Cancelar",
-
   "popup.footnote.content.placeholder": "Contenido de la nota al pie...",
   "popup.footnote.goToDefinition": "Ir a la definición",
   "popup.footnote.goToReference": "Ir a la referencia",
   "popup.footnote.save": "Guardar (Enter)",
   "popup.footnote.remove": "Eliminar nota al pie",
-
   "popup.wikiLink.target.placeholder": "Página de destino",
   "popup.wikiLink.browse": "Buscar archivo",
   "popup.wikiLink.open": "Abrir archivo enlazado",
   "popup.wikiLink.copy": "Copiar destino",
   "popup.wikiLink.save": "Guardar",
   "popup.wikiLink.remove": "Eliminar enlace wiki",
-
   "popup.math.input.placeholder": "Introducir LaTeX...",
   "popup.math.save": "Guardar",
   "popup.math.cancel": "Cancelar",
   "popup.math.invalidLatex": "LaTeX no válido",
   "popup.math.previewFailed": "Error en la vista previa de LaTeX",
-
   "popup.media.src.placeholder": "Ruta o URL del medio...",
   "popup.media.alt.placeholder": "Pie de foto (texto alternativo)...",
   "popup.media.title.placeholder": "Título (opcional)...",
@@ -142,19 +124,16 @@
   "popup.media.toggleInline": "Convertir a en línea",
   "popup.media.toggleBlockInline": "Alternar bloque/en línea",
   "popup.media.remove": "Eliminar medio",
-
   "popup.sourceImage.src.placeholder": "URL o ruta de imagen...",
   "popup.sourceImage.alt.placeholder": "Pie de foto (texto alternativo)...",
   "popup.sourceImage.browse": "Buscar archivo local",
   "popup.sourceImage.copy": "Copiar ruta",
   "popup.sourceImage.remove": "Eliminar imagen",
-
   "popup.sourceWikiLink.target.placeholder": "Página de destino...",
   "popup.sourceWikiLink.browse": "Buscar archivo",
   "popup.sourceWikiLink.open": "Abrir archivo enlazado",
   "popup.sourceWikiLink.copy": "Copiar destino",
   "popup.sourceWikiLink.remove": "Eliminar enlace wiki",
-
   "quickOpen.placeholder": "Abrir archivo...",
   "quickOpen.recentPlaceholder": "Abrir archivo reciente...",
   "quickOpen.ariaLabel": "Apertura rápida",
@@ -163,7 +142,19 @@
   "quickOpen.hintNavigate": "navegar",
   "quickOpen.hintOpen": "abrir",
   "quickOpen.hintClose": "cerrar",
-
   "toolbar.ariaLabel": "Barra de herramientas de formato",
-  "toolbar.aiPrompts": "Indicaciones de IA"
+  "toolbar.aiPrompts": "Indicaciones de IA",
+  "lint.E01": "Undefined reference: [{{ref}}]",
+  "lint.E02": "Table row has {{actual}} cells but header has {{expected}}",
+  "lint.E03": "Reversed link — did you mean [text](url)?",
+  "lint.E04": "ATX heading requires a space after #",
+  "lint.E05": "Space inside emphasis markers",
+  "lint.E06": "Empty link text",
+  "lint.E07": "Duplicate link definition: [{{ref}}]",
+  "lint.E08": "Unclosed fenced code block",
+  "lint.W01": "Heading level skipped (h{{expected}} expected, got h{{actual}})",
+  "lint.W02": "Image missing alt text",
+  "lint.W03": "Unused link definition: [{{ref}}]",
+  "lint.W04": "Fragment #{{anchor}} does not match any heading",
+  "lint.W05": "Empty link href"
 }

@@ -181,6 +181,10 @@
   "markdown.htmlRendering.sanitized": "已清理",
   "markdown.htmlRendering.sanitizedWithStyles": "已清理 + 樣式",
 
+  "markdown.group.lint": "Markdown Lint",
+  "markdown.lintEnabled.label": "Enable markdown lint",
+  "markdown.lintEnabled.description": "Check for common markdown issues (broken links, missing alt text, heading increments, etc.)",
+
   "files.group.fileBrowser": "檔案瀏覽器",
   "files.showHiddenFiles.label": "顯示隱藏檔案",
   "files.showHiddenFiles.description": "在檔案總管中顯示點開頭的檔案和系統隱藏項目",

@@ -173,6 +173,9 @@ menu:
   view.fileExplorer: "ファイルエクスプローラーの表示切替"
   view.history: "履歴の表示切替"
   view.terminal: "ターミナルの表示切替"
+  view.checkMarkdown: "Check Markdown"
+  view.lintNext: "Next Issue"
+  view.lintPrev: "Previous Issue"
 
   # === ウィンドウメニュー ===
   window: "ウィンドウ"

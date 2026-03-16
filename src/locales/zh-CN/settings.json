@@ -175,6 +175,10 @@
   "markdown.htmlRendering.hidden": "隐藏",
   "markdown.htmlRendering.sanitized": "已清理",
   "markdown.htmlRendering.sanitizedWithStyles": "已清理 + 样式",
+
+  "markdown.group.lint": "Markdown Lint",
+  "markdown.lintEnabled.label": "Enable markdown lint",
+  "markdown.lintEnabled.description": "Check for common markdown issues (broken links, missing alt text, heading increments, etc.)",
   "files.group.fileBrowser": "文件浏览器",
   "files.showHiddenFiles.label": "显示隐藏文件",
   "files.showHiddenFiles.description": "在文件浏览器中包含隐藏文件和系统隐藏项",

@@ -165,5 +165,19 @@
   "quickOpen.hintClose": "close",
 
   "toolbar.ariaLabel": "Formatting toolbar",
-  "toolbar.aiPrompts": "AI Prompts"
+  "toolbar.aiPrompts": "AI Prompts",
+
+  "lint.E01": "Undefined reference: [{{ref}}]",
+  "lint.E02": "Table row has {{actual}} cells but header has {{expected}}",
+  "lint.E03": "Reversed link — did you mean [text](url)?",
+  "lint.E04": "ATX heading requires a space after #",
+  "lint.E05": "Space inside emphasis markers",
+  "lint.E06": "Empty link text",
+  "lint.E07": "Duplicate link definition: [{{ref}}]",
+  "lint.E08": "Unclosed fenced code block",
+  "lint.W01": "Heading level skipped (h{{expected}} expected, got h{{actual}})",
+  "lint.W02": "Image missing alt text",
+  "lint.W03": "Unused link definition: [{{ref}}]",
+  "lint.W04": "Fragment #{{anchor}} does not match any heading",
+  "lint.W05": "Empty link href"
 }

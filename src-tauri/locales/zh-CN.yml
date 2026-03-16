@@ -173,6 +173,9 @@ menu:
   view.fileExplorer: "切换文件浏览器"
   view.history: "切换历史记录"
   view.terminal: "切换终端"
+  view.checkMarkdown: "Check Markdown"
+  view.lintNext: "Next Issue"
+  view.lintPrev: "Previous Issue"
 
   # === 窗口菜单 ===
   window: "窗口"

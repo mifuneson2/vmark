@@ -148,7 +148,7 @@ vi.mock("@/stores/editorStore", () => {
 
 vi.mock("@/stores/settingsStore", () => {
   const state = {
-    markdown: { preserveLineBreaks: false, hardBreakStyleOnSave: "backslash" },
+    markdown: { preserveLineBreaks: false, hardBreakStyleOnSave: "backslash", lintEnabled: true },
     appearance: { cjkLetterSpacing: "0" },
   };
   const store = ((selector: (s: typeof state) => unknown) => selector(state)) as unknown as {
@@ -159,13 +159,15 @@ vi.mock("@/stores/settingsStore", () => {
   return { useSettingsStore: store };
 });
 
-vi.mock("@/stores/tabStore", () => ({
-  useTabStore: {
-    getState: () => ({
-      activeTabId: { main: "tab-1" },
-    }),
-  },
-}));
+vi.mock("@/stores/tabStore", () => {
+  const tabState = { activeTabId: { main: "tab-1" } };
+  const store = ((selector: (s: typeof tabState) => unknown) => selector(tabState)) as unknown as {
+    (selector: (s: typeof tabState) => unknown): unknown;
+    getState: () => typeof tabState;
+  };
+  store.getState = () => tabState;
+  return { useTabStore: store };
+});
 
 vi.mock("@/stores/documentStore", () => ({
   useDocumentStore: {

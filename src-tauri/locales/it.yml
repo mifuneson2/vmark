@@ -173,6 +173,9 @@ menu:
   view.fileExplorer: "Mostra/Nascondi file explorer"
   view.history: "Mostra/Nascondi cronologia"
   view.terminal: "Mostra/Nascondi terminale"
+  view.checkMarkdown: "Check Markdown"
+  view.lintNext: "Next Issue"
+  view.lintPrev: "Previous Issue"
 
   # === Window menu ===
   window: "Finestra"

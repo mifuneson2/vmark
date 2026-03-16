@@ -173,6 +173,9 @@ menu:
   view.fileExplorer: "Alternar explorador de arquivos"
   view.history: "Alternar histórico"
   view.terminal: "Alternar terminal"
+  view.checkMarkdown: "Check Markdown"
+  view.lintNext: "Next Issue"
+  view.lintPrev: "Previous Issue"
 
   # === Window menu ===
   window: "Janela"

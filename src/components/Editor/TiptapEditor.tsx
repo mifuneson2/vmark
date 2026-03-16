@@ -124,7 +124,9 @@ export function TiptapEditorInner({ hidden = false }: TiptapEditorInnerProps) {
   const hardBreakStyleOnSave = useSettingsStore((state) => state.markdown.hardBreakStyleOnSave);
   const showLineNumbers = useEditorStore((state) => state.showLineNumbers);
   const cjkLetterSpacing = useSettingsStore((state) => state.appearance.cjkLetterSpacing);
+  const lintEnabled = useSettingsStore((state) => state.markdown.lintEnabled);
   const windowLabel = useWindowLabel();
+  const activeTabId = useTabStore((state) => state.activeTabId[windowLabel] ?? undefined);
 
   const isInternalChange = useRef(false);
   const lastExternalContent = useRef<string>("");
@@ -146,7 +148,12 @@ export function TiptapEditorInner({ hidden = false }: TiptapEditorInnerProps) {
   hardBreakStyleOnSaveRef.current = hardBreakStyleOnSave;
   hiddenRef.current = hidden;
 
-  const extensions = useMemo(() => createTiptapExtensions(), []);
+  const extensions = useMemo(
+    () => createTiptapExtensions({ tabId: activeTabId, lintEnabled }),
+    // tabId and lintEnabled are captured at mount time — editor remounts per tab
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  );
 
   const flushToStore = useCallback(
     (editor: TiptapEditor) => {

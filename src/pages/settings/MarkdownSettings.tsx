@@ -125,6 +125,19 @@ export function MarkdownSettings() {
           />
         </SettingRow>
       </SettingsGroup>
+
+      {/* Markdown Lint */}
+      <SettingsGroup title={t("markdown.group.lint")}>
+        <SettingRow
+          label={t("markdown.lintEnabled.label")}
+          description={t("markdown.lintEnabled.description")}
+        >
+          <Toggle
+            checked={markdown.lintEnabled}
+            onChange={(v) => updateSetting("lintEnabled", v)}
+          />
+        </SettingRow>
+      </SettingsGroup>
     </div>
   );
 }

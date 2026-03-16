@@ -26,6 +26,8 @@ Se preferisci mantenere le funzioni di sistema sui tasti F, puoi personalizzare 
 
 | Tasto | Azione |
 |-------|--------|
+| `F2` | Problema successivo |
+| `Shift + F2` | Problema precedente |
 | `F4` | Ordina righe in modo crescente |
 | `Shift + F4` | Ordina righe in modo decrescente |
 | `F5` | Anteprima Sorgente |
@@ -162,6 +164,9 @@ Se preferisci mantenere le funzioni di sistema sui tasti F, puoi personalizzare 
 | Adatta tabelle alla larghezza | _(personalizzabile)_ |
 | Barra degli strumenti universale | `Mod + Shift + P` |
 | Anteprima Sorgente | `F5` |
+| Controlla Markdown | `Alt + Mod + V` |
+| Problema successivo | `F2` |
+| Problema precedente | `Shift + F2` |
 
 ## Operazioni sui File
 

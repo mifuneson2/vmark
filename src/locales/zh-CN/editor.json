@@ -134,7 +134,6 @@
   "popup.sourceWikiLink.open": "打开链接的文件",
   "popup.sourceWikiLink.copy": "复制目标",
   "popup.sourceWikiLink.remove": "移除维基链接",
-
   "quickOpen.placeholder": "打开文件...",
   "quickOpen.recentPlaceholder": "打开最近文件...",
   "quickOpen.ariaLabel": "快速打开",
@@ -143,7 +142,19 @@
   "quickOpen.hintNavigate": "导航",
   "quickOpen.hintOpen": "打开",
   "quickOpen.hintClose": "关闭",
-
   "toolbar.ariaLabel": "格式工具栏",
-  "toolbar.aiPrompts": "AI 提示"
+  "toolbar.aiPrompts": "AI 提示",
+  "lint.E01": "Undefined reference: [{{ref}}]",
+  "lint.E02": "Table row has {{actual}} cells but header has {{expected}}",
+  "lint.E03": "Reversed link — did you mean [text](url)?",
+  "lint.E04": "ATX heading requires a space after #",
+  "lint.E05": "Space inside emphasis markers",
+  "lint.E06": "Empty link text",
+  "lint.E07": "Duplicate link definition: [{{ref}}]",
+  "lint.E08": "Unclosed fenced code block",
+  "lint.W01": "Heading level skipped (h{{expected}} expected, got h{{actual}})",
+  "lint.W02": "Image missing alt text",
+  "lint.W03": "Unused link definition: [{{ref}}]",
+  "lint.W04": "Fragment #{{anchor}} does not match any heading",
+  "lint.W05": "Empty link href"
 }

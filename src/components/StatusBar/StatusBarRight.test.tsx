@@ -47,6 +47,10 @@ vi.mock("./StatusBarCounts", () => ({
   StatusBarCounts: () => <span data-testid="status-counts" />,
 }));
 
+vi.mock("./LintBadge", () => ({
+  LintBadge: () => null,
+}));
+
 import { formatClientName, formatMcpTooltip, StatusBarRight } from "./StatusBarRight";
 
 // --- Pure function tests ---

@@ -26,6 +26,8 @@ import { useEditorStore } from "@/stores/editorStore";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { useShortcutsStore } from "@/stores/shortcutsStore";
 import { useSearchStore } from "@/stores/searchStore";
+import { useTabStore } from "@/stores/tabStore";
+import { useWindowLabel } from "@/contexts/WindowContext";
 import {
   useDocumentContent,
   useDocumentCursorInfo,
@@ -82,6 +84,9 @@ export function SourceEditor({ hidden = false }: SourceEditorProps) {
   const showLineNumbers = useEditorStore((state) => state.showLineNumbers);
   const showBrTags = useSettingsStore((state) => state.markdown.showBrTags);
   const autoPairEnabled = useSettingsStore((state) => state.markdown.autoPairEnabled);
+
+  // Window label for tab ID resolution (stable per window)
+  const windowLabel = useWindowLabel();
 
   // Handle image drag-drop from Finder/Explorer
   useImageDragDrop({
@@ -148,6 +153,10 @@ export function SourceEditor({ hidden = false }: SourceEditorProps) {
     const initialShowLineNumbers = useEditorStore.getState().showLineNumbers;
     const initialShowBrTags = useSettingsStore.getState().markdown.showBrTags;
     const initialAutoPair = useSettingsStore.getState().markdown.autoPairEnabled ?? true;
+    const initialLintEnabled = useSettingsStore.getState().markdown.lintEnabled ?? true;
+    // Capture tabId at mount time — SourceEditor remounts per tab so this is stable
+    const { activeTabId: currentTabId } = useTabStore.getState();
+    const mountTabId = currentTabId[windowLabel] ?? undefined;
 
     const state = EditorState.create({
       doc: content,
@@ -157,6 +166,8 @@ export function SourceEditor({ hidden = false }: SourceEditorProps) {
         initialAutoPair,
         initialShowLineNumbers,
         updateListener,
+        tabId: mountTabId,
+        lintEnabled: initialLintEnabled,
       }),
     });
 

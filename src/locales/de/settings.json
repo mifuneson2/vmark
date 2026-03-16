@@ -181,6 +181,10 @@
   "markdown.htmlRendering.sanitized": "Bereinigt",
   "markdown.htmlRendering.sanitizedWithStyles": "Bereinigt + Stile",
 
+  "markdown.group.lint": "Markdown Lint",
+  "markdown.lintEnabled.label": "Enable markdown lint",
+  "markdown.lintEnabled.description": "Check for common markdown issues (broken links, missing alt text, heading increments, etc.)",
+
   "files.group.fileBrowser": "Dateibrowser",
   "files.showHiddenFiles.label": "Versteckte Dateien anzeigen",
   "files.showHiddenFiles.description": "Dotfiles und versteckte Systemelemente im Datei-Explorer einschließen",

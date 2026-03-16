@@ -19,6 +19,10 @@ import { useSettingsStore } from "@/stores/settingsStore";
 import { cleanupBeforeModeSwitch } from "@/utils/modeSwitchCleanup";
 import { toggleSourceModeWithCheckpoint } from "@/hooks/useUnifiedHistory";
 import { safeUnlistenAll } from "@/utils/safeUnlisten";
+import { useLintStore } from "@/stores/lintStore";
+import { getActiveDocument, getActiveTabId } from "@/utils/activeDocument";
+import { toast } from "sonner";
+import i18n from "@/i18n";
 
 const DEFAULT_FONT_SIZE = 18;
 const MIN_FONT_SIZE = 12;
@@ -150,6 +154,45 @@ export function useViewMenuEvents(): void {
       });
       if (cancelled) { unlistenZoomOut(); return; }
       unlistenRefs.current.push(unlistenZoomOut);
+
+      // Lint: run validation
+      const unlistenCheckMarkdown = await currentWindow.listen<string>("menu:check-markdown", (event) => {
+        if (event.payload !== windowLabel) return;
+        const lintEnabled = useSettingsStore.getState().markdown.lintEnabled;
+        if (!lintEnabled) return;
+        const tabId = getActiveTabId(windowLabel);
+        const doc = getActiveDocument(windowLabel);
+        if (tabId && doc) {
+          const diagnostics = useLintStore.getState().runLint(tabId, doc.content);
+          if (diagnostics.length === 0) {
+            toast.success(i18n.t("statusbar:lint.clean.toast"));
+          }
+        }
+      });
+      if (cancelled) { unlistenCheckMarkdown(); return; }
+      unlistenRefs.current.push(unlistenCheckMarkdown);
+
+      // Lint: navigate to next issue
+      const unlistenLintNext = await currentWindow.listen<string>("menu:lint-next", (event) => {
+        if (event.payload !== windowLabel) return;
+        const tabId = getActiveTabId(windowLabel);
+        if (tabId) {
+          useLintStore.getState().selectNext(tabId);
+        }
+      });
+      if (cancelled) { unlistenLintNext(); return; }
+      unlistenRefs.current.push(unlistenLintNext);
+
+      // Lint: navigate to previous issue
+      const unlistenLintPrev = await currentWindow.listen<string>("menu:lint-prev", (event) => {
+        if (event.payload !== windowLabel) return;
+        const tabId = getActiveTabId(windowLabel);
+        if (tabId) {
+          useLintStore.getState().selectPrev(tabId);
+        }
+      });
+      if (cancelled) { unlistenLintPrev(); return; }
+      unlistenRefs.current.push(unlistenLintPrev);
     };
 
     setupListeners();

@@ -1,0 +1,81 @@
+/**
+ * Lint Plugin Styles
+ *
+ * Purpose: Visual indicators for markdown lint diagnostics in both
+ * Source mode (CodeMirror) and WYSIWYG mode (ProseMirror).
+ * Uses design tokens — no hardcoded colors.
+ */
+
+/* ── CodeMirror Source mode ──────────────────────────────────────────────── */
+
+/* Gutter dot indicators */
+.lint-gutter-error,
+.lint-gutter-warning {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+  margin: auto;
+  vertical-align: middle;
+}
+
+.lint-gutter-error {
+  background: var(--error-color);
+}
+
+.lint-gutter-warning {
+  background: var(--warning-color);
+}
+
+/* Line background highlights */
+.lint-line-error {
+  background: color-mix(in srgb, var(--error-color) 4%, transparent);
+}
+
+.lint-line-warning {
+  background: color-mix(in srgb, var(--warning-color) 6%, transparent);
+}
+
+/* ── ProseMirror WYSIWYG mode ────────────────────────────────────────────── */
+
+/* Block-level node decoration for lint diagnostics */
+.lint-block-error {
+  box-shadow: inset 2px 0 0 var(--error-color);
+  background: color-mix(in srgb, var(--error-color) 3%, transparent);
+}
+
+.lint-block-warning {
+  box-shadow: inset 2px 0 0 var(--warning-color);
+  background: color-mix(in srgb, var(--warning-color) 4%, transparent);
+}
+
+/* ── Status bar badge ────────────────────────────────────────────────────── */
+
+.lint-badge {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 0 4px;
+  height: 20px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+  background: transparent;
+  border: none;
+  color: inherit;
+}
+
+.lint-badge:hover {
+  background: var(--hover-bg);
+}
+
+.lint-badge--error {
+  color: var(--error-color);
+}
+
+.lint-badge--warning {
+  color: var(--warning-color);
+}

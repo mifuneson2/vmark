@@ -26,6 +26,8 @@ If you prefer keeping system functions on F-keys, you can customize VMark shortc
 
 | Key | Action |
 |-----|--------|
+| `F2` | Next Issue |
+| `Shift + F2` | Previous Issue |
 | `F4` | Sort Lines Ascending |
 | `Shift + F4` | Sort Lines Descending |
 | `F5` | Source Peek |
@@ -162,6 +164,9 @@ If you prefer keeping system functions on F-keys, you can customize VMark shortc
 | Fit Tables to Width | _(customizable)_ |
 | Universal Toolbar | `Mod + Shift + P` |
 | Source Peek | `F5` |
+| Check Markdown | `Alt + Mod + V` |
+| Next Issue | `F2` |
+| Previous Issue | `Shift + F2` |
 
 ## File Operations
 

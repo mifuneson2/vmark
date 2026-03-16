@@ -23,3 +23,25 @@ describe("settingsStore — tableFitToWidth", () => {
     expect(useSettingsStore.getState().markdown.tableFitToWidth).toBe(false);
   });
 });
+
+describe("settingsStore — lintEnabled", () => {
+  beforeEach(() => {
+    useSettingsStore.getState().resetSettings();
+  });
+
+  it("defaults to true", () => {
+    const { markdown } = useSettingsStore.getState();
+    expect(markdown.lintEnabled).toBe(true);
+  });
+
+  it("can be toggled to false via updateMarkdownSetting", () => {
+    useSettingsStore.getState().updateMarkdownSetting("lintEnabled", false);
+    expect(useSettingsStore.getState().markdown.lintEnabled).toBe(false);
+  });
+
+  it("can be toggled back to true", () => {
+    useSettingsStore.getState().updateMarkdownSetting("lintEnabled", false);
+    useSettingsStore.getState().updateMarkdownSetting("lintEnabled", true);
+    expect(useSettingsStore.getState().markdown.lintEnabled).toBe(true);
+  });
+});

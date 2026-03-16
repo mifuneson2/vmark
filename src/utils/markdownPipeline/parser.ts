@@ -535,3 +535,30 @@ export function parseMarkdownToMdast(
 
   return transformed as Root;
 }
+
+/**
+ * Create a markdown processor for lint use.
+ *
+ * Same plugin stack as the editor pipeline but:
+ * - Always loads ALL plugins (math, frontmatter, wiki-links, details)
+ * - Skips normalizeBareListMarkers (preserves original positions)
+ * - Skips preprocessEscapedMarkers (lint checks raw source)
+ *
+ * Returns a unified Processor — call `.parse(source)` for MDAST with
+ * accurate position data, then `.runSync(tree)` for transforms.
+ */
+export function createMarkdownProcessor() {
+  const processor = unified()
+    .use(remarkParse)
+    .use(remarkDisableSetextHeadings)
+    .use(remarkGfm, { singleTilde: false })
+    .use(remarkMath)
+    .use(remarkValidateMath)
+    .use(remarkFrontmatter, ["yaml"])
+    .use(remarkWikiLinks)
+    .use(remarkDetailsBlock)
+    .use(remarkCustomInline)
+    .use(remarkResolveReferences);
+
+  return processor;
+}

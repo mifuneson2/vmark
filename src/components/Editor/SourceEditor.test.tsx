@@ -201,6 +201,21 @@ vi.mock("@/utils/sourceEditorExtensions", () => ({
   },
 }));
 
+vi.mock("@/contexts/WindowContext", () => ({
+  useWindowLabel: vi.fn(() => "main"),
+}));
+
+const mockTabStoreGetState = vi.fn(() => ({
+  activeTabId: { main: "tab-1" },
+}));
+
+vi.mock("@/stores/tabStore", () => {
+  const store = vi.fn();
+  (store as unknown as Record<string, unknown>).getState = () =>
+    mockTabStoreGetState();
+  return { useTabStore: store };
+});
+
 import { SourceEditor } from "./SourceEditor";
 
 beforeEach(() => {

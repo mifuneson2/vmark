@@ -26,6 +26,8 @@ Si prefieres mantener las funciones del sistema en las teclas F, puedes personal
 
 | Tecla | Acción |
 |-------|--------|
+| `F2` | Siguiente problema |
+| `Shift + F2` | Problema anterior |
 | `F4` | Ordenar Líneas Ascendente |
 | `Shift + F4` | Ordenar Líneas Descendente |
 | `F5` | Vista Previa de Fuente |
@@ -162,6 +164,9 @@ Si prefieres mantener las funciones del sistema en las teclas F, puedes personal
 | Ajustar Tablas al Ancho | _(personalizable)_ |
 | Barra de Herramientas Universal | `Mod + Shift + P` |
 | Vista Previa de Fuente | `F5` |
+| Comprobar Markdown | `Alt + Mod + V` |
+| Siguiente problema | `F2` |
+| Problema anterior | `Shift + F2` |
 
 ## Operaciones de Archivo
 
