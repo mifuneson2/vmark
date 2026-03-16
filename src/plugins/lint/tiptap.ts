@@ -98,11 +98,17 @@ export const LintExtension = Extension.create<LintExtensionOptions>({
 
         view: (editorView) => {
           let destroyed = false;
-          // Re-decorate when diagnostics arrive from runLint (plain subscribe, manual diff)
+          // Only react when diagnostics are ADDED (runLint), not cleared.
+          // Clears are handled by apply() returning DecorationSet.empty on docChanged.
           let prevDiagnostics = useLintStore.getState().diagnosticsByTab[tabId];
           const unsubscribe = useLintStore.subscribe((state) => {
             if (destroyed) return;
             const nextDiagnostics = state.diagnosticsByTab[tabId];
+            // Skip if diagnostics were removed (cleared) — only react to new results
+            if (!nextDiagnostics || nextDiagnostics.length === 0) {
+              prevDiagnostics = nextDiagnostics;
+              return;
+            }
             if (nextDiagnostics !== prevDiagnostics) {
               prevDiagnostics = nextDiagnostics;
               runOrQueueProseMirrorAction(editorView, () => {
@@ -131,16 +137,10 @@ export const LintExtension = Extension.create<LintExtensionOptions>({
 
           apply(tr, oldDecorations) {
             // Clear decorations on doc edit — stale results should disappear.
-            // Note: we clear the STORE outside of apply() to avoid an infinite
-            // loop (store change → subscribe → dispatch → apply → store change).
+            // We only clear the DECORATIONS here, not the store — clearing the
+            // store from apply() causes an infinite loop via subscribe → dispatch.
+            // The store is cleared naturally by the next runLint or tab close.
             if (tr.docChanged) {
-              // Schedule store clear outside the transaction cycle
-              queueMicrotask(() => {
-                const diags = useLintStore.getState().diagnosticsByTab[tabId];
-                if (diags && diags.length > 0) {
-                  useLintStore.getState().clearDiagnostics(tabId);
-                }
-              });
               return DecorationSet.empty;
             }
 
