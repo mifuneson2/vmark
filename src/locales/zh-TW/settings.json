@@ -176,10 +176,10 @@
   "markdown.mediaAlignment.left": "靠左",
   "markdown.group.htmlRendering": "HTML 渲染",
   "markdown.htmlRendering.label": "富文字模式中的原始 HTML",
-  "markdown.htmlRendering.description": "控制原始 HTML 是否隱藏或渲染（已消毒）",
+  "markdown.htmlRendering.description": "控制原始 HTML 是否隱藏或渲染（已清理）",
   "markdown.htmlRendering.hidden": "隱藏",
-  "markdown.htmlRendering.sanitized": "已消毒",
-  "markdown.htmlRendering.sanitizedWithStyles": "已消毒 + 樣式",
+  "markdown.htmlRendering.sanitized": "已清理",
+  "markdown.htmlRendering.sanitizedWithStyles": "已清理 + 樣式",
 
   "files.group.fileBrowser": "檔案瀏覽器",
   "files.showHiddenFiles.label": "顯示隱藏檔案",
