@@ -4,6 +4,7 @@
  * Theme and window configuration.
  */
 
+import { useTranslation } from "react-i18next";
 import {
   useSettingsStore,
   themes,
@@ -11,15 +12,8 @@ import {
 } from "@/stores/settingsStore";
 import { SettingRow, SettingsGroup, Toggle } from "./components";
 
-const themeLabels: Record<ThemeId, string> = {
-  white: "White",
-  paper: "Paper",
-  mint: "Mint",
-  sepia: "Sepia",
-  night: "Night",
-};
-
 export function AppearanceSettings() {
+  const { t } = useTranslation("settings");
   const appearance = useSettingsStore((state) => state.appearance);
   const updateSetting = useSettingsStore(
     (state) => state.updateAppearanceSetting
@@ -28,7 +22,7 @@ export function AppearanceSettings() {
   return (
     <div>
       {/* Theme selector */}
-      <SettingsGroup title="Theme">
+      <SettingsGroup title={t("appearance.group.theme")}>
         <div className="flex items-center gap-4 pb-3">
           {(Object.keys(themes) as ThemeId[]).map((id) => (
             <button
@@ -53,7 +47,7 @@ export function AppearanceSettings() {
                   ? "text-[var(--text-primary)]"
                   : "text-[var(--text-tertiary)]"
               }`}>
-                {themeLabels[id] ?? id}
+                {t(`appearance.theme.${id}`, id)}
               </span>
             </button>
           ))}
@@ -61,10 +55,10 @@ export function AppearanceSettings() {
       </SettingsGroup>
 
       {/* Window */}
-      <SettingsGroup title="Window">
+      <SettingsGroup title={t("appearance.group.window")}>
         <SettingRow
-          label="Show filename in titlebar"
-          description="Display the current file name in the window title"
+          label={t("appearance.showFilenameInTitlebar.label")}
+          description={t("appearance.showFilenameInTitlebar.description")}
         >
           <Toggle
             checked={appearance.showFilenameInTitlebar ?? false}
@@ -72,8 +66,8 @@ export function AppearanceSettings() {
           />
         </SettingRow>
         <SettingRow
-          label="Auto-hide status bar"
-          description="Hide status bar when not interacting"
+          label={t("appearance.autoHideStatusBar.label")}
+          description={t("appearance.autoHideStatusBar.description")}
         >
           <Toggle
             checked={appearance.autoHideStatusBar ?? false}

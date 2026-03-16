@@ -19,6 +19,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { useTranslation } from "react-i18next";
 import { createPortal } from "react-dom";
 import { useGeniePickerStore } from "@/stores/geniePickerStore";
 import { useQuickOpenStore } from "@/components/QuickOpen/quickOpenStore";
@@ -42,6 +43,7 @@ const SCOPES: GenieScope[] = ["selection", "block", "document"];
 
 /** Spotlight-style overlay for browsing, searching, and invoking AI genies or freeform prompts. */
 export function GeniePicker() {
+  const { t } = useTranslation("ai");
   const isOpen = useGeniePickerStore((s) => s.isOpen);
   const filterScope = useGeniePickerStore((s) => s.filterScope);
   const mode = useGeniePickerStore((s) => s.mode);
@@ -346,7 +348,7 @@ export function GeniePicker() {
         onKeyDown={handleKeyDown}
         role="dialog"
         aria-modal="true"
-        aria-label="AI Genies"
+        aria-label={t("picker.ariaLabel")}
       >
         {/* Unified input (search + freeform) */}
         <div className="genie-picker-header">
@@ -355,7 +357,7 @@ export function GeniePicker() {
             <textarea
               ref={inputRef}
               className="genie-picker-search"
-              placeholder="Search genies or describe what you want..."
+              placeholder={t("picker.searchPlaceholder")}
               value={filter}
               onChange={(e) => {
                 setFilter(e.target.value);
@@ -393,28 +395,28 @@ export function GeniePicker() {
               {/* Genie list */}
               <div className="genie-picker-list" ref={listRef} id="genie-picker-list" role="listbox">
                 {loading && (
-                  <div className="genie-picker-empty">Loading genies...</div>
+                  <div className="genie-picker-empty">{t("picker.loading")}</div>
                 )}
 
                 {!loading && flatList.length === 0 && !filter && (
                   <div className="genie-picker-empty">
-                    No genies found. Add .md files to your genies directory.
+                    {t("picker.empty")}
                   </div>
                 )}
 
                 {/* No match — freeform hint */}
                 {!loading && flatList.length === 0 && filter && (
                   <div className="genie-picker-no-match">
-                    No matching genies.{" "}
+                    {t("picker.noMatch")}{" "}
                     {freeformConfirmed ? (
                       <span className="genie-picker-confirm-hint">
-                        Press Enter again to run as AI prompt.
+                        {t("picker.freeformConfirm")}
                       </span>
                     ) : (
                       <span>
-                        Press{" "}
-                        <kbd className="genie-picker-kbd">Enter</kbd> to run
-                        as AI prompt.
+                        {t("picker.freeformHintPrefix")}{" "}
+                        <kbd className="genie-picker-kbd">Enter</kbd>{" "}
+                        {t("picker.freeformHintSuffix")}
                       </span>
                     )}
                   </div>
@@ -423,7 +425,7 @@ export function GeniePicker() {
                 {/* Recents section */}
                 {recents.length > 0 && (
                   <>
-                    <div className="genie-picker-section-title">Recently Used</div>
+                    <div className="genie-picker-section-title">{t("picker.recentlyUsed")}</div>
                     {recents.map((genie) => {
                       const idx = itemIndex++;
                       return (
@@ -481,7 +483,7 @@ export function GeniePicker() {
         {/* Footer */}
         <div className="genie-picker-footer">
           <span className="genie-picker-scope">
-            scope: {activeScope ?? "all"}
+            {t("picker.scopeLabel", { scope: activeScope ?? "all" })}
           </span>
           {activeProvider && (
             <span className="provider-switcher-anchor">
@@ -490,7 +492,7 @@ export function GeniePicker() {
                 className="provider-switcher-trigger"
                 onClick={() => setShowProviderSwitcher((v) => !v)}
               >
-                via {activeProviderName}
+                {t("picker.via", { name: activeProviderName })}
               </button>
               {showProviderSwitcher && (
                 <ProviderSwitcher
@@ -501,9 +503,9 @@ export function GeniePicker() {
             </span>
           )}
           <span className="genie-picker-hint">
-            <kbd className="genie-picker-kbd">Tab</kbd> cycle scope
+            <kbd className="genie-picker-kbd">Tab</kbd> {t("picker.footerCycleScope")}
             {" "}
-            <kbd className="genie-picker-kbd">&uarr;&darr;</kbd> navigate
+            <kbd className="genie-picker-kbd">&uarr;&darr;</kbd> {t("picker.footerNavigate")}
           </span>
         </div>
       </div>

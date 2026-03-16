@@ -1,0 +1,35 @@
+{
+  "picker.ariaLabel": "AI Genies",
+  "picker.searchPlaceholder": "Search genies or describe what you want...",
+  "picker.loading": "Loading genies...",
+  "picker.empty": "No genies found. Add .md files to your genies directory.",
+  "picker.noMatch": "No matching genies.",
+  "picker.freeformHintPrefix": "Press",
+  "picker.freeformHintSuffix": "to run as AI prompt.",
+  "picker.freeformConfirm": "Press Enter again to run as AI prompt.",
+  "picker.recentlyUsed": "Recently Used",
+  "picker.scopeLabel": "scope: {{scope}}",
+  "picker.via": "via {{name}}",
+  "picker.footerCycleScope": "cycle scope",
+  "picker.footerNavigate": "navigate",
+
+  "chips.polish": "Polish",
+  "chips.condense": "Condense",
+  "chips.grammar": "Grammar",
+  "chips.rephrase": "Rephrase",
+
+  "response.thinking": "Thinking... {{seconds}}s",
+  "response.accept": "Accept",
+  "response.reject": "Reject",
+  "response.retry": "Retry",
+  "response.cancel": "Cancel",
+  "response.dismiss": "Dismiss",
+  "response.unknownError": "Unknown error",
+
+  "history.title": "Prompt History",
+  "history.empty": "No history",
+
+  "provider.sectionCli": "CLI",
+  "provider.sectionApi": "API",
+  "provider.settings": "Settings..."
+}

@@ -4,6 +4,7 @@
  * Typography, display, behavior, and whitespace configuration.
  */
 
+import { useTranslation } from "react-i18next";
 import {
   useSettingsStore,
   type AppearanceSettings as AppearanceSettingsType,
@@ -12,13 +13,10 @@ import {
 } from "@/stores/settingsStore";
 import { SettingRow, SettingsGroup, Select, Toggle } from "./components";
 
-/** Shared option for system default */
-const SYSTEM_DEFAULT = { value: "system", label: "System Default" };
-
-/** Font option definitions */
+/** Font option definitions (labels are not translated — font names are proper nouns) */
 const fontOptions = {
   latin: [
-    SYSTEM_DEFAULT,
+    { value: "system", label: null },
     { value: "athelas", label: "Athelas" },
     { value: "palatino", label: "Palatino" },
     { value: "georgia", label: "Georgia" },
@@ -26,7 +24,7 @@ const fontOptions = {
     { value: "literata", label: "Literata" },
   ],
   cjk: [
-    SYSTEM_DEFAULT,
+    { value: "system", label: null },
     { value: "pingfang", label: "PingFang SC" },
     { value: "songti", label: "Songti SC" },
     { value: "kaiti", label: "Kaiti SC" },
@@ -34,7 +32,7 @@ const fontOptions = {
     { value: "sourcehans", label: "Source Han Sans" },
   ],
   mono: [
-    SYSTEM_DEFAULT,
+    { value: "system", label: null },
     { value: "sfmono", label: "SF Mono" },
     { value: "monaco", label: "Monaco" },
     { value: "menlo", label: "Menlo" },
@@ -57,57 +55,19 @@ const numericOptions = {
     { value: "20", label: "20px" },
     { value: "22", label: "22px" },
   ],
-  lineHeight: [
-    { value: "1.4", label: "1.4 (Compact)" },
-    { value: "1.6", label: "1.6 (Normal)" },
-    { value: "1.8", label: "1.8 (Relaxed)" },
-    { value: "2.0", label: "2.0 (Spacious)" },
-    { value: "2.2", label: "2.2 (Extra)" },
-  ],
-  blockSpacing: [
-    { value: "0.5", label: "0.5× (Tight)" },
-    { value: "1", label: "1× (Normal)" },
-    { value: "1.5", label: "1.5× (Relaxed)" },
-    { value: "2", label: "2× (Spacious)" },
-  ],
-  cjkLetterSpacing: [
-    { value: "0", label: "Off" },
-    { value: "0.02", label: "0.02em (Subtle)" },
-    { value: "0.03", label: "0.03em (Light)" },
-    { value: "0.05", label: "0.05em (Normal)" },
-    { value: "0.08", label: "0.08em (Wide)" },
-    { value: "0.10", label: "0.10em (Wider)" },
-    { value: "0.12", label: "0.12em (Extra)" },
-  ],
-  editorWidth: [
-    { value: "36", label: "36em (Compact)" },
-    { value: "42", label: "42em (Narrow)" },
-    { value: "50", label: "50em (Medium)" },
-    { value: "60", label: "60em (Wide)" },
-    { value: "80", label: "80em (Extra Wide)" },
-    { value: "0", label: "Unlimited" },
-  ],
 };
 
 /** Typography settings configuration for data-driven rendering */
 type TypographyConfig = {
-  label: string;
+  labelKey: string;
   key: keyof AppearanceSettingsType;
-  options: { value: string; label: string }[];
+  options: { value: string; label: string | null }[];
   isNumeric: boolean;
+  optionLabelKey?: string;
 };
 
-const typographySettings: TypographyConfig[] = [
-  { label: "Latin Font", key: "latinFont", options: fontOptions.latin, isNumeric: false },
-  { label: "CJK Font", key: "cjkFont", options: fontOptions.cjk, isNumeric: false },
-  { label: "Mono Font", key: "monoFont", options: fontOptions.mono, isNumeric: false },
-  { label: "Font Size", key: "fontSize", options: numericOptions.fontSize, isNumeric: true },
-  { label: "Line Height", key: "lineHeight", options: numericOptions.lineHeight, isNumeric: true },
-  { label: "Block Spacing", key: "blockSpacing", options: numericOptions.blockSpacing, isNumeric: true },
-  { label: "CJK Letter Spacing", key: "cjkLetterSpacing", options: numericOptions.cjkLetterSpacing, isNumeric: false },
-];
-
 export function EditorSettings() {
+  const { t } = useTranslation("settings");
   const appearance = useSettingsStore((state) => state.appearance);
   const general = useSettingsStore((state) => state.general);
   const markdown = useSettingsStore((state) => state.markdown);
@@ -121,15 +81,68 @@ export function EditorSettings() {
   const cjkPairingEnabled = autoPairCJKStyle !== "off";
   const curlyQuotesEnabled = markdown.autoPairCurlyQuotes ?? false;
 
+  const systemDefaultLabel = t("editor.font.systemDefault");
+
+  /** Typography settings configuration for data-driven rendering */
+  const typographySettings: TypographyConfig[] = [
+    { labelKey: "editor.latinFont.label", key: "latinFont", options: fontOptions.latin, isNumeric: false },
+    { labelKey: "editor.cjkFont.label", key: "cjkFont", options: fontOptions.cjk, isNumeric: false },
+    { labelKey: "editor.monoFont.label", key: "monoFont", options: fontOptions.mono, isNumeric: false },
+    { labelKey: "editor.fontSize.label", key: "fontSize", options: numericOptions.fontSize, isNumeric: true },
+    {
+      labelKey: "editor.lineHeight.label", key: "lineHeight", isNumeric: true,
+      options: [
+        { value: "1.4", label: t("editor.lineHeight.compact") },
+        { value: "1.6", label: t("editor.lineHeight.normal") },
+        { value: "1.8", label: t("editor.lineHeight.relaxed") },
+        { value: "2.0", label: t("editor.lineHeight.spacious") },
+        { value: "2.2", label: t("editor.lineHeight.extra") },
+      ],
+    },
+    {
+      labelKey: "editor.blockSpacing.label", key: "blockSpacing", isNumeric: true,
+      options: [
+        { value: "0.5", label: t("editor.blockSpacing.tight") },
+        { value: "1", label: t("editor.blockSpacing.normal") },
+        { value: "1.5", label: t("editor.blockSpacing.relaxed") },
+        { value: "2", label: t("editor.blockSpacing.spacious") },
+      ],
+    },
+    {
+      labelKey: "editor.cjkLetterSpacing.label", key: "cjkLetterSpacing", isNumeric: false,
+      options: [
+        { value: "0", label: t("editor.cjkLetterSpacing.off") },
+        { value: "0.02", label: "0.02em (Subtle)" },
+        { value: "0.03", label: "0.03em (Light)" },
+        { value: "0.05", label: "0.05em (Normal)" },
+        { value: "0.08", label: "0.08em (Wide)" },
+        { value: "0.10", label: "0.10em (Wider)" },
+        { value: "0.12", label: "0.12em (Extra)" },
+      ],
+    },
+  ];
+
+  const editorWidthOptions = [
+    { value: "36", label: t("editor.editorWidth.compact") },
+    { value: "42", label: t("editor.editorWidth.narrow") },
+    { value: "50", label: t("editor.editorWidth.medium") },
+    { value: "60", label: t("editor.editorWidth.wide") },
+    { value: "80", label: t("editor.editorWidth.extraWide") },
+    { value: "0", label: t("editor.editorWidth.unlimited") },
+  ];
+
   return (
     <div>
       {/* Typography */}
-      <SettingsGroup title="Typography">
-        {typographySettings.map(({ label, key, options, isNumeric }) => (
-          <SettingRow key={key} label={label}>
+      <SettingsGroup title={t("editor.group.typography")}>
+        {typographySettings.map(({ labelKey, key, options, isNumeric }) => (
+          <SettingRow key={key} label={t(labelKey)}>
             <Select
               value={String(appearance[key])}
-              options={options}
+              options={options.map((o) => ({
+                value: o.value,
+                label: o.label ?? systemDefaultLabel,
+              }))}
               onChange={(v) =>
                 updateAppearanceSetting(key, isNumeric ? Number(v) : v)
               }
@@ -139,34 +152,34 @@ export function EditorSettings() {
       </SettingsGroup>
 
       {/* Display */}
-      <SettingsGroup title="Display">
-        <SettingRow label="Editor Width" description="Maximum content width">
+      <SettingsGroup title={t("editor.group.display")}>
+        <SettingRow label={t("editor.editorWidth.label")} description={t("editor.editorWidth.description")}>
           <Select
             value={String(appearance.editorWidth)}
-            options={numericOptions.editorWidth}
+            options={editorWidthOptions}
             onChange={(v) => updateAppearanceSetting("editorWidth", Number(v))}
           />
         </SettingRow>
       </SettingsGroup>
 
       {/* Behavior */}
-      <SettingsGroup title="Behavior">
+      <SettingsGroup title={t("editor.group.behavior")}>
         <SettingRow
-          label="Tab size"
-          description="Number of spaces inserted when pressing Tab"
+          label={t("editor.tabSize.label")}
+          description={t("editor.tabSize.description")}
         >
           <Select
             value={String(general.tabSize)}
             options={[
-              { value: "2", label: "2 spaces" },
-              { value: "4", label: "4 spaces" },
+              { value: "2", label: t("editor.tabSize.2spaces") },
+              { value: "4", label: t("editor.tabSize.4spaces") },
             ]}
             onChange={(v) => updateGeneralSetting("tabSize", Number(v))}
           />
         </SettingRow>
         <SettingRow
-          label="Enable auto-pairing"
-          description="Automatically insert closing brackets and quotes"
+          label={t("editor.autoPair.label")}
+          description={t("editor.autoPair.description")}
         >
           <Toggle
             checked={autoPairEnabled}
@@ -174,15 +187,15 @@ export function EditorSettings() {
           />
         </SettingRow>
         <SettingRow
-          label="CJK brackets"
-          description='Auto-pair CJK brackets like 「」【】《》'
+          label={t("editor.cjkBrackets.label")}
+          description={t("editor.cjkBrackets.description")}
           disabled={!autoPairEnabled}
         >
           <Select<AutoPairCJKStyle>
             value={autoPairCJKStyle}
             options={[
-              { value: "off", label: "Off" },
-              { value: "auto", label: "Auto" },
+              { value: "off", label: t("editor.cjkBrackets.off") },
+              { value: "auto", label: t("editor.cjkBrackets.auto") },
             ]}
             onChange={(v) => updateMarkdownSetting("autoPairCJKStyle", v)}
             disabled={!autoPairEnabled}
@@ -190,8 +203,8 @@ export function EditorSettings() {
         </SettingRow>
         {cjkPairingEnabled && (
           <SettingRow
-            label="Include curly quotes"
-            description={`Auto-pair \u201C\u201D and \u2018\u2019 (may conflict with IME smart quotes)`}
+            label={t("editor.curlyQuotes.label")}
+            description={t("editor.curlyQuotes.description")}
             disabled={!autoPairEnabled}
           >
             <Toggle
@@ -203,8 +216,8 @@ export function EditorSettings() {
         )}
         {cjkPairingEnabled && curlyQuotesEnabled && (
           <SettingRow
-            label="Also pair \u201D"
-            description="Typing \u201D inserts \u201C\u201D pair (helps when IME alternates open/close)"
+            label={t("editor.rightDoubleQuote.label")}
+            description={t("editor.rightDoubleQuote.description")}
             disabled={!autoPairEnabled}
           >
             <Toggle
@@ -215,21 +228,21 @@ export function EditorSettings() {
           </SettingRow>
         )}
         <SettingRow
-          label="Copy format"
-          description="What to put in plain text when copying from WYSIWYG"
+          label={t("editor.copyFormat.label")}
+          description={t("editor.copyFormat.description")}
         >
           <Select<CopyFormat>
             value={markdown.copyFormat}
             options={[
-              { value: "default", label: "Plain text" },
-              { value: "markdown", label: "Markdown" },
+              { value: "default", label: t("editor.copyFormat.plainText") },
+              { value: "markdown", label: t("editor.copyFormat.markdown") },
             ]}
             onChange={(v) => updateMarkdownSetting("copyFormat", v)}
           />
         </SettingRow>
         <SettingRow
-          label="Copy on select"
-          description="Automatically copy selected text to clipboard"
+          label={t("editor.copyOnSelect.label")}
+          description={t("editor.copyOnSelect.description")}
         >
           <Toggle
             checked={markdown.copyOnSelect}
@@ -239,24 +252,24 @@ export function EditorSettings() {
       </SettingsGroup>
 
       {/* Whitespace */}
-      <SettingsGroup title="Whitespace">
+      <SettingsGroup title={t("editor.group.whitespace")}>
         <SettingRow
-          label="Line endings on save"
-          description="Preserve original line endings or normalize on save"
+          label={t("editor.lineEndings.label")}
+          description={t("editor.lineEndings.description")}
         >
           <Select
             value={general.lineEndingsOnSave}
             options={[
-              { value: "preserve", label: "Preserve existing" },
-              { value: "lf", label: "LF (\\n)" },
-              { value: "crlf", label: "CRLF (\\r\\n)" },
+              { value: "preserve", label: t("editor.lineEndings.preserve") },
+              { value: "lf", label: t("editor.lineEndings.lf") },
+              { value: "crlf", label: t("editor.lineEndings.crlf") },
             ]}
             onChange={(v) => updateGeneralSetting("lineEndingsOnSave", v as typeof general.lineEndingsOnSave)}
           />
         </SettingRow>
         <SettingRow
-          label="Preserve consecutive line breaks"
-          description="Keep multiple blank lines as-is (don't collapse)"
+          label={t("editor.preserveLineBreaks.label")}
+          description={t("editor.preserveLineBreaks.description")}
         >
           <Toggle
             checked={markdown.preserveLineBreaks}
@@ -264,22 +277,22 @@ export function EditorSettings() {
           />
         </SettingRow>
         <SettingRow
-          label="Hard break style on save"
-          description="Two spaces works everywhere. Backslash may fail on Reddit/Jekyll."
+          label={t("editor.hardBreakStyle.label")}
+          description={t("editor.hardBreakStyle.description")}
         >
           <Select
             value={markdown.hardBreakStyleOnSave}
             options={[
-              { value: "twoSpaces", label: "Two spaces (Recommended)" },
-              { value: "preserve", label: "Preserve existing" },
-              { value: "backslash", label: "Backslash (\\)" },
+              { value: "twoSpaces", label: t("editor.hardBreakStyle.twoSpaces") },
+              { value: "preserve", label: t("editor.hardBreakStyle.preserve") },
+              { value: "backslash", label: t("editor.hardBreakStyle.backslash") },
             ]}
             onChange={(v) => updateMarkdownSetting("hardBreakStyleOnSave", v as typeof markdown.hardBreakStyleOnSave)}
           />
         </SettingRow>
         <SettingRow
-          label="Show <br> tags"
-          description="Display HTML line break tags visibly in editor"
+          label={t("editor.showBrTags.label")}
+          description={t("editor.showBrTags.description")}
         >
           <Toggle
             checked={markdown.showBrTags}

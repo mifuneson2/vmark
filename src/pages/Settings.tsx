@@ -6,6 +6,7 @@
  */
 
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Palette,
   Type,
@@ -109,18 +110,17 @@ function NavItem({ icon, label, active, onClick }: NavItemProps) {
   );
 }
 
-// Navigation config - alphabetical order, except About at the end
-// Note: Advanced section is added dynamically based on showDevSection state
+// Navigation config icons — labels are resolved at render time via i18n
 const navConfig = [
-  { id: "appearance" as const, icon: Palette, label: "Appearance" },
-  { id: "editor" as const, icon: Type, label: "Editor" },
-  { id: "files" as const, icon: FolderOpen, label: "Files & Images" },
-  { id: "integrations" as const, icon: Plug, label: "Integrations" },
-  { id: "language" as const, icon: Languages, label: "Language" },
-  { id: "markdown" as const, icon: FileText, label: "Markdown" },
-  { id: "shortcuts" as const, icon: Keyboard, label: "Shortcuts" },
-  { id: "terminal" as const, icon: SquareTerminal, label: "Terminal" },
-  { id: "about" as const, icon: Info, label: "About" },
+  { id: "appearance" as const, icon: Palette },
+  { id: "editor" as const, icon: Type },
+  { id: "files" as const, icon: FolderOpen },
+  { id: "integrations" as const, icon: Plug },
+  { id: "language" as const, icon: Languages },
+  { id: "markdown" as const, icon: FileText },
+  { id: "shortcuts" as const, icon: Keyboard },
+  { id: "terminal" as const, icon: SquareTerminal },
+  { id: "about" as const, icon: Info },
 ] as const;
 
 // Valid section IDs for URL param validation
@@ -134,6 +134,7 @@ function isValidSection(value: string): value is Section {
 }
 
 export function SettingsPage() {
+  const { t } = useTranslation("settings");
   // Read initial section from URL query params
   const getInitialSection = (): Section => {
     const params = new URLSearchParams(window.location.search);
@@ -182,7 +183,7 @@ export function SettingsPage() {
       .map((item) => ({
         id: item.id,
         icon: <item.icon className="w-4 h-4" />,
-        label: item.label,
+        label: t(`nav.${item.id}`),
       })),
     // Advanced section toggled via Ctrl+Option+Cmd+D
     ...(showDevSection
@@ -190,7 +191,7 @@ export function SettingsPage() {
           {
             id: "advanced" as const,
             icon: <Zap className="w-4 h-4" />,
-            label: "Advanced",
+            label: t("nav.advanced"),
           },
         ]
       : []),
@@ -247,7 +248,7 @@ export function SettingsPage() {
         style={{ left: "13rem" }}
       >
         <span className="text-sm font-medium text-[var(--text-primary)]">
-          Settings
+          {t("title")}
         </span>
       </div>
     </div>

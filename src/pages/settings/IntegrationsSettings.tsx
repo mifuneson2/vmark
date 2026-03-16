@@ -6,6 +6,7 @@
 
 import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { useTranslation } from "react-i18next";
 import { SettingRow, Toggle, SettingsGroup, CopyButton } from "./components";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { useMcpServer } from "@/hooks/useMcpServer";
@@ -18,11 +19,13 @@ import type { ProviderType } from "@/types/aiGenies";
 import { RestProviderConfigFields } from "./RestProviderConfigFields";
 
 function StatusBadge({ running, loading }: { running: boolean; loading: boolean }) {
+  const { t } = useTranslation("settings");
+
   if (loading) {
     return (
       <span className="inline-flex items-center gap-1.5 text-xs text-[var(--text-tertiary)]">
         <span className="w-2 h-2 rounded-full bg-[var(--warning-color)] animate-pulse" />
-        Starting...
+        {t("integrations.mcpStatus.starting")}
       </span>
     );
   }
@@ -31,7 +34,7 @@ function StatusBadge({ running, loading }: { running: boolean; loading: boolean 
     return (
       <span className="inline-flex items-center gap-1.5 text-xs text-[var(--success-color)]">
         <span className="w-2 h-2 rounded-full bg-[var(--success-color)]" />
-        Running
+        {t("integrations.mcpStatus.running")}
       </span>
     );
   }
@@ -39,12 +42,13 @@ function StatusBadge({ running, loading }: { running: boolean; loading: boolean 
   return (
     <span className="inline-flex items-center gap-1.5 text-xs text-[var(--text-tertiary)]">
       <span className="w-2 h-2 rounded-full bg-[var(--text-tertiary)]" />
-      Stopped
+      {t("integrations.mcpStatus.stopped")}
     </span>
   );
 }
 
 export function IntegrationsSettings() {
+  const { t } = useTranslation("settings");
   const mcpSettings = useSettingsStore((state) => state.advanced.mcpServer);
   const updateAdvancedSetting = useSettingsStore((state) => state.updateAdvancedSetting);
 
@@ -119,10 +123,10 @@ export function IntegrationsSettings() {
 
   return (
     <div>
-      <SettingsGroup title="MCP Server">
+      <SettingsGroup title={t("integrations.group.mcp")}>
         <SettingRow
-          label="Enable MCP Server"
-          description="Allow AI assistants to control VMark editor"
+          label={t("integrations.enableMcp.label")}
+          description={t("integrations.enableMcp.description")}
         >
           <div className="flex items-center gap-3">
             <StatusBadge running={running} loading={loading} />
@@ -135,8 +139,8 @@ export function IntegrationsSettings() {
         </SettingRow>
 
         <SettingRow
-          label="Start on launch"
-          description="Auto-start when VMark opens"
+          label={t("integrations.startOnLaunch.label")}
+          description={t("integrations.startOnLaunch.description")}
         >
           <Toggle
             checked={mcpSettings.autoStart}
@@ -145,8 +149,8 @@ export function IntegrationsSettings() {
         </SettingRow>
 
         <SettingRow
-          label="Auto-approve edits"
-          description="Apply AI changes without preview (use with caution)"
+          label={t("integrations.autoApprove.label")}
+          description={t("integrations.autoApprove.description")}
         >
           <Toggle
             checked={mcpSettings.autoApproveEdits}
@@ -162,7 +166,7 @@ export function IntegrationsSettings() {
 
         {health.checkError && !error && (
           <div className="mt-2 text-xs text-[var(--error-color)]">
-            Health check: {health.checkError}
+            {t("integrations.healthCheck.error", { error: health.checkError })}
           </div>
         )}
 
@@ -170,44 +174,44 @@ export function IntegrationsSettings() {
         {running && port && (
           <div className="mt-4 pt-3 border-t border-[var(--border-color)]">
             <div className="text-xs text-[var(--text-tertiary)] flex items-center gap-1.5">
-              <span>Listening on</span>
+              <span>{t("integrations.mcpInfo.listeningOn")}</span>
               <code className="px-1 py-0.5 rounded bg-[var(--bg-tertiary)] font-mono">
                 localhost:{port}
               </code>
               <CopyButton text={`localhost:${port}`} />
             </div>
             <div className="text-xs text-[var(--text-tertiary)] mt-1">
-              Port auto-assigned. AI clients discover it automatically.
+              {t("integrations.mcpInfo.portNote")}
             </div>
 
             {/* Server info */}
             <div className="mt-3 pt-3 border-t border-[var(--border-color)]">
               <div className="flex items-center justify-between text-xs">
-                <span className="text-[var(--text-tertiary)]">Version</span>
+                <span className="text-[var(--text-tertiary)]">{t("integrations.mcpInfo.version")}</span>
                 <code className="text-[var(--text-secondary)] font-mono">{version ?? "—"}</code>
               </div>
 
               <div className="flex items-center justify-between text-xs mt-1.5">
-                <span className="text-[var(--text-tertiary)]">Tools Available</span>
+                <span className="text-[var(--text-tertiary)]">{t("integrations.mcpInfo.toolsAvailable")}</span>
                 <a
                   href="https://vmark.app/guide/mcp-tools"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-1 text-[var(--primary-color)] hover:underline"
                 >
-                  {toolCount ?? "—"} tools
+                  {toolCount != null ? t("integrations.mcpInfo.toolsCount", { count: toolCount }) : "—"}
                   <ExternalLink size={10} />
                 </a>
               </div>
 
               <div className="flex items-center justify-between text-xs mt-1.5">
-                <span className="text-[var(--text-tertiary)]">Resources Available</span>
+                <span className="text-[var(--text-tertiary)]">{t("integrations.mcpInfo.resourcesAvailable")}</span>
                 <span className="text-[var(--text-secondary)]">{resourceCount ?? "—"}</span>
               </div>
               <div className="flex items-center justify-between text-xs mt-1.5">
                 <span className="flex items-center gap-1 text-[var(--text-tertiary)]">
                   <Users size={12} />
-                  Connected Clients
+                  {t("integrations.mcpInfo.connectedClients")}
                 </span>
                 <span className={clientCount > 0 ? "text-[var(--success-color)]" : "text-[var(--text-secondary)]"}>
                   {clientCount}
@@ -215,7 +219,7 @@ export function IntegrationsSettings() {
               </div>
               {health.lastChecked && (
                 <div className="flex items-center justify-between text-xs mt-1.5">
-                  <span className="text-[var(--text-tertiary)]">Last Checked</span>
+                  <span className="text-[var(--text-tertiary)]">{t("integrations.mcpInfo.lastChecked")}</span>
                   <span className="text-[var(--text-secondary)]">
                     {health.lastChecked.toLocaleTimeString()}
                   </span>
@@ -238,11 +242,11 @@ export function IntegrationsSettings() {
                 transition-colors"
             >
               <RefreshCw size={12} className={isChecking ? "animate-spin" : ""} />
-              {running ? "Test Connection" : "Check Sidecar"}
+              {running ? t("integrations.mcpDiag.testConnection") : t("integrations.mcpDiag.checkSidecar")}
             </button>
             {!running && health.version && (
               <span className="text-xs text-[var(--text-tertiary)]">
-                Sidecar v{health.version} • {health.toolCount} tools
+                {t("integrations.mcpDiag.sidecarInfo", { version: health.version, count: health.toolCount ?? 0 })}
               </span>
             )}
           </div>
@@ -297,6 +301,7 @@ function ProviderRadio({
 }
 
 function AiProviderSettings() {
+  const { t } = useTranslation("settings");
   const cliProviders = useAiProviderStore((s) => s.cliProviders);
   const restProviders = useAiProviderStore((s) => s.restProviders);
   const activeProvider = useAiProviderStore((s) => s.activeProvider);
@@ -317,10 +322,10 @@ function AiProviderSettings() {
   };
 
   return (
-    <SettingsGroup title="AI Providers">
+    <SettingsGroup title={t("integrations.group.aiProviders")}>
       <SettingRow
-        label="Detect CLI Providers"
-        description="Scan for installed AI CLIs (claude, codex, gemini, ollama)"
+        label={t("integrations.detectCli.label")}
+        description={t("integrations.detectCli.description")}
       >
         <button
           onClick={handleDetect}
@@ -332,14 +337,14 @@ function AiProviderSettings() {
             transition-colors"
         >
           <RefreshCw size={12} className={detecting ? "animate-spin" : ""} />
-          Detect
+          {t("integrations.detectCli.button")}
         </button>
       </SettingRow>
 
       {/* CLI providers */}
       {cliProviders.length > 0 && (
-        <div className="mt-2 px-1" role="radiogroup" aria-label="CLI Providers">
-          <div className="text-xs text-[var(--text-tertiary)] mb-1">CLI Providers</div>
+        <div className="mt-2 px-1" role="radiogroup" aria-label={t("integrations.aiProviders.cliProviders")}>
+          <div className="text-xs text-[var(--text-tertiary)] mb-1">{t("integrations.aiProviders.cliProviders")}</div>
           {cliProviders.map((p) => (
             <div
               key={p.type}
@@ -367,7 +372,7 @@ function AiProviderSettings() {
                     : "text-[var(--text-tertiary)]"
                 }`}
               >
-                {p.available ? "Available" : "Not found"}
+                {p.available ? t("integrations.aiProviders.available") : t("integrations.aiProviders.notFound")}
               </span>
             </div>
           ))}
@@ -375,9 +380,9 @@ function AiProviderSettings() {
       )}
 
       {/* REST providers */}
-      <div className="mt-3 pt-3 border-t border-[var(--border-color)]" role="radiogroup" aria-label="REST API Providers">
+      <div className="mt-3 pt-3 border-t border-[var(--border-color)]" role="radiogroup" aria-label={t("integrations.aiProviders.restProviders")}>
         <div className="text-xs text-[var(--text-tertiary)] mb-2">
-          REST API Providers
+          {t("integrations.aiProviders.restProviders")}
         </div>
         {restProviders.map((p) => {
           const isActive = activeProvider === p.type;

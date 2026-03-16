@@ -5,6 +5,7 @@
  */
 
 import { invoke } from "@tauri-apps/api/core";
+import { useTranslation } from "react-i18next";
 import i18n from "@/i18n";
 import { useSettingsStore, type QuoteStyle } from "@/stores/settingsStore";
 import {
@@ -30,6 +31,7 @@ const LANGUAGE_OPTIONS = [
 type LanguageValue = (typeof LANGUAGE_OPTIONS)[number]["value"];
 
 export function LanguageSettings() {
+  const { t } = useTranslation("settings");
   const language = useSettingsStore((s) => s.general.language) as LanguageValue;
   const updateGeneralSetting = useSettingsStore((s) => s.updateGeneralSetting);
   const cjkFormatting = useSettingsStore((state) => state.cjkFormatting);
@@ -68,10 +70,10 @@ export function LanguageSettings() {
   return (
     <div>
       {/* UI Language */}
-      <SettingsGroup title="Language">
+      <SettingsGroup title={t("language.group.language")}>
         <SettingRow
-          label="Interface language"
-          description="Language used for menus and UI text"
+          label={t("language.interfaceLanguage.label")}
+          description={t("language.interfaceLanguage.description")}
         >
           <Select<LanguageValue>
             value={language}
@@ -82,15 +84,15 @@ export function LanguageSettings() {
       </SettingsGroup>
 
       {/* CJK Formatting */}
-      <SettingsGroup title="CJK Formatting">
+      <SettingsGroup title={t("language.group.cjkFormatting")}>
         <p className="text-xs text-[var(--text-tertiary)] -mt-2 mb-3">
-          Formatting rules for CJK (Chinese, Japanese, Korean) text. Use Format &gt; Format CJK Text (Cmd+Shift+F) to apply.
+          {t("language.cjkFormatting.hint")}
         </p>
         {/* Fullwidth Normalization */}
-        <SettingsGroup title="Fullwidth Normalization">
+        <SettingsGroup title={t("language.group.fullwidthNormalization")}>
           <SettingRow
-            label="Convert fullwidth letters/numbers"
-            description="1 2 3 -> 123, A -> A"
+            label={t("language.fullwidthAlphanumeric.label")}
+            description={t("language.fullwidthAlphanumeric.description")}
           >
             <Toggle
               checked={cjkFormatting.fullwidthAlphanumeric}
@@ -98,8 +100,8 @@ export function LanguageSettings() {
             />
           </SettingRow>
           <SettingRow
-            label="Normalize punctuation width"
-            description=", -> , when between CJK"
+            label={t("language.fullwidthPunctuation.label")}
+            description={t("language.fullwidthPunctuation.description")}
           >
             <Toggle
               checked={cjkFormatting.fullwidthPunctuation}
@@ -107,8 +109,8 @@ export function LanguageSettings() {
             />
           </SettingRow>
           <SettingRow
-            label="Convert parentheses"
-            description="() -> () when content is CJK"
+            label={t("language.fullwidthParentheses.label")}
+            description={t("language.fullwidthParentheses.description")}
           >
             <Toggle
               checked={cjkFormatting.fullwidthParentheses}
@@ -116,8 +118,8 @@ export function LanguageSettings() {
             />
           </SettingRow>
           <SettingRow
-            label="Convert brackets"
-            description="[] -> 【】 when content is CJK"
+            label={t("language.fullwidthBrackets.label")}
+            description={t("language.fullwidthBrackets.description")}
           >
             <Toggle
               checked={cjkFormatting.fullwidthBrackets}
@@ -127,10 +129,10 @@ export function LanguageSettings() {
         </SettingsGroup>
 
         {/* Spacing */}
-        <SettingsGroup title="Spacing">
+        <SettingsGroup title={t("language.group.spacing")}>
           <SettingRow
-            label="Add CJK-English spacing"
-            description="Chinese English -> Chinese English"
+            label={t("language.cjkEnglishSpacing.label")}
+            description={t("language.cjkEnglishSpacing.description")}
           >
             <Toggle
               checked={cjkFormatting.cjkEnglishSpacing}
@@ -138,8 +140,8 @@ export function LanguageSettings() {
             />
           </SettingRow>
           <SettingRow
-            label="Add CJK-parenthesis spacing"
-            description="Test (test) -> Test (test)"
+            label={t("language.cjkParenthesisSpacing.label")}
+            description={t("language.cjkParenthesisSpacing.description")}
           >
             <Toggle
               checked={cjkFormatting.cjkParenthesisSpacing}
@@ -147,8 +149,8 @@ export function LanguageSettings() {
             />
           </SettingRow>
           <SettingRow
-            label="Remove currency spacing"
-            description="$ 100 -> $100"
+            label={t("language.currencySpacing.label")}
+            description={t("language.currencySpacing.description")}
           >
             <Toggle
               checked={cjkFormatting.currencySpacing}
@@ -156,8 +158,8 @@ export function LanguageSettings() {
             />
           </SettingRow>
           <SettingRow
-            label="Remove slash spacing"
-            description="A / B -> A/B (preserves URLs)"
+            label={t("language.slashSpacing.label")}
+            description={t("language.slashSpacing.description")}
           >
             <Toggle
               checked={cjkFormatting.slashSpacing}
@@ -165,8 +167,8 @@ export function LanguageSettings() {
             />
           </SettingRow>
           <SettingRow
-            label="Collapse multiple spaces"
-            description="Multiple spaces -> single space"
+            label={t("language.spaceCollapsing.label")}
+            description={t("language.spaceCollapsing.description")}
           >
             <Toggle
               checked={cjkFormatting.spaceCollapsing}
@@ -176,16 +178,16 @@ export function LanguageSettings() {
         </SettingsGroup>
 
         {/* Dash & Quotes */}
-        <SettingsGroup title="Dash & Quotes">
-          <SettingRow label="Convert dashes" description="-- → —— between CJK">
+        <SettingsGroup title={t("language.group.dashQuotes")}>
+          <SettingRow label={t("language.dashConversion.label")} description={t("language.dashConversion.description")}>
             <Toggle
               checked={cjkFormatting.dashConversion}
               onChange={(v) => updateCJKSetting("dashConversion", v)}
             />
           </SettingRow>
           <SettingRow
-            label="Fix em-dash spacing"
-            description="Proper spacing around ——"
+            label={t("language.emdashSpacing.label")}
+            description={t("language.emdashSpacing.description")}
           >
             <Toggle
               checked={cjkFormatting.emdashSpacing}
@@ -193,8 +195,8 @@ export function LanguageSettings() {
             />
           </SettingRow>
           <SettingRow
-            label="Convert straight quotes"
-            description={'Convert " and \' to smart quotes'}
+            label={t("language.smartQuoteConversion.label")}
+            description={t("language.smartQuoteConversion.description")}
           >
             <Toggle
               checked={cjkFormatting.smartQuoteConversion}
@@ -202,24 +204,24 @@ export function LanguageSettings() {
             />
           </SettingRow>
           <SettingRow
-            label="Quote style"
-            description="Target style for quote conversion"
+            label={t("language.quoteStyle.label")}
+            description={t("language.quoteStyle.description")}
             disabled={!cjkFormatting.smartQuoteConversion}
           >
             <Select<QuoteStyle>
               value={cjkFormatting.quoteStyle}
               options={[
-                { value: "curly", label: 'Curly "" \u2018\u2019' },
-                { value: "corner", label: "Corner 「」『』" },
-                { value: "guillemets", label: "Guillemets «» ‹›" },
+                { value: "curly", label: t("language.quoteStyle.curly") },
+                { value: "corner", label: t("language.quoteStyle.corner") },
+                { value: "guillemets", label: t("language.quoteStyle.guillemets") },
               ]}
               onChange={(v) => updateCJKSetting("quoteStyle", v)}
               disabled={!cjkFormatting.smartQuoteConversion}
             />
           </SettingRow>
           <SettingRow
-            label="Fix double quote spacing"
-            description={'Spacing around ""'}
+            label={t("language.quoteSpacing.label")}
+            description={t("language.quoteSpacing.description")}
           >
             <Toggle
               checked={cjkFormatting.quoteSpacing}
@@ -227,8 +229,8 @@ export function LanguageSettings() {
             />
           </SettingRow>
           <SettingRow
-            label="Fix single quote spacing"
-            description={"Spacing around ''"}
+            label={t("language.singleQuoteSpacing.label")}
+            description={t("language.singleQuoteSpacing.description")}
           >
             <Toggle
               checked={cjkFormatting.singleQuoteSpacing}
@@ -236,8 +238,8 @@ export function LanguageSettings() {
             />
           </SettingRow>
           <SettingRow
-            label="CJK corner quotes"
-            description={'"Chinese" → 「Chinese」 (Traditional Chinese/Japanese)'}
+            label={t("language.cjkCornerQuotes.label")}
+            description={t("language.cjkCornerQuotes.description")}
             disabled={cjkFormatting.quoteStyle !== "curly"}
           >
             <Toggle
@@ -247,8 +249,8 @@ export function LanguageSettings() {
             />
           </SettingRow>
           <SettingRow
-            label="Nested corner quotes"
-            description={"Nested '' → 『』 inside 「」"}
+            label={t("language.cjkNestedQuotes.label")}
+            description={t("language.cjkNestedQuotes.description")}
           >
             <Toggle
               checked={cjkFormatting.cjkNestedQuotes}
@@ -258,10 +260,10 @@ export function LanguageSettings() {
         </SettingsGroup>
 
         {/* Cleanup */}
-        <SettingsGroup title="Cleanup" className="">
+        <SettingsGroup title={t("language.group.cleanup")} className="">
           <SettingRow
-            label="Limit consecutive punctuation"
-            description="Limit repeated !?."
+            label={t("language.consecutivePunctuation.label")}
+            description={t("language.consecutivePunctuation.description")}
           >
             <select
               value={cjkFormatting.consecutivePunctuationLimit}
@@ -273,27 +275,27 @@ export function LanguageSettings() {
               }
               className={selectClass}
             >
-              <option value="0">Off</option>
-              <option value="1">Single (!! → !)</option>
-              <option value="2">Double (!!! → !!)</option>
+              <option value="0">{t("language.consecutivePunctuation.off")}</option>
+              <option value="1">{t("language.consecutivePunctuation.single")}</option>
+              <option value="2">{t("language.consecutivePunctuation.double")}</option>
             </select>
           </SettingRow>
           <SettingRow
-            label="Remove trailing spaces"
-            description="Remove spaces at end of lines"
+            label={t("language.trailingSpaces.label")}
+            description={t("language.trailingSpaces.description")}
           >
             <Toggle
               checked={cjkFormatting.trailingSpaceRemoval}
               onChange={(v) => updateCJKSetting("trailingSpaceRemoval", v)}
             />
           </SettingRow>
-          <SettingRow label="Normalize ellipsis" description=". . . -> ...">
+          <SettingRow label={t("language.ellipsisNormalization.label")} description={t("language.ellipsisNormalization.description")}>
             <Toggle
               checked={cjkFormatting.ellipsisNormalization}
               onChange={(v) => updateCJKSetting("ellipsisNormalization", v)}
             />
           </SettingRow>
-          <SettingRow label="Collapse newlines" description="3+ newlines -> 2">
+          <SettingRow label={t("language.newlineCollapsing.label")} description={t("language.newlineCollapsing.description")}>
             <Toggle
               checked={cjkFormatting.newlineCollapsing}
               onChange={(v) => updateCJKSetting("newlineCollapsing", v)}

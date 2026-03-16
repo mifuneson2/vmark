@@ -7,6 +7,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { useTranslation } from "react-i18next";
 import { SettingsGroup, Button, CopyButton } from "./components";
 import { McpConfigPreviewDialog } from "./McpConfigPreviewDialog";
 import { getFileName, normalizePath } from "@/utils/paths";
@@ -114,6 +115,7 @@ interface ProviderRowProps {
 }
 
 function ProviderRow({ diagnostic, onPreview, onRepair, onUninstall, loading }: ProviderRowProps) {
+  const { t } = useTranslation("settings");
   const showRepairButton = diagnostic.status === "PathMismatch";
   const showUpdateRemove = diagnostic.hasVmark && diagnostic.status !== "PathMismatch";
   const showInstall = !diagnostic.hasVmark;
@@ -142,29 +144,29 @@ function ProviderRow({ diagnostic, onPreview, onRepair, onUninstall, loading }: 
           {showRepairButton && (
             <>
               <Button size="sm" variant="warning" onClick={onRepair} disabled={loading}>
-                Repair
+                {t("integrations.installMcp.repair")}
               </Button>
               <Button size="sm" onClick={onPreview} disabled={loading}>
-                Update
+                {t("integrations.installMcp.update")}
               </Button>
               <Button size="sm" variant="danger" onClick={onUninstall} disabled={loading}>
-                Remove
+                {t("integrations.installMcp.remove")}
               </Button>
             </>
           )}
           {showUpdateRemove && (
             <>
               <Button size="sm" onClick={onPreview} disabled={loading}>
-                Update
+                {t("integrations.installMcp.update")}
               </Button>
               <Button size="sm" variant="danger" onClick={onUninstall} disabled={loading}>
-                Remove
+                {t("integrations.installMcp.remove")}
               </Button>
             </>
           )}
           {showInstall && (
             <Button size="sm" variant="primary" onClick={onPreview} disabled={loading}>
-              Install
+              {t("integrations.installMcp.install")}
             </Button>
           )}
         </div>
@@ -184,6 +186,7 @@ interface McpConfigInstallerProps {
 }
 
 export function McpConfigInstaller({ onInstallSuccess }: McpConfigInstallerProps) {
+  const { t } = useTranslation("settings");
   const [diagnostics, setDiagnostics] = useState<ProviderDiagnostic[]>([]);
   const [preview, setPreview] = useState<ConfigPreview | null>(null);
   const [loading, setLoading] = useState(false);
@@ -257,7 +260,7 @@ export function McpConfigInstaller({ onInstallSuccess }: McpConfigInstallerProps
         provider: providerId,
       });
       if (result.success) {
-        setSuccessMessage("Configuration repaired successfully");
+        setSuccessMessage(t("integrations.installMcp.repairSuccess"));
         setShowRestartHint(true);
         await loadDiagnostics();
       } else {
@@ -293,9 +296,9 @@ export function McpConfigInstaller({ onInstallSuccess }: McpConfigInstallerProps
   };
 
   return (
-    <SettingsGroup title="Install MCP Configuration" className="mb-0">
+    <SettingsGroup title={t("integrations.group.installMcp")} className="mb-0">
       <div className="text-xs text-[var(--text-tertiary)] mb-3">
-        Configure AI assistants to connect to VMark MCP server.
+        {t("integrations.installMcp.hint")}
       </div>
 
       <div>
@@ -311,7 +314,7 @@ export function McpConfigInstaller({ onInstallSuccess }: McpConfigInstallerProps
         ))}
         {diagnostics.length === 0 && (
           <div className="py-4 text-center text-sm text-[var(--text-tertiary)]">
-            Loading providers...
+            {t("integrations.installMcp.loadingProviders")}
           </div>
         )}
       </div>
@@ -327,7 +330,7 @@ export function McpConfigInstaller({ onInstallSuccess }: McpConfigInstallerProps
           {successMessage}
           {showRestartHint && (
             <span className="text-[var(--text-tertiary)] ml-1">
-              — Restart the AI provider to apply changes.
+              {t("integrations.installMcp.restartHint")}
             </span>
           )}
         </div>

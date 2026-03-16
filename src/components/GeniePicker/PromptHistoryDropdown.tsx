@@ -6,6 +6,7 @@
  */
 
 import { useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 
 interface PromptHistoryDropdownProps {
   entries: string[];
@@ -21,6 +22,7 @@ export function PromptHistoryDropdown({
   onSelect,
   onClose,
 }: PromptHistoryDropdownProps) {
+  const { t } = useTranslation("ai");
   const listRef = useRef<HTMLDivElement>(null);
 
   // Scroll selected item into view
@@ -50,7 +52,7 @@ export function PromptHistoryDropdown({
   if (entries.length === 0) {
     return (
       <div className="prompt-history-dropdown">
-        <div className="prompt-history-dropdown-empty">No history</div>
+        <div className="prompt-history-dropdown-empty">{t("history.empty")}</div>
       </div>
     );
   }
@@ -58,7 +60,7 @@ export function PromptHistoryDropdown({
   return (
     <div className="prompt-history-dropdown" ref={listRef}>
       <div className="prompt-history-dropdown-header">
-        Prompt History
+        {t("history.title")}
         <span className="prompt-history-dropdown-hint">
           <kbd className="genie-picker-kbd">Ctrl+R</kbd>
         </span>

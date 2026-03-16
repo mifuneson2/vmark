@@ -6,6 +6,7 @@
 
 import { useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { SettingRow, SettingsGroup, Toggle, TagInput } from "./components";
 import { useSettingsStore } from "@/stores/settingsStore";
@@ -30,6 +31,7 @@ async function withErrorHandling<T>(
 }
 
 export function AdvancedSettings() {
+  const { t } = useTranslation("settings");
   const [devTools, setDevTools] = useState(false);
   const [isBusy, setIsBusy] = useState(false);
   const customLinkProtocols = useSettingsStore((state) => state.advanced.customLinkProtocols);
@@ -38,32 +40,32 @@ export function AdvancedSettings() {
 
   return (
     <div>
-      <SettingsGroup title="Developer">
-        <SettingRow label="Developer tools" description="Enable developer mode and show dev tools below">
+      <SettingsGroup title={t("advanced.group.developer")}>
+        <SettingRow label={t("advanced.devTools.label")} description={t("advanced.devTools.description")}>
           <Toggle checked={devTools} onChange={setDevTools} />
         </SettingRow>
       </SettingsGroup>
 
-      <SettingsGroup title="Link Protocols">
+      <SettingsGroup title={t("advanced.group.linkProtocols")}>
         <div className="py-2.5">
           <div className="text-sm font-medium text-[var(--text-primary)] mb-1">
-            Custom link protocols
+            {t("advanced.customProtocols.label")}
           </div>
           <div className="text-xs text-[var(--text-tertiary)] mb-2">
-            Additional URL protocols to recognize when inserting links (e.g., obsidian, vscode)
+            {t("advanced.customProtocols.hint")}
           </div>
           <TagInput
             value={customLinkProtocols ?? []}
             onChange={(v) => updateAdvancedSetting("customLinkProtocols", v)}
-            placeholder="Add protocol..."
+            placeholder={t("advanced.customProtocols.placeholder")}
           />
         </div>
       </SettingsGroup>
 
-      <SettingsGroup title="Performance">
+      <SettingsGroup title={t("advanced.group.performance")}>
         <SettingRow
-          label="Keep both editors alive"
-          description="Faster mode switching at the cost of higher memory usage"
+          label={t("advanced.keepBothEditors.label")}
+          description={t("advanced.keepBothEditors.description")}
         >
           <Toggle
             checked={keepBothEditorsAlive}
@@ -74,10 +76,10 @@ export function AdvancedSettings() {
 
       {/* Hot Exit Dev Tools - only visible when developer mode is enabled */}
       {devTools && (
-        <SettingsGroup title="Hot Exit Dev Tools">
+        <SettingsGroup title={t("advanced.group.hotExitDevTools")}>
           <div className="py-2.5 space-y-3">
             <div className="text-sm text-[var(--text-secondary)] mb-3">
-              Test hot exit session capture and restore without actual updates.
+              {t("advanced.hotExit.hint")}
             </div>
 
             <div className="flex flex-wrap gap-2">
@@ -87,10 +89,10 @@ export function AdvancedSettings() {
                   setIsBusy(true);
                   const session = await withErrorHandling(
                     () => invoke<SessionData>("hot_exit_capture"),
-                    "Capture failed"
+                    t("advanced.hotExit.captureFailed")
                   );
                   if (session) {
-                    toast.success(`Captured ${session.windows.length} window(s)`, {
+                    toast.success(t("advanced.hotExit.captureSuccess", { count: session.windows.length }), {
                       description: `v${session.vmark_version}`,
                     });
                   }
@@ -99,7 +101,7 @@ export function AdvancedSettings() {
                 disabled={isBusy}
                 className="px-3 py-1.5 text-sm bg-[var(--bg-tertiary)] hover:bg-[var(--hover-bg)] disabled:opacity-50 disabled:cursor-not-allowed rounded border border-[var(--border-color)] transition-colors"
               >
-                Test Capture
+                {t("advanced.hotExit.testCapture")}
               </button>
 
               <button
@@ -108,22 +110,22 @@ export function AdvancedSettings() {
                   setIsBusy(true);
                   const session = await withErrorHandling(
                     () => invoke<SessionData | null>("hot_exit_inspect_session"),
-                    "Inspect failed"
+                    t("advanced.hotExit.inspectFailed")
                   );
                   if (session) {
                     const age = Math.max(0, Math.floor((Date.now() - session.timestamp * 1000) / 1000));
-                    toast.info(`Session found (${age}s ago)`, {
-                      description: `${session.windows.length} windows, v${session.vmark_version}`,
+                    toast.info(t("advanced.hotExit.sessionFound", { age }), {
+                      description: t("advanced.hotExit.sessionFoundDetail", { count: session.windows.length, version: session.vmark_version }),
                     });
                   } else if (session === null) {
-                    toast.info("No saved session found");
+                    toast.info(t("advanced.hotExit.noSession"));
                   }
                   setIsBusy(false);
                 }}
                 disabled={isBusy}
                 className="px-3 py-1.5 text-sm bg-[var(--bg-tertiary)] hover:bg-[var(--hover-bg)] disabled:opacity-50 disabled:cursor-not-allowed rounded border border-[var(--border-color)] transition-colors"
               >
-                Inspect Session
+                {t("advanced.hotExit.inspectSession")}
               </button>
 
               <button
@@ -132,25 +134,25 @@ export function AdvancedSettings() {
                   setIsBusy(true);
                   const session = await withErrorHandling(
                     () => invoke<SessionData | null>("hot_exit_inspect_session"),
-                    "Restore failed"
+                    t("advanced.hotExit.restoreFailed")
                   );
                   if (session) {
                     const result = await withErrorHandling(
                       () => invoke<void>("hot_exit_restore", { session }),
-                      "Restore failed"
+                      t("advanced.hotExit.restoreFailed")
                     );
                     if (result !== null) {
-                      toast.success("Session restored successfully");
+                      toast.success(t("advanced.hotExit.restoreSuccess"));
                     }
                   } else if (session === null) {
-                    toast.info("No saved session to restore");
+                    toast.info(t("advanced.hotExit.noSessionToRestore"));
                   }
                   setIsBusy(false);
                 }}
                 disabled={isBusy}
                 className="px-3 py-1.5 text-sm bg-[var(--bg-tertiary)] hover:bg-[var(--hover-bg)] disabled:opacity-50 disabled:cursor-not-allowed rounded border border-[var(--border-color)] transition-colors"
               >
-                Test Restore
+                {t("advanced.hotExit.testRestore")}
               </button>
 
               <button
@@ -159,17 +161,17 @@ export function AdvancedSettings() {
                   setIsBusy(true);
                   const result = await withErrorHandling(
                     () => invoke<void>("hot_exit_clear_session"),
-                    "Clear failed"
+                    t("advanced.hotExit.clearFailed")
                   );
                   if (result !== null) {
-                    toast.success("Session cleared");
+                    toast.success(t("advanced.hotExit.sessionCleared"));
                   }
                   setIsBusy(false);
                 }}
                 disabled={isBusy}
                 className="px-3 py-1.5 text-sm bg-[var(--error-bg)] hover:bg-[var(--error-color)] hover:text-[var(--contrast-text)] disabled:opacity-50 disabled:cursor-not-allowed text-[var(--error-color)] rounded border border-[var(--error-color)] transition-colors"
               >
-                Clear Session
+                {t("advanced.hotExit.clearSession")}
               </button>
 
               <button
@@ -178,14 +180,14 @@ export function AdvancedSettings() {
                   setIsBusy(true);
                   await withErrorHandling(
                     () => restartWithHotExit(),
-                    "Restart failed"
+                    t("advanced.hotExit.restartFailed")
                   );
                   // Note: If restart succeeds, app will close - setIsBusy won't run
                 }}
                 disabled={isBusy}
                 className="px-3 py-1.5 text-sm bg-[var(--primary-color)] hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed text-[var(--contrast-text)] rounded border border-[var(--primary-color)] transition-opacity"
               >
-                Test Restart
+                {t("advanced.hotExit.testRestart")}
               </button>
             </div>
           </div>

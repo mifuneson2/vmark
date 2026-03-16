@@ -5,6 +5,7 @@
  */
 
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { getVersion } from "@tauri-apps/api/app";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { listen } from "@tauri-apps/api/event";
@@ -29,6 +30,7 @@ const WEBSITE_URL = "https://vmark.app";
 const GITHUB_URL = "https://github.com/xiaolai/vmark";
 
 function VersionInfo() {
+  const { t } = useTranslation("settings");
   const [version, setVersion] = useState<string>("");
 
   useEffect(() => {
@@ -40,16 +42,17 @@ function VersionInfo() {
       <img src={appIcon} alt="VMark" className="w-12 h-12" />
       <div>
         <div className="text-lg font-semibold text-[var(--text-primary)]">VMark</div>
-        <div className="text-sm text-[var(--text-secondary)]">Version {version}</div>
+        <div className="text-sm text-[var(--text-secondary)]">{t("about.version", { version })}</div>
       </div>
     </div>
   );
 }
 
 function Links() {
+  const { t } = useTranslation("settings");
   const links = [
-    { icon: Globe, label: "Website", url: WEBSITE_URL },
-    { icon: Github, label: "GitHub", url: GITHUB_URL },
+    { icon: Globe, label: t("about.website"), url: WEBSITE_URL },
+    { icon: Github, label: t("about.github"), url: GITHUB_URL },
   ];
 
   return (
@@ -70,6 +73,7 @@ function Links() {
 }
 
 function StatusIndicator() {
+  const { t } = useTranslation("settings");
   const status = useUpdateStore((state) => state.status);
   const updateInfo = useUpdateStore((state) => state.updateInfo);
   const error = useUpdateStore((state) => state.error);
@@ -78,7 +82,7 @@ function StatusIndicator() {
     return (
       <span className="inline-flex items-center gap-1.5 text-xs text-[var(--text-tertiary)]">
         <Loader2 className="w-3 h-3 animate-spin" />
-        Checking...
+        {t("about.updateStatus.checking")}
       </span>
     );
   }
@@ -87,7 +91,7 @@ function StatusIndicator() {
     return (
       <span className="inline-flex items-center gap-1.5 text-xs text-[var(--text-secondary)]">
         <CheckCircle2 className="w-3 h-3 text-[var(--success-color)]" />
-        Up to date
+        {t("about.updateStatus.upToDate")}
       </span>
     );
   }
@@ -96,7 +100,7 @@ function StatusIndicator() {
     return (
       <span className="inline-flex items-center gap-1.5 text-xs text-[var(--primary-color)]">
         <Download className="w-3 h-3" />
-        {updateInfo.version} available
+        {t("about.updateStatus.available", { version: updateInfo.version })}
       </span>
     );
   }
@@ -105,7 +109,7 @@ function StatusIndicator() {
     return (
       <span className="inline-flex items-center gap-1.5 text-xs text-[var(--text-tertiary)]">
         <Loader2 className="w-3 h-3 animate-spin" />
-        Downloading...
+        {t("about.updateStatus.downloading")}
       </span>
     );
   }
@@ -114,7 +118,7 @@ function StatusIndicator() {
     return (
       <span className="inline-flex items-center gap-1.5 text-xs text-[var(--success-color)]">
         <CheckCircle2 className="w-3 h-3" />
-        Ready to install
+        {t("about.updateStatus.ready")}
       </span>
     );
   }
@@ -123,7 +127,7 @@ function StatusIndicator() {
     return (
       <span className="inline-flex items-center gap-1.5 text-xs text-[var(--error-color)]">
         <AlertCircle className="w-3 h-3" />
-        {error || "Check failed"}
+        {error || t("about.updateStatus.checkFailed")}
       </span>
     );
   }
@@ -132,6 +136,7 @@ function StatusIndicator() {
 }
 
 function DownloadProgress() {
+  const { t } = useTranslation("settings");
   const downloadProgress = useUpdateStore((state) => state.downloadProgress);
 
   if (!downloadProgress) return null;
@@ -144,7 +149,7 @@ function DownloadProgress() {
   return (
     <div className="mt-2 space-y-1">
       <div className="flex justify-between text-xs text-[var(--text-tertiary)]">
-        <span>Downloading update...</span>
+        <span>{t("about.downloadProgress.label")}</span>
         <span>
           {downloadedMB} / {totalMB} MB ({percentage}%)
         </span>
@@ -160,6 +165,7 @@ function DownloadProgress() {
 }
 
 function UpdateAvailableCard() {
+  const { t } = useTranslation("settings");
   const status = useUpdateStore((state) => state.status);
   const updateInfo = useUpdateStore((state) => state.updateInfo);
   const dismissed = useUpdateStore((state) => state.dismissed);
@@ -210,23 +216,23 @@ function UpdateAvailableCard() {
   };
 
   return (
-    <SettingsGroup title="Update Available">
+    <SettingsGroup title={t("about.updateAvailable.group")}>
       <div className="px-4 py-3">
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               <span className="font-medium text-[var(--text-primary)]">
-                Version {updateInfo.version}
+                {t("about.version", { version: updateInfo.version })}
               </span>
               {updateInfo.currentVersion && (
                 <span className="text-xs text-[var(--text-tertiary)]">
-                  (current: {updateInfo.currentVersion})
+                  {t("about.updateAvailable.current", { version: updateInfo.currentVersion })}
                 </span>
               )}
             </div>
             {updateInfo.pubDate && (
               <div className="text-xs text-[var(--text-tertiary)] mt-0.5">
-                Released: {new Date(updateInfo.pubDate).toLocaleDateString()}
+                {t("about.updateAvailable.released", { date: new Date(updateInfo.pubDate).toLocaleDateString() })}
               </div>
             )}
             {updateInfo.notes && (
@@ -248,14 +254,14 @@ function UpdateAvailableCard() {
                     : <Download className="w-3 h-3" />
                   }
                 >
-                  {isDownloading ? "Downloading..." : "Download"}
+                  {isDownloading ? t("about.downloading") : t("about.download")}
                 </Button>
                 <Button
                   variant="tertiary"
                   onClick={handleSkip}
                   icon={<SkipForward className="w-3 h-3" />}
                 >
-                  Skip
+                  {t("about.skip")}
                 </Button>
               </>
             )}
@@ -270,7 +276,7 @@ function UpdateAvailableCard() {
                   : <RefreshCw className="w-3 h-3" />
                 }
               >
-                {isRestarting ? "Restarting..." : "Restart to Update"}
+                {isRestarting ? t("about.restarting") : t("about.restartToUpdate")}
               </Button>
             )}
           </div>
@@ -283,6 +289,7 @@ function UpdateAvailableCard() {
 }
 
 export function AboutSettings() {
+  const { t } = useTranslation("settings");
   const status = useUpdateStore((state) => state.status);
   const autoCheckEnabled = useSettingsStore((state) => state.update.autoCheckEnabled);
   const updateUpdateSetting = useSettingsStore((state) => state.updateUpdateSetting);
@@ -319,17 +326,17 @@ export function AboutSettings() {
       <UpdateAvailableCard />
 
       {/* Check for updates */}
-      <SettingsGroup title="Updates">
+      <SettingsGroup title={t("about.group.updates")}>
         <SettingRow
-          label="Automatic updates"
-          description="Check for updates on startup"
+          label={t("about.autoUpdates.label")}
+          description={t("about.autoUpdates.description")}
         >
           <Toggle
             checked={autoCheckEnabled}
             onChange={(v) => updateUpdateSetting("autoCheckEnabled", v)}
           />
         </SettingRow>
-        <SettingRow label="Check for updates">
+        <SettingRow label={t("about.checkForUpdates.label")}>
           <div className="flex items-center gap-3">
             <StatusIndicator />
             <Button
@@ -337,7 +344,7 @@ export function AboutSettings() {
               onClick={handleCheckNow}
               disabled={checkDisabled}
             >
-              {isChecking || status === "checking" ? "Checking..." : "Check Now"}
+              {isChecking || status === "checking" ? t("about.checking") : t("about.checkNow")}
             </Button>
           </div>
         </SettingRow>

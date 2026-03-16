@@ -9,6 +9,7 @@
  */
 
 import { AlertTriangle, Check, RotateCcw, Sparkles, X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import type { PickerMode } from "@/stores/geniePickerStore";
 import "./GenieResponseView.css";
 
@@ -36,6 +37,8 @@ export function GenieResponseView({
   onRetry,
   onCancel,
 }: GenieResponseViewProps) {
+  const { t } = useTranslation("ai");
+
   if (mode === "search" || mode === "freeform") return null;
 
   if (mode === "processing") {
@@ -52,17 +55,17 @@ export function GenieResponseView({
         ) : (
           <div className="genie-response-thinking">
             <Sparkles size={14} className="genie-response-spinner" />
-            <span>Thinking... {elapsedSeconds}s</span>
+            <span>{t("response.thinking", { seconds: elapsedSeconds })}</span>
           </div>
         )}
         <div className="genie-response-actions">
           <button
             className="genie-response-btn genie-response-btn--reject"
             onClick={onCancel}
-            aria-label="Cancel"
+            aria-label={t("response.cancel")}
           >
             <X size={12} />
-            Cancel
+            {t("response.cancel")}
           </button>
         </div>
       </div>
@@ -74,24 +77,24 @@ export function GenieResponseView({
       <div className="genie-response-view">
         <div className="genie-response-error">
           <AlertTriangle size={14} />
-          <span>{error ?? "Unknown error"}</span>
+          <span>{error ?? t("response.unknownError")}</span>
         </div>
         <div className="genie-response-actions">
           <button
             className="genie-response-btn genie-response-btn--retry"
             onClick={onRetry}
-            aria-label="Retry"
+            aria-label={t("response.retry")}
           >
             <RotateCcw size={12} />
-            Retry
+            {t("response.retry")}
           </button>
           <button
             className="genie-response-btn genie-response-btn--reject"
             onClick={onReject}
-            aria-label="Dismiss"
+            aria-label={t("response.dismiss")}
           >
             <X size={12} />
-            Dismiss
+            {t("response.dismiss")}
           </button>
         </div>
       </div>
@@ -108,26 +111,26 @@ export function GenieResponseView({
         <button
           className="genie-response-btn genie-response-btn--accept"
           onClick={onAccept}
-          aria-label="Accept"
+          aria-label={t("response.accept")}
         >
           <Check size={12} />
-          Accept
+          {t("response.accept")}
         </button>
         <button
           className="genie-response-btn genie-response-btn--reject"
           onClick={onReject}
-          aria-label="Reject"
+          aria-label={t("response.reject")}
         >
           <X size={12} />
-          Reject
+          {t("response.reject")}
         </button>
         <button
           className="genie-response-btn genie-response-btn--retry"
           onClick={onRetry}
-          aria-label="Retry"
+          aria-label={t("response.retry")}
         >
           <RotateCcw size={12} />
-          Retry
+          {t("response.retry")}
         </button>
       </div>
     </div>

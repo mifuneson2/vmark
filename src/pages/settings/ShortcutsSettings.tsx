@@ -5,6 +5,7 @@
  */
 
 import { useState, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import {
   useShortcutsStore,
   DEFAULT_SHORTCUTS,
@@ -18,6 +19,7 @@ import { KeyCapture } from "./KeyCapture";
 import { Button } from "./components";
 
 export function ShortcutsSettings() {
+  const { t } = useTranslation("settings");
   const [search, setSearch] = useState("");
   const [capturing, setCapturing] = useState<ShortcutDefinition | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -122,7 +124,7 @@ export function ShortcutsSettings() {
                          ? "bg-[var(--accent-primary)]/20 text-[var(--accent-primary)] ring-1 ring-[var(--accent-primary)]/30"
                          : "bg-[var(--bg-tertiary)] text-[var(--text-secondary)]"
                        } hover:bg-[var(--bg-tertiary)] hover:ring-1 hover:ring-[var(--text-tertiary)]/30 transition-all`}
-            title="Click to change"
+            title={t("shortcuts.clickToChange")}
           >
             {formatKeyForDisplay(currentKey)}
           </button>
@@ -133,7 +135,7 @@ export function ShortcutsSettings() {
               onClick={() => resetShortcut(shortcut.id)}
               className="p-1 text-[var(--text-tertiary)] hover:text-[var(--text-primary)]
                          hover:bg-[var(--bg-secondary)] rounded transition-colors"
-              title="Reset to default"
+              title={t("shortcuts.resetToDefault")}
             >
               <svg
                 className="w-3.5 h-3.5"
@@ -177,7 +179,7 @@ export function ShortcutsSettings() {
   return (
     <div>
       <p className="text-xs text-[var(--text-tertiary)] mb-4">
-        Click a shortcut to change it.
+        {t("shortcuts.hint")}
       </p>
 
       {/* Toolbar */}
@@ -186,7 +188,7 @@ export function ShortcutsSettings() {
         <div className="flex-1 min-w-[200px]">
           <input
             type="text"
-            placeholder="Search shortcuts..."
+            placeholder={t("shortcuts.searchPlaceholder")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full px-0 py-1 text-sm bg-transparent text-[var(--text-primary)]
@@ -198,10 +200,10 @@ export function ShortcutsSettings() {
 
         {/* Import/Export */}
         <Button onClick={handleExport}>
-          Export
+          {t("shortcuts.export")}
         </Button>
         <Button onClick={() => fileInputRef.current?.click()}>
-          Import
+          {t("shortcuts.import")}
         </Button>
         <input
           ref={fileInputRef}
@@ -215,12 +217,12 @@ export function ShortcutsSettings() {
         <Button
           variant="danger"
           onClick={() => {
-            if (confirm("Reset all shortcuts to defaults?")) {
+            if (confirm(t("shortcuts.resetAllConfirm"))) {
               resetAllShortcuts();
             }
           }}
         >
-          Reset All
+          {t("shortcuts.resetAll")}
         </Button>
       </div>
 
@@ -230,14 +232,17 @@ export function ShortcutsSettings() {
           // Search results (flat list)
           <div>
             <div className="text-xs text-[var(--text-tertiary)] mb-3">
-              {filteredShortcuts.length} result{filteredShortcuts.length !== 1 ? "s" : ""}
+              {t(
+                filteredShortcuts.length === 1 ? "shortcuts.resultCount_one" : "shortcuts.resultCount_other",
+                { count: filteredShortcuts.length }
+              )}
             </div>
             <div className="space-y-0.5">
               {filteredShortcuts.map(renderShortcutRow)}
             </div>
             {filteredShortcuts.length === 0 && (
               <div className="text-sm text-[var(--text-tertiary)] py-8 text-center">
-                No shortcuts found
+                {t("shortcuts.noResults")}
               </div>
             )}
           </div>

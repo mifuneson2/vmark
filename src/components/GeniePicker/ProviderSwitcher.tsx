@@ -6,6 +6,7 @@
  */
 
 import { useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { useAiProviderStore, KEY_OPTIONAL_REST } from "@/stores/aiProviderStore";
 import { openSettingsWindow } from "@/utils/settingsWindow";
 import { Check, Settings } from "lucide-react";
@@ -24,6 +25,7 @@ function maskKey(key: string): string {
 
 /** Renders an inline popover for switching AI providers from the GeniePicker footer. */
 export function ProviderSwitcher({ onClose, onCloseAll }: ProviderSwitcherProps) {
+  const { t } = useTranslation("ai");
   const cliProviders = useAiProviderStore((s) => s.cliProviders);
   const restProviders = useAiProviderStore((s) => s.restProviders);
   const activeProvider = useAiProviderStore((s) => s.activeProvider);
@@ -88,7 +90,7 @@ export function ProviderSwitcher({ onClose, onCloseAll }: ProviderSwitcherProps)
       {/* CLI providers */}
       {availableCli.length > 0 && (
         <div className="provider-switcher-section">
-          <div className="provider-switcher-label">CLI</div>
+          <div className="provider-switcher-label">{t("provider.sectionCli")}</div>
           {availableCli.map((p) => (
             <button
               key={p.type}
@@ -108,7 +110,7 @@ export function ProviderSwitcher({ onClose, onCloseAll }: ProviderSwitcherProps)
       {/* REST providers */}
       {readyRest.length > 0 && (
         <div className="provider-switcher-section">
-          <div className="provider-switcher-label">API</div>
+          <div className="provider-switcher-label">{t("provider.sectionApi")}</div>
           {readyRest.map((p) => (
             <button
               key={p.type}
@@ -138,7 +140,7 @@ export function ProviderSwitcher({ onClose, onCloseAll }: ProviderSwitcherProps)
           onClick={handleOpenSettings}
         >
           <Settings size={12} />
-          Settings...
+          {t("provider.settings")}
         </button>
       </div>
     </div>

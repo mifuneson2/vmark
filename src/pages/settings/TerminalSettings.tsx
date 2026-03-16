@@ -7,14 +7,9 @@
 
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { useTranslation } from "react-i18next";
 import { useSettingsStore, type TerminalPosition, type TerminalCursorStyle } from "@/stores/settingsStore";
 import { SettingRow, SettingsGroup, Select, Toggle } from "./components";
-
-const positionOptions = [
-  { value: "auto", label: "Auto (based on window shape)" },
-  { value: "bottom", label: "Bottom" },
-  { value: "right", label: "Right" },
-];
 
 const panelSizeOptions = [
   { value: "0.1", label: "10%" },
@@ -31,6 +26,7 @@ const panelSizeOptions = [
   { value: "0.8", label: "80%" },
 ];
 
+// fontSizeOptions are raw numeric labels — no translation needed
 const fontSizeOptions = [
   { value: "10", label: "10px" },
   { value: "11", label: "11px" },
@@ -43,20 +39,6 @@ const fontSizeOptions = [
   { value: "24", label: "24px" },
 ];
 
-const cursorStyleOptions = [
-  { value: "bar", label: "Bar │" },
-  { value: "block", label: "Block █" },
-  { value: "underline", label: "Underline ▁" },
-];
-
-const lineHeightOptions = [
-  { value: "1.0", label: "1.0 (Tight)" },
-  { value: "1.2", label: "1.2 (Compact)" },
-  { value: "1.4", label: "1.4 (Normal)" },
-  { value: "1.6", label: "1.6 (Relaxed)" },
-  { value: "1.8", label: "1.8 (Spacious)" },
-  { value: "2.0", label: "2.0 (Extra)" },
-];
 
 /** Extract shell name from absolute path (e.g. "/bin/zsh" → "zsh", "C:\\Windows\\cmd.exe" → "cmd.exe"). */
 function shellLabel(path: string): string {
@@ -80,6 +62,7 @@ function snapToOption(ratio: number): string {
 }
 
 export function TerminalSettings() {
+  const { t } = useTranslation("settings");
   const terminal = useSettingsStore((state) => state.terminal);
   const updateTerminalSetting = useSettingsStore((state) => state.updateTerminalSetting);
 
@@ -99,18 +82,44 @@ export function TerminalSettings() {
   // Case-insensitive match for Windows path compatibility
   const shellInList = shells.some((s) => s.toLowerCase() === terminal.shell.toLowerCase());
   const shellOptions = [
-    { value: "", label: defaultShell ? `System Default (${shellLabel(defaultShell)})` : "System Default" },
+    {
+      value: "",
+      label: defaultShell
+        ? t("terminal.shell.systemDefaultNamed", { name: shellLabel(defaultShell) })
+        : t("terminal.shell.systemDefault"),
+    },
     ...detectedOptions,
     // If persisted shell is not in detected list, add a fallback entry
     ...(terminal.shell && !shellInList
-      ? [{ value: terminal.shell, label: `${shellLabel(terminal.shell)} (unavailable)` }]
+      ? [{ value: terminal.shell, label: t("terminal.shell.unavailable", { name: shellLabel(terminal.shell) }) }]
       : []),
+  ];
+
+  const positionOptions = [
+    { value: "auto", label: t("terminal.panelPosition.auto") },
+    { value: "bottom", label: t("terminal.panelPosition.bottom") },
+    { value: "right", label: t("terminal.panelPosition.right") },
+  ];
+
+  const cursorStyleOptions = [
+    { value: "bar", label: t("terminal.cursorStyle.bar") },
+    { value: "block", label: t("terminal.cursorStyle.block") },
+    { value: "underline", label: t("terminal.cursorStyle.underline") },
+  ];
+
+  const lineHeightOptions = [
+    { value: "1.0", label: t("terminal.lineHeight.tight") },
+    { value: "1.2", label: t("terminal.lineHeight.compact") },
+    { value: "1.4", label: t("terminal.lineHeight.normal") },
+    { value: "1.6", label: t("terminal.lineHeight.relaxed") },
+    { value: "1.8", label: t("terminal.lineHeight.spacious") },
+    { value: "2.0", label: t("terminal.lineHeight.extra") },
   ];
 
   return (
     <div className="space-y-6">
-      <SettingsGroup title="Terminal">
-        <SettingRow label="Shell" description="Which shell to use. Requires terminal restart.">
+      <SettingsGroup title={t("terminal.group.terminal")}>
+        <SettingRow label={t("terminal.shell.label")} description={t("terminal.shell.description")}>
           <Select
             value={terminal.shell}
             options={shellOptions}
@@ -118,7 +127,7 @@ export function TerminalSettings() {
           />
         </SettingRow>
 
-        <SettingRow label="Panel Position" description="Where to place the terminal panel. Auto switches based on window aspect ratio.">
+        <SettingRow label={t("terminal.panelPosition.label")} description={t("terminal.panelPosition.description")}>
           <Select
             value={terminal.position}
             options={positionOptions}
@@ -126,7 +135,7 @@ export function TerminalSettings() {
           />
         </SettingRow>
 
-        <SettingRow label="Panel Size" description="Proportion of available space. Drag-resizing the panel also updates this value.">
+        <SettingRow label={t("terminal.panelSize.label")} description={t("terminal.panelSize.description")}>
           <Select
             value={snapToOption(terminal.panelRatio)}
             options={panelSizeOptions}
@@ -134,7 +143,7 @@ export function TerminalSettings() {
           />
         </SettingRow>
 
-        <SettingRow label="Font Size" description="Text size in the terminal">
+        <SettingRow label={t("terminal.fontSize.label")} description={t("terminal.fontSize.description")}>
           <Select
             value={String(terminal.fontSize)}
             options={fontSizeOptions}
@@ -142,7 +151,7 @@ export function TerminalSettings() {
           />
         </SettingRow>
 
-        <SettingRow label="Line Height" description="Spacing between terminal lines">
+        <SettingRow label={t("terminal.lineHeight.label")} description={t("terminal.lineHeight.description")}>
           <Select
             value={String(terminal.lineHeight)}
             options={lineHeightOptions}
@@ -150,7 +159,7 @@ export function TerminalSettings() {
           />
         </SettingRow>
 
-        <SettingRow label="Cursor Style" description="Shape of the terminal cursor">
+        <SettingRow label={t("terminal.cursorStyle.label")} description={t("terminal.cursorStyle.description")}>
           <Select
             value={terminal.cursorStyle}
             options={cursorStyleOptions}
@@ -158,21 +167,21 @@ export function TerminalSettings() {
           />
         </SettingRow>
 
-        <SettingRow label="Cursor Blink" description="Whether the terminal cursor blinks">
+        <SettingRow label={t("terminal.cursorBlink.label")} description={t("terminal.cursorBlink.description")}>
           <Toggle
             checked={terminal.cursorBlink}
             onChange={(v) => updateTerminalSetting("cursorBlink", v)}
           />
         </SettingRow>
 
-        <SettingRow label="Copy on Select" description="Automatically copy selected text to clipboard">
+        <SettingRow label={t("terminal.copyOnSelect.label")} description={t("terminal.copyOnSelect.description")}>
           <Toggle
             checked={terminal.copyOnSelect}
             onChange={(v) => updateTerminalSetting("copyOnSelect", v)}
           />
         </SettingRow>
 
-        <SettingRow label="WebGL Renderer" description="Use GPU-accelerated rendering. Disable if you experience IME input issues. Requires terminal restart.">
+        <SettingRow label={t("terminal.webgl.label")} description={t("terminal.webgl.description")}>
           <Toggle
             checked={terminal.useWebGL}
             onChange={(v) => updateTerminalSetting("useWebGL", v)}

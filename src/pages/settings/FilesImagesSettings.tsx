@@ -7,21 +7,15 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { useTranslation } from "react-i18next";
 import { SettingRow, SettingsGroup, Toggle, Select } from "./components";
 import { useWorkspaceStore } from "@/stores/workspaceStore";
 import { useSettingsStore, type ImageAutoResizeOption } from "@/stores/settingsStore";
 import { updateWorkspaceConfig } from "@/hooks/workspaceConfig";
 import { RefreshCw, ExternalLink } from "lucide-react";
 
-const autoResizeOptions: { value: string; label: string }[] = [
-  { value: "0", label: "Off" },
-  { value: "800", label: "800px" },
-  { value: "1200", label: "1200px" },
-  { value: "1920", label: "1920px (Full HD)" },
-  { value: "2560", label: "2560px (2K)" },
-];
-
 export function FilesImagesSettings() {
+  const { t } = useTranslation("settings");
   const isWorkspaceMode = useWorkspaceStore((state) => state.isWorkspaceMode);
   const showHiddenFiles = useWorkspaceStore(
     (state) => state.config?.showHiddenFiles ?? false
@@ -38,13 +32,23 @@ export function FilesImagesSettings() {
   const cleanupOrphansOnClose = useSettingsStore((state) => state.image.cleanupOrphansOnClose);
   const updateImageSetting = useSettingsStore((state) => state.updateImageSetting);
 
+  const isMac = navigator.platform.includes("Mac");
+
+  const autoResizeOptions: { value: string; label: string }[] = [
+    { value: "0", label: t("editor.cjkLetterSpacing.off") },
+    { value: "800", label: "800px" },
+    { value: "1200", label: "1200px" },
+    { value: "1920", label: "1920px (Full HD)" },
+    { value: "2560", label: "2560px (2K)" },
+  ];
+
   return (
     <div>
       {/* File Browser */}
-      <SettingsGroup title="File Browser">
+      <SettingsGroup title={t("files.group.fileBrowser")}>
         <SettingRow
-          label="Show hidden files"
-          description="Include dotfiles and hidden system items in the file explorer"
+          label={t("files.showHiddenFiles.label")}
+          description={t("files.showHiddenFiles.description")}
           disabled={!isWorkspaceMode}
         >
           <Toggle
@@ -56,8 +60,8 @@ export function FilesImagesSettings() {
           />
         </SettingRow>
         <SettingRow
-          label="Show all files"
-          description="Show non-markdown files in the file explorer (opens with system default app)"
+          label={t("files.showAllFiles.label")}
+          description={t("files.showAllFiles.description")}
           disabled={!isWorkspaceMode}
         >
           <Toggle
@@ -71,10 +75,10 @@ export function FilesImagesSettings() {
       </SettingsGroup>
 
       {/* Quit Behavior */}
-      <SettingsGroup title="Quit Behavior">
+      <SettingsGroup title={t("files.group.quitBehavior")}>
         <SettingRow
-          label="Confirm quit"
-          description={`Press ${navigator.platform.includes("Mac") ? "⌘Q" : "Ctrl+Q"} twice to quit — prevents accidental exits`}
+          label={t("files.confirmQuit.label")}
+          description={isMac ? t("files.confirmQuit.descriptionMac") : t("files.confirmQuit.descriptionOther")}
         >
           <Toggle
             checked={general.confirmQuit}
@@ -84,10 +88,10 @@ export function FilesImagesSettings() {
       </SettingsGroup>
 
       {/* Saving */}
-      <SettingsGroup title="Saving">
+      <SettingsGroup title={t("files.group.saving")}>
         <SettingRow
-          label="Enable auto-save"
-          description="Automatically save files when edited"
+          label={t("files.autoSave.label")}
+          description={t("files.autoSave.description")}
         >
           <Toggle
             checked={general.autoSaveEnabled}
@@ -95,26 +99,26 @@ export function FilesImagesSettings() {
           />
         </SettingRow>
         <SettingRow
-          label="Save interval"
-          description="Time between auto-saves"
+          label={t("files.saveInterval.label")}
+          description={t("files.saveInterval.description")}
           disabled={!general.autoSaveEnabled}
         >
           <Select
             value={String(general.autoSaveInterval)}
             options={[
-              { value: "10", label: "10 seconds" },
-              { value: "30", label: "30 seconds" },
-              { value: "60", label: "1 minute" },
-              { value: "120", label: "2 minutes" },
-              { value: "300", label: "5 minutes" },
+              { value: "10", label: t("files.saveInterval.10s") },
+              { value: "30", label: t("files.saveInterval.30s") },
+              { value: "60", label: t("files.saveInterval.1m") },
+              { value: "120", label: t("files.saveInterval.2m") },
+              { value: "300", label: t("files.saveInterval.5m") },
             ]}
             onChange={(v) => updateGeneralSetting("autoSaveInterval", Number(v))}
             disabled={!general.autoSaveEnabled}
           />
         </SettingRow>
         <SettingRow
-          label="Keep document history"
-          description="Track versions for undo and recovery"
+          label={t("files.keepHistory.label")}
+          description={t("files.keepHistory.description")}
         >
           <Toggle
             checked={general.historyEnabled}
@@ -122,70 +126,70 @@ export function FilesImagesSettings() {
           />
         </SettingRow>
         <SettingRow
-          label="Maximum versions"
-          description="Number of snapshots to keep"
+          label={t("files.maxVersions.label")}
+          description={t("files.maxVersions.description")}
           disabled={!general.historyEnabled}
         >
           <Select
             value={String(general.historyMaxSnapshots)}
             options={[
-              { value: "10", label: "10 versions" },
-              { value: "25", label: "25 versions" },
-              { value: "50", label: "50 versions" },
-              { value: "100", label: "100 versions" },
+              { value: "10", label: t("files.maxVersions.10") },
+              { value: "25", label: t("files.maxVersions.25") },
+              { value: "50", label: t("files.maxVersions.50") },
+              { value: "100", label: t("files.maxVersions.100") },
             ]}
             onChange={(v) => updateGeneralSetting("historyMaxSnapshots", Number(v))}
             disabled={!general.historyEnabled}
           />
         </SettingRow>
         <SettingRow
-          label="Keep versions for"
-          description="Maximum age of history"
+          label={t("files.keepVersionsFor.label")}
+          description={t("files.keepVersionsFor.description")}
           disabled={!general.historyEnabled}
         >
           <Select
             value={String(general.historyMaxAgeDays)}
             options={[
-              { value: "1", label: "1 day" },
-              { value: "7", label: "7 days" },
-              { value: "14", label: "14 days" },
-              { value: "30", label: "30 days" },
+              { value: "1", label: t("files.keepVersionsFor.1d") },
+              { value: "7", label: t("files.keepVersionsFor.7d") },
+              { value: "14", label: t("files.keepVersionsFor.14d") },
+              { value: "30", label: t("files.keepVersionsFor.30d") },
             ]}
             onChange={(v) => updateGeneralSetting("historyMaxAgeDays", Number(v))}
             disabled={!general.historyEnabled}
           />
         </SettingRow>
         <SettingRow
-          label="Merge window"
-          description="Consecutive auto-saves within this window consolidate into one snapshot"
+          label={t("files.mergeWindow.label")}
+          description={t("files.mergeWindow.description")}
           disabled={!general.historyEnabled}
         >
           <Select
             value={String(general.historyMergeWindow)}
             options={[
-              { value: "0", label: "Off" },
-              { value: "10", label: "10 seconds" },
-              { value: "30", label: "30 seconds" },
-              { value: "60", label: "1 minute" },
-              { value: "120", label: "2 minutes" },
+              { value: "0", label: t("files.mergeWindow.off") },
+              { value: "10", label: t("files.mergeWindow.10s") },
+              { value: "30", label: t("files.mergeWindow.30s") },
+              { value: "60", label: t("files.mergeWindow.1m") },
+              { value: "120", label: t("files.mergeWindow.2m") },
             ]}
             onChange={(v) => updateGeneralSetting("historyMergeWindow", Number(v))}
             disabled={!general.historyEnabled}
           />
         </SettingRow>
         <SettingRow
-          label="Max file size for history"
-          description="Skip history snapshots for files larger than this"
+          label={t("files.maxFileSize.label")}
+          description={t("files.maxFileSize.description")}
           disabled={!general.historyEnabled}
         >
           <Select
             value={String(general.historyMaxFileSize)}
             options={[
-              { value: "256", label: "256 KB" },
-              { value: "512", label: "512 KB" },
-              { value: "1024", label: "1 MB" },
-              { value: "5120", label: "5 MB" },
-              { value: "0", label: "Unlimited" },
+              { value: "256", label: t("files.maxFileSize.256kb") },
+              { value: "512", label: t("files.maxFileSize.512kb") },
+              { value: "1024", label: t("files.maxFileSize.1mb") },
+              { value: "5120", label: t("files.maxFileSize.5mb") },
+              { value: "0", label: t("files.maxFileSize.unlimited") },
             ]}
             onChange={(v) => updateGeneralSetting("historyMaxFileSize", Number(v))}
             disabled={!general.historyEnabled}
@@ -194,10 +198,10 @@ export function FilesImagesSettings() {
       </SettingsGroup>
 
       {/* Images */}
-      <SettingsGroup title="Images">
+      <SettingsGroup title={t("files.group.images")}>
         <SettingRow
-          label="Auto-resize on paste"
-          description="Automatically resize large images before saving to assets"
+          label={t("files.autoResize.label")}
+          description={t("files.autoResize.description")}
         >
           <Select
             value={String(autoResizeMax)}
@@ -211,8 +215,8 @@ export function FilesImagesSettings() {
           />
         </SettingRow>
         <SettingRow
-          label="Copy to assets folder"
-          description="Copy pasted/dropped images to the document's assets folder"
+          label={t("files.copyToAssets.label")}
+          description={t("files.copyToAssets.description")}
         >
           <Toggle
             checked={copyToAssets}
@@ -220,8 +224,8 @@ export function FilesImagesSettings() {
           />
         </SettingRow>
         <SettingRow
-          label="Clean up unused images on close"
-          description="Automatically delete images from assets folder that are no longer referenced in the document"
+          label={t("files.cleanupOrphans.label")}
+          description={t("files.cleanupOrphans.description")}
         >
           <Toggle
             checked={cleanupOrphansOnClose}
@@ -247,6 +251,7 @@ interface PandocInfo {
 }
 
 function DocumentToolsSettings() {
+  const { t } = useTranslation("settings");
   const [pandoc, setPandoc] = useState<PandocInfo | null>(null);
   const [detecting, setDetecting] = useState(false);
   const [detectError, setDetectError] = useState<string | null>(null);
@@ -275,10 +280,10 @@ function DocumentToolsSettings() {
   }, [detect]);
 
   return (
-    <SettingsGroup title="Document Tools">
+    <SettingsGroup title={t("files.group.documentTools")}>
       <SettingRow
-        label="Pandoc"
-        description="Universal document converter — enables Export → Other Formats"
+        label={t("files.pandoc.label")}
+        description={t("files.pandoc.description")}
       >
         <div className="flex items-center gap-3">
           {pandoc && (
@@ -291,7 +296,7 @@ function DocumentToolsSettings() {
             >
               {pandoc.available
                 ? `v${pandoc.version ?? "unknown"}`
-                : "Not found"}
+                : t("files.pandoc.notFound")}
             </span>
           )}
           <button
@@ -304,27 +309,27 @@ function DocumentToolsSettings() {
               transition-colors"
           >
             <RefreshCw size={12} className={detecting ? "animate-spin" : ""} />
-            Detect
+            {t("files.pandoc.detect")}
           </button>
         </div>
       </SettingRow>
 
       {detectError && (
         <div className="text-xs text-[var(--error-color)] mt-1 px-1">
-          Detection failed: {detectError}
+          {t("files.pandoc.detectionFailed", { error: detectError })}
         </div>
       )}
 
       {pandoc && !pandoc.available && (
         <div className="text-xs text-[var(--text-tertiary)] mt-1 px-1">
-          Install Pandoc to export to DOCX, EPUB, LaTeX, and more.{" "}
+          {t("files.pandoc.installHint")}{" "}
           <a
             href="https://pandoc.org/installing.html"
             target="_blank"
             rel="noopener noreferrer"
             className="text-[var(--primary-color)] hover:underline inline-flex items-center gap-0.5"
           >
-            Installation guide
+            {t("files.pandoc.installGuide")}
             <ExternalLink size={10} />
           </a>
         </div>
@@ -333,7 +338,7 @@ function DocumentToolsSettings() {
       {pandoc?.available && pandoc.path && (
         <div className="mt-2 px-1">
           <div className="flex items-center justify-between text-xs">
-            <span className="text-[var(--text-tertiary)]">Path</span>
+            <span className="text-[var(--text-tertiary)]">{t("files.pandoc.path")}</span>
             <code className="text-[var(--text-secondary)] font-mono text-[11px]">
               {pandoc.path}
             </code>

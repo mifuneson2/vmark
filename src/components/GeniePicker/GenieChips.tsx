@@ -4,13 +4,14 @@
  * Pre-built action buttons shown when picker is opened with filterScope: "selection".
  */
 
+import { useTranslation } from "react-i18next";
 import type { GenieDefinition } from "@/types/aiGenies";
 
 const QUICK_ACTIONS = [
-  { label: "Polish", genieName: "polish" },
-  { label: "Condense", genieName: "condense" },
-  { label: "Grammar", genieName: "fix-grammar" },
-  { label: "Rephrase", genieName: "rephrase" },
+  { labelKey: "chips.polish", genieName: "polish" },
+  { labelKey: "chips.condense", genieName: "condense" },
+  { labelKey: "chips.grammar", genieName: "fix-grammar" },
+  { labelKey: "chips.rephrase", genieName: "rephrase" },
 ];
 
 interface GenieChipsProps {
@@ -20,6 +21,7 @@ interface GenieChipsProps {
 
 /** Renders quick-action chip buttons for common AI genies (Polish, Condense, Grammar, Rephrase). */
 export function GenieChips({ genies, onSelect }: GenieChipsProps) {
+  const { t } = useTranslation("ai");
   const available = QUICK_ACTIONS.filter((action) =>
     genies.some((g) => g.metadata.name === action.genieName)
   );
@@ -41,7 +43,7 @@ export function GenieChips({ genies, onSelect }: GenieChipsProps) {
             onClick={() => onSelect(genie)}
             type="button"
           >
-            {action.label}
+            {t(action.labelKey)}
           </button>
         );
       })}
