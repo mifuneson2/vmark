@@ -42,8 +42,12 @@ jobs:
         with:
           version: 10
 
-      - name: Install dependencies
+      - name: Install root dependencies (lint tools)
         run: pnpm install --frozen-lockfile
+
+      - name: Install website dependencies
+        working-directory: website
+        run: pnpm install --ignore-workspace
 
       - name: Lint website markdown
         working-directory: website
