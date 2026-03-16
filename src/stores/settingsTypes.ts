@@ -237,6 +237,8 @@ export interface GeneralSettings {
   lineEndingsOnSave: LineEndingOnSave; // Preserve or normalize line endings
   // Quit behavior
   confirmQuit: boolean; // Require double Cmd+Q to quit (default: true)
+  // i18n
+  language: string; // Default: "en" — UI language (BCP 47 tag, e.g. "en", "zh-CN", "zh-TW")
 }
 
 // ---------------------------------------------------------------------------

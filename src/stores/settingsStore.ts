@@ -142,6 +142,7 @@ const initialState: SettingsState = {
     tabSize: 2,
     lineEndingsOnSave: "preserve",
     confirmQuit: true,
+    language: "en",
   },
   appearance: {
     theme: "paper",
