@@ -266,8 +266,9 @@ const MENU_ICONS: &[(&str, &str)] = &[
 ];
 
 /// Icons for PredefinedMenuItems (Cut, Copy, etc.) which don't have custom IDs.
-/// Mapped by the title text passed at creation time. These titles may be localized
-/// by macOS when `None` is passed, so this is a best-effort match.
+/// Mapped by the muda default title text (after mnemonic stripping).
+/// When `None` is passed to PredefinedMenuItem constructors, muda generates these
+/// titles automatically. This is a best-effort match for English locale.
 const PREDEFINED_ICONS: &[(&str, &str)] = &[
     ("Cut", "scissors"),
     ("Copy", "doc.on.doc"),
@@ -280,7 +281,7 @@ const PREDEFINED_ICONS: &[(&str, &str)] = &[
     ("Minimize", "minus.square"),
     ("Zoom", "arrow.up.left.and.arrow.down.right"),
     ("Maximize", "arrow.up.left.and.arrow.down.right"),
-    ("Enter Full Screen", "arrow.up.left.and.arrow.down.right"),
+    ("Toggle Full Screen", "arrow.up.left.and.arrow.down.right"),
     ("Close Window", "xmark.square"),
 ];
 
