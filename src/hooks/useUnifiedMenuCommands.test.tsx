@@ -704,25 +704,20 @@ describe("useUnifiedMenuCommands", () => {
     vi.useRealTimers();
   });
 
-  it("blocks source-unsupported action in source mode", async () => {
-    sourceMode = true;
-    activeSourceView = {};
-
-    // bold supports: { wysiwyg: false, source: true } in our mock
-    // But let's test with a different action definition
-    // italic: supports { wysiwyg: true, source: true } — both supported
-    // We need an action where source is false
-    // Looking at our mock: bold has wysiwyg: false
-    // So if we're in WYSIWYG mode and try bold, it should be blocked
+  it("blocks source-unsupported action in WYSIWYG mode", async () => {
+    // bold has supports: { wysiwyg: false, source: true }
+    // In WYSIWYG mode, bold should be blocked
     sourceMode = false;
     activeWysiwygEditor = { view: {} };
 
     render(<TestHarness />);
     await waitFor(() => expect(listeners.has("menu:bold")).toBe(true));
 
+    // Clear any stale calls from listener setup before asserting
+    vi.mocked(performWysiwygToolbarAction).mockClear();
+
     listeners.get("menu:bold")?.({ payload: "main" });
 
-    // Bold is not supported in WYSIWYG mode
     expect(performWysiwygToolbarAction).not.toHaveBeenCalled();
   });
 
