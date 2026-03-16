@@ -38,7 +38,7 @@ function makeHeading(text: string, level = 1): PMNode {
   return schema.node("heading", { level }, text ? [schema.text(text)] : []);
 }
 
-function makeCode(text: string): PMNode {
+function _makeCode(text: string): PMNode {
   return schema.node("codeBlock", null, text ? [schema.text(text)] : []);
 }
 
@@ -60,7 +60,7 @@ describe("WYSIWYG lint plugin — block decoration mapping", () => {
   it("creates empty decorations when no diagnostics", () => {
     const doc = makeDoc([makePara("hello")]);
     const plugin = createLintPlugin("tab-1");
-    const state = EditorState.create({ doc, schema, plugins: [plugin] });
+    const _state = EditorState.create({ doc, schema, plugins: [plugin] });
     // DecorationSet.empty comparison
     const decoSet = plugin.spec.state!.init!({} as never, { doc } as never);
     // Should be empty (no decorations)
