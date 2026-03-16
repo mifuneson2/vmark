@@ -1,0 +1,82 @@
+import { describe, it, expect, beforeEach } from "vitest";
+import { useLintStore } from "../lintStore";
+
+describe("lintStore", () => {
+  beforeEach(() => {
+    useLintStore.getState().clearAllDiagnostics();
+  });
+
+  it("starts with empty diagnostics", () => {
+    expect(useLintStore.getState().diagnosticsByTab).toEqual({});
+  });
+
+  it("runLint stores diagnostics keyed by tabId", () => {
+    // Use a doc that triggers W01 (heading skip h1→h3)
+    useLintStore.getState().runLint("tab-1", "# Title\n\n### Skip");
+    const diags = useLintStore.getState().diagnosticsByTab["tab-1"];
+    expect(diags).toBeDefined();
+    expect(diags!.length).toBeGreaterThan(0);
+  });
+
+  it("runLint returns the diagnostics array", () => {
+    const result = useLintStore.getState().runLint("tab-1", "# Title\n\n### Skip");
+    expect(Array.isArray(result)).toBe(true);
+    expect(result.length).toBeGreaterThan(0);
+  });
+
+  it("runLint on clean doc returns empty array", () => {
+    const result = useLintStore.getState().runLint("tab-1", "# Title\n\n## Section");
+    expect(result).toEqual([]);
+  });
+
+  it("clearDiagnostics removes for specific tab only", () => {
+    useLintStore.getState().runLint("tab-1", "# Title\n\n### Skip");
+    useLintStore.getState().runLint("tab-2", "# Title\n\n### Skip");
+    useLintStore.getState().clearDiagnostics("tab-1");
+    expect(useLintStore.getState().diagnosticsByTab["tab-1"]).toBeUndefined();
+    expect(useLintStore.getState().diagnosticsByTab["tab-2"]).toBeDefined();
+  });
+
+  it("clearAllDiagnostics removes everything", () => {
+    useLintStore.getState().runLint("tab-1", "# Title\n\n### Skip");
+    useLintStore.getState().runLint("tab-2", "# Title\n\n### Skip");
+    useLintStore.getState().clearAllDiagnostics();
+    expect(useLintStore.getState().diagnosticsByTab).toEqual({});
+  });
+
+  it("selectNext wraps around", () => {
+    useLintStore.getState().runLint("tab-1", "# Title\n\n### Skip\n\n![](img.png)");
+    const count = useLintStore.getState().diagnosticsByTab["tab-1"]!.length;
+    expect(count).toBeGreaterThan(0);
+    for (let i = 0; i < count; i++) {
+      useLintStore.getState().selectNext("tab-1");
+    }
+    // Should wrap to 0
+    expect(useLintStore.getState().selectedIndex).toBe(0);
+  });
+
+  it("selectPrev wraps to last from index 0", () => {
+    useLintStore.getState().runLint("tab-1", "# Title\n\n### Skip\n\n![](img.png)");
+    const count = useLintStore.getState().diagnosticsByTab["tab-1"]!.length;
+    // selectedIndex starts at 0, selectPrev should wrap to last
+    useLintStore.getState().selectPrev("tab-1");
+    expect(useLintStore.getState().selectedIndex).toBe(count - 1);
+  });
+
+  it("selectNext/Prev with no diagnostics is a no-op", () => {
+    useLintStore.getState().selectNext("nonexistent");
+    expect(useLintStore.getState().selectedIndex).toBe(0);
+    useLintStore.getState().selectPrev("nonexistent");
+    expect(useLintStore.getState().selectedIndex).toBe(0);
+  });
+
+  it("resets selectedIndex when running lint on new content", () => {
+    useLintStore.getState().runLint("tab-1", "# Title\n\n### Skip\n\n![](img.png)");
+    // Move to index 1
+    useLintStore.getState().selectNext("tab-1");
+    expect(useLintStore.getState().selectedIndex).toBe(1);
+    // Re-run lint resets index to 0
+    useLintStore.getState().runLint("tab-1", "# Title\n\n### Skip");
+    expect(useLintStore.getState().selectedIndex).toBe(0);
+  });
+});
