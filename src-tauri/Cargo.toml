@@ -39,6 +39,7 @@ tauri-plugin-window-state = "2"
 tempfile = "3"
 sha2 = "0.10"
 gethostname = "0.5"
+rust-i18n = "3"
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"

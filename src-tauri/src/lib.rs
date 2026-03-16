@@ -21,6 +21,8 @@
 //!   - ExitRequested handling must carefully distinguish OS quit from user quit
 //!     to avoid premature exit during coordinated quit flow.
 
+rust_i18n::i18n!("locales", fallback = "en");
+
 mod ai_provider;
 mod app_paths;
 mod mcp_bridge;
