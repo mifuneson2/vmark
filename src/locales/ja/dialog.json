@@ -1,0 +1,109 @@
+{
+  "unsavedChanges": {
+    "title": "未保存の変更",
+    "single": "「{{title}}」への変更を保存しますか？",
+    "multiple": "{{count}}個の未保存ドキュメントがあります:\n\n• {{list}}",
+    "multiple_plural": "{{count}}個の未保存ドキュメントがあります:\n\n• {{list}}",
+    "newDocsHint": "{{count}}個の新しいドキュメントの保存場所を指定する必要があります。",
+    "newDocsHint_plural": "{{count}}個の新しいドキュメントの保存場所を指定する必要があります。",
+    "openInNewWindow": "このウィンドウに未保存の変更があります。代わりに新しいウィンドウでワークスペースを開きますか？",
+    "restartUnsaved": "{{count}}個の未保存ドキュメントがあります。再起動後に復元しますか？"
+  },
+  "fileChanged": {
+    "title": "ファイルが変更されました",
+    "message": "「{{fileName}}」が外部で変更されました。\n\nどうしますか？",
+    "multipleTitle": "複数のファイルが変更されました",
+    "multipleMessage": "{{count}}個のファイルが外部で変更されました:\n{{fileNames}}\n\nどうしますか？"
+  },
+  "revertToSaved": {
+    "title": "保存済みに戻す",
+    "message": "「{{title}}」のすべての変更を破棄してディスクから再読み込みしますか？"
+  },
+  "clearRecentFiles": {
+    "title": "最近のファイルを消去",
+    "message": "最近開いたファイルのリストを消去しますか？"
+  },
+  "clearRecentWorkspaces": {
+    "title": "最近のワークスペースを消去",
+    "message": "最近開いたワークスペースのリストを消去しますか？"
+  },
+  "fileNotFound": {
+    "title": "ファイルが見つかりません",
+    "message": "このファイルを開けませんでした。移動または削除された可能性があります。\n\n最近のファイルから削除しますか？"
+  },
+  "workspaceNotFound": {
+    "title": "ワークスペースが見つかりません",
+    "message": "このワークスペースフォルダが見つかりませんでした。移動または削除された可能性があります。\n\n最近のワークスペースから削除しますか？"
+  },
+  "unsavedDocument": {
+    "title": "未保存のドキュメント",
+    "message": "画像を変更するには、最初にドキュメントを保存してください。",
+    "messageCopyPath": "画像パスをコピーするには、ドキュメントを保存する必要があります。",
+    "messageReveal": "画像を表示するには、ドキュメントを保存する必要があります。"
+  },
+  "saveVersionAs": {
+    "title": "バージョンに名前を付けて保存..."
+  },
+  "chooseFolderForDocs": "{{count}}個の新しいドキュメントのフォルダを選択",
+  "toast": {
+    "saveDialogFailed": "保存ダイアログが失敗しました: {{error}}",
+    "failedToMoveToNewWindow": "ファイルを新しいウィンドウに移動できませんでした",
+    "failedToSaveDocuments": "ドキュメントの保存に失敗しました",
+    "fileMovedCantDeleteOriginal": "ファイルを新しい場所に保存しましたが、元のファイルを削除できませんでした",
+    "failedToOpenFile": "ファイルを開けませんでした: {{error}}",
+    "failedToOpen": "{{filename}} を開けませんでした",
+    "failedToOpenFilesInNewWindow": "新しいウィンドウでファイルを開けませんでした",
+    "onlyMarkdownViaDropDrop": "ドラッグ＆ドロップで開けるのはMarkdownファイルのみです",
+    "restored": "復元しました: {{filename}}",
+    "reloaded": "再読み込みしました: {{filename}}",
+    "recoveredDocuments": "予期しない終了から{{count}}個のドキュメントを復元しました",
+    "pandocExportFailed": "Pandocエクスポートが失敗しました",
+    "pandocUnknownFormat": "不明なエクスポート形式: {{format}}",
+    "pandocNoContent": "エクスポートするコンテンツがありません！",
+    "pandocNotInstalled": "Pandocがインストールされていません。pandoc.orgからインストールしてください",
+    "pandocExportSuccess": "エクスポートに成功しました",
+    "pandocExportError": "Pandocエクスポートが失敗しました: {{error}}",
+    "exportNoContent": "エクスポートするコンテンツがありません！",
+    "exportHtmlSuccess": "フォルダにエクスポートしました",
+    "exportHtmlResourceWarning_one": "1個のリソースを含められませんでした",
+    "exportHtmlResourceWarning_other": "{{count}}個のリソースを含められませんでした",
+    "printRequiresMac": "印刷にはmacOSが必要です。",
+    "nativePdfRequiresMac": "ネイティブPDFエクスポートにはmacOSが必要です。代わりに印刷を使用してください。",
+    "failedToPreparePdf": "PDFエクスポートの準備に失敗しました",
+    "noEditorContentToPrint": "印刷するエディターコンテンツがありません",
+    "failedToOpenPrintDialog": "印刷ダイアログを開けませんでした",
+    "htmlCopied": "HTMLをクリップボードにコピーしました",
+    "pdfExportSuccess": "PDFのエクスポートに成功しました",
+    "pdfExportFailed": "PDFエクスポートが失敗しました: {{error}}",
+    "cannotMoveTabNoDoc": "タブを移動できません: ドキュメントが読み込まれていません。",
+    "cannotMoveLastTab": "メインウィンドウの最後のタブは移動できません。",
+    "tabMoved": "「{{title}}」を新しいウィンドウに移動しました",
+    "tabDetached": "「{{title}}」を切り離しました",
+    "tabMovedToWindow": "「{{title}}」を移動しました",
+    "undoTabMoveFailed": "タブの移動を元に戻せませんでした。",
+    "failedToMoveTabToNewWindow": "タブを新しいウィンドウに移動できませんでした。",
+    "fileRestoredToDisk": "ファイルをディスクに復元しました。",
+    "failedToRestoreToDisk": "ファイルをディスクに復元できませんでした。",
+    "revertedToSaved": "保存済みのバージョンに戻しました。",
+    "failedToRevert": "保存済みのバージョンに戻せませんでした。",
+    "pathCopied": "パスをクリップボードにコピーしました。",
+    "failedToCopyPath": "パスのコピーに失敗しました。",
+    "relativePathCopied": "相対パスをクリップボードにコピーしました。",
+    "failedToCopyRelativePath": "相対パスのコピーに失敗しました。",
+    "failedToRevealInFileManager": "ファイルマネージャーでファイルを表示できませんでした。",
+    "pathCopiedExplorer": "パスをクリップボードにコピーしました",
+    "failedToOpenWithDefaultApp": "デフォルトアプリで「{{name}}」を開けませんでした",
+    "terminalNeedsWorkspace": "ターミナルを使用するには、フォルダを開くかファイルを保存してください。",
+    "noFormattingActions": "利用可能な書式設定アクションがありません",
+    "genieNotInSourceMode": "ジーニーはソースモードでは使用できません",
+    "genieNoProvider": "利用可能なAIプロバイダーがありません。設定で設定してください。",
+    "genieCliNotFound": "{{name}} CLIが見つかりません。インストールするか、設定で別のプロバイダーを選択してください。",
+    "genieApiKeyRequired": "{{name}} APIキーが必要です。設定 → インテグレーションで設定してください。",
+    "updateReady": "v{{version}} インストール準備完了",
+    "updateUpToDate": "最新バージョンです！",
+    "imagePathCopied": "画像パスをクリップボードにコピーしました",
+    "failedToChangeImage": "画像の変更に失敗しました。",
+    "failedToCopyImagePath": "画像パスのコピーに失敗しました。",
+    "failedToRevealImage": "Finderで画像を表示できませんでした。"
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "viewFiles": "ファイル",
+  "viewOutline": "アウトライン",
+  "viewHistory": "履歴",
+  "showFiles": "ファイルを表示",
+  "showOutline": "アウトラインを表示",
+  "showHistory": "履歴を表示",
+  "newFile": "新しいファイル",
+  "newFolder": "新しいフォルダ",
+  "clearDocumentHistory": "ドキュメント履歴を消去",
+  "closeSidebar": "サイドバーを閉じる",
+  "clearHistoryMessage": "このドキュメントの履歴をすべて削除しますか？この操作は取り消せません。",
+  "noWorkspace": "ワークスペースが開かれていません",
+  "loading": "読み込み中...",
+  "defaultFileName": "無題",
+  "defaultFolderName": "新しいフォルダ",
+  "workspaceFallback": "ワークスペース",
+  "contextMenu": {
+    "open": "開く",
+    "rename": "名前の変更",
+    "duplicate": "複製",
+    "moveTo": "移動先...",
+    "delete": "削除",
+    "copyPath": "パスをコピー",
+    "revealInFinder": "Finderで表示",
+    "showInExplorer": "エクスプローラーで表示",
+    "showInFileManager": "ファイルマネージャーで表示"
+  },
+  "outline": {
+    "documentOutline": "ドキュメントアウトライン",
+    "expandSection": "セクションを展開",
+    "collapseSection": "セクションを折りたたむ",
+    "noHeadings": "見出しなし",
+    "tooLarge": "ドキュメントが大きすぎてアウトラインを表示できません"
+  },
+  "history": {
+    "saveToEnable": "履歴を有効にするにはドキュメントを保存してください",
+    "disabled": "設定で履歴が無効になっています",
+    "noHistory": "履歴はまだありません",
+    "revertTitle": "以前のバージョンに戻す",
+    "revertMessage": "{{time}} のバージョンに戻しますか？\n\n現在の変更は最初に新しい履歴エントリとして保存されます。",
+    "revertButton": "このバージョンに戻す",
+    "deleteSnapshot": "このスナップショットを削除"
+  }
+}
