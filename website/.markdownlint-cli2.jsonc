@@ -1,0 +1,42 @@
+{
+  "config": {
+    // --- Enabled (catch real issues) ---
+    "MD001": true,          // Heading levels increment by one
+    "MD003": { "style": "atx" },
+    "MD047": true,          // Files end with single newline
+
+    // --- Disabled (conflict with VitePress or CJK content) ---
+    "MD004": false,         // Mixed list styles OK (translated content varies)
+    "MD009": false,         // Trailing spaces (intentional in some places)
+    "MD012": false,         // Multiple blank lines
+    "MD013": false,         // Line length
+    "MD022": false,         // Blank lines around headings (VitePress frontmatter)
+    "MD024": false,         // Duplicate headings (FAQ sections)
+    "MD025": false,         // Multiple top-level headings (frontmatter + content)
+    "MD026": false,         // Trailing punctuation in headings
+    "MD028": false,         // Blank line inside blockquote
+    "MD029": false,         // Ordered list item prefix
+    "MD031": false,         // Blank lines around fenced code blocks
+    "MD032": false,         // Blank lines around lists (CJK content has different conventions)
+    "MD033": false,         // Inline HTML (VitePress components, badges, scripts)
+    "MD034": false,         // Bare URLs
+    "MD036": false,         // Emphasis as heading
+    "MD037": false,         // Spaces inside emphasis (CJK formatting adds these)
+    "MD038": false,         // Spaces inside code spans
+    "MD040": false,         // Fenced code language (many translated examples omit it)
+    "MD041": false,         // First line heading (frontmatter)
+    "MD046": false,         // Code block style
+    "MD049": false,         // Emphasis style consistency
+    "MD050": false,         // Strong style consistency
+    "MD051": false,         // Link fragments
+    "MD058": false,         // Table formatting
+    "MD060": false          // Table column style (11k false positives in CJK)
+  },
+  "globs": [
+    "**/*.md"
+  ],
+  "ignores": [
+    "node_modules",
+    ".vitepress/cache"
+  ]
+}

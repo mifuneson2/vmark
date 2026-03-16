@@ -333,6 +333,24 @@
   display: none !important;
 }
 
+/* CJK typography: add letter-spacing for ideographic characters.
+ * Applied to body text on CJK locale pages (zh-CN, zh-TW, ja, ko).
+ * Reset on code/pre/nav where spacing is unwanted. */
+:lang(zh) .vp-doc,
+:lang(ja) .vp-doc,
+:lang(ko) .vp-doc {
+  letter-spacing: 0.05em;
+}
+
+:lang(zh) .vp-doc code,
+:lang(zh) .vp-doc pre,
+:lang(ja) .vp-doc code,
+:lang(ja) .vp-doc pre,
+:lang(ko) .vp-doc code,
+:lang(ko) .vp-doc pre {
+  letter-spacing: normal;
+}
+
 /* Nav and sidebar use theme backgrounds */
 .VPNav {
   background: var(--vp-c-bg) !important;

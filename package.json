@@ -126,6 +126,7 @@
     "globals": "^16.5.0",
     "i18next-parser": "^9.4.0",
     "jsdom": "^26.1.0",
+    "markdownlint-cli2": "^0.21.0",
     "mdast-util-math": "^3.0.0",
     "tailwindcss": "^4.1.18",
     "tsx": "^4.21.0",

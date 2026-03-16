@@ -134,6 +134,12 @@ description: Quick grammar fix
 scope: selection
 model: claude-haiku-4-5-20251001
 ---
+```---
+name: quick-fix
+description: Quick grammar fix
+scope: selection
+model: claude-haiku-4-5-20251001
+---
 ```
 
 这对于将简单任务路由到更快/更便宜的模型同时保持强大的默认值非常有用。

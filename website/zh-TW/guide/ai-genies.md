@@ -169,6 +169,18 @@ of the following text while preserving the author's voice and intent.
 Return only the improved text — no explanations.
 
 {{content}}
+```---
+description: Improve clarity and flow
+scope: selection
+category: editing
+---
+
+You are an expert editor. Improve the clarity, flow, and conciseness
+of the following text while preserving the author's voice and intent.
+
+Return only the improved text — no explanations.
+
+{{content}}
 ```
 
 檔案名稱 `polish.md` 在選取器中顯示為「Polish」。
@@ -268,6 +280,18 @@ Match the author's voice, style, and tone. Write 2-3 paragraphs.
 Do not repeat or summarize the existing text — just continue it.
 
 {{content}}
+```---
+description: Continue writing from here
+scope: block
+action: insert
+---
+
+Continue writing naturally from where the following text leaves off.
+Match the author's voice, style, and tone. Write 2-3 paragraphs.
+
+Do not repeat or summarize the existing text — just continue it.
+
+{{content}}
 ```
 
 ### `model` 欄位
@@ -276,6 +300,15 @@ Do not repeat or summarize the existing text — just continue it.
 
 ```markdown
 ---
+description: Quick grammar fix (uses fast model)
+scope: selection
+model: claude-haiku-4-5-20251001
+---
+
+Fix grammar and spelling errors. Return only the corrected text.
+
+{{content}}
+```---
 description: Quick grammar fix (uses fast model)
 scope: selection
 model: claude-haiku-4-5-20251001
@@ -352,6 +385,25 @@ Format as:
 - point 2
 
 {{content}}
+```---
+description: Generate a pros/cons analysis
+scope: selection
+action: insert
+---
+
+Analyze the following text and produce a brief pros/cons list.
+
+Format as:
+
+**Pros:**
+- point 1
+- point 2
+
+**Cons:**
+- point 1
+- point 2
+
+{{content}}
 ```
 
 ### 保持提示聚焦
@@ -361,6 +413,16 @@ Format as:
 ```markdown
 <!-- 好 — 一個明確的工作 -->
 ---
+description: Convert to active voice
+scope: selection
+---
+
+Rewrite the following text using active voice.
+Do not change the meaning.
+Return only the rewritten text.
+
+{{content}}
+```---
 description: Convert to active voice
 scope: selection
 ---
@@ -388,6 +450,17 @@ Read the following paper and write a concise academic abstract
 results, conclusion.
 
 {{content}}
+```---
+description: Generate an academic abstract
+scope: document
+action: insert
+---
+
+Read the following paper and write a concise academic abstract
+(150-250 words). Follow standard structure: background, methods,
+results, conclusion.
+
+{{content}}
 ```
 
 ### 部落格 — 生成吸引人的開頭
@@ -404,12 +477,34 @@ that hooks the reader. Use a question, surprising fact, or vivid
 scene. Keep it under 3 sentences.
 
 {{content}}
+```---
+description: Write an engaging opening paragraph
+scope: document
+action: insert
+---
+
+Read the following draft and write a compelling opening paragraph
+that hooks the reader. Use a question, surprising fact, or vivid
+scene. Keep it under 3 sentences.
+
+{{content}}
 ```
 
 ### 程式碼 — 解釋程式碼區塊
 
 ```markdown
 ---
+description: Add a plain-English explanation above code
+scope: selection
+action: insert
+---
+
+Read the following code and write a brief plain-English explanation
+of what it does. Use 1-2 sentences. Do not include the code itself
+in your response.
+
+{{content}}
+```---
 description: Add a plain-English explanation above code
 scope: selection
 action: insert
@@ -437,12 +532,36 @@ slang, and filler words.
 Return only the rewritten text — no explanations.
 
 {{content}}
+```---
+description: Rewrite in professional tone
+scope: selection
+---
+
+Rewrite the following text in a professional, business-appropriate tone.
+Keep the same meaning and key points. Remove casual language,
+slang, and filler words.
+
+Return only the rewritten text — no explanations.
+
+{{content}}
 ```
 
 ### 翻譯 — 翻譯為繁體中文
 
 ```markdown
 ---
+description: Translate to Traditional Chinese
+scope: selection
+---
+
+Translate the following text into Traditional Chinese (繁體中文).
+Preserve the original meaning, tone, and formatting.
+Use natural, idiomatic Chinese — not word-for-word translation.
+
+Return only the translated text — no explanations.
+
+{{content}}
+```---
 description: Translate to Traditional Chinese
 scope: selection
 ---
@@ -475,12 +594,42 @@ Return only the rewritten text — no explanations.
 
 ## Content to rewrite:
 {{content}}
+```---
+description: Rewrite to match surrounding tone and style
+scope: selection
+context: 1
+---
+
+Rewrite the following content to fit naturally with its surrounding context.
+Match the tone, style, and level of detail.
+
+Return only the rewritten text — no explanations.
+
+## Surrounding context (do not include in output):
+{{context}}
+
+## Content to rewrite:
+{{content}}
 ```
 
 ### 審閱 — 事實查核
 
 ```markdown
 ---
+description: Flag claims that need verification
+scope: selection
+action: insert
+---
+
+Read the following text and list any factual claims that should be
+verified. For each claim, note why it might need checking (e.g.,
+specific numbers, dates, statistics, or strong assertions).
+
+Format as a bullet list. If everything looks solid, say
+"No claims flagged for verification."
+
+{{content}}
+```---
 description: Flag claims that need verification
 scope: selection
 action: insert

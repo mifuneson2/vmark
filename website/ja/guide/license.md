@@ -1,10 +1,10 @@
 # ライセンス
 
-VMarkはISCライセンスの下でリリースされています — MITと同様のシンプルで許容的なライセンスです。あなたにとって何を意味するかを説明します。
+VMark は ISC ライセンスの下でリリースされています — MIT と同様のシンプルで許容的なライセンスです。あなたにとって何を意味するかを説明します。
 
-VMarkは**ISCライセンス** — 最もシンプルで許容的なオープンソースライセンスの一つ — の下でリリースされています。
+VMark は**ISC ライセンス** — 最もシンプルで許容的なオープンソースライセンスの一つ — の下でリリースされています。
 
-## ISCライセンスが許可すること
+## ISC ライセンスが許可すること
 
 - **使用** — 商業目的または個人目的を問わず
 - **コピー** — 自由に配布
@@ -40,11 +40,11 @@ OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 PERFORMANCE OF THIS SOFTWARE.
 ```
 
-## なぜISCなのか?
+## なぜ ISC なのか?
 
-ISCライセンスはMITライセンスと機能的に同等ですが、よりシンプルな言語を使用しています。[オープンソースイニシアティブ（OSI）](https://opensource.org/licenses/ISC)によって承認されており、npmとOpenBSDで使用されるデフォルトのライセンスです。
+ISC ライセンスは MIT ライセンスと機能的に同等ですが、よりシンプルな言語を使用しています。[オープンソースイニシアティブ（OSI）](https://opensource.org/licenses/ISC)によって承認されており、npm と OpenBSD で使用されるデフォルトのライセンスです。
 
-VMark向けに選ばれた理由:
+VMark 向けに選ばれた理由:
 
 - **シンプルさ** — 読みやすく理解しやすい
 - **許容性** — ソフトウェアの使い方に制限なし
@@ -52,6 +52,6 @@ VMark向けに選ばれた理由:
 
 ## 詳細を学ぶ
 
-- [OSIのISCライセンス](https://opensource.org/licenses/ISC)
-- [WikipediaのISCライセンス](https://en.wikipedia.org/wiki/ISC_license)
-- [choosealicense.comのISCライセンス](https://choosealicense.com/licenses/isc/)
+- [OSI の ISC ライセンス](https://opensource.org/licenses/ISC)
+- [Wikipedia の ISC ライセンス](https://en.wikipedia.org/wiki/ISC_license)
+- [choosealicense.com の ISC ライセンス](https://choosealicense.com/licenses/isc/)

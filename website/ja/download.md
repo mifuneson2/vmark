@@ -20,7 +20,7 @@ import DownloadButton from '../.vitepress/components/DownloadButton.vue'
 brew install xiaolai/tap/vmark
 ```
 
-これによりVMarkがインストールされ、お使いのMac（Apple SiliconまたはIntel）に適したバージョンが自動的に選択されます。
+これにより VMark がインストールされ、お使いの Mac（Apple Silicon または Intel）に適したバージョンが自動的に選択されます。
 
 **アップグレード**
 
@@ -33,24 +33,24 @@ brew update && brew upgrade vmark
 1. `.dmg` ファイルをダウンロードする
 2. ダウンロードしたファイルを開く
 3. VMark をアプリケーションフォルダにドラッグする
-4. 初回起動時は、アプリを右クリックして「開く」を選択し、Gatekeeperをバイパスする
+4. 初回起動時は、アプリを右クリックして「開く」を選択し、Gatekeeper をバイパスする
 
 ## Windows & Linux
 
-VMarkはTauriで構築されており、クロスプラットフォームコンパイルをサポートしています。ただし、**現在アクティブな開発とテストはmacOSに集中しています**。リソースの制約により、WindowsとLinuxのサポートは当面限定的です。
+VMark は Tauri で構築されており、クロスプラットフォームコンパイルをサポートしています。ただし、**現在アクティブな開発とテストは macOS に集中しています**。リソースの制約により、Windows と Linux のサポートは当面限定的です。
 
-WindowsまたはLinuxでVMarkを実行したい場合：
+Windows または Linux で VMark を実行したい場合：
 
 - **ビルド済みバイナリ**は[GitHub Releases](https://github.com/xiaolai/vmark/releases)で入手可能です（サポートの保証なしで提供）
 - **ソースからビルド**する場合は以下の手順に従ってください
 
 ## ダウンロードの確認
 
-すべてのリリースはGitHub Actionsを通じて自動的にビルドされます。[GitHub Releasesページ](https://github.com/xiaolai/vmark/releases)でリリースを確認することで、真正性を検証できます。
+すべてのリリースは GitHub Actions を通じて自動的にビルドされます。[GitHub Releases ページ](https://github.com/xiaolai/vmark/releases)でリリースを確認することで、真正性を検証できます。
 
 ## ソースからビルド
 
-ソースからVMarkをビルドしたい開発者向け：
+ソースから VMark をビルドしたい開発者向け：
 
 ```bash
 # リポジトリをクローン
