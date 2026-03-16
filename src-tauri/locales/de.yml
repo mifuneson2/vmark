@@ -1,16 +1,16 @@
-# VMark Deutsche Lokalisierung — Übersetzung der englischen Quelldatei.
-# Schlüssel folgen der Konvention: menu.<bereich>.<eintrag>
-# Dynamische Menüeinträge (zuletzt geöffnete Dateien, Genies) haben ebenfalls strukturelle Bezeichnungen hier.
+# VMark Deutsches Locale — Übersetzung der Rust-seitigen Zeichenketten.
+# Keys follow the convention: menu.<section>.<item>
+# Dynamic menu items (recent files, genies) have their structural labels here too.
 
 menu:
-  # === App-Menü (nur macOS) ===
+  # === App menu (macOS only) ===
   app: "VMark"
   app.about: "Über VMark"
   app.settings: "Einstellungen..."
   app.saveAllQuit: "Alle speichern und beenden"
   app.quit: "VMark beenden"
 
-  # === Datei-Menü ===
+  # === File menu ===
   file: "Datei"
   file.new: "Neu"
   file.newWindow: "Neues Fenster"
@@ -33,7 +33,7 @@ menu:
   file.export.pandocLatex: "LaTeX (.tex)..."
   file.export.pandocOdt: "OpenDocument (.odt)..."
   file.export.pandocRtf: "Rich Text (.rtf)..."
-  file.export.pandocTxt: "Klartext (.txt)..."
+  file.export.pandocTxt: "Nur Text (.txt)..."
   file.export.pandocHint: "Erfordert Pandoc — pandoc.org"
   file.export.copyHtml: "Als HTML kopieren"
   file.docHistory: "Dokumentverlauf"
@@ -41,18 +41,18 @@ menu:
   file.docHistory.clearAll: "Gesamten Verlauf löschen..."
   file.print: "Drucken..."
 
-  # Datei-Menü — Windows/Linux Extras
+  # File menu — Windows/Linux extras
   file.saveAllExit: "Alle speichern und beenden"
   file.exit: "Beenden"
 
-  # === Bearbeiten-Menü ===
+  # === Edit menu ===
   edit: "Bearbeiten"
   edit.undo: "Rückgängig"
   edit.redo: "Wiederholen"
   edit.find: "Suchen"
   edit.findReplace: "Suchen und Ersetzen..."
   edit.findNext: "Weitersuchen"
-  edit.findPrev: "Rückwärtssuchen"
+  edit.findPrev: "Rückwärts suchen"
   edit.useSelectionFind: "Auswahl für Suche verwenden"
   edit.selection: "Auswahl"
   edit.selection.word: "Wort auswählen"
@@ -60,8 +60,8 @@ menu:
   edit.selection.block: "Block auswählen"
   edit.selection.expand: "Auswahl erweitern"
   edit.lines: "Zeilen"
-  edit.lines.moveUp: "Zeile nach oben verschieben"
-  edit.lines.moveDown: "Zeile nach unten verschieben"
+  edit.lines.moveUp: "Zeile nach oben"
+  edit.lines.moveDown: "Zeile nach unten"
   edit.lines.duplicate: "Zeile duplizieren"
   edit.lines.delete: "Zeile löschen"
   edit.lines.join: "Zeilen verbinden"
@@ -72,7 +72,7 @@ menu:
   edit.lineEndings.lf: "In LF konvertieren"
   edit.lineEndings.crlf: "In CRLF konvertieren"
 
-  # === Format-Menü ===
+  # === Format menu ===
   format: "Format"
   format.headings: "Überschriften"
   format.headings.h1: "Überschrift 1"
@@ -103,22 +103,22 @@ menu:
   format.blockquote.toggle: "Blockzitat"
   format.blockquote.nest: "Blockzitat verschachteln"
   format.blockquote.unnest: "Blockzitat-Verschachtelung aufheben"
-  format.transform: "Transformieren"
-  format.transform.uppercase: "GROßBUCHSTABEN"
+  format.transform: "Umwandeln"
+  format.transform.uppercase: "GROSSBUCHSTABEN"
   format.transform.lowercase: "kleinbuchstaben"
-  format.transform.titleCase: "Titelschreibweise"
-  format.transform.toggleCase: "Groß-/Kleinschreibung umschalten"
+  format.transform.titleCase: "Titelschreibung"
+  format.transform.toggleCase: "Groß-/Kleinschreibung wechseln"
   format.transform.toggleQuoteStyle: "Anführungszeichen-Stil umschalten"
   format.cjk: "CJK"
   format.cjk.selection: "Auswahl formatieren"
   format.cjk.file: "Gesamte Datei formatieren"
   format.cleanup: "Textbereinigung"
-  format.cleanup.trailingSpaces: "Abschließende Leerzeichen entfernen"
+  format.cleanup.trailingSpaces: "Nachgestellte Leerzeichen entfernen"
   format.cleanup.collapseBlankLines: "Leerzeilen zusammenfassen"
-  format.cleanup.images: "Unbenutzte Bilder aufräumen..."
+  format.cleanup.images: "Nicht verwendete Bilder bereinigen..."
   format.clearFormat: "Formatierung löschen"
 
-  # === Einfügen-Menü ===
+  # === Insert menu ===
   insert: "Einfügen"
   insert.links: "Links"
   insert.links.link: "Link"
@@ -144,12 +144,12 @@ menu:
   insert.table.alignAllRight: "Alle rechtsbündig"
   insert.table.format: "Tabelle formatieren"
   insert.codeBlock: "Code-Block"
-  insert.mathBlock: "Mathematikblock"
+  insert.mathBlock: "Mathe-Block"
   insert.diagram: "Diagramm"
   insert.mindmap: "Mindmap"
   insert.horizontalLine: "Horizontale Linie"
   insert.footnote: "Fußnote"
-  insert.collapsible: "Einklappbarer Block"
+  insert.collapsible: "Zusammenklappbarer Block"
   insert.infoBox: "Infobox"
   insert.infoBox.note: "Hinweis"
   insert.infoBox.tip: "Tipp"
@@ -157,7 +157,7 @@ menu:
   insert.infoBox.warning: "Warnung"
   insert.infoBox.caution: "Vorsicht"
 
-  # === Ansicht-Menü ===
+  # === View menu ===
   view: "Ansicht"
   view.sourceMode: "Quellcode-Modus"
   view.focusMode: "Fokusmodus"
@@ -167,25 +167,25 @@ menu:
   view.zoomOut: "Verkleinern"
   view.wordWrap: "Zeilenumbruch umschalten"
   view.lineNumbers: "Zeilennummern umschalten"
-  view.diagramPreview: "Diagrammvorschau umschalten"
+  view.diagramPreview: "Diagramm-Vorschau umschalten"
   view.fitTables: "Tabellen an Breite anpassen"
   view.outline: "Gliederung umschalten"
   view.fileExplorer: "Datei-Explorer umschalten"
   view.history: "Verlauf umschalten"
   view.terminal: "Terminal umschalten"
 
-  # === Fenster-Menü ===
+  # === Window menu ===
   window: "Fenster"
   window.bringAllToFront: "Alle nach vorne bringen"
 
-  # === Hilfe-Menü ===
+  # === Help menu ===
   help: "Hilfe"
   help.vmarkHelp: "VMark-Hilfe"
   help.keyboardShortcuts: "Tastenkürzel"
-  help.installCli: "Shell-Befehl: 'vmark' im PATH installieren..."
+  help.installCli: "Shell-Befehl: 'vmark' in PATH installieren..."
   help.reportIssue: "Problem melden..."
 
-  # === Dynamische Menübezeichnungen ===
+  # === Dynamic menu labels ===
   recentFiles.empty: "Keine zuletzt geöffneten Dateien"
   recentFiles.clear: "Zuletzt geöffnete Dateien löschen"
   recentWorkspaces.empty: "Keine zuletzt geöffneten Arbeitsbereiche"
