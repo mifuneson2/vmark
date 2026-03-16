@@ -122,9 +122,17 @@ export const LintExtension = Extension.create<LintExtensionOptions>({
           },
 
           apply(tr, oldDecorations) {
-            // Clear on doc edit — stale diagnostics should disappear
+            // Clear decorations on doc edit — stale results should disappear.
+            // Note: we clear the STORE outside of apply() to avoid an infinite
+            // loop (store change → subscribe → dispatch → apply → store change).
             if (tr.docChanged) {
-              useLintStore.getState().clearDiagnostics(tabId);
+              // Schedule store clear outside the transaction cycle
+              queueMicrotask(() => {
+                const diags = useLintStore.getState().diagnosticsByTab[tabId];
+                if (diags && diags.length > 0) {
+                  useLintStore.getState().clearDiagnostics(tabId);
+                }
+              });
               return DecorationSet.empty;
             }
 
