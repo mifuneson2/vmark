@@ -35,7 +35,7 @@ import { triggerLintRefresh } from "@/plugins/codemirror/sourceLint";
 import { useActiveEditorStore } from "@/stores/activeEditorStore";
 import { useTiptapEditorStore } from "@/stores/tiptapEditorStore";
 import { serializeMarkdown } from "@/utils/markdownPipeline";
-import { scrollToSelectedDiagnostic } from "@/utils/lintNavigation";
+import { scrollToSelectedDiagnostic } from "@/hooks/lintNavigation";
 
 /** Hook that handles keyboard shortcuts for view-mode toggles (source, focus, typewriter, wrap, line numbers, terminal, sidebar panels). */
 export function useViewShortcuts() {

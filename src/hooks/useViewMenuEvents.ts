@@ -27,7 +27,7 @@ import { useActiveEditorStore } from "@/stores/activeEditorStore";
 import { useTiptapEditorStore } from "@/stores/tiptapEditorStore";
 import { serializeMarkdown } from "@/utils/markdownPipeline";
 import { triggerLintRefresh } from "@/plugins/codemirror/sourceLint";
-import { scrollToSelectedDiagnostic } from "@/utils/lintNavigation";
+import { scrollToSelectedDiagnostic } from "@/hooks/lintNavigation";
 
 const DEFAULT_FONT_SIZE = 18;
 const MIN_FONT_SIZE = 12;
