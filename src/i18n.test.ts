@@ -9,6 +9,7 @@ vi.mock("@/stores/settingsStore", () => ({
     getState: () => ({
       general: { language: "en" },
     }),
+    subscribe: vi.fn(() => vi.fn()),
   },
 }));
 
