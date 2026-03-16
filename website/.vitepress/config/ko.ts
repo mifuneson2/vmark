@@ -1,6 +1,6 @@
-import type { DefaultTheme, LocaleSpecificConfig } from "vitepress";
 
-export const ko: LocaleSpecificConfig<DefaultTheme.Config> = {
+
+export const ko = {
   label: "한국어",
   lang: "ko",
   themeConfig: {
@@ -124,8 +124,8 @@ export const ko: LocaleSpecificConfig<DefaultTheme.Config> = {
     lastUpdated: {
       text: "마지막 업데이트",
       formatOptions: {
-        dateStyle: "medium",
-        timeStyle: "short",
+        dateStyle: "medium" as const,
+        timeStyle: "short" as const,
       },
     },
 
@@ -142,7 +142,7 @@ export const ko: LocaleSpecificConfig<DefaultTheme.Config> = {
     returnToTopLabel: "맨 위로",
 
     search: {
-      provider: "local",
+      provider: "local" as const,
       options: {
         locales: {
           ko: {

@@ -1,6 +1,6 @@
-import type { DefaultTheme, LocaleSpecificConfig } from "vitepress";
 
-export const ja: LocaleSpecificConfig<DefaultTheme.Config> = {
+
+export const ja = {
   label: "日本語",
   lang: "ja",
   themeConfig: {
@@ -124,8 +124,8 @@ export const ja: LocaleSpecificConfig<DefaultTheme.Config> = {
     lastUpdated: {
       text: "最終更新",
       formatOptions: {
-        dateStyle: "medium",
-        timeStyle: "short",
+        dateStyle: "medium" as const,
+        timeStyle: "short" as const,
       },
     },
 
@@ -142,7 +142,7 @@ export const ja: LocaleSpecificConfig<DefaultTheme.Config> = {
     returnToTopLabel: "トップに戻る",
 
     search: {
-      provider: "local",
+      provider: "local" as const,
       options: {
         locales: {
           ja: {

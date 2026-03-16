@@ -1,6 +1,6 @@
-import type { DefaultTheme, LocaleSpecificConfig } from "vitepress";
 
-export const zhTW: LocaleSpecificConfig<DefaultTheme.Config> = {
+
+export const zhTW = {
   label: "繁體中文",
   lang: "zh-TW",
   themeConfig: {
@@ -118,8 +118,8 @@ export const zhTW: LocaleSpecificConfig<DefaultTheme.Config> = {
     lastUpdated: {
       text: "更新於",
       formatOptions: {
-        dateStyle: "medium",
-        timeStyle: "short",
+        dateStyle: "medium" as const,
+        timeStyle: "short" as const,
       },
     },
 
@@ -136,7 +136,7 @@ export const zhTW: LocaleSpecificConfig<DefaultTheme.Config> = {
     returnToTopLabel: "返回頂部",
 
     search: {
-      provider: "local",
+      provider: "local" as const,
       options: {
         locales: {
           "zh-TW": {

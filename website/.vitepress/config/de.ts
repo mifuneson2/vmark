@@ -1,6 +1,6 @@
-import type { DefaultTheme, LocaleSpecificConfig } from "vitepress";
 
-export const de: LocaleSpecificConfig<DefaultTheme.Config> = {
+
+export const de = {
   label: "Deutsch",
   lang: "de",
   themeConfig: {
@@ -130,8 +130,8 @@ export const de: LocaleSpecificConfig<DefaultTheme.Config> = {
     lastUpdated: {
       text: "Aktualisiert am",
       formatOptions: {
-        dateStyle: "medium",
-        timeStyle: "short",
+        dateStyle: "medium" as const,
+        timeStyle: "short" as const,
       },
     },
 
@@ -148,7 +148,7 @@ export const de: LocaleSpecificConfig<DefaultTheme.Config> = {
     returnToTopLabel: "Nach oben",
 
     search: {
-      provider: "local",
+      provider: "local" as const,
       options: {
         locales: {
           de: {
