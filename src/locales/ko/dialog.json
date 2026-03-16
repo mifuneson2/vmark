@@ -1,0 +1,109 @@
+{
+  "unsavedChanges": {
+    "title": "저장되지 않은 변경 사항",
+    "single": "\"{{title}}\"의 변경 사항을 저장할까요?",
+    "multiple": "저장되지 않은 문서가 {{count}}개 있습니다:\n\n• {{list}}",
+    "multiple_plural": "저장되지 않은 문서가 {{count}}개 있습니다:\n\n• {{list}}",
+    "newDocsHint": "새 문서 {{count}}개의 저장 위치가 필요합니다.",
+    "newDocsHint_plural": "새 문서 {{count}}개의 저장 위치가 필요합니다.",
+    "openInNewWindow": "이 창에 저장되지 않은 변경 사항이 있습니다. 대신 새 창에서 워크스페이스를 여시겠습니까?",
+    "restartUnsaved": "저장되지 않은 문서가 {{count}}개 있습니다. 재시작하고 재실행 시 복원할까요?"
+  },
+  "fileChanged": {
+    "title": "파일 변경됨",
+    "message": "\"{{fileName}}\"이(가) 외부에서 수정되었습니다.\n\n어떻게 하시겠습니까?",
+    "multipleTitle": "여러 파일이 변경됨",
+    "multipleMessage": "{{count}}개 파일이 외부에서 수정되었습니다:\n{{fileNames}}\n\n어떻게 하시겠습니까?"
+  },
+  "revertToSaved": {
+    "title": "저장된 버전으로 되돌리기",
+    "message": "모든 변경 사항을 취소하고 디스크에서 \"{{title}}\"을(를) 다시 불러올까요?"
+  },
+  "clearRecentFiles": {
+    "title": "최근 파일 지우기",
+    "message": "최근 열린 파일 목록을 지울까요?"
+  },
+  "clearRecentWorkspaces": {
+    "title": "최근 워크스페이스 지우기",
+    "message": "최근 열린 워크스페이스 목록을 지울까요?"
+  },
+  "fileNotFound": {
+    "title": "파일을 찾을 수 없음",
+    "message": "이 파일을 열 수 없습니다. 이동되었거나 삭제된 것 같습니다.\n\n최근 파일에서 제거할까요?"
+  },
+  "workspaceNotFound": {
+    "title": "워크스페이스를 찾을 수 없음",
+    "message": "이 워크스페이스 폴더를 찾을 수 없습니다. 이동되었거나 삭제된 것 같습니다.\n\n최근 워크스페이스에서 제거할까요?"
+  },
+  "unsavedDocument": {
+    "title": "저장되지 않은 문서",
+    "message": "이미지를 변경하려면 먼저 문서를 저장하세요.",
+    "messageCopyPath": "이미지 경로를 복사하려면 문서를 저장해야 합니다.",
+    "messageReveal": "이미지를 표시하려면 문서를 저장해야 합니다."
+  },
+  "saveVersionAs": {
+    "title": "버전을 다른 이름으로 저장..."
+  },
+  "chooseFolderForDocs": "새 문서 {{count}}개의 폴더 선택",
+  "toast": {
+    "saveDialogFailed": "저장 대화 상자 실패: {{error}}",
+    "failedToMoveToNewWindow": "파일을 새 창으로 이동하지 못했습니다",
+    "failedToSaveDocuments": "문서를 저장하지 못했습니다",
+    "fileMovedCantDeleteOriginal": "파일이 새 위치에 저장되었지만 원본 파일을 삭제할 수 없습니다",
+    "failedToOpenFile": "파일을 열지 못했습니다: {{error}}",
+    "failedToOpen": "{{filename}}을(를) 열지 못했습니다",
+    "failedToOpenFilesInNewWindow": "새 창에서 파일을 열지 못했습니다",
+    "onlyMarkdownViaDropDrop": "드래그 앤 드롭으로는 마크다운 파일만 열 수 있습니다",
+    "restored": "복원됨: {{filename}}",
+    "reloaded": "다시 불러옴: {{filename}}",
+    "recoveredDocuments": "예기치 않은 종료로부터 문서 {{count}}개를 복구했습니다",
+    "pandocExportFailed": "Pandoc 내보내기 실패",
+    "pandocUnknownFormat": "알 수 없는 내보내기 형식: {{format}}",
+    "pandocNoContent": "내보낼 콘텐츠가 없습니다!",
+    "pandocNotInstalled": "Pandoc이 설치되어 있지 않습니다. pandoc.org에서 설치하세요",
+    "pandocExportSuccess": "성공적으로 내보냈습니다",
+    "pandocExportError": "Pandoc 내보내기 실패: {{error}}",
+    "exportNoContent": "내보낼 콘텐츠가 없습니다!",
+    "exportHtmlSuccess": "폴더로 내보냈습니다",
+    "exportHtmlResourceWarning_one": "리소스 1개를 포함할 수 없습니다",
+    "exportHtmlResourceWarning_other": "리소스 {{count}}개를 포함할 수 없습니다",
+    "printRequiresMac": "인쇄 기능은 macOS가 필요합니다.",
+    "nativePdfRequiresMac": "네이티브 PDF 내보내기는 macOS가 필요합니다. 인쇄를 사용하세요.",
+    "failedToPreparePdf": "PDF 내보내기 준비에 실패했습니다",
+    "noEditorContentToPrint": "인쇄할 편집기 콘텐츠가 없습니다",
+    "failedToOpenPrintDialog": "인쇄 대화 상자를 열지 못했습니다",
+    "htmlCopied": "HTML이 클립보드에 복사되었습니다",
+    "pdfExportSuccess": "PDF 내보내기가 완료되었습니다",
+    "pdfExportFailed": "PDF 내보내기 실패: {{error}}",
+    "cannotMoveTabNoDoc": "탭을 이동할 수 없습니다: 문서가 로드되지 않았습니다.",
+    "cannotMoveLastTab": "메인 창의 마지막 탭은 이동할 수 없습니다.",
+    "tabMoved": "\"{{title}}\"을(를) 새 창으로 이동했습니다",
+    "tabDetached": "\"{{title}}\"을(를) 분리했습니다",
+    "tabMovedToWindow": "\"{{title}}\"을(를) 이동했습니다",
+    "undoTabMoveFailed": "탭 이동 실행 취소에 실패했습니다.",
+    "failedToMoveTabToNewWindow": "탭을 새 창으로 이동하지 못했습니다.",
+    "fileRestoredToDisk": "파일이 디스크에 복원되었습니다.",
+    "failedToRestoreToDisk": "파일을 디스크에 복원하지 못했습니다.",
+    "revertedToSaved": "저장된 버전으로 되돌렸습니다.",
+    "failedToRevert": "저장된 버전으로 되돌리지 못했습니다.",
+    "pathCopied": "경로가 클립보드에 복사되었습니다.",
+    "failedToCopyPath": "경로 복사에 실패했습니다.",
+    "relativePathCopied": "상대 경로가 클립보드에 복사되었습니다.",
+    "failedToCopyRelativePath": "상대 경로 복사에 실패했습니다.",
+    "failedToRevealInFileManager": "파일 관리자에서 파일을 표시하지 못했습니다.",
+    "pathCopiedExplorer": "경로가 클립보드에 복사되었습니다",
+    "failedToOpenWithDefaultApp": "기본 앱으로 \"{{name}}\"을(를) 열지 못했습니다",
+    "terminalNeedsWorkspace": "터미널을 사용하려면 폴더를 열거나 파일을 저장하세요.",
+    "noFormattingActions": "사용 가능한 서식 작업이 없습니다",
+    "genieNotInSourceMode": "소스 모드에서는 지니를 사용할 수 없습니다",
+    "genieNoProvider": "사용 가능한 AI 공급자가 없습니다. 설정에서 구성하세요.",
+    "genieCliNotFound": "{{name}} CLI를 찾을 수 없습니다. 설치하거나 설정에서 다른 공급자를 선택하세요.",
+    "genieApiKeyRequired": "{{name}} API 키가 필요합니다. 설정 → 통합에서 구성하세요.",
+    "updateReady": "v{{version}} 설치 준비 완료",
+    "updateUpToDate": "최신 버전입니다!",
+    "imagePathCopied": "이미지 경로가 클립보드에 복사되었습니다",
+    "failedToChangeImage": "이미지 변경에 실패했습니다.",
+    "failedToCopyImagePath": "이미지 경로 복사에 실패했습니다.",
+    "failedToRevealImage": "Finder에서 이미지를 표시하지 못했습니다."
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "viewFiles": "파일",
+  "viewOutline": "개요",
+  "viewHistory": "기록",
+  "showFiles": "파일 보기",
+  "showOutline": "개요 보기",
+  "showHistory": "기록 보기",
+  "newFile": "새 파일",
+  "newFolder": "새 폴더",
+  "clearDocumentHistory": "문서 기록 지우기",
+  "closeSidebar": "사이드바 닫기",
+  "clearHistoryMessage": "이 문서의 모든 기록을 삭제할까요? 이 작업은 취소할 수 없습니다.",
+  "noWorkspace": "열린 워크스페이스 없음",
+  "loading": "불러오는 중...",
+  "defaultFileName": "제목 없음",
+  "defaultFolderName": "새 폴더",
+  "workspaceFallback": "워크스페이스",
+  "contextMenu": {
+    "open": "열기",
+    "rename": "이름 변경",
+    "duplicate": "복제",
+    "moveTo": "이동...",
+    "delete": "삭제",
+    "copyPath": "경로 복사",
+    "revealInFinder": "Finder에서 보기",
+    "showInExplorer": "탐색기에서 보기",
+    "showInFileManager": "파일 관리자에서 보기"
+  },
+  "outline": {
+    "documentOutline": "문서 개요",
+    "expandSection": "섹션 펼치기",
+    "collapseSection": "섹션 접기",
+    "noHeadings": "제목 없음",
+    "tooLarge": "개요를 표시하기에 문서가 너무 큽니다"
+  },
+  "history": {
+    "saveToEnable": "기록을 활성화하려면 문서를 저장하세요",
+    "disabled": "설정에서 기록이 비활성화되었습니다",
+    "noHistory": "아직 기록 없음",
+    "revertTitle": "이전 버전으로 되돌리기",
+    "revertMessage": "{{time}}의 버전으로 되돌릴까요?\n\n현재 변경 사항은 먼저 새 기록 항목으로 저장됩니다.",
+    "revertButton": "이 버전으로 되돌리기",
+    "deleteSnapshot": "이 스냅샷 삭제"
+  }
+}
