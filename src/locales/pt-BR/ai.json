@@ -1,0 +1,35 @@
+{
+  "picker.ariaLabel": "Assistentes de IA",
+  "picker.searchPlaceholder": "Pesquisar assistentes ou descreva o que deseja...",
+  "picker.loading": "Carregando assistentes...",
+  "picker.empty": "Nenhum assistente encontrado. Adicione arquivos .md ao seu diretório de assistentes.",
+  "picker.noMatch": "Nenhum assistente correspondente.",
+  "picker.freeformHintPrefix": "Pressione",
+  "picker.freeformHintSuffix": "para executar como prompt de IA.",
+  "picker.freeformConfirm": "Pressione Enter novamente para executar como prompt de IA.",
+  "picker.recentlyUsed": "Usados recentemente",
+  "picker.scopeLabel": "escopo: {{scope}}",
+  "picker.via": "via {{name}}",
+  "picker.footerCycleScope": "alternar escopo",
+  "picker.footerNavigate": "navegar",
+
+  "chips.polish": "Polir",
+  "chips.condense": "Condensar",
+  "chips.grammar": "Gramática",
+  "chips.rephrase": "Reformular",
+
+  "response.thinking": "Pensando... {{seconds}}s",
+  "response.accept": "Aceitar",
+  "response.reject": "Rejeitar",
+  "response.retry": "Tentar novamente",
+  "response.cancel": "Cancelar",
+  "response.dismiss": "Dispensar",
+  "response.unknownError": "Erro desconhecido",
+
+  "history.title": "Histórico de prompts",
+  "history.empty": "Sem histórico",
+
+  "provider.sectionCli": "CLI",
+  "provider.sectionApi": "API",
+  "provider.settings": "Configurações..."
+}

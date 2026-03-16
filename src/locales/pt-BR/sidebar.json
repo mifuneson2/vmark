@@ -1,0 +1,45 @@
+{
+  "viewFiles": "ARQUIVOS",
+  "viewOutline": "ESTRUTURA",
+  "viewHistory": "HISTÓRICO",
+  "showFiles": "Mostrar arquivos",
+  "showOutline": "Mostrar estrutura",
+  "showHistory": "Mostrar histórico",
+  "newFile": "Novo arquivo",
+  "newFolder": "Nova pasta",
+  "clearDocumentHistory": "Limpar histórico do documento",
+  "closeSidebar": "Fechar barra lateral",
+  "clearHistoryMessage": "Excluir todo o histórico deste documento? Esta ação não pode ser desfeita.",
+  "noWorkspace": "Nenhum espaço de trabalho aberto",
+  "loading": "Carregando...",
+  "defaultFileName": "Sem título",
+  "defaultFolderName": "Nova pasta",
+  "workspaceFallback": "Espaço de trabalho",
+  "contextMenu": {
+    "open": "Abrir",
+    "rename": "Renomear",
+    "duplicate": "Duplicar",
+    "moveTo": "Mover para...",
+    "delete": "Excluir",
+    "copyPath": "Copiar caminho",
+    "revealInFinder": "Mostrar no Finder",
+    "showInExplorer": "Mostrar no Explorador",
+    "showInFileManager": "Mostrar no gerenciador de arquivos"
+  },
+  "outline": {
+    "documentOutline": "Estrutura do documento",
+    "expandSection": "Expandir seção",
+    "collapseSection": "Recolher seção",
+    "noHeadings": "Sem títulos",
+    "tooLarge": "Documento muito grande para exibir estrutura"
+  },
+  "history": {
+    "saveToEnable": "Salve o documento para ativar o histórico",
+    "disabled": "Histórico desativado nas configurações",
+    "noHistory": "Sem histórico ainda",
+    "revertTitle": "Reverter para versão anterior",
+    "revertMessage": "Reverter para a versão de {{time}}?\n\nSuas alterações atuais serão salvas como uma nova entrada no histórico primeiro.",
+    "revertButton": "Reverter para esta versão",
+    "deleteSnapshot": "Excluir este instantâneo"
+  }
+}
