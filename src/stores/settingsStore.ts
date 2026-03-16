@@ -29,6 +29,7 @@
  * @coordinates-with spawnPty.ts — reads terminal.shell for configured shell preference
  * @coordinates-with settingsTypes.ts — all type/interface definitions live there
  * @coordinates-with src/utils/deepMerge.ts — deep-merge utility for persist migration
+ * @coordinates-with i18n.ts — reads general.language at startup to set UI locale
  * @module stores/settingsStore
  */
 
