@@ -1,9 +1,9 @@
-# VMark 日本語ロケール — Rust側の翻訳可能な文字列のソース。
-# キーは menu.<section>.<item> の規則に従います。
-# 動的メニュー項目（最近のファイル、ジーニー）の構造ラベルもここに含まれます。
+# VMark 日本語ロケール
+# キーの規則: menu.<section>.<item>
+# 動的メニュー項目（最近のファイル、ジーニーなど）の構造ラベルもここに含まれます。
 
 menu:
-  # === Appメニュー（macOSのみ）===
+  # === アプリメニュー（macOSのみ）===
   app: "VMark"
   app.about: "VMark について"
   app.settings: "設定..."
@@ -22,7 +22,7 @@ menu:
   file.close: "閉じる"
   file.closeWorkspace: "ワークスペースを閉じる"
   file.save: "保存"
-  file.saveAs: "名前を付けて保存..."
+  file.saveAs: "名前をつけて保存..."
   file.moveTo: "移動先..."
   file.export: "エクスポート"
   file.export.html: "HTML..."
@@ -34,21 +34,21 @@ menu:
   file.export.pandocOdt: "OpenDocument (.odt)..."
   file.export.pandocRtf: "リッチテキスト (.rtf)..."
   file.export.pandocTxt: "プレーンテキスト (.txt)..."
-  file.export.pandocHint: "Pandocが必要です — pandoc.org"
+  file.export.pandocHint: "Pandoc が必要です — pandoc.org"
   file.export.copyHtml: "HTMLとしてコピー"
   file.docHistory: "ドキュメント履歴"
   file.docHistory.clearWorkspace: "ワークスペース履歴を消去..."
   file.docHistory.clearAll: "すべての履歴を消去..."
   file.print: "印刷..."
 
-  # ファイルメニュー — Windows/Linux追加項目
+  # ファイルメニュー — Windows/Linux の追加項目
   file.saveAllExit: "すべて保存して終了"
   file.exit: "終了"
 
   # === 編集メニュー ===
   edit: "編集"
   edit.undo: "元に戻す"
-  edit.redo: "やり直し"
+  edit.redo: "やり直す"
   edit.find: "検索"
   edit.findReplace: "検索と置換..."
   edit.findNext: "次を検索"
@@ -58,7 +58,7 @@ menu:
   edit.selection.word: "単語を選択"
   edit.selection.line: "行を選択"
   edit.selection.block: "ブロックを選択"
-  edit.selection.expand: "選択範囲を拡張"
+  edit.selection.expand: "選択範囲を拡大"
   edit.lines: "行"
   edit.lines.moveUp: "行を上へ移動"
   edit.lines.moveDown: "行を下へ移動"
@@ -107,15 +107,15 @@ menu:
   format.transform.uppercase: "大文字"
   format.transform.lowercase: "小文字"
   format.transform.titleCase: "タイトルケース"
-  format.transform.toggleCase: "大文字小文字を切り替え"
-  format.transform.toggleQuoteStyle: "クォートスタイルを切り替え"
+  format.transform.toggleCase: "大文字/小文字を切り替え"
+  format.transform.toggleQuoteStyle: "引用符スタイルを切り替え"
   format.cjk: "CJK"
-  format.cjk.selection: "選択範囲を整形"
-  format.cjk.file: "ファイル全体を整形"
+  format.cjk.selection: "選択範囲を書式設定"
+  format.cjk.file: "ファイル全体を書式設定"
   format.cleanup: "テキストのクリーンアップ"
   format.cleanup.trailingSpaces: "末尾スペースを削除"
   format.cleanup.collapseBlankLines: "空白行を折りたたむ"
-  format.cleanup.images: "未使用の画像を削除..."
+  format.cleanup.images: "未使用の画像をクリーンアップ..."
   format.clearFormat: "書式をクリア"
 
   # === 挿入メニュー ===
@@ -142,16 +142,16 @@ menu:
   insert.table.alignAllLeft: "すべて左揃え"
   insert.table.alignAllCenter: "すべて中央揃え"
   insert.table.alignAllRight: "すべて右揃え"
-  insert.table.format: "表を整形"
+  insert.table.format: "表を書式設定"
   insert.codeBlock: "コードブロック"
   insert.mathBlock: "数式ブロック"
-  insert.diagram: "図"
+  insert.diagram: "ダイアグラム"
   insert.mindmap: "マインドマップ"
   insert.horizontalLine: "水平線"
   insert.footnote: "脚注"
   insert.collapsible: "折りたたみブロック"
   insert.infoBox: "情報ボックス"
-  insert.infoBox.note: "ノート"
+  insert.infoBox.note: "注記"
   insert.infoBox.tip: "ヒント"
   insert.infoBox.important: "重要"
   insert.infoBox.warning: "警告"
@@ -166,23 +166,23 @@ menu:
   view.zoomIn: "拡大"
   view.zoomOut: "縮小"
   view.wordWrap: "折り返しの切り替え"
-  view.lineNumbers: "行番号の切り替え"
-  view.diagramPreview: "図プレビューの切り替え"
-  view.fitTables: "表を幅に合わせる"
-  view.outline: "アウトラインの切り替え"
-  view.fileExplorer: "ファイルエクスプローラーの切り替え"
-  view.history: "履歴の切り替え"
-  view.terminal: "ターミナルの切り替え"
+  view.lineNumbers: "行番号の表示切替"
+  view.diagramPreview: "ダイアグラムプレビューの切り替え"
+  view.fitTables: "テーブルを幅に合わせる"
+  view.outline: "アウトラインの表示切替"
+  view.fileExplorer: "ファイルエクスプローラーの表示切替"
+  view.history: "履歴の表示切替"
+  view.terminal: "ターミナルの表示切替"
 
   # === ウィンドウメニュー ===
   window: "ウィンドウ"
-  window.bringAllToFront: "すべてのウィンドウを手前に"
+  window.bringAllToFront: "すべてのウィンドウを前面へ"
 
   # === ヘルプメニュー ===
   help: "ヘルプ"
   help.vmarkHelp: "VMark ヘルプ"
   help.keyboardShortcuts: "キーボードショートカット"
-  help.installCli: "シェルコマンド: PATHに 'vmark' をインストール..."
+  help.installCli: "シェルコマンド: 'vmark' をPATHにインストール..."
   help.reportIssue: "問題を報告..."
 
   # === 動的メニューラベル ===
@@ -191,7 +191,7 @@ menu:
   recentWorkspaces.empty: "最近のワークスペースなし"
   recentWorkspaces.clear: "最近のワークスペースを消去"
   genies: "ジーニー"
-  genies.search: "ジーニーを検索\u2026"
+  genies.search: "ジーニーを検索…"
   genies.empty: "ジーニーなし"
   genies.reload: "ジーニーを再読み込み"
   genies.openFolder: "ジーニーフォルダを開く"
