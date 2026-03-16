@@ -8,6 +8,7 @@
 
 use std::collections::HashMap;
 
+use rust_i18n::t;
 use tauri::menu::{Menu, MenuItem, MenuItemKind, PredefinedMenuItem, Submenu};
 use tauri::AppHandle;
 
@@ -50,7 +51,7 @@ pub fn update_recent_files_menu(app: &AppHandle, files: Vec<String>) -> tauri::R
     // Add file items
     if files.is_empty() {
         let no_recent =
-            MenuItem::with_id(app, "no-recent", "No Recent Files", false, None::<&str>)?;
+            MenuItem::with_id(app, "no-recent", &t!("menu.recentFiles.empty").to_string(), false, None::<&str>)?;
         submenu.append(&no_recent)?;
     } else {
         for (index, path) in files.iter().enumerate() {
@@ -72,7 +73,7 @@ pub fn update_recent_files_menu(app: &AppHandle, files: Vec<String>) -> tauri::R
     let clear_item = MenuItem::with_id(
         app,
         "clear-recent",
-        "Clear Recent Files",
+        &t!("menu.recentFiles.clear").to_string(),
         !files.is_empty(),
         None::<&str>,
     )?;
@@ -116,7 +117,7 @@ pub fn update_recent_workspaces_menu(
         let no_recent = MenuItem::with_id(
             app,
             "no-recent-workspace",
-            "No Recent Workspaces",
+            &t!("menu.recentWorkspaces.empty").to_string(),
             false,
             None::<&str>,
         )?;
@@ -140,7 +141,7 @@ pub fn update_recent_workspaces_menu(
     let clear_item = MenuItem::with_id(
         app,
         "clear-recent-workspaces",
-        "Clear Recent Workspaces",
+        &t!("menu.recentWorkspaces.clear").to_string(),
         !workspaces.is_empty(),
         None::<&str>,
     )?;
@@ -204,7 +205,7 @@ pub fn refresh_genies_menu(
         let sep = PredefinedMenuItem::separator(&app).map_err(|e| e.to_string())?;
         edit_menu.append(&sep).map_err(|e| e.to_string())?;
         let new_sub =
-            Submenu::with_id_and_items(&app, GENIES_SUBMENU_ID, "Genies", true, &[])
+            Submenu::with_id_and_items(&app, GENIES_SUBMENU_ID, &t!("menu.genies").to_string(), true, &[])
                 .map_err(|e| e.to_string())?;
         edit_menu
             .append(&new_sub)
@@ -224,7 +225,7 @@ pub fn refresh_genies_menu(
         None => Some("CmdOrCtrl+Y".to_string()), // no map at all
     };
     let search_item =
-        MenuItem::with_id(&app, "search-genies", "Search Genies\u{2026}", true, accel.as_deref())
+        MenuItem::with_id(&app, "search-genies", &t!("menu.genies.search").to_string(), true, accel.as_deref())
             .map_err(|e| e.to_string())?;
     submenu
         .append(&search_item)
@@ -234,7 +235,7 @@ pub fn refresh_genies_menu(
 
     if global_entries.is_empty() {
         let no_genies =
-            MenuItem::with_id(&app, "no-genies", "No Genies", false, None::<&str>)
+            MenuItem::with_id(&app, "no-genies", &t!("menu.genies.empty").to_string(), false, None::<&str>)
                 .map_err(|e| e.to_string())?;
         submenu
             .append(&no_genies)
@@ -249,7 +250,7 @@ pub fn refresh_genies_menu(
 
     // Reload Genies
     let reload =
-        MenuItem::with_id(&app, "reload-genies", "Reload Genies", true, None::<&str>)
+        MenuItem::with_id(&app, "reload-genies", &t!("menu.genies.reload").to_string(), true, None::<&str>)
             .map_err(|e| e.to_string())?;
     submenu.append(&reload).map_err(|e| e.to_string())?;
 
@@ -257,7 +258,7 @@ pub fn refresh_genies_menu(
     let open_folder = MenuItem::with_id(
         &app,
         "open-genies-folder",
-        "Open Genies Folder",
+        &t!("menu.genies.openFolder").to_string(),
         true,
         None::<&str>,
     )
