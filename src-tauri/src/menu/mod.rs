@@ -1,13 +1,16 @@
 //! # Application Menu
 //!
-//! Purpose: Builds the native application menu bar with keyboard accelerators.
+//! Purpose: Builds the native application menu bar with localized labels and
+//! keyboard accelerators, using `rust-i18n` for translation.
 //!
-//! Pipeline: `lib.rs` setup -> `create_menu()` -> Tauri `app.set_menu()`.
-//! When user customizes shortcuts: frontend `rebuild_menu` invoke -> `create_menu_with_shortcuts()`.
+//! Pipeline: `lib.rs` setup -> `localized::create_localized_menu()` -> Tauri `app.set_menu()`.
+//! When user customizes shortcuts or changes locale: frontend `rebuild_menu` invoke
+//!   -> `localized::create_localized_menu()` with custom shortcuts.
 //!
 //! Key decisions:
-//!   - TWO menu creation functions exist: `create_menu` (defaults) and
-//!     `create_menu_with_shortcuts` (custom). Both MUST be updated in sync.
+//!   - A single `create_localized_menu()` function handles both default and custom
+//!     shortcuts via an `Option<&HashMap>` parameter.
+//!   - All menu labels use `t!()` macro from `rust-i18n` for i18n support.
 //!   - Recent files/workspaces and genies use snapshot Mutexes so menu-click
 //!     handlers always resolve the correct path even if the store changed.
 //!   - Genies submenu is created dynamically inside Edit (not at build time)
@@ -20,10 +23,9 @@
 //! @coordinates-with `menu_events.rs` (dispatches click events to frontend)
 //! @coordinates-with `macos_menu.rs` (applies SF Symbol icons and workarounds)
 //! @coordinates-with `lib.rs` (registers Tauri commands and builds initial menu)
+//! @coordinates-with `locales/en.yml` (English locale strings)
 
 mod commands;
-mod custom_menu;
-mod default_menu;
 mod dynamic;
 pub mod localized;
 
@@ -79,7 +81,6 @@ pub fn get_genie_path(index: usize) -> Option<String> {
 // Wildcard re-exports are required for `#[tauri::command]` functions because the macro
 // generates hidden items (`__cmd__*`) that `generate_handler!` in `lib.rs` must resolve.
 pub use commands::*;
-pub use default_menu::create_menu;
 pub use dynamic::*;
 // Wildcard re-export required: `#[tauri::command]` generates hidden `__cmd__*` items
 // that `generate_handler!` in `lib.rs` must resolve.
