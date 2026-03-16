@@ -5,6 +5,7 @@
  * Only available in workspace mode — shows markdown files (and optionally all files via
  * showAllFiles config) with drag-and-drop, rename, delete, and context menu operations.
  * Non-markdown files open with the system default app.
+ * User-visible strings are translated via the "sidebar" i18n namespace.
  *
  * User interactions:
  *   - Double-click or Enter to open a file in a tab

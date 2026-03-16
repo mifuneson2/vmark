@@ -3,6 +3,7 @@
  *
  * Purpose: macOS-style right-click context menu for the file explorer. Shows different
  * actions depending on whether the user clicked a file, folder, or empty area.
+ * All user-visible labels are translated via the "sidebar" i18n namespace.
  *
  * User interactions: Click to execute action, Escape or click-outside to close.
  * Automatically adjusts position to stay within viewport bounds.
