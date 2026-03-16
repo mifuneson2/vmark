@@ -1,0 +1,215 @@
+# Popups Inline
+
+O VMark fornece popups contextuais para editar links, imagens, mídia, matemática, rodapés e mais. Esses popups funcionam nos modos WYSIWYG e Fonte com navegação por teclado consistente.
+
+## Atalhos de Teclado Comuns
+
+Todos os popups compartilham estes comportamentos de teclado:
+
+| Ação | Atalho |
+|------|--------|
+| Fechar/Cancelar | `Escape` |
+| Confirmar/Salvar | `Enter` |
+| Navegar campos | `Tab` / `Shift + Tab` |
+
+## Dica e Popup de Link
+
+O VMark usa um sistema de dois níveis para links: uma dica somente leitura ao passar o mouse, e um popup de edição via atalho de teclado.
+
+### Dica ao Passar o Mouse (Somente Leitura)
+
+**Ativação:** Passar o mouse sobre o link (atraso de 300ms)
+
+**Mostra:**
+- **Prévia da URL** — URL truncada com URL completa ao passar o mouse
+- **Botão Abrir** — Abre o link no navegador (ou vai para o título para `#favoritos`)
+
+**Comportamento:** Somente visualização. Afaste o mouse para dispensar.
+
+### Editar Link Existente
+
+**Ativação:** Posicionar cursor no link + `Mod + K`
+
+**Campos:**
+- **URL** — Editar o destino do link
+- **Abrir** — Abrir link no navegador
+- **Copiar** — Copiar URL para a área de transferência
+- **Excluir** — Remover link, manter texto
+
+### Criar Novo Link
+
+**Ativação:** Selecionar texto + `Mod + K`
+
+**Área de transferência inteligente:** Se a sua área de transferência contiver uma URL, ela é preenchida automaticamente.
+
+**Campos:**
+- **Entrada de URL** — Inserir destino
+- **Confirmar** — Pressione Enter ou clique em ✓
+- **Cancelar** — Pressione Escape ou clique em ✗
+
+### Modo Fonte
+
+- **`Cmd + Clique`** no link → abre no navegador
+- **Clique** na sintaxe `[texto](url)` → mostra popup de edição
+- **`Mod + K`** dentro do link → mostra popup de edição
+
+::: tip Links de Favorito
+Links que começam com `#` são tratados como favoritos (links de títulos internos). Abrir vai para o título em vez de abrir um navegador.
+:::
+
+## Popup de Mídia (Imagens, Vídeo, Áudio)
+
+Um popup unificado para editar todos os tipos de mídia — imagens, vídeo e áudio.
+
+### Popup de Edição
+
+**Ativação:** Duplo clique em qualquer elemento de mídia (imagem, vídeo ou áudio)
+
+**Campos comuns (todos os tipos de mídia):**
+- **Fonte** — Caminho do arquivo ou URL
+
+**Campos específicos por tipo:**
+
+| Campo | Imagem | Vídeo | Áudio |
+|-------|--------|-------|-------|
+| Texto alternativo | Sim | — | — |
+| Título | — | Sim | Sim |
+| Pôster | — | Sim | — |
+| Dimensões | Somente leitura | — | — |
+| Alternância Inline/Bloco | Sim | — | — |
+
+**Botões:**
+- **Navegar** — Escolher arquivo do sistema de arquivos
+- **Copiar** — Copiar caminho da fonte para a área de transferência
+- **Excluir** — Remover o elemento de mídia
+
+**Atalhos:**
+- `Mod + Shift + I` — Inserir nova imagem
+- `Enter` — Salvar alterações
+- `Escape` — Fechar popup
+
+### Modo Fonte
+
+No modo Fonte, clicar na sintaxe de imagem `![alt](caminho)` abre o mesmo popup de mídia. Arquivos de mídia (extensões de vídeo/áudio) mostram uma prévia flutuante com controles nativos de reprodução ao passar o mouse.
+
+## Popup de Matemática
+
+Edite expressões LaTeX com prévia ao vivo.
+
+**Ativação:**
+- **WYSIWYG:** Clique em matemática inline `$...$`
+
+**Campos:**
+- **Entrada LaTeX** — Editar a expressão matemática
+- **Prévia** — Prévia renderizada em tempo real
+- **Exibição de Erros** — Mostra erros LaTeX com dicas de sintaxe úteis
+
+**Atalhos:**
+- `Mod + Enter` — Salvar e fechar
+- `Escape` — Cancelar e fechar
+- `Shift + Backspace` — Excluir matemática inline (funciona mesmo quando não vazia)
+- `Alt + Mod + M` — Inserir nova matemática inline
+
+::: tip Dicas de Erro
+Quando você tem um erro de sintaxe LaTeX, o popup mostra sugestões úteis como chaves faltando, comandos desconhecidos ou delimitadores desbalanceados.
+:::
+
+::: info Modo Fonte
+No modo Fonte, edite a matemática diretamente no texto. A prévia aparece no painel de prévia Mermaid/Matemática.
+:::
+
+## Popup de Rodapé
+
+Edite o conteúdo de rodapé inline.
+
+**Ativação:**
+- **WYSIWYG:** Passar o mouse sobre a referência de rodapé `[^1]`
+
+**Campos:**
+- **Conteúdo** — Texto de rodapé em múltiplas linhas (redimensionamento automático)
+- **Ir para Definição** — Saltar para a definição do rodapé
+- **Excluir** — Remover rodapé
+
+**Comportamento:**
+- Novos rodapés focam automaticamente o campo de conteúdo
+- A área de texto se expande conforme você digita
+
+## Popup de Link Wiki
+
+Edite links no estilo wiki para conexões internas de documentos.
+
+**Ativação:**
+- **WYSIWYG:** Passar o mouse sobre `[[alvo]]` (atraso de 300ms)
+- **Fonte:** Clicar na sintaxe de link wiki
+
+**Campos:**
+- **Alvo** — Caminho relativo à área de trabalho (extensão `.md` tratada automaticamente)
+- **Navegar** — Escolher arquivo da área de trabalho
+- **Abrir** — Abrir documento vinculado
+- **Copiar** — Copiar caminho de destino
+- **Excluir** — Remover link wiki
+
+## Menu de Contexto de Tabela
+
+Ações rápidas de edição de tabelas.
+
+**Ativação:**
+- **WYSIWYG:** Use a barra de ferramentas ou atalhos de teclado
+- **Fonte:** Clique com o botão direito na célula da tabela
+
+**Ações:**
+| Ação | Descrição |
+|------|-----------|
+| Inserir Linha Acima/Abaixo | Adicionar linha no cursor |
+| Inserir Coluna à Esquerda/Direita | Adicionar coluna no cursor |
+| Excluir Linha | Remover linha atual |
+| Excluir Coluna | Remover coluna atual |
+| Excluir Tabela | Remover tabela inteira |
+| Alinhar Coluna à Esquerda/Centro/Direita | Definir alinhamento para a coluna atual |
+| Alinhar Todas à Esquerda/Centro/Direita | Definir alinhamento para todas as colunas |
+| Formatar Tabela | Alinhar automaticamente as colunas da tabela (embelezar markdown) |
+
+## Popup de Verificação Ortográfica
+
+Corrija erros de ortografia com sugestões.
+
+**Ativação:**
+- Clique com o botão direito na palavra com erro de ortografia (sublinhado vermelho)
+
+**Ações:**
+- **Sugestões** — Clique para substituir pela sugestão
+- **Adicionar ao Dicionário** — Parar de marcar como erro ortográfico
+
+## Comparação de Modos
+
+| Elemento | Edição WYSIWYG | Fonte |
+|----------|----------------|-------|
+| Link | Dica ao passar / `Mod+K` | Clique / `Mod+K` / `Cmd+Clique` para abrir |
+| Imagem | Duplo clique | Clique em `![](caminho)` |
+| Vídeo | Duplo clique | — |
+| Áudio | Duplo clique | — |
+| Matemática | Clique | Edição direta |
+| Rodapé | Passar mouse | Edição direta |
+| Link Wiki | Passar mouse | Clique |
+| Tabela | Barra de ferramentas | Menu de contexto |
+| Verificação Ortográfica | Clique direito | Clique direito |
+
+## Dicas de Navegação em Popups
+
+### Fluxo de Foco
+1. O popup abre com o primeiro campo em foco
+2. `Tab` avança pelos campos e botões
+3. `Shift + Tab` volta
+4. O foco envolve dentro do popup
+
+### Edição Rápida
+- Para alterações simples de URL: edite e pressione `Enter`
+- Para cancelar: pressione `Escape` em qualquer campo
+- Para conteúdo de múltiplas linhas (rodapés, matemática): use `Mod + Enter` para salvar
+
+### Comportamento do Mouse
+- Clique fora do popup para fechar (as alterações são descartadas)
+- Popups de hover (link, rodapé, wiki) têm atraso de 300ms antes de aparecerem
+- Mover o mouse de volta para o popup mantém-no aberto
+
+<!-- Styles in style.css -->
