@@ -78,9 +78,11 @@ import { syntaxHighlighting } from "@codemirror/language";
 async function flushCMInit(): Promise<void> {
   // Lazy-loaded modules resolve via Promise.all inside loadCMModules,
   // then initCMEditor continues after that. Need multiple microtask
-  // ticks for the full async chain to settle.
-  await new Promise((r) => setTimeout(r, 0));
-  await new Promise((r) => setTimeout(r, 0));
+  // ticks for the full async chain to settle. Three ticks needed to
+  // reliably cover: import resolution → Promise.all → async continuation.
+  for (let i = 0; i < 3; i++) {
+    await new Promise((r) => setTimeout(r, 0));
+  }
 }
 
 // ---------------------------------------------------------------------------
