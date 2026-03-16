@@ -23,6 +23,11 @@ import { useLintStore } from "@/stores/lintStore";
 import { getActiveDocument, getActiveTabId } from "@/utils/activeDocument";
 import { toast } from "sonner";
 import i18n from "@/i18n";
+import { useActiveEditorStore } from "@/stores/activeEditorStore";
+import { useTiptapEditorStore } from "@/stores/tiptapEditorStore";
+import { serializeMarkdown } from "@/utils/markdownPipeline";
+import { triggerLintRefresh } from "@/plugins/codemirror/sourceLint";
+import { scrollToSelectedDiagnostic } from "@/utils/lintNavigation";
 
 const DEFAULT_FONT_SIZE = 18;
 const MIN_FONT_SIZE = 12;
@@ -161,9 +166,32 @@ export function useViewMenuEvents(): void {
         const lintEnabled = useSettingsStore.getState().markdown.lintEnabled;
         if (!lintEnabled) return;
         const tabId = getActiveTabId(windowLabel);
-        const doc = getActiveDocument(windowLabel);
-        if (tabId && doc) {
-          const diagnostics = useLintStore.getState().runLint(tabId, doc.content);
+        if (!tabId) return;
+
+        // Prefer fresh content from the active editor over potentially stale doc store.
+        // In Source mode: read from CM view. In WYSIWYG mode: serialize Tiptap content.
+        let content: string | undefined;
+        const editorState = useEditorStore.getState();
+        const { activeSourceView } = useActiveEditorStore.getState();
+
+        if (editorState.sourceMode && activeSourceView) {
+          content = activeSourceView.state.doc.toString();
+        } else {
+          const tiptapEditor = useTiptapEditorStore.getState().editor;
+          if (tiptapEditor) {
+            content = serializeMarkdown(tiptapEditor.state.schema, tiptapEditor.state.doc);
+          }
+        }
+
+        // Fall back to persisted doc content if live content unavailable
+        if (content === undefined) {
+          const doc = getActiveDocument(windowLabel);
+          content = doc?.content;
+        }
+
+        if (content !== undefined) {
+          const diagnostics = useLintStore.getState().runLint(tabId, content);
+          triggerLintRefresh();
           if (diagnostics.length === 0) {
             toast.success(i18n.t("statusbar:lint.clean.toast"));
           }
@@ -178,6 +206,7 @@ export function useViewMenuEvents(): void {
         const tabId = getActiveTabId(windowLabel);
         if (tabId) {
           useLintStore.getState().selectNext(tabId);
+          scrollToSelectedDiagnostic(tabId);
         }
       });
       if (cancelled) { unlistenLintNext(); return; }
@@ -189,6 +218,7 @@ export function useViewMenuEvents(): void {
         const tabId = getActiveTabId(windowLabel);
         if (tabId) {
           useLintStore.getState().selectPrev(tabId);
+          scrollToSelectedDiagnostic(tabId);
         }
       });
       if (cancelled) { unlistenLintPrev(); return; }

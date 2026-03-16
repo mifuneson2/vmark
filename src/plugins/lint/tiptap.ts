@@ -96,22 +96,30 @@ export const LintExtension = Extension.create<LintExtensionOptions>({
       new Plugin({
         key: lintPluginKey,
 
-        view: (view) => {
+        view: (editorView) => {
+          let destroyed = false;
           // Re-decorate when diagnostics arrive from runLint (plain subscribe, manual diff)
           let prevDiagnostics = useLintStore.getState().diagnosticsByTab[tabId];
           const unsubscribe = useLintStore.subscribe((state) => {
+            if (destroyed) return;
             const nextDiagnostics = state.diagnosticsByTab[tabId];
             if (nextDiagnostics !== prevDiagnostics) {
               prevDiagnostics = nextDiagnostics;
-              runOrQueueProseMirrorAction(view, () => {
-                view.dispatch(
-                  view.state.tr.setMeta(lintPluginKey, "diagnosticsChanged")
+              runOrQueueProseMirrorAction(editorView, () => {
+                if (destroyed) return;
+                editorView.dispatch(
+                  editorView.state.tr.setMeta(lintPluginKey, "diagnosticsChanged")
                 );
               });
             }
           });
 
-          return { destroy: () => unsubscribe() };
+          return {
+            destroy: () => {
+              destroyed = true;
+              unsubscribe();
+            },
+          };
         },
 
         state: {

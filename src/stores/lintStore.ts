@@ -14,8 +14,8 @@ interface LintState {
   diagnosticsByTab: Record<string, LintDiagnostic[]>;
   /** Source hash per tab to detect stale results */
   sourceHashByTab: Record<string, string>;
-  /** Currently selected diagnostic index for navigation */
-  selectedIndex: number;
+  /** Currently selected diagnostic index per tab for navigation */
+  selectedIndexByTab: Record<string, number>;
 }
 
 interface LintActions {
@@ -39,10 +39,10 @@ function simpleHash(s: string): string {
   return h.toString(36);
 }
 
-export const useLintStore = create<LintState & LintActions>((set, get) => ({
+export const useLintStore = create<LintState & LintActions>((set) => ({
   diagnosticsByTab: {},
   sourceHashByTab: {},
-  selectedIndex: 0,
+  selectedIndexByTab: {},
 
   runLint: (tabId, source) => {
     const hash = simpleHash(source);
@@ -51,7 +51,7 @@ export const useLintStore = create<LintState & LintActions>((set, get) => ({
     set((state) => ({
       diagnosticsByTab: { ...state.diagnosticsByTab, [tabId]: diagnostics },
       sourceHashByTab: { ...state.sourceHashByTab, [tabId]: hash },
-      selectedIndex: 0,
+      selectedIndexByTab: { ...state.selectedIndexByTab, [tabId]: 0 },
     }));
 
     return diagnostics;
@@ -61,34 +61,44 @@ export const useLintStore = create<LintState & LintActions>((set, get) => ({
     set((state) => {
       const { [tabId]: _, ...rest } = state.diagnosticsByTab;
       const { [tabId]: __, ...hashRest } = state.sourceHashByTab;
+      const { [tabId]: ___, ...indexRest } = state.selectedIndexByTab;
       return {
         diagnosticsByTab: rest,
         sourceHashByTab: hashRest,
-        selectedIndex: 0,
+        selectedIndexByTab: indexRest,
       };
     });
   },
 
   clearAllDiagnostics: () => {
-    set({ diagnosticsByTab: {}, sourceHashByTab: {}, selectedIndex: 0 });
+    set({ diagnosticsByTab: {}, sourceHashByTab: {}, selectedIndexByTab: {} });
   },
 
   selectNext: (tabId) => {
-    const diagnostics = get().diagnosticsByTab[tabId];
-    if (!diagnostics || diagnostics.length === 0) return;
-    set((state) => ({
-      selectedIndex: (state.selectedIndex + 1) % diagnostics.length,
-    }));
+    set((state) => {
+      const diagnostics = state.diagnosticsByTab[tabId];
+      if (!diagnostics || diagnostics.length === 0) return state;
+      const current = state.selectedIndexByTab[tabId] ?? 0;
+      return {
+        selectedIndexByTab: {
+          ...state.selectedIndexByTab,
+          [tabId]: (current + 1) % diagnostics.length,
+        },
+      };
+    });
   },
 
   selectPrev: (tabId) => {
-    const diagnostics = get().diagnosticsByTab[tabId];
-    if (!diagnostics || diagnostics.length === 0) return;
-    set((state) => ({
-      selectedIndex:
-        state.selectedIndex <= 0
-          ? diagnostics.length - 1
-          : state.selectedIndex - 1,
-    }));
+    set((state) => {
+      const diagnostics = state.diagnosticsByTab[tabId];
+      if (!diagnostics || diagnostics.length === 0) return state;
+      const current = state.selectedIndexByTab[tabId] ?? 0;
+      return {
+        selectedIndexByTab: {
+          ...state.selectedIndexByTab,
+          [tabId]: current <= 0 ? diagnostics.length - 1 : current - 1,
+        },
+      };
+    });
   },
 }));

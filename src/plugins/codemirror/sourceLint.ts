@@ -69,10 +69,11 @@ export function createSourceLintExtension(tabId: string) {
  * Force the active CodeMirror source view to re-run its linter immediately.
  * Call this after runLint() to surface new diagnostics without waiting for
  * the next document change event.
+ * Guards against calling forceLinting on a destroyed view (dom not connected).
  */
 export function triggerLintRefresh(): void {
   const view = useActiveEditorStore.getState().activeSourceView;
-  if (view) {
+  if (view && view.dom?.isConnected) {
     forceLinting(view);
   }
 }

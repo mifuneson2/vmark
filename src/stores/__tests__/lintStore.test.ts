@@ -52,31 +52,40 @@ describe("lintStore", () => {
       useLintStore.getState().selectNext("tab-1");
     }
     // Should wrap to 0
-    expect(useLintStore.getState().selectedIndex).toBe(0);
+    expect(useLintStore.getState().selectedIndexByTab["tab-1"]).toBe(0);
   });
 
   it("selectPrev wraps to last from index 0", () => {
     useLintStore.getState().runLint("tab-1", "# Title\n\n### Skip\n\n![](img.png)");
     const count = useLintStore.getState().diagnosticsByTab["tab-1"]!.length;
-    // selectedIndex starts at 0, selectPrev should wrap to last
+    // selectedIndexByTab starts at 0, selectPrev should wrap to last
     useLintStore.getState().selectPrev("tab-1");
-    expect(useLintStore.getState().selectedIndex).toBe(count - 1);
+    expect(useLintStore.getState().selectedIndexByTab["tab-1"]).toBe(count - 1);
   });
 
   it("selectNext/Prev with no diagnostics is a no-op", () => {
     useLintStore.getState().selectNext("nonexistent");
-    expect(useLintStore.getState().selectedIndex).toBe(0);
+    expect(useLintStore.getState().selectedIndexByTab["nonexistent"]).toBeUndefined();
     useLintStore.getState().selectPrev("nonexistent");
-    expect(useLintStore.getState().selectedIndex).toBe(0);
+    expect(useLintStore.getState().selectedIndexByTab["nonexistent"]).toBeUndefined();
   });
 
-  it("resets selectedIndex when running lint on new content", () => {
+  it("resets selectedIndexByTab when running lint on new content", () => {
     useLintStore.getState().runLint("tab-1", "# Title\n\n### Skip\n\n![](img.png)");
     // Move to index 1
     useLintStore.getState().selectNext("tab-1");
-    expect(useLintStore.getState().selectedIndex).toBe(1);
+    expect(useLintStore.getState().selectedIndexByTab["tab-1"]).toBe(1);
     // Re-run lint resets index to 0
     useLintStore.getState().runLint("tab-1", "# Title\n\n### Skip");
-    expect(useLintStore.getState().selectedIndex).toBe(0);
+    expect(useLintStore.getState().selectedIndexByTab["tab-1"]).toBe(0);
+  });
+
+  it("selectedIndexByTab is independent across tabs", () => {
+    useLintStore.getState().runLint("tab-1", "# Title\n\n### Skip\n\n![](img.png)");
+    useLintStore.getState().runLint("tab-2", "# Title\n\n### Skip\n\n![](img.png)");
+    // Advance tab-1 once; tab-2 should remain at 0
+    useLintStore.getState().selectNext("tab-1");
+    expect(useLintStore.getState().selectedIndexByTab["tab-1"]).toBe(1);
+    expect(useLintStore.getState().selectedIndexByTab["tab-2"]).toBe(0);
   });
 });

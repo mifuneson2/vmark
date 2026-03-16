@@ -48,13 +48,16 @@ export function Editor() {
   const htmlRenderingMode = useSettingsStore((s) => s.markdown.htmlRenderingMode);
   const tableFitToWidth = useSettingsStore((s) => s.markdown.tableFitToWidth);
   const keepAlive = useSettingsStore((s) => s.advanced.keepBothEditorsAlive);
+  const lintEnabled = useSettingsStore((s) => s.markdown.lintEnabled);
 
   // Mount unified menu dispatcher (handles routing based on mode)
   useUnifiedMenuCommands();
 
-  // Include tabId in key to ensure editor remounts when switching tabs
-  // documentId handles content reloads within the same tab
-  const editorKey = `${tabId}-doc-${documentId}`;
+  // Include tabId in key to ensure editor remounts when switching tabs.
+  // documentId handles content reloads within the same tab.
+  // lintEnabled is captured at editor mount; remount when it changes so the
+  // lint extension is included or excluded correctly.
+  const editorKey = `${tabId}-doc-${documentId}-lint-${lintEnabled}`;
   /* v8 ignore next -- @preserve tableFitToWidth conditional class appended at runtime */
   const containerClass = `editor-container media-border-${mediaBorderStyle} media-align-${mediaAlignment} heading-align-${headingAlignment}${tableFitToWidth ? " table-fit-to-width" : ""}`;
   /* v8 ignore next -- @preserve sourceMode ternary branches require mode toggle */
