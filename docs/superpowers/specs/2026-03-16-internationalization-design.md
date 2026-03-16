@@ -121,10 +121,16 @@ import { initReactI18next } from 'react-i18next';
 import resourcesToBackend from 'i18next-resources-to-backend';
 import { useSettingsStore } from '@/stores/settingsStore';
 
+// Build a lookup table from Vite's import.meta.glob (supports two variable segments)
+const localeModules = import.meta.glob('./locales/*/*.json');
+
 i18n
   .use(initReactI18next)
   .use(resourcesToBackend(
-    (lng: string, ns: string) => import(`./locales/${lng}/${ns}.json`)
+    (lng: string, ns: string) => {
+      const key = `./locales/${lng}/${ns}.json`;
+      return localeModules[key]?.() ?? Promise.reject(new Error(`Missing: ${key}`));
+    }
   ))
   .init({
     lng: useSettingsStore.getState().general.language,
@@ -216,7 +222,10 @@ Language dropdown in Settings with 10 options. On change:
 1. `useSettingsStore.getState().setLanguage(lang)` — persist to settings
 2. `i18n.changeLanguage(lang)` — React re-renders automatically
 3. `invoke("set_locale", { locale: lang })` — notify Rust
-4. Rust: `rust_i18n::set_locale(&lang)` + `app.set_menu(create_localized_menu(app))?`
+4. Rust: `rust_i18n::set_locale(&lang)` + rebuild menu
+5. Frontend: after Rust returns, re-trigger `rebuild_menu` with current custom shortcuts to repopulate recent files, workspaces, and genies (same flow as current shortcut customization)
+
+**Important coordination**: Shortcuts are owned by the frontend (`shortcutsStore.ts`), not Rust. The `set_locale` command changes the locale and rebuilds the menu skeleton, but the frontend must then call `rebuild_menu` (existing command) to push the current shortcuts and repopulate dynamic submenus (recent files, workspaces, genies). This is the same pattern already used when shortcuts are customized.
 
 No restart required — Tauri v2 supports `app.set_menu()` at runtime.
 
@@ -232,8 +241,9 @@ All of these break when menus use translated titles.
 
 **Required migration:**
 - `MENU_ICONS`: Map from menu item **ID** (e.g., `"about"`, `"save-file"`) to SF Symbol, not from title
-- `fix_help_menu()` / `fix_window_menu()`: Find submenus by ID, not by title string
+- `fix_help_menu()` / `fix_window_menu()`: These walk native `NSMenu` objects where Tauri submenu IDs are not directly exposed. Two approaches: (a) assign Tauri submenu IDs (e.g., `"help-menu"`, `"window-menu"`) and use muda's submenu-by-ID API on the Rust side to find them before the AppKit call, or (b) use muda's special Help/Window submenu registration APIs if available in the shipped muda version. Verify against the exact muda version in `Cargo.lock`.
 - `submenu_title_to_id()`: Remove — no longer needed when submenus have IDs
+- `find_edit_submenu()` in `dynamic.rs`: Currently matches by English title `"Edit"` (line 156). Must also migrate to ID-based lookup. **All runtime submenu lookups across the codebase** — not just `macos_menu.rs` — must use stable IDs. Audit: `grep -rn 'text().ok().as_deref()' src-tauri/src/menu/` to find all title-based lookups.
 
 This migration must happen before any menu translation.
 
@@ -372,9 +382,10 @@ The AI translation script lives at `scripts/translate.ts` and supports:
 
 ### 3.10 CI Integration
 
-- **Missing keys**: Script compares each language's keys against `en/*.json` — missing key = build warning, extra key = warning
-- **Type safety**: `@i18next/cli` generates TypeScript types for `t()` — compile-time key validation
-- **Rust check**: `cargo check` catches typos in `t!()` macro keys at compile time
+- **Missing keys (React)**: Script compares each language's JSON keys against `en/*.json` — missing key = build warning, extra key = warning
+- **Type safety (React)**: `@i18next/cli` generates TypeScript types for `t()` — compile-time key validation
+- **Missing keys (Rust)**: Separate script compares each language's YAML keys against `en.yml`. **Note:** `cargo check` does NOT validate `t!()` keys at compile time — `rust-i18n` resolves keys at runtime. The explicit completeness check script is the only protection against typos in Rust translation keys.
+- **Website build**: Add `cd website && pnpm build` to the CI gate (current `pnpm check:all` only covers the app, not the website). Without this, broken translations in 270 pages would ship unnoticed.
 
 ### 3.11 Migration Strategy
 
@@ -552,15 +563,28 @@ export default withMermaid(defineConfig({
 
 Page count reflects the current file system as of 2026-03-16. New pages added before implementation should be included in the translation scope.
 
-### 4.5 Translation Workflow
+### 4.5 Cross-Locale Link Rewriting
+
+**CRITICAL**: English pages contain absolute root links (e.g., `/guide/features`, `/guide/export#vmark-reader`). When these pages are copied into `/{lang}/` directories, the links still point to the English root, leaking users back to English.
+
+**Solution**: The AI translation script must rewrite internal links during translation:
+- `/guide/features` → `/{lang}/guide/features`
+- `/guide/export#vmark-reader` → `/{lang}/guide/export#vmark-reader`
+- `/download` → `/{lang}/download`
+- External URLs (https://...) remain unchanged
+
+Alternatively, use VitePress relative links (`./features.md`, `../download.md`) which resolve correctly regardless of locale directory. Convert existing absolute links to relative during the translation pass.
+
+### 4.6 Translation Workflow
 
 1. AI-translate all 30 English pages per language using Claude API
 2. Each page is ~500-3,000 words — ~35,000 words total English
 3. Total translation volume: ~315,000 words across 9 languages
 4. Technical pages maintain English code snippets/shortcuts (only prose is translated)
 5. Screenshots referenced by path stay the same (English screenshots initially — localized screenshots later if needed)
+6. Internal links are rewritten to locale-prefixed paths (see 4.5)
 
-### 4.6 VitePress UI Labels
+### 4.7 VitePress UI Labels
 
 Each locale config translates VitePress's built-in UI labels:
 
@@ -579,15 +603,28 @@ export const ja = {
     darkModeSwitchLabel: 'テーマ',
     sidebarMenuLabel: 'メニュー',
     returnToTopLabel: 'トップに戻る',
-    search: { provider: 'local', options: { translations: {
-      button: { buttonText: '検索', buttonAriaLabel: '検索' },
-      modal: { noResultsText: '結果が見つかりません' },
-    }}},
+    search: {
+      options: {
+        locales: {
+          ja: {
+            translations: {
+              button: { buttonText: '検索', buttonAriaLabel: '検索' },
+              modal: {
+                displayDetails: '詳細を表示',
+                resetButtonTitle: 'リセット',
+                noResultsText: '結果が見つかりません',
+                footer: { selectText: '選択', navigateText: '移動', closeText: '閉じる' },
+              },
+            },
+          },
+        },
+      },
+    },
   },
 };
 ```
 
-### 4.7 Language Switcher
+### 4.8 Language Switcher
 
 VitePress automatically renders a language switcher dropdown in the nav bar when `locales` is configured with multiple entries. No custom component needed.
 
