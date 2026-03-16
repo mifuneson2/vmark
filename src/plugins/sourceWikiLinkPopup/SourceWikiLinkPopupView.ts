@@ -7,6 +7,7 @@
 
 import type { EditorView } from "@codemirror/view";
 import { open } from "@tauri-apps/plugin-dialog";
+import i18n from "@/i18n";
 import { SourcePopupView, type StoreApi } from "@/plugins/sourcePopup";
 import { useWikiLinkPopupStore } from "@/stores/wikiLinkPopupStore";
 import { useWorkspaceStore } from "@/stores/workspaceStore";
@@ -67,16 +68,16 @@ export class SourceWikiLinkPopupView extends SourcePopupView<WikiLinkPopupStoreS
     this.targetInput = document.createElement("input");
     this.targetInput.type = "text";
     this.targetInput.className = "source-wiki-link-popup-target";
-    this.targetInput.placeholder = "Target page...";
+    this.targetInput.placeholder = i18n.t("editor:popup.sourceWikiLink.target.placeholder");
     this.targetInput.addEventListener("keydown", this.handleInputKeydown.bind(this));
     this.targetInput.addEventListener("input", this.handleTargetInput.bind(this));
 
     // Icon buttons: browse, open, copy, delete
-    const browseBtn = this.buildIconButton(popupIcons.folder, "Browse for file", this.handleBrowse.bind(this));
-    this.openBtn = this.buildIconButton(popupIcons.open, "Open linked file", this.handleOpen.bind(this));
+    const browseBtn = this.buildIconButton(popupIcons.folder, i18n.t("editor:popup.sourceWikiLink.browse"), this.handleBrowse.bind(this));
+    this.openBtn = this.buildIconButton(popupIcons.open, i18n.t("editor:popup.sourceWikiLink.open"), this.handleOpen.bind(this));
     this.openBtn.classList.add("source-wiki-link-popup-btn-open");
-    const copyBtn = this.buildIconButton(popupIcons.copy, "Copy target", this.handleCopy.bind(this));
-    const deleteBtn = this.buildIconButton(popupIcons.delete, "Remove wiki link", this.handleRemove.bind(this));
+    const copyBtn = this.buildIconButton(popupIcons.copy, i18n.t("editor:popup.sourceWikiLink.copy"), this.handleCopy.bind(this));
+    const deleteBtn = this.buildIconButton(popupIcons.delete, i18n.t("editor:popup.sourceWikiLink.remove"), this.handleRemove.bind(this));
     deleteBtn.classList.add("source-wiki-link-popup-btn-delete");
 
     targetRow.appendChild(this.targetInput);

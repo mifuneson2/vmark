@@ -34,6 +34,7 @@ import {
   Replace,
   ReplaceAll,
 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { useSearchStore } from "@/stores/searchStore";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { isImeKeyEvent } from "@/utils/imeGuard";
@@ -56,6 +57,7 @@ function preventSelectAllOnButtons(e: ReactKeyboardEvent) {
 
 /** Renders an inline search-and-replace bar with case, whole-word, and regex toggle support. */
 export function FindBar() {
+  const { t } = useTranslation("editor");
   const isOpen = useSearchStore((state) => state.isOpen);
   const query = useSearchStore((state) => state.query);
   const replaceText = useSearchStore((state) => state.replaceText);
@@ -158,9 +160,9 @@ export function FindBar() {
   const matchDisplay =
     matchCount === 0
       ? query
-        ? "No results"
+        ? t("findbar.noResults")
         : ""
-      : `${currentIndex + 1} of ${matchCount}`;
+      : t("findbar.matchCount", { current: currentIndex + 1, total: matchCount });
 
   return (
     <div className="find-bar" onKeyDown={preventSelectAllOnButtons}>
@@ -171,8 +173,8 @@ export function FindBar() {
             <button
               className={`find-bar-toggle ${useRegex ? "active" : ""}`}
               onClick={handleToggleRegex}
-              title="Use Regular Expression"
-              aria-label="Use Regular Expression"
+              title={t("findbar.toggleRegex")}
+              aria-label={t("findbar.toggleRegex")}
             >
               <Regex size={16} />
             </button>
@@ -180,16 +182,16 @@ export function FindBar() {
           <button
             className={`find-bar-toggle ${caseSensitive ? "active" : ""}`}
             onClick={handleToggleCaseSensitive}
-            title="Match Case"
-            aria-label="Match Case"
+            title={t("findbar.toggleCase")}
+            aria-label={t("findbar.toggleCase")}
           >
             <CaseSensitive size={16} />
           </button>
           <button
             className={`find-bar-toggle ${wholeWord ? "active" : ""}`}
             onClick={handleToggleWholeWord}
-            title="Whole Word"
-            aria-label="Whole Word"
+            title={t("findbar.toggleWholeWord")}
+            aria-label={t("findbar.toggleWholeWord")}
           >
             <WholeWord size={16} />
           </button>
@@ -202,7 +204,7 @@ export function FindBar() {
             ref={findInputRef}
             type="text"
             className="find-bar-input"
-            placeholder="Find..."
+            placeholder={t("findbar.find.placeholder")}
             value={query}
             onChange={handleQueryChange}
             onKeyDown={handleFindKeyDown}
@@ -217,8 +219,8 @@ export function FindBar() {
             className="find-bar-nav-btn"
             onClick={handleFindPrevious}
             disabled={matchCount === 0}
-            title="Previous (Shift+Enter)"
-            aria-label="Previous (Shift+Enter)"
+            title={t("findbar.prev")}
+            aria-label={t("findbar.prev")}
           >
             <ChevronLeft size={16} />
           </button>
@@ -227,8 +229,8 @@ export function FindBar() {
             className="find-bar-nav-btn"
             onClick={handleFindNext}
             disabled={matchCount === 0}
-            title="Next (Enter)"
-            aria-label="Next (Enter)"
+            title={t("findbar.next")}
+            aria-label={t("findbar.next")}
           >
             <ChevronRight size={16} />
           </button>
@@ -241,7 +243,7 @@ export function FindBar() {
             ref={replaceInputRef}
             type="text"
             className="find-bar-input"
-            placeholder="Replace..."
+            placeholder={t("findbar.replace.placeholder")}
             value={replaceText}
             onChange={handleReplaceChange}
             onKeyDown={handleReplaceKeyDown}
@@ -256,8 +258,8 @@ export function FindBar() {
             className="find-bar-icon-btn"
             onClick={handleReplaceCurrent}
             disabled={matchCount === 0}
-            title="Replace"
-            aria-label="Replace"
+            title={t("findbar.replace")}
+            aria-label={t("findbar.replace")}
           >
             <Replace size={16} />
           </button>
@@ -265,14 +267,14 @@ export function FindBar() {
             className="find-bar-icon-btn"
             onClick={handleReplaceAll}
             disabled={matchCount === 0}
-            title="Replace All"
-            aria-label="Replace All"
+            title={t("findbar.replaceAll")}
+            aria-label={t("findbar.replaceAll")}
           >
             <ReplaceAll size={16} />
           </button>
         </div>
 
-        <button className="find-bar-close" onClick={handleClose} title="Close (Esc)" aria-label="Close (Esc)">
+        <button className="find-bar-close" onClick={handleClose} title={t("findbar.close")} aria-label={t("findbar.close")}>
           <X size={16} />
         </button>
       </div>

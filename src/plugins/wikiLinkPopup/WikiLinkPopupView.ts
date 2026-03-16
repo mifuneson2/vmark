@@ -9,6 +9,7 @@
 import type { EditorView } from "@tiptap/pm/view";
 import { open } from "@tauri-apps/plugin-dialog";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
+import i18n from "@/i18n";
 import { useWikiLinkPopupStore } from "@/stores/wikiLinkPopupStore";
 import { useWorkspaceStore } from "@/stores/workspaceStore";
 import { wikiLinkPopupWarn } from "@/utils/debug";
@@ -119,7 +120,7 @@ export class WikiLinkPopupView {
 
     // Single row: Input + Browse + Action buttons
     const targetInput = buildPopupInput({
-      placeholder: "Target page",
+      placeholder: i18n.t("editor:popup.wikiLink.target.placeholder"),
       className: "wiki-link-popup-target",
       onInput: this.handleTargetChange,
       onKeydown: this.handleInputKeydown,
@@ -127,33 +128,33 @@ export class WikiLinkPopupView {
 
     const browseBtn = buildPopupIconButton({
       icon: "folder",
-      title: "Browse for file",
+      title: i18n.t("editor:popup.wikiLink.browse"),
       onClick: this.handleBrowse,
     });
 
     const openBtn = buildPopupIconButton({
       icon: "open",
-      title: "Open linked file",
+      title: i18n.t("editor:popup.wikiLink.open"),
       onClick: this.handleOpen,
     });
     openBtn.classList.add("wiki-link-popup-btn-open");
 
     const copyBtn = buildPopupIconButton({
       icon: "copy",
-      title: "Copy target",
+      title: i18n.t("editor:popup.wikiLink.copy"),
       onClick: this.handleCopy,
     });
 
     const saveBtn = buildPopupIconButton({
       icon: "save",
-      title: "Save",
+      title: i18n.t("editor:popup.wikiLink.save"),
       onClick: this.handleSave,
       variant: "primary",
     });
 
     const deleteBtn = buildPopupIconButton({
       icon: "delete",
-      title: "Remove wiki link",
+      title: i18n.t("editor:popup.wikiLink.remove"),
       onClick: this.handleDelete,
       variant: "danger",
     });

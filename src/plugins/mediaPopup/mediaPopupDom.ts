@@ -10,6 +10,7 @@
  * @module plugins/mediaPopup/mediaPopupDom
  */
 
+import i18n from "@/i18n";
 import { isImeKeyEvent } from "@/utils/imeGuard";
 import { buildPopupIconButton, buildPopupInput, popupIcons } from "@/utils/popupComponents";
 
@@ -50,7 +51,7 @@ export function createMediaPopupDom(handlers: MediaPopupDomHandlers): MediaPopup
   srcRow.className = "media-popup-row";
 
   const srcInput = buildPopupInput({
-    placeholder: "Media source path or URL...",
+    placeholder: i18n.t("editor:popup.media.src.placeholder"),
     monospace: true,
     className: "media-popup-src",
     onKeydown: handlers.onInputKeydown,
@@ -58,14 +59,14 @@ export function createMediaPopupDom(handlers: MediaPopupDomHandlers): MediaPopup
 
   const browseBtn = buildPopupIconButton({
     icon: "folder",
-    title: "Browse local file",
+    title: i18n.t("editor:popup.media.browse"),
     onClick: handlers.onBrowse,
   });
   browseBtn.classList.add("media-popup-btn");
 
   const copyBtn = buildPopupIconButton({
     icon: "copy",
-    title: "Copy path",
+    title: i18n.t("editor:popup.media.copy"),
     onClick: handlers.onCopy,
   });
   copyBtn.classList.add("media-popup-btn");
@@ -73,14 +74,14 @@ export function createMediaPopupDom(handlers: MediaPopupDomHandlers): MediaPopup
   // Toggle button (image-only: switch between inline/block)
   const toggleBtn = buildPopupIconButton({
     icon: "blockImage",
-    title: "Toggle block/inline",
+    title: i18n.t("editor:popup.media.toggleBlockInline"),
     onClick: handlers.onToggle,
   });
   toggleBtn.classList.add("media-popup-btn", "media-popup-btn-toggle");
 
   const deleteBtn = buildPopupIconButton({
     icon: "delete",
-    title: "Remove media",
+    title: i18n.t("editor:popup.media.remove"),
     onClick: handlers.onRemove,
     variant: "danger",
   });
@@ -97,7 +98,7 @@ export function createMediaPopupDom(handlers: MediaPopupDomHandlers): MediaPopup
   altRow.className = "media-popup-row";
 
   const altInput = buildPopupInput({
-    placeholder: "Caption (alt text)...",
+    placeholder: i18n.t("editor:popup.media.alt.placeholder"),
     className: "media-popup-alt",
     onKeydown: handlers.onInputKeydown,
   });
@@ -113,7 +114,7 @@ export function createMediaPopupDom(handlers: MediaPopupDomHandlers): MediaPopup
   titleRow.className = "media-popup-row";
 
   const titleInput = buildPopupInput({
-    placeholder: "Title (optional)...",
+    placeholder: i18n.t("editor:popup.media.title.placeholder"),
     fullWidth: true,
     className: "media-popup-title",
     onKeydown: handlers.onInputKeydown,
@@ -126,7 +127,7 @@ export function createMediaPopupDom(handlers: MediaPopupDomHandlers): MediaPopup
   posterRow.className = "media-popup-row";
 
   const posterInput = buildPopupInput({
-    placeholder: "Poster image (optional)...",
+    placeholder: i18n.t("editor:popup.media.poster.placeholder"),
     monospace: true,
     fullWidth: true,
     className: "media-popup-poster",
@@ -156,7 +157,10 @@ export function createMediaPopupDom(handlers: MediaPopupDomHandlers): MediaPopup
 
 export function updateMediaPopupToggleButton(toggleBtn: HTMLElement, nodeType: MediaNodeType): void {
   const icon = nodeType === "block_image" ? popupIcons.inlineImage : popupIcons.blockImage;
-  const title = nodeType === "block_image" ? "Convert to inline" : "Convert to block";
+  const title =
+    nodeType === "block_image"
+      ? i18n.t("editor:popup.media.toggleInline")
+      : i18n.t("editor:popup.media.toggleBlock");
   toggleBtn.innerHTML = icon;
   toggleBtn.title = title;
 }

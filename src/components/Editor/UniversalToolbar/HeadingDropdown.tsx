@@ -11,6 +11,7 @@
  */
 import { forwardRef, useEffect, useMemo, useRef } from "react";
 import type { KeyboardEvent as ReactKeyboardEvent } from "react";
+import { useTranslation } from "react-i18next";
 
 interface HeadingDropdownProps {
   anchorRect: DOMRect;
@@ -21,19 +22,20 @@ interface HeadingDropdownProps {
 
 const HeadingDropdown = forwardRef<HTMLDivElement, HeadingDropdownProps>(
   ({ anchorRect, currentLevel, onSelect, onClose }, ref) => {
+    const { t } = useTranslation("editor");
     const containerRef = useRef<HTMLDivElement>(null);
 
     const options = useMemo(
       () => [
-        { level: 0, label: "Paragraph" },
-        { level: 1, label: "Heading 1" },
-        { level: 2, label: "Heading 2" },
-        { level: 3, label: "Heading 3" },
-        { level: 4, label: "Heading 4" },
-        { level: 5, label: "Heading 5" },
-        { level: 6, label: "Heading 6" },
+        { level: 0, label: t("toolbar.heading.paragraph") },
+        { level: 1, label: t("toolbar.heading.h1") },
+        { level: 2, label: t("toolbar.heading.h2") },
+        { level: 3, label: t("toolbar.heading.h3") },
+        { level: 4, label: t("toolbar.heading.h4") },
+        { level: 5, label: t("toolbar.heading.h5") },
+        { level: 6, label: t("toolbar.heading.h6") },
       ],
-      []
+      [t]
     );
 
     useEffect(() => {
@@ -95,7 +97,7 @@ const HeadingDropdown = forwardRef<HTMLDivElement, HeadingDropdownProps>(
         style={{ top: anchorRect.top - 8, left: anchorRect.left }}
         onKeyDown={handleKeyDown}
         role="menu"
-        aria-label="Heading levels"
+        aria-label={t("toolbar.aria.headingLevels")}
       >
         {options.map((option) => (
           <button

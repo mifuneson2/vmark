@@ -6,6 +6,7 @@
  */
 
 import type { EditorView } from "@codemirror/view";
+import i18n from "@/i18n";
 import { SourcePopupView, type StoreApi } from "@/plugins/sourcePopup";
 import { useFootnotePopupStore } from "@/stores/footnotePopupStore";
 import { popupIcons } from "@/utils/popupComponents";
@@ -48,11 +49,11 @@ export class SourceFootnotePopupView extends SourcePopupView<FootnotePopupStoreS
     const spacer = document.createElement("div");
     spacer.style.flex = "1";
 
-    this.gotoBtn = this.buildIconButton(popupIcons.goto, "Go to definition", this.handleGoto.bind(this));
+    this.gotoBtn = this.buildIconButton(popupIcons.goto, i18n.t("editor:popup.footnote.goToDefinition"), this.handleGoto.bind(this));
     this.gotoBtn.classList.add("source-footnote-popup-btn-goto");
-    const saveBtn = this.buildIconButton(popupIcons.save, "Save (Enter)", this.handleSave.bind(this));
+    const saveBtn = this.buildIconButton(popupIcons.save, i18n.t("editor:popup.footnote.save"), this.handleSave.bind(this));
     saveBtn.classList.add("source-footnote-popup-btn-save");
-    const deleteBtn = this.buildIconButton(popupIcons.delete, "Remove footnote", this.handleDelete.bind(this));
+    const deleteBtn = this.buildIconButton(popupIcons.delete, i18n.t("editor:popup.footnote.remove"), this.handleDelete.bind(this));
     deleteBtn.classList.add("source-footnote-popup-btn-delete");
 
     headerRow.appendChild(this.labelSpan);
@@ -64,7 +65,7 @@ export class SourceFootnotePopupView extends SourcePopupView<FootnotePopupStoreS
     // Row 2: Textarea for content
     this.textarea = document.createElement("textarea");
     this.textarea.className = "source-footnote-popup-textarea";
-    this.textarea.placeholder = "Footnote content...";
+    this.textarea.placeholder = i18n.t("editor:popup.footnote.content.placeholder");
     this.textarea.rows = 2;
     this.textarea.addEventListener("input", this.handleTextareaInput.bind(this));
     this.textarea.addEventListener("keydown", this.handleTextareaKeydown.bind(this));
@@ -95,11 +96,11 @@ export class SourceFootnotePopupView extends SourcePopupView<FootnotePopupStoreS
     // Configure goto button based on context
     if (this.openedOnReference) {
       // On reference - goto goes to definition
-      this.gotoBtn.title = "Go to definition";
+      this.gotoBtn.title = i18n.t("editor:popup.footnote.goToDefinition");
       this.gotoBtn.style.display = state.definitionPos !== null ? "flex" : "none";
     } else {
       // On definition - goto goes to reference
-      this.gotoBtn.title = "Go to reference";
+      this.gotoBtn.title = i18n.t("editor:popup.footnote.goToReference");
       /* v8 ignore next -- @preserve reason: footnote definition without a reference is an edge case */
       this.gotoBtn.style.display = state.referencePos !== null ? "flex" : "none";
     }

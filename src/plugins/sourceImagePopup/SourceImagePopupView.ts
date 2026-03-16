@@ -6,6 +6,7 @@
  */
 
 import type { EditorView } from "@codemirror/view";
+import i18n from "@/i18n";
 import { SourcePopupView, type StoreApi } from "@/plugins/sourcePopup";
 import { useMediaPopupStore } from "@/stores/mediaPopupStore";
 import { popupIcons } from "@/utils/popupComponents";
@@ -37,14 +38,14 @@ export class SourceImagePopupView extends SourcePopupView<MediaPopupStoreState> 
     this.srcInput = document.createElement("input");
     this.srcInput.type = "text";
     this.srcInput.className = "source-image-popup-src";
-    this.srcInput.placeholder = "Image URL or path...";
+    this.srcInput.placeholder = i18n.t("editor:popup.sourceImage.src.placeholder");
     this.srcInput.addEventListener("keydown", this.handleInputKeydown.bind(this));
     this.srcInput.addEventListener("input", this.handleSrcInput.bind(this));
 
     // Icon buttons: browse, copy, delete
-    const browseBtn = this.buildIconButton(popupIcons.folder, "Browse local file", this.handleBrowse.bind(this));
-    const copyBtn = this.buildIconButton(popupIcons.copy, "Copy path", this.handleCopy.bind(this));
-    const deleteBtn = this.buildIconButton(popupIcons.delete, "Remove image", this.handleRemove.bind(this));
+    const browseBtn = this.buildIconButton(popupIcons.folder, i18n.t("editor:popup.sourceImage.browse"), this.handleBrowse.bind(this));
+    const copyBtn = this.buildIconButton(popupIcons.copy, i18n.t("editor:popup.sourceImage.copy"), this.handleCopy.bind(this));
+    const deleteBtn = this.buildIconButton(popupIcons.delete, i18n.t("editor:popup.sourceImage.remove"), this.handleRemove.bind(this));
     deleteBtn.classList.add("source-image-popup-btn-delete");
 
     srcRow.appendChild(this.srcInput);
@@ -59,7 +60,7 @@ export class SourceImagePopupView extends SourcePopupView<MediaPopupStoreState> 
     this.altInput = document.createElement("input");
     this.altInput.type = "text";
     this.altInput.className = "source-image-popup-alt";
-    this.altInput.placeholder = "Caption (alt text)...";
+    this.altInput.placeholder = i18n.t("editor:popup.sourceImage.alt.placeholder");
     this.altInput.addEventListener("keydown", this.handleInputKeydown.bind(this));
     this.altInput.addEventListener("input", this.handleAltInput.bind(this));
 

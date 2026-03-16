@@ -6,6 +6,7 @@
  *
  * @module components/Editor/UniversalToolbar/ToolbarButton
  */
+import { useTranslation } from "react-i18next";
 import type { ToolbarGroupButton as ButtonDef } from "./toolbarGroups";
 
 interface ToolbarButtonProps {
@@ -46,11 +47,12 @@ export function ToolbarButton({
   ariaExpanded,
   onClick,
 }: ToolbarButtonProps) {
+  const { t } = useTranslation("editor");
   // Show "Not available yet" tooltip for unimplemented buttons
   let title = button.label;
 
   if (notImplemented) {
-    title = `${button.label} — Not available yet`;
+    title = t("toolbar.notAvailable", { label: button.label });
   }
 
   // Roving tabindex: only focused button has tabIndex=0 when focus is active

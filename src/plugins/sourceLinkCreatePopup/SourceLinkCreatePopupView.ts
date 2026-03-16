@@ -6,6 +6,7 @@
  */
 
 import type { EditorView } from "@codemirror/view";
+import i18n from "@/i18n";
 import { useLinkCreatePopupStore } from "@/stores/linkCreatePopupStore";
 import {
   calculatePopupPosition,
@@ -69,7 +70,7 @@ export class SourceLinkCreatePopupView {
       this.textInput = document.createElement("input");
       this.textInput.type = "text";
       this.textInput.className = "link-create-popup-input link-create-popup-text";
-      this.textInput.placeholder = "Link text...";
+      this.textInput.placeholder = i18n.t("editor:popup.linkCreate.text.placeholder");
       this.textInput.autocapitalize = "off";
       this.textInput.autocomplete = "off";
       this.textInput.spellcheck = false;
@@ -88,7 +89,7 @@ export class SourceLinkCreatePopupView {
     this.urlInput = document.createElement("input");
     this.urlInput.type = "text";
     this.urlInput.className = "link-create-popup-input link-create-popup-url";
-    this.urlInput.placeholder = "URL...";
+    this.urlInput.placeholder = i18n.t("editor:popup.linkCreate.url.placeholder");
     this.urlInput.autocapitalize = "off";
     this.urlInput.autocomplete = "off";
     this.urlInput.spellcheck = false;
@@ -96,9 +97,9 @@ export class SourceLinkCreatePopupView {
     this.urlInput.addEventListener("input", this.handleUrlInput);
     this.urlInput.addEventListener("keydown", this.handleInputKeydown);
 
-    const saveBtn = this.buildIconButton(popupIcons.save, "Create link", this.handleSave);
+    const saveBtn = this.buildIconButton(popupIcons.save, i18n.t("editor:popup.linkCreate.create"), this.handleSave);
     saveBtn.classList.add("link-create-popup-btn-save");
-    const cancelBtn = this.buildIconButton(popupIcons.close, "Cancel", this.handleCancel);
+    const cancelBtn = this.buildIconButton(popupIcons.close, i18n.t("editor:popup.linkCreate.cancel"), this.handleCancel);
     cancelBtn.classList.add("link-create-popup-btn-cancel");
 
     urlRow.appendChild(this.urlInput);

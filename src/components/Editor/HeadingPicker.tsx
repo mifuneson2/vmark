@@ -7,6 +7,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
+import { useTranslation } from "react-i18next";
 import { useHeadingPickerStore } from "@/stores/headingPickerStore";
 import { calculatePopupPosition, getViewportBounds } from "@/utils/popupPosition";
 import type { HeadingWithId } from "@/utils/headingSlug";
@@ -23,6 +24,7 @@ interface HeadingItemProps {
 }
 
 function HeadingItem({ heading, isSelected, onSelect }: HeadingItemProps) {
+  const { t } = useTranslation("editor");
   const indent = (heading.level - 1) * 16;
 
   return (
@@ -34,7 +36,7 @@ function HeadingItem({ heading, isSelected, onSelect }: HeadingItemProps) {
       data-heading-id={heading.id}
     >
       <span className="heading-picker-level">H{heading.level}</span>
-      <span className="heading-picker-text">{heading.text || "(empty heading)"}</span>
+      <span className="heading-picker-text">{heading.text || t("headingPicker.empty.heading")}</span>
       <span className="heading-picker-id">#{heading.id}</span>
     </button>
   );
@@ -42,6 +44,7 @@ function HeadingItem({ heading, isSelected, onSelect }: HeadingItemProps) {
 
 /** Renders a popup for selecting a document heading to create bookmark links. */
 export function HeadingPicker() {
+  const { t } = useTranslation("editor");
   const isOpen = useHeadingPickerStore((s) => s.isOpen);
   const headings = useHeadingPickerStore((s) => s.headings);
   const anchorRect = useHeadingPickerStore((s) => s.anchorRect);
@@ -218,7 +221,7 @@ export function HeadingPicker() {
           ref={inputRef}
           type="text"
           className="heading-picker-filter popup-input"
-          placeholder="Filter headings..."
+          placeholder={t("headingPicker.filter.placeholder")}
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
           onCompositionStart={() => ime.onCompositionStart()}
@@ -230,8 +233,8 @@ export function HeadingPicker() {
         {filteredHeadings.length === 0 ? (
           <div className="heading-picker-empty">
             {headings.length === 0
-              ? "No headings in document"
-              : "No headings match filter"}
+              ? t("headingPicker.empty.noHeadings")
+              : t("headingPicker.empty.noMatch")}
           </div>
         ) : (
           filteredHeadings.map((heading, index) => (

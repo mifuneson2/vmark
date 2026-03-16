@@ -8,6 +8,7 @@
  */
 
 import { TextSelection } from "@tiptap/pm/state";
+import i18n from "@/i18n";
 import { useLinkPopupStore } from "@/stores/linkPopupStore";
 import { findHeadingById } from "@/utils/headingSlug";
 import { isImeKeyEvent } from "@/utils/imeGuard";
@@ -74,17 +75,17 @@ export class LinkPopupView extends WysiwygPopupView<LinkPopupState> {
     const input = document.createElement("input");
     input.type = "text";
     input.className = "link-popup-input";
-    input.placeholder = "URL...";
+    input.placeholder = i18n.t("editor:popup.link.url.placeholder");
     input.autocapitalize = "off";
     input.autocomplete = "off";
     input.spellcheck = false;
     input.setAttribute("autocorrect", "off");
 
     // Icon buttons (event listeners attached in attachEventListeners)
-    const openBtn = this.buildButton(popupIcons.open, "Open link", "link-popup-btn-open");
-    const copyBtn = this.buildButton(popupIcons.copy, "Copy URL", "link-popup-btn-copy");
-    const saveBtn = this.buildButton(popupIcons.save, "Save", "link-popup-btn-save");
-    const deleteBtn = this.buildButton(popupIcons.delete, "Remove link", "link-popup-btn-delete");
+    const openBtn = this.buildButton(popupIcons.open, i18n.t("editor:popup.link.openLink"), "link-popup-btn-open");
+    const copyBtn = this.buildButton(popupIcons.copy, i18n.t("editor:popup.link.copyUrl"), "link-popup-btn-copy");
+    const saveBtn = this.buildButton(popupIcons.save, i18n.t("editor:popup.link.save"), "link-popup-btn-save");
+    const deleteBtn = this.buildButton(popupIcons.delete, i18n.t("editor:popup.link.remove"), "link-popup-btn-delete");
 
     container.appendChild(input);
     container.appendChild(openBtn);
@@ -112,7 +113,7 @@ export class LinkPopupView extends WysiwygPopupView<LinkPopupState> {
     this.input.disabled = false;
     this.input.classList.remove("disabled");
     this.saveBtn.style.display = "";
-    this.openBtn.title = isBookmark ? "Go to heading" : "Open link";
+    this.openBtn.title = isBookmark ? i18n.t("editor:popup.link.goToHeading") : i18n.t("editor:popup.link.openLink");
 
     // Focus and select input
     requestAnimationFrame(() => {

@@ -5,6 +5,7 @@
  */
 
 import type { EditorView } from "@tiptap/pm/view";
+import i18n from "@/i18n";
 import { useMathPopupStore } from "@/stores/mathPopupStore";
 import {
   calculatePopupPosition,
@@ -73,7 +74,7 @@ export class MathPopupView {
 
     const textarea = document.createElement("textarea");
     textarea.className = "math-popup-input";
-    textarea.placeholder = "Enter LaTeX...";
+    textarea.placeholder = i18n.t("editor:popup.math.input.placeholder");
     textarea.rows = 3;
     textarea.addEventListener("input", this.handleInputChange);
     textarea.addEventListener("keydown", this.handleKeydown);
@@ -90,13 +91,13 @@ export class MathPopupView {
     const cancelBtn = document.createElement("button");
     cancelBtn.type = "button";
     cancelBtn.className = "math-popup-btn math-popup-btn-cancel";
-    cancelBtn.textContent = "Cancel";
+    cancelBtn.textContent = i18n.t("editor:popup.math.cancel");
     cancelBtn.addEventListener("click", this.handleCancel);
 
     const saveBtn = document.createElement("button");
     saveBtn.type = "button";
     saveBtn.className = "math-popup-btn math-popup-btn-save";
-    saveBtn.textContent = "Save";
+    saveBtn.textContent = i18n.t("editor:popup.math.save");
     saveBtn.addEventListener("click", this.handleSave);
 
     buttons.appendChild(cancelBtn);
@@ -190,14 +191,14 @@ export class MathPopupView {
           });
         } catch {
           this.preview.textContent = trimmed;
-          this.error.textContent = "Invalid LaTeX";
+          this.error.textContent = i18n.t("editor:popup.math.invalidLatex");
         }
       })
       .catch((error: unknown) => {
         if (token !== this.renderToken) return;
         renderWarn("LaTeX preview failed:", error instanceof Error ? error.message : String(error));
         this.preview.textContent = trimmed;
-        this.error.textContent = "LaTeX preview failed";
+        this.error.textContent = i18n.t("editor:popup.math.previewFailed");
       });
   }
 

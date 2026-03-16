@@ -7,6 +7,7 @@
 
 import { useEffect, useRef, useCallback, useMemo } from "react";
 import { ImagePlus, Trash2, Copy, FolderOpen } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { useImageContextMenuStore } from "@/stores/imageContextMenuStore";
 import "@/components/Sidebar/FileExplorer/ContextMenu.css";
 import { isImeKeyEvent } from "@/utils/imeGuard";
@@ -19,16 +20,21 @@ interface MenuItem {
   separator?: boolean;
 }
 
-function buildMenuItems(revealLabel: string): MenuItem[] {
+function buildMenuItems(
+  revealLabel: string,
+  changeLabel: string,
+  deleteLabel: string,
+  copyLabel: string
+): MenuItem[] {
   return [
-    { id: "change", label: "Change Image...", icon: <ImagePlus size={14} /> },
+    { id: "change", label: changeLabel, icon: <ImagePlus size={14} /> },
     {
       id: "delete",
-      label: "Delete Image",
+      label: deleteLabel,
       icon: <Trash2 size={14} />,
       separator: true,
     },
-    { id: "copyPath", label: "Copy Image Path", icon: <Copy size={14} /> },
+    { id: "copyPath", label: copyLabel, icon: <Copy size={14} /> },
     {
       id: "revealInFinder",
       label: revealLabel,
@@ -43,13 +49,23 @@ interface ImageContextMenuProps {
 
 /** Renders a right-click context menu for image nodes (change, delete, copy path, reveal). */
 export function ImageContextMenu({ onAction }: ImageContextMenuProps) {
+  const { t } = useTranslation("editor");
   const menuRef = useRef<HTMLDivElement>(null);
   const isOpen = useImageContextMenuStore((s) => s.isOpen);
   const position = useImageContextMenuStore((s) => s.position);
   const closeMenu = useImageContextMenuStore((s) => s.closeMenu);
   // Get platform-appropriate label once (stable across renders)
   const revealLabel = useMemo(() => getRevealInFileManagerLabel(), []);
-  const menuItems = useMemo(() => buildMenuItems(revealLabel), [revealLabel]);
+  const menuItems = useMemo(
+    () =>
+      buildMenuItems(
+        revealLabel,
+        t("imageMenu.changeImage"),
+        t("imageMenu.deleteImage"),
+        t("imageMenu.copyPath")
+      ),
+    [revealLabel, t]
+  );
 
   // Close on click outside
   useEffect(() => {

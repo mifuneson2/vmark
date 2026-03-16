@@ -8,6 +8,7 @@
  * @module plugins/footnotePopup/footnotePopupDom
  */
 
+import i18n from "@/i18n";
 import { popupIcons } from "@/utils/popupComponents";
 
 /** Delay in ms before auto-focusing the textarea after popup appears. */
@@ -41,7 +42,7 @@ export function createFootnotePopupDom(handlers: FootnotePopupDomHandlers) {
 
   const textarea = document.createElement("textarea");
   textarea.className = "footnote-popup-textarea";
-  textarea.placeholder = "Footnote content...";
+  textarea.placeholder = i18n.t("editor:popup.footnote.content.placeholder");
   textarea.rows = 2;
   textarea.addEventListener("input", handlers.onInputChange);
   textarea.addEventListener("keydown", handlers.onInputKeydown);
@@ -56,11 +57,11 @@ export function createFootnotePopupDom(handlers: FootnotePopupDomHandlers) {
   spacer.style.flex = "1";
   btnRow.appendChild(spacer);
 
-  const gotoBtn = buildIconButton(popupIcons.goto, "Go to definition", handlers.onGoto);
+  const gotoBtn = buildIconButton(popupIcons.goto, i18n.t("editor:popup.footnote.goToDefinition"), handlers.onGoto);
   gotoBtn.classList.add("footnote-popup-btn-goto");
-  const saveBtn = buildIconButton(popupIcons.save, "Save (Enter)", handlers.onSave);
+  const saveBtn = buildIconButton(popupIcons.save, i18n.t("editor:popup.footnote.save"), handlers.onSave);
   saveBtn.classList.add("footnote-popup-btn-save");
-  const deleteBtn = buildIconButton(popupIcons.delete, "Remove footnote", handlers.onDelete);
+  const deleteBtn = buildIconButton(popupIcons.delete, i18n.t("editor:popup.footnote.remove"), handlers.onDelete);
   deleteBtn.classList.add("footnote-popup-btn-delete");
 
   btnRow.appendChild(gotoBtn);

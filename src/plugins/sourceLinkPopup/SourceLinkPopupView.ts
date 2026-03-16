@@ -6,6 +6,7 @@
  */
 
 import type { EditorView } from "@codemirror/view";
+import i18n from "@/i18n";
 import { SourcePopupView, type StoreApi } from "@/plugins/sourcePopup";
 import { useLinkPopupStore } from "@/stores/linkPopupStore";
 import { popupIcons } from "@/utils/popupComponents";
@@ -38,7 +39,7 @@ export class SourceLinkPopupView extends SourcePopupView<LinkPopupStoreState> {
     this.hrefInput = document.createElement("input");
     this.hrefInput.type = "text";
     this.hrefInput.className = "source-link-popup-href";
-    this.hrefInput.placeholder = "URL...";
+    this.hrefInput.placeholder = i18n.t("editor:popup.link.url.placeholder");
     this.hrefInput.autocapitalize = "off";
     this.hrefInput.autocomplete = "off";
     this.hrefInput.spellcheck = false;
@@ -47,10 +48,10 @@ export class SourceLinkPopupView extends SourcePopupView<LinkPopupStoreState> {
     this.hrefInput.addEventListener("input", this.handleHrefInput.bind(this));
 
     // Icon buttons: open, copy, delete
-    this.openBtn = this.buildIconButton(popupIcons.open, "Open link", this.handleOpen.bind(this));
+    this.openBtn = this.buildIconButton(popupIcons.open, i18n.t("editor:popup.link.openLink"), this.handleOpen.bind(this));
     this.openBtn.classList.add("source-link-popup-btn-open");
-    const copyBtn = this.buildIconButton(popupIcons.copy, "Copy URL", this.handleCopy.bind(this));
-    const deleteBtn = this.buildIconButton(popupIcons.delete, "Remove link", this.handleRemove.bind(this));
+    const copyBtn = this.buildIconButton(popupIcons.copy, i18n.t("editor:popup.link.copyUrl"), this.handleCopy.bind(this));
+    const deleteBtn = this.buildIconButton(popupIcons.delete, i18n.t("editor:popup.link.remove"), this.handleRemove.bind(this));
     deleteBtn.classList.add("source-link-popup-btn-delete");
 
     hrefRow.appendChild(this.hrefInput);
@@ -83,12 +84,12 @@ export class SourceLinkPopupView extends SourcePopupView<LinkPopupStoreState> {
       // Bookmark: disable href input, update open button title
       this.hrefInput.disabled = true;
       this.hrefInput.classList.add("disabled");
-      this.openBtn.title = "Go to heading";
+      this.openBtn.title = i18n.t("editor:popup.link.goToHeading");
     } else {
       // Regular link: enable href input
       this.hrefInput.disabled = false;
       this.hrefInput.classList.remove("disabled");
-      this.openBtn.title = "Open link";
+      this.openBtn.title = i18n.t("editor:popup.link.openLink");
     }
 
     // Focus appropriate input (base class has already blurred the editor)

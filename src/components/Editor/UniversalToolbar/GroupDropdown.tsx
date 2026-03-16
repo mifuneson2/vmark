@@ -13,6 +13,7 @@
  */
 import { forwardRef, useEffect, useMemo, useRef } from "react";
 import type { KeyboardEvent as ReactKeyboardEvent } from "react";
+import { useTranslation } from "react-i18next";
 import { isSeparator, type ToolbarMenuItem, type ToolbarActionItem } from "./toolbarGroups";
 import type { ToolbarItemState } from "@/plugins/toolbarActions/enableRules";
 
@@ -57,6 +58,7 @@ function getItemRole(action: string, groupId: string): "menuitemcheckbox" | "men
 
 const GroupDropdown = forwardRef<HTMLDivElement, GroupDropdownProps>(
   ({ anchorRect, items, groupId, onSelect, onClose, onNavigateOut, onTabOut }, ref) => {
+    const { t } = useTranslation("editor");
     const containerRef = useRef<HTMLDivElement>(null);
 
     // Track if this is the initial mount (to avoid stealing focus on re-renders)
@@ -239,7 +241,7 @@ const GroupDropdown = forwardRef<HTMLDivElement, GroupDropdownProps>(
         style={{ top: anchorRect.top - 8, left: anchorRect.left }}
         onKeyDown={handleKeyDown}
         role="menu"
-        aria-label={`${groupId} options`}
+        aria-label={t("toolbar.aria.groupOptions", { group: groupId })}
       >
         {items.map(({ item, state }) => {
           if (isSeparator(item)) {
@@ -263,7 +265,7 @@ const GroupDropdown = forwardRef<HTMLDivElement, GroupDropdownProps>(
                 }
               }}
               tabIndex={-1}
-              title={state.notImplemented ? `${actionItem.label} — Not available yet` : actionItem.label}
+              title={state.notImplemented ? t("toolbar.notAvailable", { label: actionItem.label }) : actionItem.label}
             >
               <span
                 className="universal-toolbar-dropdown-icon"

@@ -7,11 +7,13 @@
  * @module components/Editor/DropZoneIndicator
  */
 
+import { useTranslation } from "react-i18next";
 import { useDropZoneStore } from "@/stores/dropZoneStore";
 import "./drop-zone.css";
 
 /** Renders a drop overlay when images are dragged over the editor area. */
 export function DropZoneIndicator() {
+  const { t } = useTranslation("editor");
   const isDragging = useDropZoneStore((state) => state.isDragging);
   const hasImages = useDropZoneStore((state) => state.hasImages);
   const imageCount = useDropZoneStore((state) => state.imageCount);
@@ -22,7 +24,10 @@ export function DropZoneIndicator() {
   }
 
   /* v8 ignore start -- @preserve render guard: requires active drag with images */
-  const dropText = imageCount === 1 ? "Drop to insert image" : `Drop to insert ${imageCount} images`;
+  const dropText =
+    imageCount === 1
+      ? t("dropZone.single")
+      : t("dropZone.multiple", { count: imageCount });
   /* v8 ignore stop */
 
   return (

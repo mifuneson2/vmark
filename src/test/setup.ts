@@ -7,9 +7,15 @@ import { vi } from "vitest";
 // applied, so component tests can assert against real English text.
 // ---------------------------------------------------------------------------
 import statusbarEn from "../locales/en/statusbar.json";
+import aiEn from "../locales/en/ai.json";
+import editorEn from "../locales/en/editor.json";
+import dialogEn from "../locales/en/dialog.json";
 
-const localeMap: Record<string, Record<string, string>> = {
-  statusbar: statusbarEn as Record<string, string>,
+const localeMap: Record<string, Record<string, unknown>> = {
+  statusbar: statusbarEn as Record<string, unknown>,
+  ai: aiEn as Record<string, unknown>,
+  editor: editorEn as Record<string, unknown>,
+  dialog: dialogEn as Record<string, unknown>,
 };
 
 function applyInterpolation(template: string, opts?: Record<string, unknown>): string {
@@ -20,19 +26,64 @@ function applyInterpolation(template: string, opts?: Record<string, unknown>): s
   });
 }
 
+/**
+ * Walk a nested object by dot-separated path.
+ * Returns the leaf string value or undefined if not found.
+ */
+function walkNestedKey(obj: Record<string, unknown>, dotKey: string): string | undefined {
+  const parts = dotKey.split(".");
+  let current: unknown = obj;
+  for (const part of parts) {
+    if (current == null || typeof current !== "object") return undefined;
+    current = (current as Record<string, unknown>)[part];
+  }
+  return typeof current === "string" ? current : undefined;
+}
+
+/**
+ * Resolve a namespaced key like "editor:popup.link.url.placeholder"
+ * or a plain key like "popup.link.url.placeholder" against the locale map.
+ * Supports nested JSON objects via dot notation.
+ */
+function resolveKey(key: string, defaultNs: string, opts?: Record<string, unknown>): string {
+  let namespace = defaultNs;
+  let localKey = key;
+  if (key.includes(":")) {
+    const colonIdx = key.indexOf(":");
+    namespace = key.slice(0, colonIdx);
+    localKey = key.slice(colonIdx + 1);
+  }
+  const dict = localeMap[namespace] ?? {};
+  // Try flat lookup first (for flat JSON like statusbar), then nested
+  const flatTemplate = (dict as Record<string, unknown>)[localKey];
+  const template = typeof flatTemplate === "string"
+    ? flatTemplate
+    : (walkNestedKey(dict as Record<string, unknown>, localKey) ?? key);
+  return applyInterpolation(template, opts);
+}
+
 vi.mock("react-i18next", () => ({
   useTranslation: (ns?: string) => {
     const namespace = ns ?? "common";
-    const dict = localeMap[namespace] ?? {};
-    const t = (key: string, opts?: Record<string, unknown>) => {
-      const template = dict[key] ?? key;
-      return applyInterpolation(template, opts);
-    };
+    const t = (key: string, opts?: Record<string, unknown>) =>
+      resolveKey(key, namespace, opts);
     return { t, i18n: { language: "en" } };
   },
   Trans: ({ children }: { children: React.ReactNode }) => children,
   initReactI18next: { type: "3rdParty", init: vi.fn() },
 }));
+
+// Mock the i18n singleton used by non-React (DOM-based) plugin code.
+// Plugins call i18n.t("editor:key") using namespace-prefixed keys.
+vi.mock("@/i18n", () => {
+  const t = (key: string, opts?: Record<string, unknown>) =>
+    resolveKey(key, "common", opts);
+  return {
+    default: { t, language: "en" },
+    // Ensure the default export and named exports both work
+    __esModule: true,
+  };
+});
 
 // Mock Tauri APIs
 vi.mock("@tauri-apps/api/core", () => ({
