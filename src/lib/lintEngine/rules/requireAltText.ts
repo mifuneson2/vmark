@@ -8,7 +8,7 @@ import { visit } from "unist-util-visit";
 import type { Root, Image } from "mdast";
 import { createDiagnostic, type LintDiagnostic } from "../types";
 
-export function requireAltText(source: string, mdast: Root): LintDiagnostic[] {
+export function requireAltText(_source: string, mdast: Root): LintDiagnostic[] {
   const diagnostics: LintDiagnostic[] = [];
 
   visit(mdast, "image", (node: Image) => {

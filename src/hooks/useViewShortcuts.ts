@@ -27,6 +27,10 @@ import { getCurrentWindowLabel } from "@/utils/workspaceStorage";
 import { toggleSourceModeWithCheckpoint } from "@/hooks/useUnifiedHistory";
 import { requestToggleTerminal } from "@/components/Terminal/terminalGate";
 import { useSettingsStore } from "@/stores/settingsStore";
+import { useLintStore } from "@/stores/lintStore";
+import { getActiveDocument, getActiveTabId } from "@/utils/activeDocument";
+import { toast } from "sonner";
+import i18n from "@/i18n";
 
 /** Hook that handles keyboard shortcuts for view-mode toggles (source, focus, typewriter, wrap, line numbers, terminal, sidebar panels). */
 export function useViewShortcuts() {
@@ -97,6 +101,48 @@ export function useViewShortcuts() {
         e.preventDefault();
         const current = useSettingsStore.getState().markdown.tableFitToWidth;
         useSettingsStore.getState().updateMarkdownSetting("tableFitToWidth", !current);
+        return;
+      }
+
+      // Validate markdown (run lint)
+      const validateMarkdownKey = shortcuts.getShortcut("validateMarkdown");
+      if (validateMarkdownKey && matchesShortcutEvent(e, validateMarkdownKey)) {
+        e.preventDefault();
+        const lintEnabled = useSettingsStore.getState().markdown.lintEnabled;
+        if (!lintEnabled) return;
+        const windowLabel = getCurrentWindowLabel();
+        const tabId = getActiveTabId(windowLabel);
+        const doc = getActiveDocument(windowLabel);
+        if (tabId && doc) {
+          const diagnostics = useLintStore.getState().runLint(tabId, doc.content);
+          if (diagnostics.length === 0) {
+            toast.success(i18n.t("statusbar:lint.clean.toast"));
+          }
+        }
+        return;
+      }
+
+      // Navigate to next lint issue
+      const lintNextKey = shortcuts.getShortcut("lintNext");
+      if (lintNextKey && matchesShortcutEvent(e, lintNextKey)) {
+        e.preventDefault();
+        const windowLabel = getCurrentWindowLabel();
+        const tabId = getActiveTabId(windowLabel);
+        if (tabId) {
+          useLintStore.getState().selectNext(tabId);
+        }
+        return;
+      }
+
+      // Navigate to previous lint issue
+      const lintPrevKey = shortcuts.getShortcut("lintPrev");
+      if (lintPrevKey && matchesShortcutEvent(e, lintPrevKey)) {
+        e.preventDefault();
+        const windowLabel = getCurrentWindowLabel();
+        const tabId = getActiveTabId(windowLabel);
+        if (tabId) {
+          useLintStore.getState().selectPrev(tabId);
+        }
         return;
       }
 

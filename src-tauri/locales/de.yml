@@ -173,6 +173,9 @@ menu:
   view.fileExplorer: "Datei-Explorer umschalten"
   view.history: "Verlauf umschalten"
   view.terminal: "Terminal umschalten"
+  view.checkMarkdown: "Check Markdown"
+  view.lintNext: "Next Issue"
+  view.lintPrev: "Previous Issue"
 
   # === Window menu ===
   window: "Fenster"

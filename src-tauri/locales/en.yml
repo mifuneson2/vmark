@@ -173,6 +173,9 @@ menu:
   view.fileExplorer: "Toggle File Explorer"
   view.history: "Toggle History"
   view.terminal: "Toggle Terminal"
+  view.checkMarkdown: "Check Markdown"
+  view.lintNext: "Next Issue"
+  view.lintPrev: "Previous Issue"
 
   # === Window menu ===
   window: "Window"

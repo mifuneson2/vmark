@@ -10,7 +10,7 @@ import { visit } from "unist-util-visit";
 import type { Root, Heading } from "mdast";
 import { createDiagnostic, type LintDiagnostic } from "../types";
 
-export function headingIncrement(source: string, mdast: Root): LintDiagnostic[] {
+export function headingIncrement(_source: string, mdast: Root): LintDiagnostic[] {
   const diagnostics: LintDiagnostic[] = [];
   let prevDepth: number | null = null;
 

@@ -45,5 +45,9 @@
   "terminal.newSession": "新增終端機",
   "terminal.maxSessions": "最多 5 個工作階段",
   "terminal.closeSession": "關閉",
-  "terminal.restartSession": "重新啟動"
+  "terminal.restartSession": "重新啟動",
+
+  "lint.badge.tooltip": "{{count}} issue(s) — click to go to next",
+  "lint.badge.tooltipSingle": "1 issue — click to go to next",
+  "lint.clean.toast": "No markdown issues found"
 }

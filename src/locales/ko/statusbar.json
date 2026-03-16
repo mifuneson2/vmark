@@ -45,5 +45,9 @@
   "terminal.newSession": "새 터미널",
   "terminal.maxSessions": "최대 5개 세션",
   "terminal.closeSession": "닫기",
-  "terminal.restartSession": "재시작"
+  "terminal.restartSession": "재시작",
+
+  "lint.badge.tooltip": "{{count}} issue(s) — click to go to next",
+  "lint.badge.tooltipSingle": "1 issue — click to go to next",
+  "lint.clean.toast": "No markdown issues found"
 }

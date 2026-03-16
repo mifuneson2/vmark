@@ -23,7 +23,7 @@ function extractHeadingText(children: PhrasingContent[]): string {
   return text;
 }
 
-export function linkFragments(source: string, mdast: Root): LintDiagnostic[] {
+export function linkFragments(_source: string, mdast: Root): LintDiagnostic[] {
   const diagnostics: LintDiagnostic[] = [];
 
   // Build the set of valid slugs from all headings

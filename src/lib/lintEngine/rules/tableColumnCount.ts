@@ -9,7 +9,7 @@ import { visit } from "unist-util-visit";
 import type { Root, Table, TableRow } from "mdast";
 import { createDiagnostic, type LintDiagnostic } from "../types";
 
-export function tableColumnCount(source: string, mdast: Root): LintDiagnostic[] {
+export function tableColumnCount(_source: string, mdast: Root): LintDiagnostic[] {
   const diagnostics: LintDiagnostic[] = [];
 
   visit(mdast, "table", (node: Table) => {

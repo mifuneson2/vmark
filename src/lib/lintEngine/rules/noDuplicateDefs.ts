@@ -11,7 +11,7 @@ import type { Root, Definition } from "mdast";
 import { createDiagnostic, type LintDiagnostic } from "../types";
 import { normalizeLabel } from "./labelUtils";
 
-export function noDuplicateDefs(source: string, mdast: Root): LintDiagnostic[] {
+export function noDuplicateDefs(_source: string, mdast: Root): LintDiagnostic[] {
   const diagnostics: LintDiagnostic[] = [];
   const seenLabels = new Set<string>();
 

@@ -237,6 +237,9 @@ const MENU_ICONS: &[(&str, &str)] = &[
     ("info-warning", "exclamationmark.triangle"),
     ("info-caution", "flame"),
     // ── View menu ──
+    ("check-markdown", "checkmark.circle"),
+    ("lint-next", "chevron.down"),
+    ("lint-prev", "chevron.up"),
     ("source-mode", "chevron.left.forwardslash.chevron.right"),
     ("focus-mode", "eye"),
     ("typewriter-mode", "character.cursor.ibeam"),

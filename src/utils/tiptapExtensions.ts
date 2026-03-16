@@ -91,12 +91,21 @@ import { smartSelectAllExtension } from "@/plugins/smartSelectAll/tiptap";
 import { inlineCodeBoundaryExtension } from "@/plugins/inlineCodeBoundary/tiptap";
 import { CJKBold, CJKItalic } from "@/plugins/markInputRules/tiptap";
 import { textDragDropExtension } from "@/plugins/textDragDrop/tiptap";
+import { LintExtension } from "@/plugins/lint/tiptap";
+
+export interface TiptapExtensionConfig {
+  /** Tab ID for lint diagnostics (required when lintEnabled is true) */
+  tabId?: string;
+  /** Whether to enable the markdown lint extension */
+  lintEnabled?: boolean;
+}
 
 /**
  * Creates the array of Tiptap extensions for the WYSIWYG editor.
  * This is a pure factory function with no React dependencies.
  */
-export function createTiptapExtensions(): Extensions {
+export function createTiptapExtensions(config: TiptapExtensionConfig = {}): Extensions {
+  const { tabId, lintEnabled } = config;
   return [
     StarterKit.configure({
       // We parse/serialize markdown ourselves.
@@ -207,5 +216,9 @@ export function createTiptapExtensions(): Extensions {
     smartSelectAllExtension,
     inlineCodeBoundaryExtension,
     textDragDropExtension,
+    // Lint decorations (block-level, WYSIWYG only)
+    ...(lintEnabled && tabId
+      ? [LintExtension.configure({ tabId })]
+      : []),
   ];
 }

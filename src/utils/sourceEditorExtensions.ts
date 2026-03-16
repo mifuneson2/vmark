@@ -79,6 +79,7 @@ import { createSourceLinkPopupPlugin } from "@/plugins/sourceLinkPopup";
 import { createSourceLinkCreatePopupPlugin } from "@/plugins/sourceLinkCreatePopup";
 import { createSourceWikiLinkPopupPlugin } from "@/plugins/sourceWikiLinkPopup";
 import { createSourceFootnotePopupPlugin } from "@/plugins/sourceFootnotePopup";
+import { createSourceLintExtension } from "@/plugins/codemirror/sourceLint";
 
 // Compartments for dynamic configuration
 export const lineWrapCompartment = new Compartment();
@@ -100,13 +101,17 @@ interface ExtensionConfig {
   initialAutoPair: boolean;
   initialShowLineNumbers: boolean;
   updateListener: Extension;
+  /** Tab ID for per-tab lint diagnostics (required when lintEnabled is true) */
+  tabId?: string;
+  /** Whether to include the lint annotation extension */
+  lintEnabled?: boolean;
 }
 
 /**
  * Creates the array of CodeMirror extensions for the source editor.
  */
 export function createSourceEditorExtensions(config: ExtensionConfig): Extension[] {
-  const { initialWordWrap, initialShowBrTags, initialAutoPair, initialShowLineNumbers, updateListener } = config;
+  const { initialWordWrap, initialShowBrTags, initialAutoPair, initialShowLineNumbers, updateListener, tabId, lintEnabled } = config;
 
   return [
     // Line wrapping (dynamic via compartment)
@@ -264,5 +269,7 @@ export function createSourceEditorExtensions(config: ExtensionConfig): Extension
     ...sourceDetailsDecorationExtensions,
     // Media tag decorations (video, audio, YouTube iframe)
     ...sourceMediaDecorationExtensions,
+    // Lint annotations (gated by lintEnabled setting and tabId availability)
+    ...(lintEnabled && tabId ? createSourceLintExtension(tabId) : []),
   ];
 }

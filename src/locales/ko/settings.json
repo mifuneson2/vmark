@@ -181,6 +181,10 @@
   "markdown.htmlRendering.sanitized": "정화됨",
   "markdown.htmlRendering.sanitizedWithStyles": "정화됨 + 스타일",
 
+  "markdown.group.lint": "Markdown Lint",
+  "markdown.lintEnabled.label": "Enable markdown lint",
+  "markdown.lintEnabled.description": "Check for common markdown issues (broken links, missing alt text, heading increments, etc.)",
+
   "files.group.fileBrowser": "파일 브라우저",
   "files.showHiddenFiles.label": "숨김 파일 표시",
   "files.showHiddenFiles.description": "파일 탐색기에 점 파일 및 숨김 시스템 항목 포함",

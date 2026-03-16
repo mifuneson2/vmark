@@ -9,7 +9,7 @@ import { visit } from "unist-util-visit";
 import type { Root, Link } from "mdast";
 import { createDiagnostic, type LintDiagnostic } from "../types";
 
-export function noEmptyLinkHref(source: string, mdast: Root): LintDiagnostic[] {
+export function noEmptyLinkHref(_source: string, mdast: Root): LintDiagnostic[] {
   const diagnostics: LintDiagnostic[] = [];
 
   visit(mdast, "link", (node: Link) => {

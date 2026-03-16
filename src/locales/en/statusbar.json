@@ -45,5 +45,9 @@
   "terminal.newSession": "New Terminal",
   "terminal.maxSessions": "Maximum 5 sessions",
   "terminal.closeSession": "Close",
-  "terminal.restartSession": "Restart"
+  "terminal.restartSession": "Restart",
+
+  "lint.badge.tooltip": "{{count}} issue(s) — click to go to next",
+  "lint.badge.tooltipSingle": "1 issue — click to go to next",
+  "lint.clean.toast": "No markdown issues found"
 }

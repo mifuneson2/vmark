@@ -28,6 +28,7 @@ import { formatExactTime } from "@/utils/dateUtils";
 import { formatKeyForDisplay } from "@/stores/shortcutsStore";
 import { UpdateIndicator } from "./UpdateIndicator";
 import { StatusBarCounts } from "./StatusBarCounts";
+import { LintBadge } from "./LintBadge";
 import type { McpClient } from "@/hooks/useMcpClients";
 
 const UPPERCASE_WORDS = new Set(["cli", "ai", "mcp", "api", "ide"]);
@@ -147,6 +148,8 @@ export function StatusBarRight({
       )}
 
       <StatusBarCounts />
+
+      <LintBadge />
 
       <UpdateIndicator />
 

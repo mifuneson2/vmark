@@ -181,6 +181,10 @@
   "markdown.htmlRendering.sanitized": "サニタイズ済み",
   "markdown.htmlRendering.sanitizedWithStyles": "サニタイズ済み + スタイル",
 
+  "markdown.group.lint": "Markdown Lint",
+  "markdown.lintEnabled.label": "Enable markdown lint",
+  "markdown.lintEnabled.description": "Check for common markdown issues (broken links, missing alt text, heading increments, etc.)",
+
   "files.group.fileBrowser": "ファイルブラウザ",
   "files.showHiddenFiles.label": "隠しファイルを表示",
   "files.showHiddenFiles.description": "ファイルエクスプローラーにドットファイルと隠しシステムアイテムを表示する",

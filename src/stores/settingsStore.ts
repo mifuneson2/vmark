@@ -207,6 +207,7 @@ const initialState: SettingsState = {
     copyFormat: "default",
     copyOnSelect: false,
     tableFitToWidth: false,
+    lintEnabled: true,
   },
   image: {
     autoResizeMax: 0, // Off by default

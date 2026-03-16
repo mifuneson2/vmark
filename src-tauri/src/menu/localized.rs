@@ -504,6 +504,10 @@ pub fn create_localized_menu(
             &MenuItem::with_id(app, "view-history", &t!("menu.view.history").to_string(), true, accel("view-history", "Ctrl+Shift+3"))?,
             &MenuItem::with_id(app, "toggle-terminal", &t!("menu.view.terminal").to_string(), true, accel("toggle-terminal", "Ctrl+`"))?,
             &PredefinedMenuItem::separator(app)?,
+            &MenuItem::with_id(app, "check-markdown", &t!("menu.view.checkMarkdown").to_string(), true, accel("check-markdown", "Alt+CmdOrCtrl+V"))?,
+            &MenuItem::with_id(app, "lint-next", &t!("menu.view.lintNext").to_string(), true, accel("lint-next", "F2"))?,
+            &MenuItem::with_id(app, "lint-prev", &t!("menu.view.lintPrev").to_string(), true, accel("lint-prev", "Shift+F2"))?,
+            &PredefinedMenuItem::separator(app)?,
             &PredefinedMenuItem::fullscreen(app, None)?,
         ],
     )?;

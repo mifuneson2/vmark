@@ -173,6 +173,9 @@ menu:
   view.fileExplorer: "Mostrar/ocultar explorador de archivos"
   view.history: "Mostrar/ocultar historial"
   view.terminal: "Mostrar/ocultar terminal"
+  view.checkMarkdown: "Check Markdown"
+  view.lintNext: "Next Issue"
+  view.lintPrev: "Previous Issue"
 
   # === Window menu ===
   window: "Ventana"
