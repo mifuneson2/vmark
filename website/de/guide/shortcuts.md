@@ -26,6 +26,8 @@ Wenn Sie die Systemfunktionen auf F-Tasten bevorzugen, können Sie VMark-Tastatu
 
 | Taste | Aktion |
 |-------|--------|
+| `F2` | Nächstes Problem |
+| `Shift + F2` | Vorheriges Problem |
 | `F4` | Zeilen aufsteigend sortieren |
 | `Umschalt + F4` | Zeilen absteigend sortieren |
 | `F5` | Quellvorschau |
@@ -162,6 +164,9 @@ Wenn Sie die Systemfunktionen auf F-Tasten bevorzugen, können Sie VMark-Tastatu
 | Tabellen an Breite anpassen | _(anpassbar)_ |
 | Universelle Symbolleiste | `Mod + Umschalt + P` |
 | Quellvorschau | `F5` |
+| Markdown prüfen | `Alt + Mod + V` |
+| Nächstes Problem | `F2` |
+| Vorheriges Problem | `Shift + F2` |
 
 ## Dateioperationen
 
