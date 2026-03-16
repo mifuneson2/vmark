@@ -31,8 +31,9 @@ pub(crate) fn create_menu_with_shortcuts(
     // App menu (macOS only)
     // ========================================================================
     #[cfg(target_os = "macos")]
-    let app_menu = Submenu::with_items(
+    let app_menu = Submenu::with_id_and_items(
         app,
+        "app-menu",
         "VMark",
         true,
         &[
@@ -78,8 +79,9 @@ pub(crate) fn create_menu_with_shortcuts(
         ],
     )?;
 
-    let export_submenu = Submenu::with_items(
+    let export_submenu = Submenu::with_id_and_items(
         app,
+        "export-submenu",
         "Export",
         true,
         &[
@@ -99,15 +101,16 @@ pub(crate) fn create_menu_with_shortcuts(
                     items.push(Box::new(MenuItem::with_id(app, "export-pandoc-hint", "Requires Pandoc — pandoc.org", true, None::<&str>)?));
                 }
                 let refs: Vec<&dyn IsMenuItem<tauri::Wry>> = items.iter().map(|i| &**i).collect();
-                Submenu::with_items(app, "Other Formats", true, &refs)?
+                Submenu::with_id_and_items(app, "other-formats-submenu", "Other Formats", true, &refs)?
             },
             &PredefinedMenuItem::separator(app)?,
             &MenuItem::with_id(app, "copy-html", "Copy as HTML", true, get_accel("copy-html", "CmdOrCtrl+Shift+C"))?,
         ],
     )?;
 
-    let history_submenu = Submenu::with_items(
+    let history_submenu = Submenu::with_id_and_items(
         app,
+        "doc-history-submenu",
         "Document History",
         true,
         &[
@@ -117,8 +120,9 @@ pub(crate) fn create_menu_with_shortcuts(
     )?;
 
     #[cfg(target_os = "macos")]
-    let file_menu = Submenu::with_items(
+    let file_menu = Submenu::with_id_and_items(
         app,
+        "file-menu",
         "File",
         true,
         &[
@@ -146,8 +150,9 @@ pub(crate) fn create_menu_with_shortcuts(
     )?;
 
     #[cfg(not(target_os = "macos"))]
-    let file_menu = Submenu::with_items(
+    let file_menu = Submenu::with_id_and_items(
         app,
+        "file-menu",
         "File",
         true,
         &[
@@ -182,8 +187,9 @@ pub(crate) fn create_menu_with_shortcuts(
     // ========================================================================
     // Edit menu
     // ========================================================================
-    let find_submenu = Submenu::with_items(
+    let find_submenu = Submenu::with_id_and_items(
         app,
+        "find-submenu",
         "Find",
         true,
         &[
@@ -195,8 +201,9 @@ pub(crate) fn create_menu_with_shortcuts(
         ],
     )?;
 
-    let selection_submenu = Submenu::with_items(
+    let selection_submenu = Submenu::with_id_and_items(
         app,
+        "selection-submenu",
         "Selection",
         true,
         &[
@@ -208,8 +215,9 @@ pub(crate) fn create_menu_with_shortcuts(
         ],
     )?;
 
-    let lines_submenu = Submenu::with_items(
+    let lines_submenu = Submenu::with_id_and_items(
         app,
+        "lines-submenu",
         "Lines",
         true,
         &[
@@ -226,8 +234,9 @@ pub(crate) fn create_menu_with_shortcuts(
         ],
     )?;
 
-    let line_endings_submenu = Submenu::with_items(
+    let line_endings_submenu = Submenu::with_id_and_items(
         app,
+        "line-endings-submenu",
         "Line Endings",
         true,
         &[
@@ -236,8 +245,9 @@ pub(crate) fn create_menu_with_shortcuts(
         ],
     )?;
 
-    let edit_menu = Submenu::with_items(
+    let edit_menu = Submenu::with_id_and_items(
         app,
+        "edit-menu",
         "Edit",
         true,
         &[
@@ -259,8 +269,9 @@ pub(crate) fn create_menu_with_shortcuts(
     // ========================================================================
     // Format menu (merged: Block + Format + Tools)
     // ========================================================================
-    let headings_submenu = Submenu::with_items(
+    let headings_submenu = Submenu::with_id_and_items(
         app,
+        "headings-submenu",
         "Headings",
         true,
         &[
@@ -278,8 +289,9 @@ pub(crate) fn create_menu_with_shortcuts(
         ],
     )?;
 
-    let lists_submenu = Submenu::with_items(
+    let lists_submenu = Submenu::with_id_and_items(
         app,
+        "lists-submenu",
         "Lists",
         true,
         &[
@@ -293,8 +305,9 @@ pub(crate) fn create_menu_with_shortcuts(
         ],
     )?;
 
-    let blockquote_submenu = Submenu::with_items(
+    let blockquote_submenu = Submenu::with_id_and_items(
         app,
+        "blockquote-submenu",
         "Blockquote",
         true,
         &[
@@ -304,8 +317,9 @@ pub(crate) fn create_menu_with_shortcuts(
         ],
     )?;
 
-    let transform_submenu = Submenu::with_items(
+    let transform_submenu = Submenu::with_id_and_items(
         app,
+        "transform-submenu",
         "Transform",
         true,
         &[
@@ -318,8 +332,9 @@ pub(crate) fn create_menu_with_shortcuts(
         ],
     )?;
 
-    let cjk_submenu = Submenu::with_items(
+    let cjk_submenu = Submenu::with_id_and_items(
         app,
+        "cjk-submenu",
         "CJK",
         true,
         &[
@@ -328,8 +343,9 @@ pub(crate) fn create_menu_with_shortcuts(
         ],
     )?;
 
-    let cleanup_submenu = Submenu::with_items(
+    let cleanup_submenu = Submenu::with_id_and_items(
         app,
+        "text-cleanup-submenu",
         "Text Cleanup",
         true,
         &[
@@ -340,8 +356,9 @@ pub(crate) fn create_menu_with_shortcuts(
         ],
     )?;
 
-    let format_menu = Submenu::with_items(
+    let format_menu = Submenu::with_id_and_items(
         app,
+        "format-menu",
         "Format",
         true,
         &[
@@ -371,8 +388,9 @@ pub(crate) fn create_menu_with_shortcuts(
     // ========================================================================
     // Insert menu
     // ========================================================================
-    let links_submenu = Submenu::with_items(
+    let links_submenu = Submenu::with_id_and_items(
         app,
+        "links-submenu",
         "Links",
         true,
         &[
@@ -382,8 +400,9 @@ pub(crate) fn create_menu_with_shortcuts(
         ],
     )?;
 
-    let table_submenu = Submenu::with_items(
+    let table_submenu = Submenu::with_id_and_items(
         app,
+        "table-submenu",
         "Table",
         true,
         &[
@@ -410,8 +429,9 @@ pub(crate) fn create_menu_with_shortcuts(
         ],
     )?;
 
-    let info_boxes_submenu = Submenu::with_items(
+    let info_boxes_submenu = Submenu::with_id_and_items(
         app,
+        "info-box-submenu",
         "Info Box",
         true,
         &[
@@ -423,8 +443,9 @@ pub(crate) fn create_menu_with_shortcuts(
         ],
     )?;
 
-    let insert_menu = Submenu::with_items(
+    let insert_menu = Submenu::with_id_and_items(
         app,
+        "insert-menu",
         "Insert",
         true,
         &[
@@ -449,8 +470,9 @@ pub(crate) fn create_menu_with_shortcuts(
     // ========================================================================
     // View menu
     // ========================================================================
-    let view_menu = Submenu::with_items(
+    let view_menu = Submenu::with_id_and_items(
         app,
+        "view-menu",
         "View",
         true,
         &[
@@ -481,8 +503,9 @@ pub(crate) fn create_menu_with_shortcuts(
     // Window menu
     // ========================================================================
     #[cfg(target_os = "macos")]
-    let window_menu = Submenu::with_items(
+    let window_menu = Submenu::with_id_and_items(
         app,
+        "window-menu",
         "Window",
         true,
         &[
@@ -494,8 +517,9 @@ pub(crate) fn create_menu_with_shortcuts(
     )?;
 
     #[cfg(not(target_os = "macos"))]
-    let window_menu = Submenu::with_items(
+    let window_menu = Submenu::with_id_and_items(
         app,
+        "window-menu",
         "Window",
         true,
         &[
@@ -508,8 +532,9 @@ pub(crate) fn create_menu_with_shortcuts(
     // Help menu
     // ========================================================================
     #[cfg(target_os = "macos")]
-    let help_menu = Submenu::with_items(
+    let help_menu = Submenu::with_id_and_items(
         app,
+        "help-menu",
         "Help",
         true,
         &[
@@ -523,8 +548,9 @@ pub(crate) fn create_menu_with_shortcuts(
     )?;
 
     #[cfg(not(target_os = "macos"))]
-    let help_menu = Submenu::with_items(
+    let help_menu = Submenu::with_id_and_items(
         app,
+        "help-menu",
         "Help",
         true,
         &[
