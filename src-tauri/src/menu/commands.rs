@@ -32,7 +32,7 @@ pub fn rebuild_menu(app: AppHandle, shortcuts: HashMap<String, String>) -> Resul
     app.set_menu(menu).map_err(|e| e.to_string())?;
 
     #[cfg(target_os = "macos")]
-    crate::macos_menu::apply_menu_fixes();
+    crate::macos_menu::apply_menu_fixes(&app);
 
     Ok(())
 }

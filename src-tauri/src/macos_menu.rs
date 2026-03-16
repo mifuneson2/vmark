@@ -1,16 +1,22 @@
 //! macOS-specific menu fixes.
 //!
-//! Workaround for muda's broken `set_as_help_menu_for_nsapp()`.
+//! Applies SF Symbol icons to menu items and registers Help/Window menus
+//! with NSApplication for native macOS behavior.
+//!
+//! All lookups use stable menu item IDs (not translated titles) for i18n safety.
 //! See: https://github.com/tauri-apps/muda/pull/322
+
+use std::collections::HashMap;
 
 use objc2::MainThreadMarker;
 use objc2_app_kit::{NSApplication, NSImage, NSMenu};
 use objc2_foundation::NSString;
+use tauri::menu::MenuItemKind;
 
 /// Fix the Help menu on macOS.
 ///
-/// This finds the "Help" submenu in the app's main menu and properly registers it
-/// with NSApplication so macOS shows the native search field.
+/// Help is always the last top-level menu. Uses positional lookup
+/// (not title matching) so it works regardless of UI language.
 ///
 /// Must be called after `app.set_menu()`.
 pub fn fix_help_menu() {
@@ -25,15 +31,20 @@ pub fn fix_help_menu() {
         return;
     };
 
-    // Find the Help menu by title
-    let help_title = NSString::from_str("Help");
-    let Some(help_item) = main_menu.itemWithTitle(&help_title) else {
-        eprintln!("[macos_menu] No 'Help' menu item found");
+    // Help menu is always the last top-level menu item on macOS
+    let item_count = main_menu.numberOfItems();
+    if item_count == 0 {
+        eprintln!("[macos_menu] Main menu has no items");
+        return;
+    }
+
+    let Some(help_item) = main_menu.itemAtIndex(item_count - 1) else {
+        eprintln!("[macos_menu] Could not get last menu item");
         return;
     };
 
     let Some(help_submenu) = help_item.submenu() else {
-        eprintln!("[macos_menu] Help item has no submenu");
+        eprintln!("[macos_menu] Last menu item has no submenu");
         return;
     };
 
@@ -46,8 +57,8 @@ pub fn fix_help_menu() {
 
 /// Fix the Window menu on macOS.
 ///
-/// This finds the "Window" submenu and registers it with NSApplication
-/// so macOS adds native window management items.
+/// Window is always the second-to-last top-level menu. Uses positional lookup
+/// (not title matching) so it works regardless of UI language.
 pub fn fix_window_menu() {
     let Some(mtm) = MainThreadMarker::new() else {
         return;
@@ -58,9 +69,13 @@ pub fn fix_window_menu() {
         return;
     };
 
-    let window_title = NSString::from_str("Window");
-    let Some(window_item) = main_menu.itemWithTitle(&window_title) else {
-        // Window menu is optional
+    // Window menu is always second-to-last (before Help)
+    let item_count = main_menu.numberOfItems();
+    if item_count < 2 {
+        return;
+    }
+
+    let Some(window_item) = main_menu.itemAtIndex(item_count - 2) else {
         return;
     };
 
@@ -78,212 +93,325 @@ pub fn fix_window_menu() {
 // SF Symbol Menu Icons
 // ============================================================================
 
-/// Maps menu item titles to SF Symbol names.
+/// Maps menu item **IDs** to SF Symbol names.
 /// Only leaf items (not submenus) are matched.
+/// IDs come from `MenuItem::with_id(app, "THE-ID", ...)` in menu builders.
 const MENU_ICONS: &[(&str, &str)] = &[
     // ── App menu ──
-    ("About VMark", "info.circle"),
-    ("Settings...", "gearshape"),
-    ("Hide VMark", "eye.slash"),
-    ("Hide Others", "eye.slash.circle"),
-    ("Show All", "eye"),
-    ("Save All and Quit", "rectangle.portrait.and.arrow.right"),
-    ("Save All and Exit", "rectangle.portrait.and.arrow.right"),
-    ("Quit VMark", "power"),
-    ("Exit", "power"),
+    ("about", "info.circle"),
+    ("preferences", "gearshape"),
+    ("save-all-quit", "rectangle.portrait.and.arrow.right"),
+    ("quit", "power"),
     // ── File menu ──
-    ("New", "doc.badge.plus"),
-    ("New Window", "macwindow.badge.plus"),
-    ("Quick Open", "magnifyingglass"),
-    ("Open File...", "folder"),
-    ("Open Workspace...", "folder.badge.gearshape"),
-    ("Close", "xmark"),
-    ("Close Workspace", "xmark.square"),
-    ("Save", "arrow.down.doc"),
-    ("Save As...", "arrow.down.doc.fill"),
-    ("Move to...", "folder.badge.questionmark"),
+    ("new", "doc.badge.plus"),
+    ("new-window", "macwindow.badge.plus"),
+    ("quick-open", "magnifyingglass"),
+    ("open", "folder"),
+    ("open-folder", "folder.badge.gearshape"),
+    ("close", "xmark"),
+    ("close-workspace", "xmark.square"),
+    ("save", "arrow.down.doc"),
+    ("save-as", "arrow.down.doc.fill"),
+    ("move-to", "folder.badge.questionmark"),
     // Export
-    ("HTML...", "doc.richtext"),
-    ("Print...", "printer"),
-    ("PDF...", "arrow.up.doc"),
-    ("Word (.docx)...", "doc.richtext.fill"),
-    ("EPUB (.epub)...", "book"),
-    ("LaTeX (.tex)...", "function"),
-    ("OpenDocument (.odt)...", "doc.text"),
-    ("Rich Text (.rtf)...", "doc.plaintext"),
-    ("Plain Text (.txt)...", "doc"),
-    ("Requires Pandoc — pandoc.org", "info.circle"),
-    ("Copy as HTML", "doc.text"),
+    ("export-html", "doc.richtext"),
+    ("export-pdf", "printer"),
+    ("export-pdf-native", "arrow.up.doc"),
+    ("export-pandoc-docx", "doc.richtext.fill"),
+    ("export-pandoc-epub", "book"),
+    ("export-pandoc-latex", "function"),
+    ("export-pandoc-odt", "doc.text"),
+    ("export-pandoc-rtf", "doc.plaintext"),
+    ("export-pandoc-txt", "doc"),
+    ("export-pandoc-hint", "info.circle"),
+    ("copy-html", "doc.text"),
     // History
-    ("Clear Workspace History...", "clock.badge.xmark"),
-    ("Clear All History...", "clock.badge.xmark"),
+    ("clear-workspace-history", "clock.badge.xmark"),
+    ("clear-history", "clock.badge.xmark"),
     // Recent
-    ("Clear Recent Files", "trash"),
-    ("Clear Recent Workspaces", "trash"),
+    ("clear-recent", "trash"),
+    ("clear-recent-workspaces", "trash"),
     // ── Edit menu ──
-    ("Undo", "arrow.uturn.backward"),
-    ("Redo", "arrow.uturn.forward"),
+    ("undo", "arrow.uturn.backward"),
+    ("redo", "arrow.uturn.forward"),
+    // Find
+    ("find-replace", "magnifyingglass"),
+    ("find-next", "chevron.down"),
+    ("find-prev", "chevron.up"),
+    ("use-selection-find", "text.magnifyingglass"),
+    // Selection
+    ("select-word", "textformat.abc"),
+    ("select-line", "arrow.left.and.line.vertical.and.arrow.right"),
+    ("select-block", "rectangle.dashed"),
+    ("expand-selection", "arrow.up.left.and.arrow.down.right"),
+    // Lines
+    ("move-line-up", "arrow.up"),
+    ("move-line-down", "arrow.down"),
+    ("duplicate-line", "plus.square.on.square"),
+    ("delete-line", "trash"),
+    ("join-lines", "text.justify"),
+    ("remove-blank-lines", "line.3.horizontal.decrease"),
+    ("sort-lines-asc", "arrow.up.right"),
+    ("sort-lines-desc", "arrow.down.right"),
+    // Line Endings
+    ("line-endings-lf", "l.circle"),
+    ("line-endings-crlf", "c.circle"),
+    // ── Format menu ──
+    ("bold", "bold"),
+    ("italic", "italic"),
+    ("underline", "underline"),
+    ("strikethrough", "strikethrough"),
+    ("code", "chevron.left.forwardslash.chevron.right"),
+    ("highlight", "highlighter"),
+    ("subscript", "textformat.subscript"),
+    ("superscript", "textformat.superscript"),
+    ("clear-format", "paintbrush"),
+    // Headings
+    ("heading-1", "1.circle"),
+    ("heading-2", "2.circle"),
+    ("heading-3", "3.circle"),
+    ("heading-4", "4.circle"),
+    ("heading-5", "5.circle"),
+    ("heading-6", "6.circle"),
+    ("paragraph", "paragraph"),
+    ("increase-heading", "plus.circle"),
+    ("decrease-heading", "minus.circle"),
+    // Lists
+    ("ordered-list", "list.number"),
+    ("unordered-list", "list.bullet"),
+    ("task-list", "checklist"),
+    ("indent", "increase.indent"),
+    ("outdent", "decrease.indent"),
+    ("remove-list", "xmark.circle"),
+    // Blockquote
+    ("quote", "text.quote"),
+    ("nest-blockquote", "increase.indent"),
+    ("unnest-blockquote", "decrease.indent"),
+    // Transform
+    ("transform-uppercase", "textformat.size.larger"),
+    ("transform-lowercase", "textformat.size.smaller"),
+    ("transform-title-case", "textformat"),
+    ("transform-toggle-case", "arrow.up.arrow.down"),
+    ("toggle-quote-style", "quote.opening"),
+    // CJK
+    ("format-cjk", "globe.asia.australia"),
+    ("format-cjk-file", "doc.text.magnifyingglass"),
+    // Text Cleanup
+    ("remove-trailing-spaces", "eraser"),
+    ("collapse-blank-lines", "rectangle.compress.vertical"),
+    ("cleanup-images", "photo.badge.minus"),
+    // ── Insert menu ──
+    ("link", "link"),
+    ("wiki-link", "link.badge.plus"),
+    ("bookmark", "bookmark"),
+    ("image", "photo"),
+    ("video", "video"),
+    ("audio", "waveform"),
+    ("insert-table", "tablecells"),
+    ("code-fences", "curlybraces"),
+    ("math-block", "function"),
+    ("diagram", "chart.xyaxis.line"),
+    ("horizontal-line", "minus"),
+    ("footnote", "note.text"),
+    ("collapsible-block", "chevron.down.square"),
+    ("mindmap", "brain"),
+    // Table
+    ("add-row-before", "arrow.up.to.line"),
+    ("add-row-after", "arrow.down.to.line"),
+    ("add-col-before", "arrow.left.to.line"),
+    ("add-col-after", "arrow.right.to.line"),
+    ("delete-row", "minus.rectangle"),
+    ("delete-col", "minus.rectangle.portrait"),
+    ("delete-table", "trash"),
+    ("align-left", "text.alignleft"),
+    ("align-center", "text.aligncenter"),
+    ("align-right", "text.alignright"),
+    ("align-all-left", "text.alignleft"),
+    ("align-all-center", "text.aligncenter"),
+    ("align-all-right", "text.alignright"),
+    ("format-table", "wand.and.stars"),
+    // Info Box
+    ("info-note", "note.text"),
+    ("info-tip", "lightbulb"),
+    ("info-important", "exclamationmark.circle"),
+    ("info-warning", "exclamationmark.triangle"),
+    ("info-caution", "flame"),
+    // ── View menu ──
+    ("source-mode", "chevron.left.forwardslash.chevron.right"),
+    ("focus-mode", "eye"),
+    ("typewriter-mode", "character.cursor.ibeam"),
+    ("zoom-actual", "1.magnifyingglass"),
+    ("zoom-in", "plus.magnifyingglass"),
+    ("zoom-out", "minus.magnifyingglass"),
+    ("word-wrap", "arrow.right.to.line"),
+    ("line-numbers", "number"),
+    ("diagram-preview", "eye.square"),
+    ("fit-tables", "arrow.left.and.right.righttriangle.left.righttriangle.right"),
+    ("outline", "list.bullet.indent"),
+    ("file-explorer", "folder"),
+    ("view-history", "clock.arrow.circlepath"),
+    ("toggle-terminal", "terminal"),
+    // ── Window menu ──
+    ("bring-all-to-front", "macwindow.on.rectangle"),
+    // ── Help menu ──
+    ("vmark-help", "questionmark.circle"),
+    ("keyboard-shortcuts", "keyboard"),
+    ("install-cli", "terminal"),
+    ("report-issue", "exclamationmark.bubble"),
+    // ── Genies menu (structural items) ──
+    ("search-genies", "sparkles"),
+    ("no-genies", "sparkles"),
+    ("reload-genies", "arrow.clockwise"),
+    ("open-genies-folder", "folder"),
+];
+
+/// Icons for PredefinedMenuItems (Cut, Copy, etc.) which don't have custom IDs.
+/// Mapped by the title text passed at creation time. These titles may be localized
+/// by macOS when `None` is passed, so this is a best-effort match.
+const PREDEFINED_ICONS: &[(&str, &str)] = &[
     ("Cut", "scissors"),
     ("Copy", "doc.on.doc"),
     ("Paste", "doc.on.clipboard"),
     ("Select All", "checkmark.square"),
-    // Find
-    ("Find and Replace...", "magnifyingglass"),
-    ("Find Next", "chevron.down"),
-    ("Find Previous", "chevron.up"),
-    ("Use Selection for Find", "text.magnifyingglass"),
-    // Selection
-    ("Select Word", "textformat.abc"),
-    ("Select Line", "arrow.left.and.line.vertical.and.arrow.right"),
-    ("Select Block", "rectangle.dashed"),
-    ("Expand Selection", "arrow.up.left.and.arrow.down.right"),
-    // Lines
-    ("Move Line Up", "arrow.up"),
-    ("Move Line Down", "arrow.down"),
-    ("Duplicate Line", "plus.square.on.square"),
-    ("Delete Line", "trash"),
-    ("Join Lines", "text.justify"),
-    ("Remove Blank Lines", "line.3.horizontal.decrease"),
-    ("Sort Lines Ascending", "arrow.up.right"),
-    ("Sort Lines Descending", "arrow.down.right"),
-    // Line Endings
-    ("Convert to LF", "l.circle"),
-    ("Convert to CRLF", "c.circle"),
-    // ── Format menu ──
-    ("Bold", "bold"),
-    ("Italic", "italic"),
-    ("Underline", "underline"),
-    ("Strikethrough", "strikethrough"),
-    ("Inline Code", "chevron.left.forwardslash.chevron.right"),
-    ("Highlight", "highlighter"),
-    ("Subscript", "textformat.subscript"),
-    ("Superscript", "textformat.superscript"),
-    ("Clear Format", "paintbrush"),
-    // Headings
-    ("Heading 1", "1.circle"),
-    ("Heading 2", "2.circle"),
-    ("Heading 3", "3.circle"),
-    ("Heading 4", "4.circle"),
-    ("Heading 5", "5.circle"),
-    ("Heading 6", "6.circle"),
-    ("Paragraph", "paragraph"),
-    ("Increase Heading Level", "plus.circle"),
-    ("Decrease Heading Level", "minus.circle"),
-    // Lists
-    ("Ordered List", "list.number"),
-    ("Unordered List", "list.bullet"),
-    ("Task List", "checklist"),
-    ("Indent", "increase.indent"),
-    ("Outdent", "decrease.indent"),
-    ("Remove List", "xmark.circle"),
-    // Blockquote
-    ("Blockquote", "text.quote"),
-    ("Nest Blockquote", "increase.indent"),
-    ("Unnest Blockquote", "decrease.indent"),
-    // Transform
-    ("UPPERCASE", "textformat.size.larger"),
-    ("lowercase", "textformat.size.smaller"),
-    ("Title Case", "textformat"),
-    ("Toggle Case", "arrow.up.arrow.down"),
-    ("Toggle Quote Style", "quote.opening"),
-    // CJK
-    ("Format Selection", "globe.asia.australia"),
-    ("Format Entire File", "doc.text.magnifyingglass"),
-    // Text Cleanup
-    ("Remove Trailing Spaces", "eraser"),
-    ("Collapse Blank Lines", "rectangle.compress.vertical"),
-    ("Clean Up Unused Images...", "photo.badge.minus"),
-    // ── Insert menu ──
-    ("Link", "link"),
-    ("Wiki Link", "link.badge.plus"),
-    ("Bookmark", "bookmark"),
-    ("Image...", "photo"),
-    ("Video...", "video"),
-    ("Audio...", "waveform"),
-    ("Insert Table", "tablecells"),
-    ("Code Block", "curlybraces"),
-    ("Math Block", "function"),
-    ("Diagram", "chart.xyaxis.line"),
-    ("Horizontal Line", "minus"),
-    ("Footnote", "note.text"),
-    ("Collapsible Block", "chevron.down.square"),
-    ("Mindmap", "brain"),
-    // Table
-    ("Add Row Above", "arrow.up.to.line"),
-    ("Add Row Below", "arrow.down.to.line"),
-    ("Add Column Before", "arrow.left.to.line"),
-    ("Add Column After", "arrow.right.to.line"),
-    ("Delete Row", "minus.rectangle"),
-    ("Delete Column", "minus.rectangle.portrait"),
-    ("Delete Table", "trash"),
-    ("Align Left", "text.alignleft"),
-    ("Align Center", "text.aligncenter"),
-    ("Align Right", "text.alignright"),
-    ("Align All Left", "text.alignleft"),
-    ("Align All Center", "text.aligncenter"),
-    ("Align All Right", "text.alignright"),
-    ("Format Table", "wand.and.stars"),
-    // Info Box
-    ("Note", "note.text"),
-    ("Tip", "lightbulb"),
-    ("Important", "exclamationmark.circle"),
-    ("Warning", "exclamationmark.triangle"),
-    ("Caution", "flame"),
-    // ── View menu ──
-    ("Source Code Mode", "chevron.left.forwardslash.chevron.right"),
-    ("Focus Mode", "eye"),
-    ("Typewriter Mode", "character.cursor.ibeam"),
-    ("Actual Size", "1.magnifyingglass"),
-    ("Zoom In", "plus.magnifyingglass"),
-    ("Zoom Out", "minus.magnifyingglass"),
-    ("Toggle Word Wrap", "arrow.right.to.line"),
-    ("Toggle Line Numbers", "number"),
-    ("Toggle Diagram Preview", "eye.square"),
-    ("Fit Tables to Width", "arrow.left.and.right.righttriangle.left.righttriangle.right"),
-    ("Toggle Outline", "list.bullet.indent"),
-    ("Toggle File Explorer", "folder"),
-    ("Toggle History", "clock.arrow.circlepath"),
-    ("Toggle Terminal", "terminal"),
-    ("Enter Full Screen", "arrow.up.left.and.arrow.down.right"),
-    // ── Window menu ──
+    ("Services", "gear"),
+    ("Hide VMark", "eye.slash"),
+    ("Hide Others", "eye.slash.circle"),
+    ("Show All", "eye"),
     ("Minimize", "minus.square"),
     ("Zoom", "arrow.up.left.and.arrow.down.right"),
     ("Maximize", "arrow.up.left.and.arrow.down.right"),
-    ("Bring All to Front", "macwindow.on.rectangle"),
-    // ── Help menu ──
-    ("VMark Help", "questionmark.circle"),
-    ("Keyboard Shortcuts", "keyboard"),
-    ("Shell Command: Install 'vmark' in PATH...", "terminal"),
-    ("Report an Issue...", "exclamationmark.bubble"),
-    // ── Genies menu (structural items) ──
-    ("Search Genies\u{2026}", "sparkles"),
-    ("No Genies", "sparkles"),
-    ("Reload Genies", "arrow.clockwise"),
-    ("Open Genies Folder", "folder"),
+    ("Enter Full Screen", "arrow.up.left.and.arrow.down.right"),
+    ("Close Window", "xmark.square"),
 ];
 
-/// Look up the SF Symbol name for a menu item title.
-fn icon_for_title(title: &str) -> Option<&'static str> {
+/// Look up the SF Symbol name for a menu item ID.
+fn icon_for_id(id: &str) -> Option<&'static str> {
     MENU_ICONS
         .iter()
-        .find(|(t, _)| *t == title)
+        .find(|(i, _)| *i == id)
         .map(|(_, icon)| *icon)
         .filter(|s| !s.is_empty())
 }
 
+/// Look up the SF Symbol name for a PredefinedMenuItem by its title text.
+fn icon_for_predefined_title(title: &str) -> Option<&'static str> {
+    PREDEFINED_ICONS
+        .iter()
+        .find(|(t, _)| *t == title)
+        .map(|(_, icon)| *icon)
+}
+
+/// Build a `title -> SF Symbol` map by walking the Tauri menu tree.
+///
+/// For each leaf item, looks up its ID in `MENU_ICONS` and records the mapping
+/// from its current display title to the SF Symbol name. This decouples the
+/// NSMenu icon application from hardcoded English titles — when titles are
+/// translated, the ID-based lookup still resolves correctly.
+fn build_title_icon_map(app_handle: &tauri::AppHandle) -> HashMap<String, &'static str> {
+    let mut map = HashMap::new();
+
+    let Some(menu) = app_handle.menu() else {
+        return map;
+    };
+
+    let Ok(items) = menu.items() else {
+        return map;
+    };
+
+    for item in items {
+        collect_icons_from_item(&item, &mut map);
+    }
+
+    map
+}
+
+/// Recursively collect title -> icon mappings from a Tauri MenuItemKind.
+fn collect_icons_from_item(
+    item: &MenuItemKind<tauri::Wry>,
+    map: &mut HashMap<String, &'static str>,
+) {
+    match item {
+        MenuItemKind::Submenu(sub) => {
+            // Record submenu ID for fallback icon resolution
+            if let Ok(items) = sub.items() {
+                let sub_id = sub.id().0.as_str();
+                for child in &items {
+                    collect_icons_from_item_in_submenu(child, sub_id, map);
+                }
+            }
+        }
+        MenuItemKind::MenuItem(mi) => {
+            let id = mi.id().0.as_str();
+            if let Some(icon) = icon_for_id(id) {
+                if let Ok(title) = mi.text() {
+                    map.insert(title, icon);
+                }
+            }
+        }
+        MenuItemKind::Predefined(pi) => {
+            // PredefinedMenuItems (Cut, Copy, etc.) don't have custom IDs.
+            // Match by their title text using the PREDEFINED_ICONS table.
+            if let Ok(title) = pi.text() {
+                if let Some(icon) = icon_for_predefined_title(&title) {
+                    map.insert(title, icon);
+                }
+            }
+        }
+        _ => {}
+    }
+}
+
+/// Collect icons within a known submenu context (for fallback icons).
+fn collect_icons_from_item_in_submenu(
+    item: &MenuItemKind<tauri::Wry>,
+    submenu_id: &str,
+    map: &mut HashMap<String, &'static str>,
+) {
+    match item {
+        MenuItemKind::Submenu(sub) => {
+            if let Ok(items) = sub.items() {
+                let sub_id = sub.id().0.as_str();
+                for child in &items {
+                    collect_icons_from_item_in_submenu(child, sub_id, map);
+                }
+            }
+        }
+        MenuItemKind::MenuItem(mi) => {
+            let id = mi.id().0.as_str();
+            let icon = icon_for_id(id).or_else(|| fallback_for_submenu_id(Some(submenu_id)));
+            if let Some(icon) = icon {
+                if let Ok(title) = mi.text() {
+                    map.insert(title, icon);
+                }
+            }
+        }
+        MenuItemKind::Predefined(pi) => {
+            if let Ok(title) = pi.text() {
+                if let Some(icon) = icon_for_predefined_title(&title) {
+                    map.insert(title, icon);
+                }
+            }
+        }
+        _ => {}
+    }
+}
+
 /// Apply SF Symbol icons to all menu items (leaf items only, not submenus).
-/// Walks the entire menu tree recursively.
-pub fn apply_menu_icons() {
+/// Walks the Tauri menu tree to build an ID-based title->icon map, then
+/// applies icons via NSMenu traversal.
+pub fn apply_menu_icons(app_handle: &tauri::AppHandle) {
+    let title_icon_map = build_title_icon_map(app_handle);
+
     let Some(mtm) = MainThreadMarker::new() else {
         return;
     };
 
-    let app = NSApplication::sharedApplication(mtm);
-    let Some(main_menu) = app.mainMenu() else {
+    let ns_app = NSApplication::sharedApplication(mtm);
+    let Some(main_menu) = ns_app.mainMenu() else {
         return;
     };
 
-    apply_icons_to_menu(&main_menu, None);
+    apply_icons_to_ns_menu(&main_menu, &title_icon_map);
 
     #[cfg(debug_assertions)]
     eprintln!("[macos_menu] Menu icons applied");
@@ -300,8 +428,8 @@ fn fallback_for_submenu_id(id: Option<&str>) -> Option<&'static str> {
 }
 
 /// Recursively walk an NSMenu and set SF Symbol icons on leaf items.
-/// `submenu_id` tracks the Tauri submenu ID for context-aware fallback icons.
-fn apply_icons_to_menu(menu: &NSMenu, submenu_id: Option<&str>) {
+/// Uses the pre-built title->icon map for lookup.
+fn apply_icons_to_ns_menu(menu: &NSMenu, title_icon_map: &HashMap<String, &'static str>) {
     let count = menu.numberOfItems();
 
     for i in 0..count {
@@ -314,12 +442,9 @@ fn apply_icons_to_menu(menu: &NSMenu, submenu_id: Option<&str>) {
             continue;
         }
 
-        // If item has a submenu, recurse with the submenu's title as context.
-        // Tauri submenu IDs aren't exposed on NSMenuItem, so we match by title
-        // for known submenus that need context-aware fallbacks.
+        // If item has a submenu, recurse
         if let Some(child_menu) = item.submenu() {
-            let child_id = submenu_title_to_id(&item.title().to_string());
-            apply_icons_to_menu(&child_menu, child_id.as_deref());
+            apply_icons_to_ns_menu(&child_menu, title_icon_map);
             continue;
         }
 
@@ -331,12 +456,8 @@ fn apply_icons_to_menu(menu: &NSMenu, submenu_id: Option<&str>) {
         let title = item.title();
         let title_str = title.to_string();
 
-        let symbol_name = match icon_for_title(&title_str) {
-            Some(name) => name,
-            None => match fallback_for_submenu_id(submenu_id) {
-                Some(fallback) => fallback,
-                None => continue, // No icon for unrecognized dynamic items
-            },
+        let Some(symbol_name) = title_icon_map.get(&title_str).copied() else {
+            continue;
         };
 
         let ns_name = NSString::from_str(symbol_name);
@@ -348,19 +469,9 @@ fn apply_icons_to_menu(menu: &NSMenu, submenu_id: Option<&str>) {
     }
 }
 
-/// Map known submenu titles to their Tauri submenu IDs.
-fn submenu_title_to_id(title: &str) -> Option<String> {
-    match title {
-        "Open Recent" => Some(crate::menu::RECENT_FILES_SUBMENU_ID.to_string()),
-        "Open Recent Workspace" => Some(crate::menu::RECENT_WORKSPACES_SUBMENU_ID.to_string()),
-        "Genies" => Some(crate::menu::GENIES_SUBMENU_ID.to_string()),
-        _ => None,
-    }
-}
-
 /// Apply all macOS menu fixes.
-pub fn apply_menu_fixes() {
+pub fn apply_menu_fixes(app_handle: &tauri::AppHandle) {
     fix_help_menu();
     fix_window_menu();
-    apply_menu_icons();
+    apply_menu_icons(app_handle);
 }

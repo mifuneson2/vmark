@@ -149,11 +149,11 @@ pub fn update_recent_workspaces_menu(
     Ok(())
 }
 
-/// Find the Edit submenu from the top-level menu.
+/// Find the Edit submenu from the top-level menu by ID.
 fn find_edit_submenu(menu: &Menu<tauri::Wry>) -> Option<Submenu<tauri::Wry>> {
     for item in menu.items().ok()? {
         if let MenuItemKind::Submenu(top) = item {
-            if top.text().ok().as_deref() == Some("Edit") {
+            if top.id().0.as_str() == "edit-menu" {
                 return Some(top);
             }
         }
@@ -273,7 +273,7 @@ pub fn refresh_genies_menu(
 
     // Re-apply SF Symbol icons to cover newly added genie items
     #[cfg(target_os = "macos")]
-    crate::macos_menu::apply_menu_icons();
+    crate::macos_menu::apply_menu_icons(&app);
 
     Ok(())
 }

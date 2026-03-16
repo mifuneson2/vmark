@@ -531,7 +531,7 @@ pub fn run() {
 
             // Fix macOS Help/Window menus (workaround for muda bug)
             #[cfg(target_os = "macos")]
-            macos_menu::apply_menu_fixes();
+            macos_menu::apply_menu_fixes(app.handle());
 
             // Best-effort cleanup of legacy ~/.vmark/ directory
             app_paths::cleanup_legacy_home_dir(app.handle());
