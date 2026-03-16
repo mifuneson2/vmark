@@ -104,12 +104,12 @@ onMounted(() => {
   position: absolute;
   top: calc(100% + 6px);
   right: 0;
-  min-width: 120px;
-  padding: 4px;
+  min-width: var(--dropdown-min-width);
+  padding: var(--dropdown-padding);
   border: 1px solid var(--vp-c-border);
-  border-radius: 8px;
+  border-radius: var(--dropdown-radius);
   background: var(--vp-c-bg);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--dropdown-shadow);
   z-index: 100;
   opacity: 0;
   visibility: hidden;
@@ -126,12 +126,12 @@ onMounted(() => {
   align-items: center;
   gap: 8px;
   width: 100%;
-  padding: 8px 10px;
+  padding: var(--dropdown-item-padding);
   border: none;
-  border-radius: 6px;
+  border-radius: var(--dropdown-item-radius);
   background: transparent;
   color: var(--vp-c-text-1);
-  font-size: 13px;
+  font-size: var(--dropdown-item-font-size);
   cursor: pointer;
   transition: background 0.15s ease;
 }
