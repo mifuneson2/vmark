@@ -1,0 +1,45 @@
+{
+  "viewFiles": "FILE",
+  "viewOutline": "STRUTTURA",
+  "viewHistory": "CRONOLOGIA",
+  "showFiles": "Mostra file",
+  "showOutline": "Mostra struttura",
+  "showHistory": "Mostra cronologia",
+  "newFile": "Nuovo file",
+  "newFolder": "Nuova cartella",
+  "clearDocumentHistory": "Cancella cronologia documento",
+  "closeSidebar": "Chiudi barra laterale",
+  "clearHistoryMessage": "Eliminare tutta la cronologia per questo documento? L'operazione non può essere annullata.",
+  "noWorkspace": "Nessun spazio di lavoro aperto",
+  "loading": "Caricamento...",
+  "defaultFileName": "Senza titolo",
+  "defaultFolderName": "Nuova cartella",
+  "workspaceFallback": "Spazio di lavoro",
+  "contextMenu": {
+    "open": "Apri",
+    "rename": "Rinomina",
+    "duplicate": "Duplica",
+    "moveTo": "Sposta in...",
+    "delete": "Elimina",
+    "copyPath": "Copia percorso",
+    "revealInFinder": "Mostra nel Finder",
+    "showInExplorer": "Mostra in Esplora risorse",
+    "showInFileManager": "Mostra nel gestore file"
+  },
+  "outline": {
+    "documentOutline": "Struttura del documento",
+    "expandSection": "Espandi sezione",
+    "collapseSection": "Comprimi sezione",
+    "noHeadings": "Nessun titolo",
+    "tooLarge": "Documento troppo grande per la struttura"
+  },
+  "history": {
+    "saveToEnable": "Salva il documento per abilitare la cronologia",
+    "disabled": "La cronologia è disabilitata nelle impostazioni",
+    "noHistory": "Nessuna cronologia",
+    "revertTitle": "Ripristina versione precedente",
+    "revertMessage": "Ripristinare la versione del {{time}}?\n\nLe modifiche attuali verranno salvate come nuova voce nella cronologia.",
+    "revertButton": "Ripristina questa versione",
+    "deleteSnapshot": "Elimina questo snapshot"
+  }
+}

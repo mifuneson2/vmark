@@ -1,0 +1,109 @@
+{
+  "unsavedChanges": {
+    "title": "Modifiche non salvate",
+    "single": "Vuoi salvare le modifiche a \"{{title}}\"?",
+    "multiple": "Hai {{count}} documento non salvato:\n\n• {{list}}",
+    "multiple_plural": "Hai {{count}} documenti non salvati:\n\n• {{list}}",
+    "newDocsHint": "{{count}} nuovo documento richiederà un percorso di salvataggio.",
+    "newDocsHint_plural": "{{count}} nuovi documenti richiederanno un percorso di salvataggio.",
+    "openInNewWindow": "Questa finestra ha modifiche non salvate. Aprire lo spazio di lavoro in una nuova finestra?",
+    "restartUnsaved": "Hai {{count}} documento(i) non salvato(i). Riavviare e ripristinare al riavvio?"
+  },
+  "fileChanged": {
+    "title": "File modificato",
+    "message": "\"{{fileName}}\" è stato modificato esternamente.\n\nCosa vuoi fare?",
+    "multipleTitle": "Più file modificati",
+    "multipleMessage": "{{count}} file sono stati modificati esternamente:\n{{fileNames}}\n\nCosa vuoi fare?"
+  },
+  "revertToSaved": {
+    "title": "Ripristina alla versione salvata",
+    "message": "Scartare tutte le modifiche e ricaricare \"{{title}}\" dal disco?"
+  },
+  "clearRecentFiles": {
+    "title": "Cancella file recenti",
+    "message": "Cancellare l'elenco dei file aperti di recente?"
+  },
+  "clearRecentWorkspaces": {
+    "title": "Cancella spazi di lavoro recenti",
+    "message": "Cancellare l'elenco degli spazi di lavoro aperti di recente?"
+  },
+  "fileNotFound": {
+    "title": "File non trovato",
+    "message": "Impossibile aprire questo file. Potrebbe essere stato spostato o eliminato.\n\nRimuovere dai file recenti?"
+  },
+  "workspaceNotFound": {
+    "title": "Spazio di lavoro non trovato",
+    "message": "Impossibile trovare questa cartella dello spazio di lavoro. Potrebbe essere stata spostata o eliminata.\n\nRimuovere dagli spazi di lavoro recenti?"
+  },
+  "unsavedDocument": {
+    "title": "Documento non salvato",
+    "message": "Salva prima il documento per modificare le immagini.",
+    "messageCopyPath": "Il documento deve essere salvato per copiare il percorso dell'immagine.",
+    "messageReveal": "Il documento deve essere salvato per mostrare l'immagine."
+  },
+  "saveVersionAs": {
+    "title": "Salva la tua versione come..."
+  },
+  "chooseFolderForDocs": "Scegli cartella per {{count}} nuovi documenti",
+  "toast": {
+    "saveDialogFailed": "Finestra di dialogo di salvataggio fallita: {{error}}",
+    "failedToMoveToNewWindow": "Spostamento del file in una nuova finestra fallito",
+    "failedToSaveDocuments": "Salvataggio dei documenti fallito",
+    "fileMovedCantDeleteOriginal": "File salvato nel nuovo percorso, ma impossibile eliminare il file originale",
+    "failedToOpenFile": "Apertura del file fallita: {{error}}",
+    "failedToOpen": "Apertura di {{filename}} fallita",
+    "failedToOpenFilesInNewWindow": "Apertura dei file in una nuova finestra fallita",
+    "onlyMarkdownViaDropDrop": "Solo i file markdown possono essere aperti tramite trascinamento",
+    "restored": "Ripristinato: {{filename}}",
+    "reloaded": "Ricaricato: {{filename}}",
+    "recoveredDocuments": "Recuperati {{count}} documento(i) da uscita imprevista",
+    "pandocExportFailed": "Esportazione Pandoc fallita",
+    "pandocUnknownFormat": "Formato di esportazione sconosciuto: {{format}}",
+    "pandocNoContent": "Nessun contenuto da esportare!",
+    "pandocNotInstalled": "Pandoc non è installato. Installalo da pandoc.org",
+    "pandocExportSuccess": "Esportazione completata con successo",
+    "pandocExportError": "Esportazione Pandoc fallita: {{error}}",
+    "exportNoContent": "Nessun contenuto da esportare!",
+    "exportHtmlSuccess": "Esportato nella cartella",
+    "exportHtmlResourceWarning_one": "1 risorsa non è stata inclusa",
+    "exportHtmlResourceWarning_other": "{{count}} risorse non sono state incluse",
+    "printRequiresMac": "La stampa richiede macOS.",
+    "nativePdfRequiresMac": "L'esportazione PDF nativa richiede macOS. Usa Stampa.",
+    "failedToPreparePdf": "Preparazione esportazione PDF fallita",
+    "noEditorContentToPrint": "Nessun contenuto dell'editor da stampare",
+    "failedToOpenPrintDialog": "Apertura della finestra di dialogo di stampa fallita",
+    "htmlCopied": "HTML copiato negli appunti",
+    "pdfExportSuccess": "PDF esportato con successo",
+    "pdfExportFailed": "Esportazione PDF fallita: {{error}}",
+    "cannotMoveTabNoDoc": "Impossibile spostare la scheda: il documento non è caricato.",
+    "cannotMoveLastTab": "Impossibile spostare l'ultima scheda nella finestra principale.",
+    "tabMoved": "\"{{title}}\" spostato in una nuova finestra",
+    "tabDetached": "\"{{title}}\" separato",
+    "tabMovedToWindow": "\"{{title}}\" spostato",
+    "undoTabMoveFailed": "Annullamento spostamento scheda fallito.",
+    "failedToMoveTabToNewWindow": "Spostamento della scheda in una nuova finestra fallito.",
+    "fileRestoredToDisk": "File ripristinato sul disco.",
+    "failedToRestoreToDisk": "Ripristino del file sul disco fallito.",
+    "revertedToSaved": "Ripristinato alla versione salvata.",
+    "failedToRevert": "Ripristino alla versione salvata fallito.",
+    "pathCopied": "Percorso copiato negli appunti.",
+    "failedToCopyPath": "Copia del percorso fallita.",
+    "relativePathCopied": "Percorso relativo copiato negli appunti.",
+    "failedToCopyRelativePath": "Copia del percorso relativo fallita.",
+    "failedToRevealInFileManager": "Visualizzazione del file nel gestore file fallita.",
+    "pathCopiedExplorer": "Percorso copiato negli appunti",
+    "failedToOpenWithDefaultApp": "Apertura di \"{{name}}\" con l'app predefinita fallita",
+    "terminalNeedsWorkspace": "Apri una cartella o salva il file per usare il terminale.",
+    "noFormattingActions": "Nessuna azione di formattazione disponibile",
+    "genieNotInSourceMode": "I geni non sono disponibili in modalità sorgente",
+    "genieNoProvider": "Nessun provider IA disponibile. Configurane uno nelle Impostazioni.",
+    "genieCliNotFound": "CLI {{name}} non trovata. Installala o scegli un altro provider nelle Impostazioni.",
+    "genieApiKeyRequired": "È richiesta la chiave API di {{name}}. Configurala in Impostazioni → Integrazioni.",
+    "updateReady": "v{{version}} pronto per l'installazione",
+    "updateUpToDate": "Sei aggiornato!",
+    "imagePathCopied": "Percorso immagine copiato negli appunti",
+    "failedToChangeImage": "Modifica dell'immagine fallita.",
+    "failedToCopyImagePath": "Copia del percorso dell'immagine fallita.",
+    "failedToRevealImage": "Visualizzazione dell'immagine nel Finder fallita."
+  }
+}
