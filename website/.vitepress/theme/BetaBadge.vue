@@ -1,12 +1,12 @@
 <script setup lang="ts">
-// Beta badge for VMark site title
-// Minimal outlined design with subtle pulse indicator
+declare const __VMARK_VERSION__: string
+const version = typeof __VMARK_VERSION__ !== 'undefined' ? __VMARK_VERSION__ : ''
 </script>
 
 <template>
-  <span class="beta-badge" title="Beta Release - Stable but evolving">
+  <span class="beta-badge" :title="`v${version} — Beta Release`">
     <span class="beta-dot"></span>
-    <span class="beta-text">beta</span>
+    <span class="beta-text"><span class="beta-letter">β</span> v{{ version }}</span>
   </span>
 </template>
 
@@ -61,6 +61,13 @@
 
 .beta-text {
   line-height: 1;
+}
+
+.beta-letter {
+  font-family: "Times New Roman", Georgia, serif;
+  font-size: 12px;
+  font-style: italic;
+  font-weight: normal;
 }
 
 @keyframes beta-pulse {

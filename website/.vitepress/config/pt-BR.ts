@@ -1,7 +1,7 @@
 
 
 export const ptBR = {
-  label: "Português (Brasil)",
+  label: "Português",
   lang: "pt-BR",
   themeConfig: {
     nav: [

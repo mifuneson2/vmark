@@ -23,6 +23,11 @@ When bumping the version number, **all five files must be updated together**.
 - Settings panel and status dialog show version from useMcpHealthCheck.ts (reads from MCP_VERSION constant)
 - Must match main app to avoid user confusion
 
+**Website version (automatic):**
+- The website reads version from `package.json` at build time via `__VMARK_VERSION__` (defined in `website/.vitepress/config/shared.ts`)
+- Displayed in the navbar beta badge (`BetaBadge.vue`)
+- No extra file to update — just rebuild/deploy the website after bumping
+
 ## Bump Procedure
 
 1. **Update all five files** with the new version:

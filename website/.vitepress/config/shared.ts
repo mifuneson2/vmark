@@ -1,9 +1,21 @@
 import footnote from "markdown-it-footnote";
 import type { UserConfig } from "vitepress";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+
+const pkg = JSON.parse(
+  readFileSync(resolve(__dirname, "../../../package.json"), "utf-8")
+);
 
 export const shared: UserConfig = {
   title: "VMark",
   description: "AI friendly markdown editor",
+
+  vite: {
+    define: {
+      __VMARK_VERSION__: JSON.stringify(pkg.version),
+    },
+  },
   lastUpdated: true,
   appearance: false, // We use our own theme switcher
 
