@@ -3,7 +3,8 @@
 //! Purpose: Entry point for the Tauri backend — wires together all modules,
 //! registers commands, configures plugins, and handles app-level events.
 //!
-//! Pipeline: `main.rs` → `run()` here → Tauri builder → window creation → frontend
+//! Pipeline: `main.rs` → `run()` here → Tauri builder (log plugin first, then others)
+//!   → window creation → frontend
 //!
 //! Key decisions:
 //!   - Window close is intercepted for document windows (main, doc-*) to allow
