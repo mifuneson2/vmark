@@ -12,8 +12,9 @@
  *   - IME composition tracking via compositionstart/end on the hidden
  *     textarea — used to suppress copy-on-select and data forwarding
  *     during CJK input to avoid garbled text. Includes an 80ms grace
- *     period after compositionend to block xterm's space-injected onData,
- *     and fires onCompositionCommit with clean committed text for direct
+ *     period after compositionend to block xterm's space-injected ASCII
+ *     onData while allowing non-ASCII (CJK punctuation) through (#454).
+ *     Fires onCompositionCommit with clean committed text for direct
  *     PTY write (fixes macOS Chinese IME: "claude" → "cl au de").
  *     Rapid back-to-back compositions flush pending text immediately.
  *   - WebGL renderer is optional (settings-driven); falls back silently

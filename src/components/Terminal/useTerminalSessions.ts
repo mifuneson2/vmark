@@ -11,10 +11,10 @@
  *     80x24 defaults while hidden, which causes blank-line artifacts on resize.
  *   - After a shell exits, pressing any key respawns it — no manual restart needed.
  *     The "dead session" state is visually indicated in the tab bar.
- *   - IME composition guard: data from onData during compositionstart..compositionend
- *     (plus 80ms grace period) is dropped to prevent garbled preedit text from
- *     being sent to the PTY. Clean committed text is written directly via
- *     onCompositionCommit, bypassing xterm's space-injected onData.
+ *   - IME composition guard: during active composition all onData is blocked;
+ *     during the 80ms grace period only ASCII data is blocked (garbled spaces)
+ *     while non-ASCII (CJK punctuation) passes through (#454). Clean committed
+ *     text is written directly via onCompositionCommit.
  *   - Theme sync uses buildXtermThemeForId() from terminalTheme.ts for
  *     per-theme ANSI color palettes. Font size and workspace root changes
  *     are also synced across all sessions via store subscriptions.
