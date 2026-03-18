@@ -64,6 +64,7 @@ export const zhTW = {
               link: "/zh-TW/guide/mcp-tools",
             },
             { text: "設定", link: "/zh-TW/guide/settings" },
+            { text: "疑難排解", link: "/zh-TW/guide/troubleshooting" },
             { text: "隱私權政策", link: "/zh-TW/guide/privacy" },
             { text: "授權條款", link: "/zh-TW/guide/license" },
           ],

@@ -70,6 +70,7 @@ export const ja = {
               link: "/ja/guide/mcp-tools",
             },
             { text: "設定", link: "/ja/guide/settings" },
+            { text: "トラブルシューティング", link: "/ja/guide/troubleshooting" },
             { text: "プライバシー", link: "/ja/guide/privacy" },
             { text: "ライセンス", link: "/ja/guide/license" },
           ],

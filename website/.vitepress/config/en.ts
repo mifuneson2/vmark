@@ -34,6 +34,7 @@ export const en = {
             { text: "MCP Setup", link: "/guide/mcp-setup" },
             { text: "MCP Tools Reference", link: "/guide/mcp-tools" },
             { text: "Settings", link: "/guide/settings" },
+            { text: "Troubleshooting", link: "/guide/troubleshooting" },
             { text: "Privacy", link: "/guide/privacy" },
             { text: "License", link: "/guide/license" },
           ],

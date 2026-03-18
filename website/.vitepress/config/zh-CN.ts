@@ -64,6 +64,7 @@ export const zhCN = {
               link: "/zh-CN/guide/mcp-tools",
             },
             { text: "设置", link: "/zh-CN/guide/settings" },
+            { text: "故障排除", link: "/zh-CN/guide/troubleshooting" },
             { text: "隐私政策", link: "/zh-CN/guide/privacy" },
             { text: "许可证", link: "/zh-CN/guide/license" },
           ],

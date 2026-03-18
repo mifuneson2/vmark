@@ -70,6 +70,7 @@ export const ko = {
               link: "/ko/guide/mcp-tools",
             },
             { text: "설정", link: "/ko/guide/settings" },
+            { text: "문제 해결", link: "/ko/guide/troubleshooting" },
             { text: "개인정보 보호", link: "/ko/guide/privacy" },
             { text: "라이선스", link: "/ko/guide/license" },
           ],

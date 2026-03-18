@@ -79,6 +79,7 @@ export const ptBR = {
               text: "Configurações",
               link: "/pt-BR/guide/settings",
             },
+            { text: "Solução de problemas", link: "/pt-BR/guide/troubleshooting" },
             { text: "Privacidade", link: "/pt-BR/guide/privacy" },
             { text: "Licença", link: "/pt-BR/guide/license" },
           ],

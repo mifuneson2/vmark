@@ -76,6 +76,7 @@ export const it = {
               link: "/it/guide/mcp-tools",
             },
             { text: "Impostazioni", link: "/it/guide/settings" },
+            { text: "Risoluzione dei problemi", link: "/it/guide/troubleshooting" },
             { text: "Privacy", link: "/it/guide/privacy" },
             { text: "Licenza", link: "/it/guide/license" },
           ],
