@@ -85,6 +85,38 @@ Markmap은 표준 마크다운을 입력으로 사용합니다. 제목이 트리
 
 제목 아래의 목록 항목이 해당 제목의 하위 노드가 됩니다.
 
+### 라이브 데모
+
+이 페이지에서 직접 렌더링된 인터랙티브 마크맵입니다. 패닝, 줌, 노드 접기를 시도해 보세요:
+
+```markmap
+# VMark Features
+
+## Editor
+### WYSIWYG Mode
+### Source Mode
+### Focus Mode
+### Typewriter Mode
+
+## AI Integration
+### MCP Server
+### AI Genies
+### Smart Paste
+
+## Markdown
+### Mermaid Diagrams
+### Markmap Mindmaps
+### LaTeX Math
+### Code Blocks
+- Syntax highlighting
+- Line numbers
+
+## Platform
+### macOS
+### Windows
+### Linux
+```
+
 ## 대화형 기능
 
 | 동작 | 방법 |

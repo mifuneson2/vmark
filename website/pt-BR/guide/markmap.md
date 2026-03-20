@@ -85,6 +85,38 @@ Os nós podem conter Markdown inline:
 
 Itens de lista sob um título se tornam nós filhos desse título.
 
+### Demonstração ao vivo
+
+Aqui está um markmap interativo renderizado diretamente nesta página — experimente fazer panorâmica, zoom e recolher nós:
+
+```markmap
+# VMark Features
+
+## Editor
+### WYSIWYG Mode
+### Source Mode
+### Focus Mode
+### Typewriter Mode
+
+## AI Integration
+### MCP Server
+### AI Genies
+### Smart Paste
+
+## Markdown
+### Mermaid Diagrams
+### Markmap Mindmaps
+### LaTeX Math
+### Code Blocks
+- Syntax highlighting
+- Line numbers
+
+## Platform
+### macOS
+### Windows
+### Linux
+```
+
 ## Recursos Interativos
 
 | Ação | Como |

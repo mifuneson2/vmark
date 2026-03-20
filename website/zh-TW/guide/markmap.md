@@ -85,6 +85,38 @@ Markmap 使用標準 Markdown 作為輸入。標題定義樹狀階層：
 
 標題下的清單項目會成為該標題的子節點。
 
+### 即時演示
+
+以下是直接在本頁渲染的互動式心智圖——試試平移、縮放和摺疊節點：
+
+```markmap
+# VMark Features
+
+## Editor
+### WYSIWYG Mode
+### Source Mode
+### Focus Mode
+### Typewriter Mode
+
+## AI Integration
+### MCP Server
+### AI Genies
+### Smart Paste
+
+## Markdown
+### Mermaid Diagrams
+### Markmap Mindmaps
+### LaTeX Math
+### Code Blocks
+- Syntax highlighting
+- Line numbers
+
+## Platform
+### macOS
+### Windows
+### Linux
+```
+
 ## 互動功能
 
 | 操作 | 方式 |

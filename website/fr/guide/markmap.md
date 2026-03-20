@@ -85,6 +85,38 @@ Les nœuds peuvent contenir du Markdown en ligne :
 
 Les éléments de liste sous un titre deviennent des nœuds enfants de ce titre.
 
+### Démonstration en direct
+
+Voici un markmap interactif rendu directement sur cette page — essayez de faire un panoramique, un zoom et de replier les nœuds :
+
+```markmap
+# VMark Features
+
+## Editor
+### WYSIWYG Mode
+### Source Mode
+### Focus Mode
+### Typewriter Mode
+
+## AI Integration
+### MCP Server
+### AI Genies
+### Smart Paste
+
+## Markdown
+### Mermaid Diagrams
+### Markmap Mindmaps
+### LaTeX Math
+### Code Blocks
+- Syntax highlighting
+- Line numbers
+
+## Platform
+### macOS
+### Windows
+### Linux
+```
+
 ## Fonctionnalités interactives
 
 | Action | Comment |

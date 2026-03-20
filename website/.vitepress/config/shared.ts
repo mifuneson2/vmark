@@ -1,4 +1,5 @@
 import footnote from "markdown-it-footnote";
+import { vitepressMarkmapPreview } from "vitepress-markmap-preview";
 import type { UserConfig } from "vitepress";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -22,6 +23,7 @@ export const shared: UserConfig = {
   markdown: {
     config: (md: any) => {
       md.use(footnote);
+      vitepressMarkmapPreview(md);
     },
   },
 

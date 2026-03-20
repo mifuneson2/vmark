@@ -5,10 +5,15 @@ import ThemeSwitcher from './ThemeSwitcher.vue'
 import LanguageSwitcher from './LanguageSwitcher.vue'
 import GitHubLink from './GitHubLink.vue'
 import BetaBadge from './BetaBadge.vue'
+import { initComponent as initMarkmap } from 'vitepress-markmap-preview/component'
+import 'vitepress-markmap-preview/dist/index.css'
 import './style.css'
 
 export default {
   extends: DefaultTheme,
+  enhanceApp({ app }) {
+    initMarkmap(app)
+  },
   Layout() {
     return h(DefaultTheme.Layout, null, {
       'nav-bar-title-after': () => h(BetaBadge),

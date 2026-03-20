@@ -85,6 +85,38 @@ I nodi possono contenere Markdown inline:
 
 Gli elementi di elenco sotto un'intestazione diventano nodi figli di quell'intestazione.
 
+### Demo dal vivo
+
+Ecco un markmap interattivo renderizzato direttamente in questa pagina — prova a fare panoramica, zoom e a comprimere i nodi:
+
+```markmap
+# VMark Features
+
+## Editor
+### WYSIWYG Mode
+### Source Mode
+### Focus Mode
+### Typewriter Mode
+
+## AI Integration
+### MCP Server
+### AI Genies
+### Smart Paste
+
+## Markdown
+### Mermaid Diagrams
+### Markmap Mindmaps
+### LaTeX Math
+### Code Blocks
+- Syntax highlighting
+- Line numbers
+
+## Platform
+### macOS
+### Windows
+### Linux
+```
+
 ## Funzionalità Interattive
 
 | Azione | Come |

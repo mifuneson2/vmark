@@ -85,6 +85,38 @@ Nodes can contain inline Markdown:
 
 List items under a heading become child nodes of that heading.
 
+### Live Demo
+
+Here is an interactive markmap rendered directly on this page — try panning, zooming, and collapsing nodes:
+
+```markmap
+# VMark Features
+
+## Editor
+### WYSIWYG Mode
+### Source Mode
+### Focus Mode
+### Typewriter Mode
+
+## AI Integration
+### MCP Server
+### AI Genies
+### Smart Paste
+
+## Markdown
+### Mermaid Diagrams
+### Markmap Mindmaps
+### LaTeX Math
+### Code Blocks
+- Syntax highlighting
+- Line numbers
+
+## Platform
+### macOS
+### Windows
+### Linux
+```
+
 ## Interactive Features
 
 | Action | How |

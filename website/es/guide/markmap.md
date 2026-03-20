@@ -85,6 +85,38 @@ Los nodos pueden contener Markdown en línea:
 
 Los elementos de lista bajo un encabezado se convierten en nodos hijos de ese encabezado.
 
+### Demostración en vivo
+
+Aquí hay un markmap interactivo renderizado directamente en esta página — prueba a hacer pan, zoom y colapsar nodos:
+
+```markmap
+# VMark Features
+
+## Editor
+### WYSIWYG Mode
+### Source Mode
+### Focus Mode
+### Typewriter Mode
+
+## AI Integration
+### MCP Server
+### AI Genies
+### Smart Paste
+
+## Markdown
+### Mermaid Diagrams
+### Markmap Mindmaps
+### LaTeX Math
+### Code Blocks
+- Syntax highlighting
+- Line numbers
+
+## Platform
+### macOS
+### Windows
+### Linux
+```
+
 ## Funciones Interactivas
 
 | Acción | Cómo |

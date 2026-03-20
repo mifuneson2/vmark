@@ -85,6 +85,38 @@ Knoten können Inline-Markdown enthalten:
 
 Listenelemente unter einer Überschrift werden zu Kindknoten dieser Überschrift.
 
+### Live-Demo
+
+Hier ist eine interaktive Markmap, die direkt auf dieser Seite gerendert wird — probieren Sie Schwenken, Zoomen und das Auf-/Zuklappen von Knoten aus:
+
+```markmap
+# VMark Features
+
+## Editor
+### WYSIWYG Mode
+### Source Mode
+### Focus Mode
+### Typewriter Mode
+
+## AI Integration
+### MCP Server
+### AI Genies
+### Smart Paste
+
+## Markdown
+### Mermaid Diagrams
+### Markmap Mindmaps
+### LaTeX Math
+### Code Blocks
+- Syntax highlighting
+- Line numbers
+
+## Platform
+### macOS
+### Windows
+### Linux
+```
+
 ## Interaktive Funktionen
 
 | Aktion | Wie |

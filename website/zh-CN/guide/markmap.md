@@ -85,6 +85,38 @@ Markmap 使用标准 Markdown 作为输入。标题定义树的层级结构：
 
 标题下的列表项会成为该标题的子节点。
 
+### 实时演示
+
+以下是直接在本页渲染的交互式思维导图——试试平移、缩放和折叠节点：
+
+```markmap
+# VMark Features
+
+## Editor
+### WYSIWYG Mode
+### Source Mode
+### Focus Mode
+### Typewriter Mode
+
+## AI Integration
+### MCP Server
+### AI Genies
+### Smart Paste
+
+## Markdown
+### Mermaid Diagrams
+### Markmap Mindmaps
+### LaTeX Math
+### Code Blocks
+- Syntax highlighting
+- Line numbers
+
+## Platform
+### macOS
+### Windows
+### Linux
+```
+
 ## 交互功能
 
 | 操作 | 方法 |
