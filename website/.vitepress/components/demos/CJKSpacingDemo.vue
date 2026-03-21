@@ -1,7 +1,10 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted, watch, nextTick } from 'vue'
+import { wrapCJKRuns } from '../../theme/cjkSpacing'
 
-const spacing = ref('0.03')
+const spacing = ref('0.05')
+const previewRef = ref<HTMLElement | null>(null)
+const compareWithRef = ref<HTMLElement | null>(null)
 
 const spacingOptions = [
   { value: '0', label: 'Off', description: 'No extra spacing' },
@@ -17,6 +20,17 @@ const sampleTexts = [
   '日本語の文字間隔も調整できます。',
   '한국어 텍스트도 지원됩니다.',
 ]
+
+/** Apply wrapCJKRuns to preview and compare containers */
+function applyWrapping() {
+  if (previewRef.value) wrapCJKRuns(previewRef.value)
+  if (compareWithRef.value) wrapCJKRuns(compareWithRef.value)
+}
+
+onMounted(() => applyWrapping())
+
+// Re-wrap after spacing change (Vue re-renders the text, removing spans)
+watch(spacing, () => nextTick(() => applyWrapping()))
 </script>
 
 <template>
@@ -35,12 +49,15 @@ const sampleTexts = [
       </button>
     </div>
 
-    <div class="preview">
+    <div
+      ref="previewRef"
+      class="preview"
+      :style="{ '--cjk-demo-spacing': spacing === '0' ? '0' : spacing + 'em' }"
+    >
       <p
         v-for="(text, index) in sampleTexts"
         :key="index"
         class="preview__text"
-        :style="{ letterSpacing: spacing === '0' ? 'normal' : spacing + 'em' }"
       >
         {{ text }}
       </p>
@@ -49,13 +66,13 @@ const sampleTexts = [
     <div class="vmark-grid vmark-grid--2">
       <div class="compare">
         <div class="compare__label">Without spacing</div>
-        <div class="compare__text" style="letter-spacing: normal">
+        <div class="compare__text">
           中文排版的艺术在于细节。
         </div>
       </div>
       <div class="compare">
         <div class="compare__label">With 0.05em spacing</div>
-        <div class="compare__text" style="letter-spacing: 0.05em">
+        <div ref="compareWithRef" class="compare__text compare__text--spaced">
           中文排版的艺术在于细节。
         </div>
       </div>
@@ -124,6 +141,11 @@ const sampleTexts = [
   margin-bottom: 20px;
 }
 
+/* CJK spans inside preview use the dynamic spacing value */
+.preview :deep(.cjk-spacing) {
+  letter-spacing: var(--cjk-demo-spacing, 0.05em);
+}
+
 .preview__text {
   margin: 0 0 12px 0;
   font-size: 18px;
@@ -152,5 +174,9 @@ const sampleTexts = [
   font-size: 16px;
   line-height: 1.6;
   color: var(--text-color);
+}
+
+.compare__text--spaced :deep(.cjk-spacing) {
+  letter-spacing: 0.05em;
 }
 </style>

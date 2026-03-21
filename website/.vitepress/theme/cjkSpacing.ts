@@ -16,7 +16,7 @@ function isCJKPage(): boolean {
 }
 
 /** Wrap CJK runs in text nodes with <span class="cjk-spacing"> */
-function wrapCJKRuns(root: Element): void {
+export function wrapCJKRuns(root: Element): void {
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT)
   const textNodes: Text[] = []
 
