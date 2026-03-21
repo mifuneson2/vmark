@@ -240,6 +240,30 @@
 }
 
 /* ============================================
+   CJK FONT STACKS & LINE HEIGHT
+   Latin fonts first, then platform-specific CJK fallbacks.
+   ============================================ */
+:lang(zh-CN) {
+  --vmark-font-family: Charter, Palatino, "Book Antiqua", Georgia, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", serif;
+  --vmark-line-height: 1.75;
+}
+
+:lang(zh-TW) {
+  --vmark-font-family: Charter, Palatino, "Book Antiqua", Georgia, "PingFang TC", "Microsoft JhengHei", "Noto Sans TC", serif;
+  --vmark-line-height: 1.75;
+}
+
+:lang(ja) {
+  --vmark-font-family: Charter, Palatino, "Book Antiqua", Georgia, "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Yu Gothic", "Meiryo", "Noto Sans JP", serif;
+  --vmark-line-height: 1.75;
+}
+
+:lang(ko) {
+  --vmark-font-family: Charter, Palatino, "Book Antiqua", Georgia, "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", serif;
+  --vmark-line-height: 1.75;
+}
+
+/* ============================================
    TYPOGRAPHY - VMark Style
    ============================================ */
 .vp-doc {
