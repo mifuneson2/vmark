@@ -25,7 +25,7 @@
   "noResults": "無結果",
   "selectAll": "全選",
   "deselectAll": "取消全選",
-
+  "untitled": "Untitled",
   "fileDeleted": "檔案已從磁碟刪除",
   "fileDivergent": "本機與磁碟內容不同",
   "closeTab": "關閉 {{title}}",

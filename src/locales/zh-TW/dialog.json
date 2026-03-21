@@ -13,7 +13,13 @@
     "title": "檔案已變更",
     "message": "「{{fileName}}」已被外部程式修改。\n\n您想要怎麼做？",
     "multipleTitle": "多個檔案已變更",
-    "multipleMessage": "{{count}} 個檔案已被外部程式修改：\n{{fileNames}}\n\n您想要怎麼做？"
+    "multipleMessage": "{{count}} 個檔案已被外部程式修改：\n{{fileNames}}\n\n您想要怎麼做？",
+    "buttonSaveAs": "Save As...",
+    "buttonReload": "Reload",
+    "buttonKeep": "Keep my changes",
+    "buttonReloadAll": "Reload All",
+    "buttonKeepAll": "Keep All",
+    "buttonReviewEach": "Review Each"
   },
   "revertToSaved": {
     "title": "還原至已儲存版本",
@@ -39,7 +45,11 @@
     "title": "未儲存的文件",
     "message": "請先儲存文件以變更圖片。",
     "messageCopyPath": "必須先儲存文件才能複製圖片路徑。",
-    "messageReveal": "必須先儲存文件才能顯示圖片。"
+    "messageReveal": "必須先儲存文件才能顯示圖片。",
+    "messageInsertImages": "Please save the document first before inserting images. Images are stored relative to the document location.",
+    "messageLocalImages": "Please save the document first to use local images.",
+    "messageLocalMedia": "Please save the document first to use local media files.",
+    "messageInsertImagesLocal": "Please save the document first before inserting images from local paths. Images are stored relative to the document location."
   },
   "saveVersionAs": {
     "title": "將您的版本另存新檔..."
@@ -104,6 +114,11 @@
     "imagePathCopied": "圖片路徑已複製至剪貼簿",
     "failedToChangeImage": "變更圖片失敗。",
     "failedToCopyImagePath": "複製圖片路徑失敗。",
-    "failedToRevealImage": "無法在 Finder 中顯示圖片。"
+    "failedToRevealImage": "無法在 Finder 中顯示圖片。",
+    "failedToChangeMedia": "Failed to change media file.",
+    "failedToSaveDroppedImages": "Failed to save dropped images.",
+    "failedToSaveClipboardImage": "Failed to save image from clipboard.",
+    "failedToResolveHomePath": "Failed to resolve home directory path.",
+    "failedToCopyToAssets": "Failed to copy image to assets folder."
   }
 }

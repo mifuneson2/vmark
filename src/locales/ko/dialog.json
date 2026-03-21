@@ -13,7 +13,13 @@
     "title": "파일 변경됨",
     "message": "\"{{fileName}}\"이(가) 외부에서 수정되었습니다.\n\n어떻게 하시겠습니까?",
     "multipleTitle": "여러 파일이 변경됨",
-    "multipleMessage": "{{count}}개 파일이 외부에서 수정되었습니다:\n{{fileNames}}\n\n어떻게 하시겠습니까?"
+    "multipleMessage": "{{count}}개 파일이 외부에서 수정되었습니다:\n{{fileNames}}\n\n어떻게 하시겠습니까?",
+    "buttonSaveAs": "Save As...",
+    "buttonReload": "Reload",
+    "buttonKeep": "Keep my changes",
+    "buttonReloadAll": "Reload All",
+    "buttonKeepAll": "Keep All",
+    "buttonReviewEach": "Review Each"
   },
   "revertToSaved": {
     "title": "저장된 버전으로 되돌리기",
@@ -39,7 +45,11 @@
     "title": "저장되지 않은 문서",
     "message": "이미지를 변경하려면 먼저 문서를 저장하세요.",
     "messageCopyPath": "이미지 경로를 복사하려면 문서를 저장해야 합니다.",
-    "messageReveal": "이미지를 표시하려면 문서를 저장해야 합니다."
+    "messageReveal": "이미지를 표시하려면 문서를 저장해야 합니다.",
+    "messageInsertImages": "Please save the document first before inserting images. Images are stored relative to the document location.",
+    "messageLocalImages": "Please save the document first to use local images.",
+    "messageLocalMedia": "Please save the document first to use local media files.",
+    "messageInsertImagesLocal": "Please save the document first before inserting images from local paths. Images are stored relative to the document location."
   },
   "saveVersionAs": {
     "title": "버전을 다른 이름으로 저장..."
@@ -104,6 +114,11 @@
     "imagePathCopied": "이미지 경로가 클립보드에 복사되었습니다",
     "failedToChangeImage": "이미지 변경에 실패했습니다.",
     "failedToCopyImagePath": "이미지 경로 복사에 실패했습니다.",
-    "failedToRevealImage": "Finder에서 이미지를 표시하지 못했습니다."
+    "failedToRevealImage": "Finder에서 이미지를 표시하지 못했습니다.",
+    "failedToChangeMedia": "Failed to change media file.",
+    "failedToSaveDroppedImages": "Failed to save dropped images.",
+    "failedToSaveClipboardImage": "Failed to save image from clipboard.",
+    "failedToResolveHomePath": "Failed to resolve home directory path.",
+    "failedToCopyToAssets": "Failed to copy image to assets folder."
   }
 }

@@ -14,6 +14,7 @@
 
 import { EditorView } from "@codemirror/view";
 import { message } from "@tauri-apps/plugin-dialog";
+import i18n from "@/i18n";
 import { copyImageToAssets } from "@/hooks/useImageOperations";
 import { useImagePasteToastStore } from "@/stores/imagePasteToastStore";
 import { smartPasteWarn, smartPasteError } from "@/utils/debug";
@@ -54,9 +55,8 @@ async function insertImageMarkdown(
   if (detection.needsCopy) {
     if (!filePath) {
       await message(
-        "Please save the document first before inserting images from local paths. " +
-          "Images are stored relative to the document location.",
-        { title: "Unsaved Document", kind: "warning" }
+        i18n.t("dialog:unsavedDocument.messageInsertImagesLocal"),
+        { title: i18n.t("dialog:unsavedDocument.title"), kind: "warning" }
       );
       return;
     }
@@ -66,7 +66,7 @@ async function insertImageMarkdown(
       if (detection.type === "homePath") {
         const expanded = await expandHomePath(detection.path);
         if (!expanded) {
-          await message("Failed to resolve home directory path.", { kind: "error" });
+          await message(i18n.t("dialog:toast.failedToResolveHomePath"), { kind: "error" });
           return;
         }
         sourcePath = expanded;
@@ -75,7 +75,7 @@ async function insertImageMarkdown(
       imagePath = await copyImageToAssets(sourcePath, filePath);
     } catch (error) {
       smartPasteError("Failed to copy image to assets:", error);
-      await message("Failed to copy image to assets folder.", { kind: "error" });
+      await message(i18n.t("dialog:toast.failedToCopyToAssets"), { kind: "error" });
       return;
     }
   }
@@ -311,9 +311,8 @@ async function insertMultipleImageMarkdown(
     if (detection.needsCopy) {
       if (!filePath) {
         await message(
-          "Please save the document first before inserting images from local paths. " +
-            "Images are stored relative to the document location.",
-          { title: "Unsaved Document", kind: "warning" }
+          i18n.t("dialog:unsavedDocument.messageInsertImagesLocal"),
+          { title: i18n.t("dialog:unsavedDocument.title"), kind: "warning" }
         );
         return;
       }
@@ -323,7 +322,7 @@ async function insertMultipleImageMarkdown(
         if (detection.type === "homePath") {
           const expanded = await expandHomePath(detection.path);
           if (!expanded) {
-            await message("Failed to resolve home directory path.", { kind: "error" });
+            await message(i18n.t("dialog:toast.failedToResolveHomePath"), { kind: "error" });
             return;
           }
           sourcePath = expanded;
@@ -332,7 +331,7 @@ async function insertMultipleImageMarkdown(
         imagePath = await copyImageToAssets(sourcePath, filePath);
       } catch (error) {
         smartPasteError("Failed to copy image to assets:", error);
-        await message("Failed to copy image to assets folder.", { kind: "error" });
+        await message(i18n.t("dialog:toast.failedToCopyToAssets"), { kind: "error" });
         return;
       }
     }

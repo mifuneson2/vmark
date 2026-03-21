@@ -8,6 +8,7 @@
 import type { EditorView } from "@codemirror/view";
 import { open, message } from "@tauri-apps/plugin-dialog";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
+import i18n from "@/i18n";
 import { useDocumentStore } from "@/stores/documentStore";
 import { useTabStore } from "@/stores/tabStore";
 import { useMediaPopupStore } from "@/stores/mediaPopupStore";
@@ -143,8 +144,8 @@ export async function browseImage(view: EditorView): Promise<boolean> {
       const filePath = doc?.filePath;
 
       if (!filePath) {
-        await message("Please save the document first to use local images.", {
-          title: "Unsaved Document",
+        await message(i18n.t("dialog:unsavedDocument.messageLocalImages"), {
+          title: i18n.t("dialog:unsavedDocument.title"),
           kind: "warning",
         });
         return false;
@@ -161,7 +162,7 @@ export async function browseImage(view: EditorView): Promise<boolean> {
       return true;
     } catch (error) {
       sourceActionError("Browse failed:", error);
-      await message("Failed to change image.", { kind: "error" });
+      await message(i18n.t("dialog:toast.failedToChangeImage"), { kind: "error" });
       return false;
     }
   });

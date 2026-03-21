@@ -93,9 +93,9 @@ export function useExternalFileChanges(): void {
   const handleDirtyChange = useCallback(
     async (tabId: string, filePath: string) => {
       const dialogButtons = {
-        saveAs: "Save As...",
-        reload: "Reload",
-        keep: "Keep my changes",
+        saveAs: i18n.t("dialog:fileChanged.buttonSaveAs"),
+        reload: i18n.t("dialog:fileChanged.buttonReload"),
+        keep: i18n.t("dialog:fileChanged.buttonKeep"),
       } as const;
 
       const fileName = getFileName(filePath) || "file";
@@ -184,14 +184,18 @@ export function useExternalFileChanges(): void {
             title: i18n.t("dialog:fileChanged.multipleTitle"),
             kind: "warning",
             buttons: {
-              yes: "Reload All",
-              no: "Keep All",
-              cancel: "Review Each",
+              yes: i18n.t("dialog:fileChanged.buttonReloadAll"),
+              no: i18n.t("dialog:fileChanged.buttonKeepAll"),
+              cancel: i18n.t("dialog:fileChanged.buttonReviewEach"),
             },
           }
         );
 
-        const batchButtons = { reloadAll: "Reload All", keepAll: "Keep All", reviewEach: "Review Each" } as const;
+        const batchButtons = {
+          reloadAll: i18n.t("dialog:fileChanged.buttonReloadAll"),
+          keepAll: i18n.t("dialog:fileChanged.buttonKeepAll"),
+          reviewEach: i18n.t("dialog:fileChanged.buttonReviewEach"),
+        } as const;
 
         if (result === "Yes" || result === batchButtons.reloadAll) {
           // Reload all files from disk

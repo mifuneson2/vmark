@@ -13,7 +13,13 @@
     "title": "Fichier modifié",
     "message": "« {{fileName}} » a été modifié en dehors de l'application.\n\nQue souhaitez-vous faire ?",
     "multipleTitle": "Plusieurs fichiers modifiés",
-    "multipleMessage": "{{count}} fichiers ont été modifiés en dehors de l'application :\n{{fileNames}}\n\nQue souhaitez-vous faire ?"
+    "multipleMessage": "{{count}} fichiers ont été modifiés en dehors de l'application :\n{{fileNames}}\n\nQue souhaitez-vous faire ?",
+    "buttonSaveAs": "Save As...",
+    "buttonReload": "Reload",
+    "buttonKeep": "Keep my changes",
+    "buttonReloadAll": "Reload All",
+    "buttonKeepAll": "Keep All",
+    "buttonReviewEach": "Review Each"
   },
   "revertToSaved": {
     "title": "Rétablir la version enregistrée",
@@ -39,7 +45,11 @@
     "title": "Document non enregistré",
     "message": "Veuillez d'abord enregistrer le document pour modifier les images.",
     "messageCopyPath": "Le document doit être enregistré pour copier le chemin de l'image.",
-    "messageReveal": "Le document doit être enregistré pour afficher l'image."
+    "messageReveal": "Le document doit être enregistré pour afficher l'image.",
+    "messageInsertImages": "Please save the document first before inserting images. Images are stored relative to the document location.",
+    "messageLocalImages": "Please save the document first to use local images.",
+    "messageLocalMedia": "Please save the document first to use local media files.",
+    "messageInsertImagesLocal": "Please save the document first before inserting images from local paths. Images are stored relative to the document location."
   },
   "saveVersionAs": {
     "title": "Enregistrer votre version sous..."
@@ -104,6 +114,11 @@
     "imagePathCopied": "Chemin de l'image copié dans le presse-papiers",
     "failedToChangeImage": "Impossible de modifier l'image.",
     "failedToCopyImagePath": "Impossible de copier le chemin de l'image.",
-    "failedToRevealImage": "Impossible d'afficher l'image dans le Finder."
+    "failedToRevealImage": "Impossible d'afficher l'image dans le Finder.",
+    "failedToChangeMedia": "Failed to change media file.",
+    "failedToSaveDroppedImages": "Failed to save dropped images.",
+    "failedToSaveClipboardImage": "Failed to save image from clipboard.",
+    "failedToResolveHomePath": "Failed to resolve home directory path.",
+    "failedToCopyToAssets": "Failed to copy image to assets folder."
   }
 }

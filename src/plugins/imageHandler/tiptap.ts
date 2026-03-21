@@ -27,6 +27,7 @@ import { Extension } from "@tiptap/core";
 import { Plugin, PluginKey, Selection } from "@tiptap/pm/state";
 import type { EditorView } from "@tiptap/pm/view";
 import { message } from "@tauri-apps/plugin-dialog";
+import i18n from "@/i18n";
 import { saveImageToAssets, insertBlockImageNode } from "@/hooks/useImageOperations";
 import { getWindowLabel } from "@/hooks/useWindowFocus";
 import { useSettingsStore } from "@/stores/settingsStore";
@@ -208,7 +209,7 @@ function handleDrop(view: EditorView, event: DragEvent, _slice: unknown, moved: 
 
     processDroppedFiles(view, imageFiles, insertPos).catch((error) => {
       imageHandlerError("Failed to process dropped images:", error);
-      message("Failed to save dropped images.", { kind: "error" }).catch(imageHandlerError);
+      message(i18n.t("dialog:toast.failedToSaveDroppedImages"), { kind: "error" }).catch(imageHandlerError);
     });
 
     return true;
@@ -256,7 +257,7 @@ function handlePaste(view: EditorView, event: ClipboardEvent): boolean {
       event.preventDefault();
       processClipboardImage(view, item).catch((error) => {
         imageHandlerError("Failed to process clipboard image:", error);
-        message("Failed to save image from clipboard.", { kind: "error" }).catch(imageHandlerError);
+        message(i18n.t("dialog:toast.failedToSaveClipboardImage"), { kind: "error" }).catch(imageHandlerError);
       });
       return true;
     }

@@ -25,7 +25,7 @@
   "noResults": "Nessun risultato",
   "selectAll": "Seleziona tutto",
   "deselectAll": "Deseleziona tutto",
-
+  "untitled": "Untitled",
   "fileDeleted": "File eliminato dal disco",
   "fileDivergent": "Il file locale differisce dal disco",
   "closeTab": "Chiudi {{title}}",

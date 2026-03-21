@@ -25,7 +25,7 @@
   "noResults": "結果なし",
   "selectAll": "すべて選択",
   "deselectAll": "選択解除",
-
+  "untitled": "Untitled",
   "fileDeleted": "ファイルがディスクから削除されました",
   "fileDivergent": "ローカルとディスクの内容が異なります",
   "closeTab": "{{title}} を閉じる",

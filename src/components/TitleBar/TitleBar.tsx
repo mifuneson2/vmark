@@ -24,6 +24,7 @@
  * @module components/TitleBar/TitleBar
  */
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { emitTo } from "@tauri-apps/api/event";
 import { getCurrentWindowLabel } from "@/utils/workspaceStorage";
 import { useDocumentFilePath, useDocumentIsDirty, useDocumentIsMissing, useActiveTabId } from "@/hooks/useDocumentState";
@@ -33,10 +34,9 @@ import { useTitleBarRename } from "./useTitleBarRename";
 import { getFileNameWithoutExtension } from "@/utils/pathUtils";
 import "./title-bar.css";
 
-const DEFAULT_DISPLAY_NAME = "Untitled";
-
 /** macOS-style title bar displaying the document filename with inline rename on double-click. */
 export function TitleBar() {
+  const { t } = useTranslation("common");
   const filePath = useDocumentFilePath();
   const isDirty = useDocumentIsDirty();
   const isMissing = useDocumentIsMissing();
@@ -61,7 +61,7 @@ export function TitleBar() {
   // Get display filename: use file path (without extension) if saved, otherwise use tab title
   const displayName = filePath
     ? getFileNameWithoutExtension(filePath)
-    : tabTitle ?? DEFAULT_DISPLAY_NAME;
+    : tabTitle ?? t("untitled");
   const isUnsaved = !filePath;
 
   // Start editing on double-click
@@ -159,7 +159,7 @@ export function TitleBar() {
           <span
             className={`title-bar-filename ${isUnsaved ? "unsaved" : ""} ${isMissing ? "missing" : ""}`}
             onDoubleClick={handleDoubleClick}
-            title={isMissing ? "File deleted from disk" : undefined}
+            title={isMissing ? t("fileDeleted") : undefined}
           >
             {isDirty && <span className="dirty-indicator">•</span>}
             {isMissing && <span className="missing-indicator">⚠</span>}

@@ -196,5 +196,10 @@
   "plugin.pasteAsText": "Paste as Text",
   "plugin.imageDetected": "Image detected",
   "plugin.acceptSuggestion": "Accept (Enter)",
-  "plugin.rejectSuggestion": "Reject (Escape)"
+  "plugin.rejectSuggestion": "Reject (Escape)",
+
+  "preview.loading": "Loading…",
+  "preview.noMediaPath": "No media path",
+  "preview.pathResolutionFailed": "Path resolution failed",
+  "preview.failedToLoad": "Failed to load"
 }

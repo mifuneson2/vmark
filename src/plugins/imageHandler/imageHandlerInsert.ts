@@ -14,6 +14,7 @@
 import { TextSelection } from "@tiptap/pm/state";
 import type { EditorView } from "@tiptap/pm/view";
 import { message } from "@tauri-apps/plugin-dialog";
+import i18n from "@/i18n";
 import { copyImageToAssets, insertBlockImageNode } from "@/hooks/useImageOperations";
 import { useSettingsStore } from "@/stores/settingsStore";
 import type { ImagePathResult } from "@/utils/imagePathDetection";
@@ -45,7 +46,7 @@ async function resolveImagePath(
       if (detection.type === "homePath") {
         const expanded = await expandHomePath(detection.path);
         if (!expanded) {
-          await message("Failed to resolve home directory path.", { kind: "error" });
+          await message(i18n.t("dialog:toast.failedToResolveHomePath"), { kind: "error" });
           return null;
         }
         sourcePath = expanded;
@@ -53,7 +54,7 @@ async function resolveImagePath(
       return await copyImageToAssets(sourcePath, filePath);
     } catch (error) {
       imageHandlerError("Failed to copy image to assets:", error);
-      await message("Failed to copy image to assets folder.", { kind: "error" });
+      await message(i18n.t("dialog:toast.failedToCopyToAssets"), { kind: "error" });
       return null;
     }
   }
@@ -62,7 +63,7 @@ async function resolveImagePath(
     if (detection.type === "homePath") {
       const expanded = await expandHomePath(detection.path);
       if (!expanded) {
-        await message("Failed to resolve home directory path.", { kind: "error" });
+        await message(i18n.t("dialog:toast.failedToResolveHomePath"), { kind: "error" });
         return null;
       }
       return expanded;

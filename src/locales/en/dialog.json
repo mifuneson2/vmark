@@ -13,7 +13,13 @@
     "title": "File Changed",
     "message": "\"{{fileName}}\" has been modified externally.\n\nWhat would you like to do?",
     "multipleTitle": "Multiple Files Changed",
-    "multipleMessage": "{{count}} files have been modified externally:\n{{fileNames}}\n\nWhat would you like to do?"
+    "multipleMessage": "{{count}} files have been modified externally:\n{{fileNames}}\n\nWhat would you like to do?",
+    "buttonSaveAs": "Save As...",
+    "buttonReload": "Reload",
+    "buttonKeep": "Keep my changes",
+    "buttonReloadAll": "Reload All",
+    "buttonKeepAll": "Keep All",
+    "buttonReviewEach": "Review Each"
   },
   "revertToSaved": {
     "title": "Revert to Saved",
@@ -39,7 +45,11 @@
     "title": "Unsaved Document",
     "message": "Please save the document first to change images.",
     "messageCopyPath": "Document must be saved to copy image path.",
-    "messageReveal": "Document must be saved to reveal image."
+    "messageReveal": "Document must be saved to reveal image.",
+    "messageInsertImages": "Please save the document first before inserting images. Images are stored relative to the document location.",
+    "messageLocalImages": "Please save the document first to use local images.",
+    "messageLocalMedia": "Please save the document first to use local media files.",
+    "messageInsertImagesLocal": "Please save the document first before inserting images from local paths. Images are stored relative to the document location."
   },
   "saveVersionAs": {
     "title": "Save your version as..."
@@ -104,6 +114,11 @@
     "imagePathCopied": "Image path copied to clipboard",
     "failedToChangeImage": "Failed to change image.",
     "failedToCopyImagePath": "Failed to copy image path.",
-    "failedToRevealImage": "Failed to reveal image in Finder."
+    "failedToRevealImage": "Failed to reveal image in Finder.",
+    "failedToChangeMedia": "Failed to change media file.",
+    "failedToSaveDroppedImages": "Failed to save dropped images.",
+    "failedToSaveClipboardImage": "Failed to save image from clipboard.",
+    "failedToResolveHomePath": "Failed to resolve home directory path.",
+    "failedToCopyToAssets": "Failed to copy image to assets folder."
   }
 }

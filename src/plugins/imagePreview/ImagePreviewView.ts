@@ -21,6 +21,7 @@
 
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { dirname, join } from "@tauri-apps/api/path";
+import i18n from "@/i18n";
 import { useDocumentStore } from "@/stores/documentStore";
 import { useTabStore } from "@/stores/tabStore";
 import { renderWarn, imagePreviewError } from "@/utils/debug";
@@ -154,7 +155,7 @@ export class ImagePreviewView {
 
     const loading = document.createElement("div");
     loading.className = "image-preview-loading";
-    loading.textContent = "Loading…";
+    loading.textContent = i18n.t("editor:preview.loading");
 
     const img = document.createElement("img");
     img.className = "image-preview-img";
@@ -289,7 +290,7 @@ export class ImagePreviewView {
     const trimmed = src.trim();
 
     if (!trimmed) {
-      this.showError("No media path");
+      this.showError(i18n.t("editor:preview.noMediaPath"));
       return;
     }
 
@@ -309,7 +310,7 @@ export class ImagePreviewView {
       .catch((error: unknown) => {
         if (currentToken !== this.resolveToken) return;
         renderWarn("Image path resolution failed:", error instanceof Error ? error.message : /* v8 ignore next -- @preserve non-Error rejection is rare */ String(error));
-        this.showError("Path resolution failed");
+        this.showError(i18n.t("editor:preview.pathResolutionFailed"));
       });
   }
 
@@ -330,7 +331,7 @@ export class ImagePreviewView {
     };
     testImg.onerror = () => {
       if (token !== this.resolveToken) return;
-      this.showError("Failed to load");
+      this.showError(i18n.t("editor:preview.failedToLoad"));
     };
     testImg.src = resolvedSrc;
   }
@@ -354,7 +355,7 @@ export class ImagePreviewView {
     const onError = () => {
       cleanup();
       if (token !== this.resolveToken) return;
-      this.showError("Failed to load");
+      this.showError(i18n.t("editor:preview.failedToLoad"));
     };
 
     const cleanup = () => {

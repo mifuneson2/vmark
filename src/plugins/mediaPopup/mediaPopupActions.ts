@@ -17,6 +17,7 @@
 
 import type { EditorView } from "@tiptap/pm/view";
 import { open, message } from "@tauri-apps/plugin-dialog";
+import i18n from "@/i18n";
 import { useDocumentStore } from "@/stores/documentStore";
 import { useTabStore } from "@/stores/tabStore";
 import { useMediaPopupStore } from "@/stores/mediaPopupStore";
@@ -66,8 +67,8 @@ export async function browseAndReplaceMedia(
       const filePath = doc?.filePath;
 
       if (!filePath) {
-        await message("Please save the document first to use local media files.", {
-          title: "Unsaved Document",
+        await message(i18n.t("dialog:unsavedDocument.messageLocalMedia"), {
+          title: i18n.t("dialog:unsavedDocument.title"),
           kind: "warning",
         });
         return false;
@@ -97,7 +98,7 @@ export async function browseAndReplaceMedia(
       return true;
     } catch (error) {
       mediaPopupError("Browse failed:", error);
-      await message("Failed to change media file.", { kind: "error" });
+      await message(i18n.t("dialog:toast.failedToChangeMedia"), { kind: "error" });
       return false;
     }
   });

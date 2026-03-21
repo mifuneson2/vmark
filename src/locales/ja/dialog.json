@@ -13,7 +13,13 @@
     "title": "ファイルが変更されました",
     "message": "「{{fileName}}」が外部で変更されました。\n\nどうしますか？",
     "multipleTitle": "複数のファイルが変更されました",
-    "multipleMessage": "{{count}}個のファイルが外部で変更されました:\n{{fileNames}}\n\nどうしますか？"
+    "multipleMessage": "{{count}}個のファイルが外部で変更されました:\n{{fileNames}}\n\nどうしますか？",
+    "buttonSaveAs": "Save As...",
+    "buttonReload": "Reload",
+    "buttonKeep": "Keep my changes",
+    "buttonReloadAll": "Reload All",
+    "buttonKeepAll": "Keep All",
+    "buttonReviewEach": "Review Each"
   },
   "revertToSaved": {
     "title": "保存済みに戻す",
@@ -39,7 +45,11 @@
     "title": "未保存のドキュメント",
     "message": "画像を変更するには、最初にドキュメントを保存してください。",
     "messageCopyPath": "画像パスをコピーするには、ドキュメントを保存する必要があります。",
-    "messageReveal": "画像を表示するには、ドキュメントを保存する必要があります。"
+    "messageReveal": "画像を表示するには、ドキュメントを保存する必要があります。",
+    "messageInsertImages": "Please save the document first before inserting images. Images are stored relative to the document location.",
+    "messageLocalImages": "Please save the document first to use local images.",
+    "messageLocalMedia": "Please save the document first to use local media files.",
+    "messageInsertImagesLocal": "Please save the document first before inserting images from local paths. Images are stored relative to the document location."
   },
   "saveVersionAs": {
     "title": "バージョンに名前を付けて保存..."
@@ -104,6 +114,11 @@
     "imagePathCopied": "画像パスをクリップボードにコピーしました",
     "failedToChangeImage": "画像の変更に失敗しました。",
     "failedToCopyImagePath": "画像パスのコピーに失敗しました。",
-    "failedToRevealImage": "Finderで画像を表示できませんでした。"
+    "failedToRevealImage": "Finderで画像を表示できませんでした。",
+    "failedToChangeMedia": "Failed to change media file.",
+    "failedToSaveDroppedImages": "Failed to save dropped images.",
+    "failedToSaveClipboardImage": "Failed to save image from clipboard.",
+    "failedToResolveHomePath": "Failed to resolve home directory path.",
+    "failedToCopyToAssets": "Failed to copy image to assets folder."
   }
 }

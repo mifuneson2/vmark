@@ -26,6 +26,7 @@
   "selectAll": "Select All",
   "deselectAll": "Deselect All",
 
+  "untitled": "Untitled",
   "fileDeleted": "File deleted from disk",
   "fileDivergent": "Local differs from disk",
   "closeTab": "Close {{title}}",

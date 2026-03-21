@@ -13,6 +13,7 @@
 
 import type { EditorView } from "@tiptap/pm/view";
 import { message } from "@tauri-apps/plugin-dialog";
+import i18n from "@/i18n";
 import { getWindowLabel } from "@/hooks/useWindowFocus";
 import { useDocumentStore } from "@/stores/documentStore";
 import { useTabStore } from "@/stores/tabStore";
@@ -47,9 +48,8 @@ export function fileUrlToPath(url: string): string {
  */
 export async function showUnsavedDocWarning(): Promise<void> {
   await message(
-    "Please save the document first before inserting images. " +
-      "Images are stored relative to the document location.",
-    { title: "Unsaved Document", kind: "warning" }
+    i18n.t("dialog:unsavedDocument.messageInsertImages"),
+    { title: i18n.t("dialog:unsavedDocument.title"), kind: "warning" }
   );
 }
 

@@ -13,7 +13,13 @@
     "title": "Datei geändert",
     "message": "\"{{fileName}}\" wurde extern geändert.\n\nWas möchten Sie tun?",
     "multipleTitle": "Mehrere Dateien geändert",
-    "multipleMessage": "{{count}} Dateien wurden extern geändert:\n{{fileNames}}\n\nWas möchten Sie tun?"
+    "multipleMessage": "{{count}} Dateien wurden extern geändert:\n{{fileNames}}\n\nWas möchten Sie tun?",
+    "buttonSaveAs": "Save As...",
+    "buttonReload": "Reload",
+    "buttonKeep": "Keep my changes",
+    "buttonReloadAll": "Reload All",
+    "buttonKeepAll": "Keep All",
+    "buttonReviewEach": "Review Each"
   },
   "revertToSaved": {
     "title": "Zur gespeicherten Version zurücksetzen",
@@ -39,7 +45,11 @@
     "title": "Nicht gespeichertes Dokument",
     "message": "Bitte speichern Sie das Dokument zuerst, um Bilder zu ändern.",
     "messageCopyPath": "Das Dokument muss gespeichert werden, um den Bildpfad zu kopieren.",
-    "messageReveal": "Das Dokument muss gespeichert werden, um das Bild anzuzeigen."
+    "messageReveal": "Das Dokument muss gespeichert werden, um das Bild anzuzeigen.",
+    "messageInsertImages": "Please save the document first before inserting images. Images are stored relative to the document location.",
+    "messageLocalImages": "Please save the document first to use local images.",
+    "messageLocalMedia": "Please save the document first to use local media files.",
+    "messageInsertImagesLocal": "Please save the document first before inserting images from local paths. Images are stored relative to the document location."
   },
   "saveVersionAs": {
     "title": "Ihre Version speichern unter..."
@@ -104,6 +114,11 @@
     "imagePathCopied": "Bildpfad in Zwischenablage kopiert",
     "failedToChangeImage": "Bild konnte nicht geändert werden.",
     "failedToCopyImagePath": "Bildpfad konnte nicht kopiert werden.",
-    "failedToRevealImage": "Bild konnte im Finder nicht angezeigt werden."
+    "failedToRevealImage": "Bild konnte im Finder nicht angezeigt werden.",
+    "failedToChangeMedia": "Failed to change media file.",
+    "failedToSaveDroppedImages": "Failed to save dropped images.",
+    "failedToSaveClipboardImage": "Failed to save image from clipboard.",
+    "failedToResolveHomePath": "Failed to resolve home directory path.",
+    "failedToCopyToAssets": "Failed to copy image to assets folder."
   }
 }
