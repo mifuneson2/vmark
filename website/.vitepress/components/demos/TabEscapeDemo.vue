@@ -1,49 +1,94 @@
 <script setup lang="ts">
-import { ref, nextTick } from 'vue'
+import { ref, nextTick, onUnmounted } from 'vue'
 
 const inputRef = ref<HTMLInputElement | null>(null)
 const text = ref('')
-const cursorPos = ref(0)
 const flash = ref(false)
 const pairs: Record<string, string> = {
   '(': ')', '[': ']', '{': '}', '"': '"', "'": "'", '`': '`',
   '「': '」', '（': '）', '【': '】',
 }
 
+// IME composition guard — mirrors src/utils/imeGuard.ts pattern
+const IME_GRACE_MS = 50
+let compositionEndAt = 0
+let flashTimer: ReturnType<typeof setTimeout> | undefined
+
+function onCompositionEnd() {
+  compositionEndAt = performance.now()
+}
+
+function isInImeGrace() {
+  return compositionEndAt > 0 && performance.now() - compositionEndAt < IME_GRACE_MS
+}
+
+function handleInput() {
+  // Reset to controlled value — blocks IME composed text from leaking in
+  const el = inputRef.value
+  if (el) el.value = text.value
+}
+
+/** Get selection range, collapsing to a single position for edits. */
+function getRange(el: HTMLInputElement): [number, number] {
+  const start = el.selectionStart ?? 0
+  const end = el.selectionEnd ?? start
+  return [start, end]
+}
+
+/** Replace [start, end) in text and set cursor at newPos. */
+function splice(el: HTMLInputElement, start: number, end: number, insert: string) {
+  text.value = text.value.slice(0, start) + insert + text.value.slice(end)
+  const newPos = start + insert.length
+  nextTick(() => el.setSelectionRange(newPos, newPos))
+}
+
 function handleKeydown(e: KeyboardEvent) {
   const el = inputRef.value
   if (!el) return
 
-  const pos = el.selectionStart ?? 0
+  // Block IME composition events + post-composition grace period
+  if (e.isComposing || e.keyCode === 229 || isInImeGrace()) {
+    e.preventDefault()
+    return
+  }
+
+  const [start, end] = getRange(el)
+  const hasSelection = start !== end
 
   if (e.key === 'Tab') {
     e.preventDefault()
-    // If next char is a closing bracket/quote, jump over it
+    const pos = hasSelection ? end : start
     const nextChar = text.value[pos]
     if (nextChar && Object.values(pairs).includes(nextChar)) {
-      cursorPos.value = pos + 1
+      // If there's a selection, collapse it first
+      if (hasSelection) {
+        text.value = text.value.slice(0, start) + text.value.slice(end)
+      }
+      const jumpPos = hasSelection ? start + 1 : pos + 1
       flash.value = true
-      setTimeout(() => { flash.value = false }, 300)
-      nextTick(() => {
-        el.setSelectionRange(pos + 1, pos + 1)
-      })
+      if (flashTimer) clearTimeout(flashTimer)
+      flashTimer = setTimeout(() => { flash.value = false }, 300)
+      nextTick(() => el.setSelectionRange(jumpPos, jumpPos))
     }
     return
   }
 
   if (e.key === 'Backspace') {
     e.preventDefault()
+    if (hasSelection) {
+      // Delete selection
+      splice(el, start, end, '')
+      return
+    }
     // If inside empty pair, delete both
-    const before = text.value[pos - 1]
-    const after = text.value[pos]
+    const before = text.value[start - 1]
+    const after = text.value[start]
     if (before && pairs[before] === after) {
-      text.value = text.value.slice(0, pos - 1) + text.value.slice(pos + 1)
-      cursorPos.value = pos - 1
-      nextTick(() => el.setSelectionRange(pos - 1, pos - 1))
-    } else if (pos > 0) {
-      text.value = text.value.slice(0, pos - 1) + text.value.slice(pos)
-      cursorPos.value = pos - 1
-      nextTick(() => el.setSelectionRange(pos - 1, pos - 1))
+      text.value = text.value.slice(0, start - 1) + text.value.slice(start + 1)
+      nextTick(() => el.setSelectionRange(start - 1, start - 1))
+    } else if (start > 0) {
+      text.value = text.value.slice(0, start - 1) + text.value.slice(start)
+      nextTick(() => el.setSelectionRange(start - 1, start - 1))
     }
     return
   }
@@ -52,15 +97,13 @@ function handleKeydown(e: KeyboardEvent) {
     e.preventDefault()
     const ch = e.key
     if (pairs[ch]) {
-      // Auto-pair: insert both opening and closing
-      text.value = text.value.slice(0, pos) + ch + pairs[ch] + text.value.slice(pos)
-      cursorPos.value = pos + 1
-      nextTick(() => el.setSelectionRange(pos + 1, pos + 1))
+      // Auto-pair: insert both opening and closing, replacing selection
+      splice(el, start, end, ch + pairs[ch])
+      // Cursor between the pair
+      nextTick(() => el.setSelectionRange(start + 1, start + 1))
     } else {
-      // Normal character
-      text.value = text.value.slice(0, pos) + ch + text.value.slice(pos)
-      cursorPos.value = pos + 1
-      nextTick(() => el.setSelectionRange(pos + 1, pos + 1))
+      // Normal character — replaces selection if any
+      splice(el, start, end, ch)
     }
   }
 }
@@ -68,6 +111,10 @@ function handleKeydown(e: KeyboardEvent) {
 function focus() {
   inputRef.value?.focus()
 }
+
+onUnmounted(() => {
+  if (flashTimer) clearTimeout(flashTimer)
+})
 </script>
 
 <template>
@@ -85,7 +132,8 @@ function focus() {
           spellcheck="false"
           autocomplete="off"
           @keydown="handleKeydown"
-          @input="() => {}"
+          @input="handleInput"
+          @compositionend="onCompositionEnd"
         />
       </div>
     </div>
