@@ -91,7 +91,7 @@ Cliquez sur l'icône d'engrenage (en bas à droite) ou appuyez sur `Échap` pour
 |-----------|-------------|
 | Taille de police | Ajuster la taille du texte (12px – 24px) |
 | Interligne | Ajuster l'espacement des lignes (1.2 – 2.0) |
-| Thème clair/sombre | Basculer entre le mode clair et sombre |
+| Thème | Changer de thème (White, Paper, Mint, Sepia, Night) |
 | Espacement CJK-Latin | Basculer l'espacement entre les caractères CJK et latins |
 
 ### Table des matières

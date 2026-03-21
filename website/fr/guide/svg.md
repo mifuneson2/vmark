@@ -130,7 +130,7 @@ L'IA génère un graphique à barres SVG qui s'affiche en ligne dans votre docum
 | Panoramique + Zoom | Oui | Oui |
 | Export PNG | Oui | Oui |
 | Prévisualisation en direct | Oui | Oui |
-| Adaptation au thème | Non (utilise les couleurs propres du SVG) | Oui (s'adapte au mode clair/sombre) |
+| Adaptation au thème | Non (utilise les couleurs propres du SVG) | Oui (s'adapte à tous les thèmes) |
 | Idéal pour | Graphiques personnalisés, visuels générés par IA | Organigrammes, diagrammes de séquence, diagrammes structurés |
 
 ## Conseils

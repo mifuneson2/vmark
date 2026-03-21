@@ -91,7 +91,7 @@ Clique no ícone de engrenagem (canto inferior direito) ou pressione `Esc` para 
 |-------------|-----------|
 | Tamanho da Fonte | Ajustar tamanho do texto (12px – 24px) |
 | Altura de Linha | Ajustar espaçamento entre linhas (1.2 – 2.0) |
-| Tema Claro/Escuro | Alternar entre modo claro e escuro |
+| Tema | Alternar entre temas (White, Paper, Mint, Sepia, Night) |
 | Espaçamento CJK-Latino | Alternar espaçamento entre caracteres CJK e latinos |
 
 ### Índice

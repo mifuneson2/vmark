@@ -91,7 +91,7 @@ Haz clic en el icono de engranaje (abajo a la derecha) o presiona `Esc` para abr
 |---------------|-------------|
 | Tamaño de Fuente | Ajusta el tamaño del texto (12px – 24px) |
 | Altura de Línea | Ajusta el interlineado (1.2 – 2.0) |
-| Tema Claro/Oscuro | Cambia entre modo claro y oscuro |
+| Tema | Cambiar entre temas (White, Paper, Mint, Sepia, Night) |
 | Espaciado CJK-Latino | Activa/desactiva el espaciado entre caracteres CJK y latinos |
 
 ### Tabla de Contenidos

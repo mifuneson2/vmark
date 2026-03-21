@@ -243,7 +243,7 @@ Beim Bearbeiten eines Mermaid-Code-Blocks im WYSIWYG-Modus erscheint eine **Kopi
 
 ### Design-Integration
 
-Mermaid-Diagramme passen sich automatisch an das aktuelle VMark-Design an (Hell- oder Dunkelthema).
+Mermaid-Diagramme passen sich automatisch an das aktuelle VMark-Design an (White, Paper, Mint, Sepia oder Night).
 
 ### Als PNG exportieren
 

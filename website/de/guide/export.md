@@ -91,7 +91,7 @@ Klicken Sie auf das Zahnradsymbol (unten rechts) oder drücken Sie `Esc`, um das
 |-------------|--------------|
 | Schriftgröße | Textgröße anpassen (12px – 24px) |
 | Zeilenhöhe | Zeilenabstand anpassen (1,2 – 2,0) |
-| Hell-/Dunkeldesign | Zwischen hellem und dunklem Modus wechseln |
+| Design | Design wechseln (White, Paper, Mint, Sepia, Night) |
 | CJK-Lateinischer Abstand | Abstände zwischen CJK- und lateinischen Zeichen umschalten |
 
 ### Inhaltsverzeichnis

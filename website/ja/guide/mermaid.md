@@ -243,7 +243,7 @@ WYSIWYG モードで mermaid コードブロックを編集する際、編集ヘ
 
 ### テーマ統合
 
-Mermaid ダイアグラムは VMark の現在のテーマ（ライトまたはダークモード）に自動的に適応します。
+Mermaid ダイアグラムは VMark の現在のテーマ（White、Paper、Mint、Sepia、Night）に自動的に適応します。
 
 ### PNG としてエクスポート
 

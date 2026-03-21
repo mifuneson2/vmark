@@ -129,7 +129,7 @@ Hier ist eine interaktive Markmap, die direkt auf dieser Seite gerendert wird �
 
 ## Design-Integration
 
-Markmap-Mindmaps passen sich automatisch an das aktuelle VMark-Design an (Hell- oder Dunkelthema). Zweigfarben passen sich für Lesbarkeit in beiden Designs an.
+Markmap-Mindmaps passen sich automatisch an das aktuelle VMark-Design an (White, Paper, Mint, Sepia oder Night). Branchfarben werden für die Lesbarkeit in jedem Design angepasst.
 
 ## Als PNG exportieren
 

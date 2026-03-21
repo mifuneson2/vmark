@@ -243,7 +243,7 @@ When editing a mermaid code block in WYSIWYG mode, a **copy** button appears in 
 
 ### Theme Integration
 
-Mermaid diagrams automatically adapt to VMark's current theme (light or dark mode).
+Mermaid diagrams automatically adapt to VMark's current theme (White, Paper, Mint, Sepia, or Night).
 
 ### Export as PNG
 

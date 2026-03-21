@@ -129,7 +129,7 @@ Markmap 使用标准 Markdown 作为输入。标题定义树的层级结构：
 
 ## 主题集成
 
-Markmap 思维导图会自动适应 VMark 的当前主题（浅色或深色模式）。分支颜色会针对两种主题的可读性进行调整。
+Markmap 思维导图会自动适应 VMark 的当前主题（White、Paper、Mint、Sepia 或 Night）。分支颜色会针对每种主题的可读性进行调整。
 
 ## 导出为 PNG
 

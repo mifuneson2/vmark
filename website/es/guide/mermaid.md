@@ -243,7 +243,7 @@ Al editar un bloque de código mermaid en el modo WYSIWYG, aparece un botón de 
 
 ### Integración de Temas
 
-Los diagramas Mermaid se adaptan automáticamente al tema actual de VMark (modo claro u oscuro).
+Los diagramas Mermaid se adaptan automáticamente al tema actual de VMark (White, Paper, Mint, Sepia o Night).
 
 ### Exportar como PNG
 

@@ -129,7 +129,7 @@ Aquí hay un markmap interactivo renderizado directamente en esta página — pr
 
 ## Integración de Temas
 
-Los mapas mentales Markmap se adaptan automáticamente al tema actual de VMark (modo claro u oscuro). Los colores de las ramas se ajustan para facilitar la lectura en ambos temas.
+Los mapas mentales Markmap se adaptan automáticamente al tema actual de VMark (White, Paper, Mint, Sepia o Night). Los colores de las ramas se ajustan para facilitar la lectura en todos los temas.
 
 ## Exportar como PNG
 

@@ -91,7 +91,7 @@ Fai clic sull'icona ingranaggio (in basso a destra) o premi `Esc` per aprire il 
 |-------------|-------------|
 | Dimensione Font | Regola la dimensione del testo (12px – 24px) |
 | Interlinea | Regola la spaziatura delle righe (1.2 – 2.0) |
-| Tema Chiaro/Scuro | Alterna tra modalità chiara e scura |
+| Tema | Cambiare tema (White, Paper, Mint, Sepia, Night) |
 | Spaziatura CJK-Latino | Attiva/disattiva la spaziatura tra caratteri CJK e latini |
 
 ### Sommario

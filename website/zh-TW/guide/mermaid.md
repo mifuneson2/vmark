@@ -243,7 +243,7 @@ gitGraph
 
 ### 主題整合
 
-Mermaid 圖表會自動適應 VMark 目前的主題（明亮或深色模式）。
+Mermaid 圖表會自動適應 VMark 目前的主題（White、Paper、Mint、Sepia 或 Night）。
 
 ### 匯出為 PNG
 

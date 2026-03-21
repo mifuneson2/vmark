@@ -130,7 +130,7 @@ The AI generates an SVG bar chart that renders inline in your document, with pan
 | Pan + Zoom | Yes | Yes |
 | PNG Export | Yes | Yes |
 | Live preview | Yes | Yes |
-| Theme adaptation | No (uses SVG's own colors) | Yes (adapts to light/dark) |
+| Theme adaptation | No (uses SVG's own colors) | Yes (adapts to all themes) |
 | Best for | Custom graphics, AI-generated visuals | Flowcharts, sequence diagrams, structured diagrams |
 
 ## Tips

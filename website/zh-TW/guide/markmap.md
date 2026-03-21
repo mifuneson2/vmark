@@ -129,7 +129,7 @@ Markmap 使用標準 Markdown 作為輸入。標題定義樹狀階層：
 
 ## 主題整合
 
-Markmap 心智圖會自動適應 VMark 目前的主題（明亮或深色模式）。分支顏色在兩種主題下均調整為易讀的配色。
+Markmap 心智圖會自動適應 VMark 目前的主題（White、Paper、Mint、Sepia 或 Night）。分支顏色在每種主題下均調整為易讀的配色。
 
 ## 匯出為 PNG
 

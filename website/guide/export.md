@@ -91,7 +91,7 @@ Click the gear icon (bottom-right) or press `Esc` to open the settings panel:
 |---------|-------------|
 | Font Size | Adjust text size (12px – 24px) |
 | Line Height | Adjust line spacing (1.2 – 2.0) |
-| Light/Dark Theme | Toggle between light and dark mode |
+| Theme | Cycle through themes (White, Paper, Mint, Sepia, Night) |
 | CJK-Latin Spacing | Toggle spacing between CJK and Latin characters |
 
 ### Table of Contents

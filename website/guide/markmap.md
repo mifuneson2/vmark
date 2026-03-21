@@ -129,7 +129,7 @@ Here is an interactive markmap rendered directly on this page — try panning, z
 
 ## Theme Integration
 
-Markmap mindmaps automatically adapt to VMark's current theme (light or dark mode). Branch colors adjust for readability in both themes.
+Markmap mindmaps automatically adapt to VMark's current theme (White, Paper, Mint, Sepia, or Night). Branch colors adjust for readability in every theme.
 
 ## Export as PNG
 

@@ -130,7 +130,7 @@ La IA genera un gráfico de barras SVG que se renderiza en línea en tu document
 | Panorámica + Zoom | Sí | Sí |
 | Exportación PNG | Sí | Sí |
 | Vista previa en vivo | Sí | Sí |
-| Adaptación de tema | No (usa los colores propios del SVG) | Sí (se adapta a claro/oscuro) |
+| Adaptación de tema | No (usa los colores propios del SVG) | Sí (se adapta a todos los temas) |
 | Mejor para | Gráficos personalizados, visuales generados por IA | Diagramas de flujo, diagramas de secuencia, diagramas estructurados |
 
 ## Consejos

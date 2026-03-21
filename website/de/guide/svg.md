@@ -130,7 +130,7 @@ Die KI generiert ein SVG-Balkendiagramm, das inline in Ihrem Dokument gerendert 
 | Schwenken + Zoomen | Ja | Ja |
 | PNG-Export | Ja | Ja |
 | Live-Vorschau | Ja | Ja |
-| Design-Anpassung | Nein (verwendet eigene SVG-Farben) | Ja (passt sich Hell/Dunkel an) |
+| Design-Anpassung | Nein (verwendet eigene SVG-Farben) | Ja (passt sich allen Designs an) |
 | Am besten für | Benutzerdefinierte Grafiken, KI-generierte Visualisierungen | Flussdiagramme, Sequenzdiagramme, strukturierte Diagramme |
 
 ## Tipps
