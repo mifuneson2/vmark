@@ -128,5 +128,30 @@ describe("secureStorage", () => {
       await new Promise((r) => setTimeout(r, 50));
       expect(mockStore.delete).toHaveBeenCalledWith("rm-key");
     });
+
+    it("setItem handles Tauri store write failure gracefully", async () => {
+      await initSecureStorage([]);
+      mockStore.set.mockRejectedValueOnce(new Error("write failed"));
+
+      const storage = createSecureStorage();
+      // Should not throw — error is caught and logged
+      storage.setItem("fail-key", "fail-value");
+      // Cache still updated
+      expect(storage.getItem("fail-key")).toBe("fail-value");
+      // Wait for async error handling
+      await new Promise((r) => setTimeout(r, 50));
+    });
+
+    it("removeItem handles Tauri store delete failure gracefully", async () => {
+      await initSecureStorage([]);
+      mockStore.delete.mockRejectedValueOnce(new Error("delete failed"));
+
+      const storage = createSecureStorage();
+      storage.setItem("fail-rm", "value");
+      // Should not throw
+      storage.removeItem("fail-rm");
+      expect(storage.getItem("fail-rm")).toBeNull();
+      await new Promise((r) => setTimeout(r, 50));
+    });
   });
 });

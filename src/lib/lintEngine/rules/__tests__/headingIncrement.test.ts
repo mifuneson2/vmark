@@ -108,4 +108,35 @@ describe("W01 headingIncrement", () => {
     expect(diagnostics[0].messageParams.from).toBe("3");
     expect(diagnostics[0].messageParams.to).toBe("5");
   });
+
+  it("uses offset fallback when position.start.offset is undefined", () => {
+    // Exercises the `offset ?? 0` branch (line 34)
+    const mdast: Root = {
+      type: "root",
+      children: [
+        {
+          type: "heading",
+          depth: 1,
+          children: [{ type: "text", value: "H1" }],
+          position: {
+            start: { line: 1, column: 1, offset: 0 },
+            end: { line: 1, column: 5, offset: 4 },
+          },
+        },
+        {
+          type: "heading",
+          depth: 3,
+          children: [{ type: "text", value: "H3" }],
+          position: {
+            start: { line: 3, column: 1 },
+            end: { line: 3, column: 7 },
+          },
+        } as unknown as Heading,
+      ],
+    };
+
+    const diagnostics = headingIncrement("", mdast);
+    expect(diagnostics).toHaveLength(1);
+    expect(diagnostics[0].offset).toBe(0);
+  });
 });

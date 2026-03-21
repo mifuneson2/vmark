@@ -156,4 +156,36 @@ describe("E07 noDuplicateDefs", () => {
     const diagnostics = noDuplicateDefs("", mdast);
     expect(diagnostics).toHaveLength(1);
   });
+
+  it("uses offset fallback when position.start.offset is undefined", () => {
+    const mdast: Root = {
+      type: "root",
+      children: [
+        {
+          type: "definition",
+          identifier: "ref",
+          label: "ref",
+          url: "https://a.com",
+          position: {
+            start: { line: 1, column: 1, offset: 0 },
+            end: { line: 1, column: 21, offset: 20 },
+          },
+        },
+        {
+          type: "definition",
+          identifier: "ref",
+          label: "ref",
+          url: "https://b.com",
+          position: {
+            start: { line: 2, column: 1 },
+            end: { line: 2, column: 21 },
+          },
+        } as unknown as Definition,
+      ],
+    };
+
+    const diagnostics = noDuplicateDefs("", mdast);
+    expect(diagnostics).toHaveLength(1);
+    expect(diagnostics[0].offset).toBe(0);
+  });
 });
