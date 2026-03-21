@@ -355,13 +355,17 @@
 /* Hide language section inside VPNavBarExtra (tablet 768–1279px flyout) */
 .VPNavBarExtra .group:has(.vpi-languages) { display: none !important; }
 
-/* CJK typography: auto-spacing between ideographic and Latin/numeric characters.
- * Uses CSS text-autospace (Baseline 2025: Chrome 133+, Safari 18.4+).
- * Only adds space at CJK↔Latin boundaries — no effect on pure Latin or pure CJK runs. */
+/* CJK typography — two layers:
+ * 1. text-autospace: space at CJK↔Latin boundaries (Baseline 2025)
+ * 2. .cjk-spacing: letter-spacing on CJK character runs only (via JS) */
 :lang(zh) .vp-doc,
 :lang(ja) .vp-doc,
 :lang(ko) .vp-doc {
   text-autospace: ideograph-alpha ideograph-numeric;
+}
+
+.vp-doc .cjk-spacing {
+  letter-spacing: 0.05em;
 }
 
 /* Nav and sidebar use theme backgrounds */
