@@ -330,9 +330,13 @@ export function CopyButton({ text, size = "sm", className = "" }: CopyButtonProp
 
   const handleCopy = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    await navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // Clipboard access denied — no user feedback needed, button stays in default state
+    }
   };
 
   /* v8 ignore next -- @preserve size !=="sm" branch: tests only invoke with size="sm" */

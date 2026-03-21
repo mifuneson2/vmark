@@ -107,7 +107,7 @@ export const hotExitLog = isDev
 
 /**
  * Debug logger for Hot Exit warnings.
- * Only logs in development mode.
+ * Logs in dev (console) and production (log file).
  */
 export const hotExitWarn = isDev
   ? (...args: unknown[]) => console.warn("[HotExit]", ...args)
@@ -123,7 +123,7 @@ export const fileOpsLog = isDev
 
 /**
  * Debug logger for File Operations warnings.
- * Only logs in development mode.
+ * Logs in dev (console) and production (log file).
  */
 export const fileOpsWarn = isDev
   ? (...args: unknown[]) => console.warn("[FileOps]", ...args)
@@ -155,7 +155,7 @@ export const aiProviderLog = isDev
 
 /**
  * Debug logger for AI Provider warnings.
- * Only logs in development mode.
+ * Logs in dev (console) and production (log file).
  */
 export const aiProviderWarn = isDev
   ? (...args: unknown[]) => console.warn("[AIProvider]", ...args)
@@ -171,7 +171,7 @@ export const geniesLog = isDev
 
 /**
  * Debug logger for Genies warnings.
- * Only logs in development mode.
+ * Logs in dev (console) and production (log file).
  */
 export const geniesWarn = isDev
   ? (...args: unknown[]) => console.warn("[Genies]", ...args)
@@ -179,7 +179,7 @@ export const geniesWarn = isDev
 
 /**
  * Debug logger for Recent Files/Workspaces warnings.
- * Only logs in development mode.
+ * Logs in dev (console) and production (log file).
  */
 export const recentWarn = isDev
   ? (...args: unknown[]) => console.warn("[Recent]", ...args)
@@ -187,7 +187,7 @@ export const recentWarn = isDev
 
 /**
  * Debug logger for Shortcuts store warnings.
- * Only logs in development mode.
+ * Logs in dev (console) and production (log file).
  */
 export const shortcutsWarn = isDev
   ? (...args: unknown[]) => console.warn("[Shortcuts]", ...args)
@@ -195,7 +195,7 @@ export const shortcutsWarn = isDev
 
 /**
  * Debug logger for Image Handler operations.
- * Only logs in development mode.
+ * Logs in dev (console) and production (log file).
  */
 export const imageHandlerWarn = isDev
   ? (...args: unknown[]) => console.warn("[imageHandler]", ...args)
@@ -203,7 +203,7 @@ export const imageHandlerWarn = isDev
 
 /**
  * Debug logger for Smart Paste operations.
- * Only logs in development mode.
+ * Logs in dev (console) and production (log file).
  */
 export const smartPasteWarn = isDev
   ? (...args: unknown[]) => console.warn("[smartPaste]", ...args)
@@ -211,7 +211,7 @@ export const smartPasteWarn = isDev
 
 /**
  * Debug logger for Footnote Popup warnings.
- * Only logs in development mode.
+ * Logs in dev (console) and production (log file).
  */
 export const footnotePopupWarn = isDev
   ? (...args: unknown[]) => console.warn("[FootnotePopup]", ...args)
@@ -220,7 +220,7 @@ export const footnotePopupWarn = isDev
 
 /**
  * Debug logger for Media Popup warnings.
- * Only logs in development mode.
+ * Logs in dev (console) and production (log file).
  */
 export const mediaPopupWarn = isDev
   ? (...args: unknown[]) => console.warn("[MediaPopup]", ...args)
@@ -228,7 +228,7 @@ export const mediaPopupWarn = isDev
 
 /**
  * Debug logger for WYSIWYG Adapter warnings.
- * Only logs in development mode.
+ * Logs in dev (console) and production (log file).
  */
 export const wysiwygAdapterWarn = isDev
   ? (...args: unknown[]) => console.warn("[wysiwygAdapter]", ...args)
@@ -236,7 +236,7 @@ export const wysiwygAdapterWarn = isDev
 
 /**
  * Debug logger for Mermaid/Markmap/SVG diagram warnings.
- * Only logs in development mode.
+ * Logs in dev (console) and production (log file).
  */
 export const diagramWarn = isDev
   ? (...args: unknown[]) => console.warn("[Diagram]", ...args)
@@ -244,7 +244,7 @@ export const diagramWarn = isDev
 
 /**
  * Debug logger for HTML/Markdown paste warnings.
- * Only logs in development mode.
+ * Logs in dev (console) and production (log file).
  */
 export const pasteWarn = isDev
   ? (...args: unknown[]) => console.warn("[Paste]", ...args)
@@ -252,7 +252,7 @@ export const pasteWarn = isDev
 
 /**
  * Debug logger for Image View security warnings.
- * Only logs in development mode.
+ * Logs in dev (console) and production (log file).
  */
 export const imageViewWarn = isDev
   ? (...args: unknown[]) => console.warn("[ImageView]", ...args)
@@ -260,7 +260,7 @@ export const imageViewWarn = isDev
 
 /**
  * Debug logger for Source mode popup warnings.
- * Only logs in development mode.
+ * Logs in dev (console) and production (log file).
  */
 export const sourcePopupWarn = isDev
   ? (...args: unknown[]) => console.warn("[SourcePopup]", ...args)
@@ -268,7 +268,7 @@ export const sourcePopupWarn = isDev
 
 /**
  * Debug logger for Action Registry warnings.
- * Only logs in development mode.
+ * Logs in dev (console) and production (log file).
  */
 export const actionRegistryWarn = isDev
   ? (...args: unknown[]) => console.warn("[ActionRegistry]", ...args)
@@ -276,7 +276,7 @@ export const actionRegistryWarn = isDev
 
 /**
  * Debug logger for Markdown Copy warnings.
- * Only logs in development mode.
+ * Logs in dev (console) and production (log file).
  */
 export const markdownCopyWarn = isDev
   ? (...args: unknown[]) => console.warn("[markdownCopy]", ...args)
@@ -284,7 +284,7 @@ export const markdownCopyWarn = isDev
 
 /**
  * Debug logger for Wiki Link Popup warnings.
- * Only logs in development mode.
+ * Logs in dev (console) and production (log file).
  */
 export const wikiLinkPopupWarn = isDev
   ? (...args: unknown[]) => console.warn("[WikiLinkPopup]", ...args)

@@ -240,6 +240,7 @@ export function HeadingPicker() {
       role="dialog"
       aria-modal="true"
       aria-label={t("headingPicker.ariaLabel")}
+      tabIndex={-1}
       style={{
         position: portalTarget ? "absolute" : "fixed",
         top: `${position.top}px`,

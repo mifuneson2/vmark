@@ -57,10 +57,12 @@ function parseDestination(dest: unknown): SmartInsertDestination | null {
       if (!Number.isFinite(obj.after_paragraph) || !Number.isInteger(obj.after_paragraph) || obj.after_paragraph < 0) return null;
       return { after_paragraph: obj.after_paragraph };
     }
-    if ('after_paragraph_containing' in obj && typeof obj.after_paragraph_containing === 'string') {
+    if ('after_paragraph_containing' in obj && typeof obj.after_paragraph_containing === 'string'
+        && obj.after_paragraph_containing.length > 0) {
       return { after_paragraph_containing: obj.after_paragraph_containing };
     }
-    if ('after_section' in obj && typeof obj.after_section === 'string') {
+    if ('after_section' in obj && typeof obj.after_section === 'string'
+        && obj.after_section.length > 0) {
       return { after_section: obj.after_section };
     }
   }
