@@ -81,3 +81,10 @@
 .dark-theme .image-preview-popup {
   box-shadow: var(--popup-shadow-dark);
 }
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .image-preview-popup {
+    animation: none;
+  }
+}

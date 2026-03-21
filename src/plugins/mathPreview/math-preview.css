@@ -69,3 +69,10 @@
 .dark-theme .math-preview-popup {
   box-shadow: var(--popup-shadow-dark);
 }
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .math-preview-popup {
+    animation: none;
+  }
+}

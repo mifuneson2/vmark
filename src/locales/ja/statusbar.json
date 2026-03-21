@@ -36,18 +36,16 @@
   "updateReadyVersion": "v{{version}} 準備完了 — クリックして再起動",
   "updateError": "アップデート確認失敗 — クリックして再試行",
   "autoSavedAt": "{{time}} に自動保存",
-
   "terminal.search.placeholder": "検索...",
   "terminal.search.previous": "前へ (Shift+Enter)",
   "terminal.search.next": "次へ (Enter)",
   "terminal.search.close": "閉じる (Escape)",
-
   "terminal.newSession": "新しいターミナル",
   "terminal.maxSessions": "最大5セッション",
   "terminal.closeSession": "閉じる",
   "terminal.restartSession": "再起動",
-
   "lint.badge.tooltip": "{{count}} issue(s) — click to go to next",
   "lint.badge.tooltipSingle": "1 issue — click to go to next",
-  "lint.clean.toast": "No markdown issues found"
+  "lint.clean.toast": "No markdown issues found",
+  "terminal.ariaLabel": "Terminal"
 }

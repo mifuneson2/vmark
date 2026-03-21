@@ -233,3 +233,10 @@
   opacity: 0.5;
   pointer-events: none;
 }
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .source-peek-inline {
+    animation: none;
+  }
+}

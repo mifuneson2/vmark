@@ -707,3 +707,19 @@
 .source-editor .cm-list-blank-hidden {
   display: none;
 }
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .tiptap-editor .ProseMirror.pm-selection-pulse .pm-selection-persist,
+  .tiptap-editor .ProseMirror.ProseMirror-focused.pm-selection-pulse .pm-selection-persist {
+    animation: none;
+  }
+
+  .tiptap-editor .ProseMirror-gapcursor::after {
+    animation: none;
+  }
+
+  .source-editor .cm-editor.cm-selection-pulse .cm-selectionBackground {
+    animation: none;
+  }
+}

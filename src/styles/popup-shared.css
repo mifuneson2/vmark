@@ -172,3 +172,10 @@
   background: var(--hover-bg-dark);
 }
 
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .popup-container {
+    animation: none;
+  }
+}
+

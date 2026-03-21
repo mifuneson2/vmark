@@ -26,6 +26,9 @@
   "selectAll": "Select All",
   "deselectAll": "Deselect All",
 
+  "aria.sidebar": "Sidebar",
+  "aria.mainContent": "Main content",
+
   "untitled": "Untitled",
   "fileDeleted": "File deleted from disk",
   "fileDivergent": "Local differs from disk",

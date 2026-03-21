@@ -122,3 +122,10 @@
 .dark-theme .link-popup-btn:hover {
   background: var(--hover-bg-dark);
 }
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .link-popup {
+    animation: none;
+  }
+}

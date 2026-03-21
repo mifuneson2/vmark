@@ -132,3 +132,10 @@
 .dark-theme .source-wiki-link-popup-btn:hover {
   background: var(--hover-bg-dark);
 }
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .source-wiki-link-popup {
+    animation: none;
+  }
+}

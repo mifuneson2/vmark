@@ -793,6 +793,13 @@
   }
 }
 
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .vmark-highlight {
+    animation: none;
+  }
+}
+
 /* Print: Hide interactive elements */
 @media print {
   .vmark-reader-toggle,

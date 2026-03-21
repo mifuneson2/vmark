@@ -153,3 +153,10 @@
 .dark-theme .media-popup-btn:hover {
   background: var(--hover-bg-dark);
 }
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .media-popup {
+    animation: none;
+  }
+}

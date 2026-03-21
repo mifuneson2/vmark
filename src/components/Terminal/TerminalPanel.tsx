@@ -34,6 +34,7 @@
  * @module components/Terminal/TerminalPanel
  */
 import { useRef, useEffect, useState, useCallback, type RefObject, type MutableRefObject } from "react";
+import { useTranslation } from "react-i18next";
 import { useUIStore } from "@/stores/uiStore";
 import { useTerminalSessionStore } from "@/stores/terminalSessionStore";
 import { useTerminalSessions } from "./useTerminalSessions";
@@ -47,6 +48,7 @@ const NULL_REF: RefObject<HTMLDivElement | null> = { current: null };
 
 /** Container for the integrated terminal with resize handle, tab bar, search bar, and context menu. */
 export function TerminalPanel() {
+  const { t } = useTranslation("statusbar");
   const visible = useUIStore((s) => s.terminalVisible);
   const height = useUIStore((s) => s.terminalHeight);
   const width = useUIStore((s) => s.terminalWidth);
@@ -176,7 +178,7 @@ export function TerminalPanel() {
     : "terminal-resize-handle--horizontal";
 
   return (
-    <div className={panelClassName} style={panelStyle}>
+    <div className={panelClassName} style={panelStyle} role="region" aria-label={t("terminal.ariaLabel")}>
       <div className={handleClassName} onMouseDown={handleResizeStart} />
       <div className={`terminal-body ${isRight ? "terminal-body--column" : ""}`}>
         <div className="terminal-sessions-container">

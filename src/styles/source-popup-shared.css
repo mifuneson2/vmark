@@ -221,3 +221,10 @@
 .dark-theme .source-popup-textarea {
   background: var(--subtle-bg);
 }
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .source-popup-base {
+    animation: none;
+  }
+}

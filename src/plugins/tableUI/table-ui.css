@@ -145,3 +145,10 @@
   background: var(--primary-color);
   opacity: 0.8;
 }
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .table-context-menu {
+    animation: none;
+  }
+}

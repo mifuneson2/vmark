@@ -29,5 +29,7 @@
   "fileDeleted": "Fichier supprimé du disque",
   "fileDivergent": "Local diffère du disque",
   "closeTab": "Fermer {{title}}",
-  "tabActions": "Actions de l'onglet"
+  "tabActions": "Actions de l'onglet",
+  "aria.sidebar": "Sidebar",
+  "aria.mainContent": "Main content"
 }

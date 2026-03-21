@@ -36,18 +36,16 @@
   "updateReadyVersion": "v{{version}} listo — haz clic para reiniciar",
   "updateError": "Error al buscar actualizaciones — haz clic para reintentar",
   "autoSavedAt": "Guardado automáticamente a las {{time}}",
-
   "terminal.search.placeholder": "Buscar...",
   "terminal.search.previous": "Anterior (Shift+Enter)",
   "terminal.search.next": "Siguiente (Enter)",
   "terminal.search.close": "Cerrar (Escape)",
-
   "terminal.newSession": "Nueva terminal",
   "terminal.maxSessions": "Máximo 5 sesiones",
   "terminal.closeSession": "Cerrar",
   "terminal.restartSession": "Reiniciar",
-
   "lint.badge.tooltip": "{{count}} issue(s) — click to go to next",
   "lint.badge.tooltipSingle": "1 issue — click to go to next",
-  "lint.clean.toast": "No markdown issues found"
+  "lint.clean.toast": "No markdown issues found",
+  "terminal.ariaLabel": "Terminal"
 }

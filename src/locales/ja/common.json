@@ -29,5 +29,7 @@
   "fileDeleted": "ファイルがディスクから削除されました",
   "fileDivergent": "ローカルとディスクの内容が異なります",
   "closeTab": "{{title}} を閉じる",
-  "tabActions": "タブの操作"
+  "tabActions": "タブの操作",
+  "aria.sidebar": "Sidebar",
+  "aria.mainContent": "Main content"
 }

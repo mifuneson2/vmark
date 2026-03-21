@@ -151,3 +151,10 @@
 .dark-theme .source-footnote-popup-textarea {
   background: var(--subtle-bg);
 }
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .source-footnote-popup {
+    animation: none;
+  }
+}

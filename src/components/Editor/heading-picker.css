@@ -117,3 +117,10 @@
 .dark-theme .heading-picker-item:hover {
   background: var(--hover-bg-dark);
 }
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .heading-picker {
+    animation: none;
+  }
+}

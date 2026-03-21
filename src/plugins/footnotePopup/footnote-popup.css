@@ -140,3 +140,10 @@
 .dark-theme .footnote-popup-btn:hover {
   background: var(--hover-bg-dark);
 }
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .footnote-popup {
+    animation: none;
+  }
+}

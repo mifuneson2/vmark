@@ -42,6 +42,7 @@
   "terminal.search.next": "Next (Enter)",
   "terminal.search.close": "Close (Escape)",
 
+  "terminal.ariaLabel": "Terminal",
   "terminal.newSession": "New Terminal",
   "terminal.maxSessions": "Maximum 5 sessions",
   "terminal.closeSession": "Close",

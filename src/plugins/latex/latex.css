@@ -185,3 +185,10 @@
 .math-block.editing .math-block-preview {
   display: none;
 }
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .math-inline-loading {
+    animation: none;
+  }
+}

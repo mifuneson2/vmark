@@ -213,6 +213,7 @@ export function StatusBar() {
     <>
       <div
         className={`status-bar-container visible${isDropPreviewTarget ? " status-bar-container--drop-target" : ""}`}
+        role="contentinfo"
         onKeyDown={preventSelectAllOnButtons}
       >
         <div className="status-bar">

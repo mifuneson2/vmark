@@ -70,3 +70,11 @@
 .dark-theme .syntax-marker-image-close {
   color: var(--primary-color);
 }
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .syntax-marker {
+    animation: none;
+    opacity: 1;
+  }
+}

@@ -29,5 +29,7 @@
   "fileDeleted": "Datei von Datenträger gelöscht",
   "fileDivergent": "Lokale Version weicht von Datenträger ab",
   "closeTab": "{{title}} schließen",
-  "tabActions": "Tab-Aktionen"
+  "tabActions": "Tab-Aktionen",
+  "aria.sidebar": "Sidebar",
+  "aria.mainContent": "Main content"
 }

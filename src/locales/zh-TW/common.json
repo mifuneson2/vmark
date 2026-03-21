@@ -29,5 +29,7 @@
   "fileDeleted": "檔案已從磁碟刪除",
   "fileDivergent": "本機與磁碟內容不同",
   "closeTab": "關閉 {{title}}",
-  "tabActions": "標籤頁操作"
+  "tabActions": "標籤頁操作",
+  "aria.sidebar": "Sidebar",
+  "aria.mainContent": "Main content"
 }

@@ -29,5 +29,7 @@
   "fileDeleted": "파일이 디스크에서 삭제되었습니다",
   "fileDivergent": "로컬과 디스크가 다릅니다",
   "closeTab": "{{title}} 닫기",
-  "tabActions": "탭 작업"
+  "tabActions": "탭 작업",
+  "aria.sidebar": "Sidebar",
+  "aria.mainContent": "Main content"
 }

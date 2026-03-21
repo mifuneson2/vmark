@@ -36,3 +36,10 @@
   flex: 1;
   min-width: 160px;
 }
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .wiki-link-popup {
+    animation: none;
+  }
+}

@@ -54,3 +54,10 @@
 .dark-theme .drop-zone-content {
   color: var(--accent-primary, #5aa8ff);
 }
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .drop-zone-indicator {
+    animation: none;
+  }
+}

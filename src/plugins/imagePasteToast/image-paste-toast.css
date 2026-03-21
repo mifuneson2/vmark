@@ -103,3 +103,10 @@
 .dark-theme .image-paste-toast-btn:hover {
   background: var(--hover-bg-dark);
 }
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .image-paste-toast {
+    animation: none;
+  }
+}

@@ -13,6 +13,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "bench": "vitest bench src/bench/",
     "lint": "eslint src",
     "lint:selection-styles": "node scripts/check-selection-styles.mjs",
     "lint:design-tokens": "node scripts/check-design-tokens.mjs",

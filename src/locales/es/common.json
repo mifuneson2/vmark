@@ -29,5 +29,7 @@
   "fileDeleted": "Archivo eliminado del disco",
   "fileDivergent": "El archivo local difiere del disco",
   "closeTab": "Cerrar {{title}}",
-  "tabActions": "Acciones de pestaña"
+  "tabActions": "Acciones de pestaña",
+  "aria.sidebar": "Sidebar",
+  "aria.mainContent": "Main content"
 }
