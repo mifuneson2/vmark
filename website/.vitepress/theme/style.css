@@ -355,19 +355,13 @@
 /* Hide language section inside VPNavBarExtra (tablet 768–1279px flyout) */
 .VPNavBarExtra .group:has(.vpi-languages) { display: none !important; }
 
-/* CJK typography: add letter-spacing for ideographic characters.
- * Applied to zh-CN, zh-TW, ja locale pages only.
- * Korean excluded: Hangul uses native word spacing. */
+/* CJK typography: auto-spacing between ideographic and Latin/numeric characters.
+ * Uses CSS text-autospace (Baseline 2025: Chrome 133+, Safari 18.4+).
+ * Only adds space at CJK↔Latin boundaries — no effect on pure Latin or pure CJK runs. */
 :lang(zh) .vp-doc,
-:lang(ja) .vp-doc {
-  letter-spacing: 0.05em;
-}
-
-:lang(zh) .vp-doc code,
-:lang(zh) .vp-doc pre,
-:lang(ja) .vp-doc code,
-:lang(ja) .vp-doc pre {
-  letter-spacing: normal;
+:lang(ja) .vp-doc,
+:lang(ko) .vp-doc {
+  text-autospace: ideograph-alpha ideograph-numeric;
 }
 
 /* Nav and sidebar use theme backgrounds */
