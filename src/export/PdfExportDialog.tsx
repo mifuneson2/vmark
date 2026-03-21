@@ -25,6 +25,7 @@ import { captureThemeCSS } from "./themeSnapshot";
 import { getEditorContentCSS } from "./htmlExportStyles";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { PdfSettingsSidebar } from "./PdfSettingsSidebar";
+import { pdfPreviewError } from "@/utils/debug";
 
 import "./pdf-export-dialog.css";
 
@@ -170,7 +171,7 @@ export function PdfExportContent({
       } else if (e.data?.type === "pagedjs-error") {
         setLoading(false);
         setPreviewError(true);
-        console.error("[PDF Preview] Paged.js error:", e.data.message);
+        pdfPreviewError("Paged.js error:", e.data.message);
       }
     };
     window.addEventListener("message", handler);

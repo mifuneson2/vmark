@@ -30,7 +30,7 @@ import { useMediaPopupStore } from "@/stores/mediaPopupStore";
 import { getWindowLabel } from "@/hooks/useWindowFocus";
 import { isRelativePath, isAbsolutePath, isExternalUrl, validateImagePath } from "./security";
 import { decodeMarkdownUrl } from "@/utils/markdownUrl";
-import { imageViewWarn } from "@/utils/debug";
+import { imageViewWarn, imagePreviewError } from "@/utils/debug";
 
 /**
  * Normalize path for convertFileSrc on Windows.
@@ -91,7 +91,7 @@ async function resolveImageSrc(src: string): Promise<string> {
       const absolutePath = await join(docDir, cleanPath);
       return convertFileSrc(normalizePathForAsset(absolutePath));
     } catch (error) {
-      console.error("Failed to resolve image path:", error);
+      imagePreviewError("Failed to resolve image path:", error);
       return src;
     }
   }

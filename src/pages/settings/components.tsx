@@ -47,6 +47,7 @@ export function Toggle({
       disabled={disabled}
       onClick={() => !disabled && onChange(!checked)}
       className={`relative w-7 h-4 rounded-full transition-colors
+                  focus-visible:ring-2 focus-visible:ring-[var(--primary-color)] focus-visible:ring-offset-1
                   ${checked ? "bg-[var(--accent-primary)]" : "bg-[var(--bg-tertiary)]"}
                   ${disabled ? "cursor-not-allowed" : "cursor-pointer"}`}
     >
@@ -96,6 +97,7 @@ export function Select<T extends string>({
       className={`appearance-none px-2 pt-[1px] pb-0 pr-6 rounded border border-[var(--border-color)]
                  bg-[var(--bg-primary)] text-sm text-[var(--text-primary)]
                  bg-[length:16px_16px] bg-[position:right_4px_center] bg-no-repeat
+                 focus-visible:ring-2 focus-visible:ring-[var(--primary-color)]
                  ${disabled ? "cursor-not-allowed" : ""}`}
       style={{
         backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m7 15 5 5 5-5'/%3E%3Cpath d='m7 9 5-5 5 5'/%3E%3C/svg%3E")`,
@@ -136,7 +138,8 @@ export function CollapsibleGroup({
       <button
         onClick={() => setOpen(!open)}
         className="flex items-center gap-2 text-sm font-medium text-[var(--text-primary)] mb-2
-                   hover:text-[var(--text-secondary)] transition-colors"
+                   rounded hover:text-[var(--text-secondary)] transition-colors
+                   focus-visible:ring-2 focus-visible:ring-[var(--primary-color)] focus-visible:ring-offset-1"
       >
         <ChevronRight
           className={`w-4 h-4 transition-transform ${open ? "rotate-90" : ""}`}
@@ -213,7 +216,7 @@ export function TagInput({
               removeTag(tag);
             }}
             className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)]
-                       focus:outline-none"
+                       rounded-full focus-visible:ring-1 focus-visible:ring-[var(--primary-color)]"
             aria-label={t("removeTag", { tag })}
           >
             ×
@@ -300,6 +303,7 @@ export function Button({
       disabled={disabled}
       onClick={onClick}
       className={`rounded font-medium transition-colors
+                  focus-visible:ring-2 focus-visible:ring-[var(--primary-color)] focus-visible:ring-offset-1
                   ${buttonVariants[variant]}
                   ${buttonSizes[size]}
                   ${disabled ? "opacity-50 cursor-not-allowed" : ""}
@@ -326,9 +330,13 @@ export function CopyButton({ text, size = "sm", className = "" }: CopyButtonProp
 
   const handleCopy = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    await navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // Clipboard access denied — no user feedback needed, button stays in default state
+    }
   };
 
   /* v8 ignore next -- @preserve size !=="sm" branch: tests only invoke with size="sm" */
@@ -339,6 +347,7 @@ export function CopyButton({ text, size = "sm", className = "" }: CopyButtonProp
       onClick={handleCopy}
       className={`p-0.5 rounded hover:bg-[var(--hover-bg)] text-[var(--text-tertiary)]
                   hover:text-[var(--text-primary)] transition-colors flex-shrink-0
+                  focus-visible:ring-2 focus-visible:ring-[var(--primary-color)] focus-visible:ring-offset-1
                   ${className}`}
       title={copied ? t("copied") : t("copy")}
     >
@@ -371,7 +380,9 @@ export function CloseButton({ onClick, className = "" }: CloseButtonProps) {
     <button
       onClick={onClick}
       className={`p-1 rounded hover:bg-[var(--hover-bg)] text-[var(--text-tertiary)]
-                  hover:text-[var(--text-primary)] transition-colors ${className}`}
+                  hover:text-[var(--text-primary)] transition-colors
+                  focus-visible:ring-2 focus-visible:ring-[var(--primary-color)] focus-visible:ring-offset-1
+                  ${className}`}
       title={t("close")}
     >
       <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

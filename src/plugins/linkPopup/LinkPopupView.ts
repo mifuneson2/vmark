@@ -9,6 +9,7 @@
 
 import { TextSelection } from "@tiptap/pm/state";
 import i18n from "@/i18n";
+import { linkPopupError } from "@/utils/debug";
 import { useLinkPopupStore } from "@/stores/linkPopupStore";
 import { findHeadingById } from "@/utils/headingSlug";
 import { isImeKeyEvent } from "@/utils/imeGuard";
@@ -168,7 +169,7 @@ export class LinkPopupView extends WysiwygPopupView<LinkPopupState> {
       this.closePopup();
       this.focusEditor();
     } catch (error) {
-      console.error("[LinkPopup] Save failed:", error);
+      linkPopupError("Save failed:", error);
       this.closePopup();
     }
   };
@@ -190,7 +191,7 @@ export class LinkPopupView extends WysiwygPopupView<LinkPopupState> {
           this.closePopup();
           this.focusEditor();
         } catch (error) {
-          console.error("[LinkPopup] Navigation failed:", error);
+          linkPopupError("Navigation failed:", error);
         }
       }
       return;
@@ -200,9 +201,9 @@ export class LinkPopupView extends WysiwygPopupView<LinkPopupState> {
     import("@tauri-apps/plugin-opener").then(({ openUrl }) => {
       /* v8 ignore next -- @preserve openUrl failure is a Tauri runtime error; not testable in jsdom */
       openUrl(href).catch((error: unknown) => {
-        console.error("Failed to open link:", error);
+        linkPopupError("Failed to open link:", error);
       });
-    }).catch(console.error);
+    }).catch(linkPopupError);
   };
 
   private handleCopy = async () => {
@@ -211,7 +212,7 @@ export class LinkPopupView extends WysiwygPopupView<LinkPopupState> {
       try {
         await navigator.clipboard.writeText(href);
       } catch (err) {
-        console.error("Failed to copy URL:", err);
+        linkPopupError("Failed to copy URL:", err);
       }
     }
   };
@@ -233,7 +234,7 @@ export class LinkPopupView extends WysiwygPopupView<LinkPopupState> {
       this.closePopup();
       this.focusEditor();
     } catch (error) {
-      console.error("[LinkPopup] Remove failed:", error);
+      linkPopupError("Remove failed:", error);
       this.closePopup();
     }
   };

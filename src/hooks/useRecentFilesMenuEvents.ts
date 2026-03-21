@@ -32,6 +32,7 @@ import { getReplaceableTab } from "@/hooks/useReplaceableTab";
 import { detectLinebreaks } from "@/utils/linebreakDetection";
 import { openWorkspaceWithConfig } from "@/hooks/openWorkspaceWithConfig";
 import { safeUnlistenAll } from "@/utils/safeUnlisten";
+import { menuError } from "@/utils/debug";
 import { getFileName } from "@/utils/pathUtils";
 
 /** Hook that handles native menu events for the "Open Recent" file submenu. */
@@ -107,7 +108,7 @@ export function useRecentFilesMenuEvents(): void {
                 useDocumentStore.getState().setLineMetadata(tabId, detectLinebreaks(content));
                 useRecentFilesStore.getState().addFile(file.path);
               } catch (error) {
-                console.error("[Menu] Failed to open recent file:", error);
+                menuError("Failed to open recent file:", error);
                 const remove = await ask(
                   i18n.t("dialog:fileNotFound.message"),
                   { title: i18n.t("dialog:fileNotFound.title"), kind: "warning" }
@@ -131,7 +132,7 @@ export function useRecentFilesMenuEvents(): void {
                 await openWorkspaceWithConfig(result.workspaceRoot);
                 useRecentFilesStore.getState().addFile(file.path);
               } catch (error) {
-                console.error("[Menu] Failed to replace tab with recent file:", error);
+                menuError("Failed to replace tab with recent file:", error);
                 const remove = await ask(
                   i18n.t("dialog:fileNotFound.message"),
                   { title: i18n.t("dialog:fileNotFound.title"), kind: "warning" }
@@ -149,7 +150,7 @@ export function useRecentFilesMenuEvents(): void {
                   filePath: result.filePath,
                 });
               } catch (error) {
-                console.error("[Menu] Failed to open workspace in new window:", error);
+                menuError("Failed to open workspace in new window:", error);
                 const filename = getFileName(file.path) || file.path;
                 toast.error(i18n.t("dialog:toast.failedToOpen", { filename }));
               }

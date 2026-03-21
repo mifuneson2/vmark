@@ -13,6 +13,7 @@ vi.mock("sonner", () => ({
 // Mock debug logger
 vi.mock("@/utils/debug", () => ({
   windowCloseWarn: vi.fn(),
+  tabContextError: vi.fn(),
 }));
 
 // Mock stores
@@ -344,17 +345,16 @@ describe("transferTabFromDragOut", () => {
     const action = (toastCall[1] as Record<string, unknown>).action as { onClick: () => void };
 
     // Make restoreTransferredTab's invoke reject
-    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { tabContextError } = await import("@/utils/debug");
     mockInvoke.mockRejectedValue(new Error("restore failed"));
     action.onClick();
 
     await vi.waitFor(() => {
-      expect(consoleSpy).toHaveBeenCalledWith(
-        "[StatusBar] Undo cross-window move failed:",
+      expect(tabContextError).toHaveBeenCalledWith(
+        "Undo cross-window move failed:",
         expect.any(Error),
       );
     });
-    consoleSpy.mockRestore();
   });
 
   it("undo callback for detach logs error when restoreTransferredTab fails", async () => {
@@ -368,17 +368,16 @@ describe("transferTabFromDragOut", () => {
     const toastCall = vi.mocked(toast.message).mock.calls[0];
     const action = (toastCall[1] as Record<string, unknown>).action as { onClick: () => void };
 
-    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { tabContextError } = await import("@/utils/debug");
     mockInvoke.mockRejectedValue(new Error("detach undo failed"));
     action.onClick();
 
     await vi.waitFor(() => {
-      expect(consoleSpy).toHaveBeenCalledWith(
-        "[StatusBar] Undo detach failed:",
+      expect(tabContextError).toHaveBeenCalledWith(
+        "Undo detach failed:",
         expect.any(Error),
       );
     });
-    consoleSpy.mockRestore();
   });
 
   it("close_window catch logs error via windowCloseWarn", async () => {

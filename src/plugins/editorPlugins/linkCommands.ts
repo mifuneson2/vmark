@@ -19,7 +19,7 @@ import { useWikiLinkPopupStore } from "@/stores/wikiLinkPopupStore";
 import { expandedToggleMark } from "@/plugins/editorPlugins/expandedToggleMark";
 import { findMarkRange, findWordAtCursor } from "@/plugins/syntaxReveal/marks";
 import { readClipboardUrl } from "@/utils/clipboardUrl";
-import { wikiLinkPopupWarn } from "@/utils/debug";
+import { wikiLinkPopupWarn, linkCommandsError } from "@/utils/debug";
 
 /**
  * Apply a link mark with a specific href to a range.
@@ -105,7 +105,7 @@ function openLinkCreatePopup(
       showTextInput,
     });
   } catch (error) {
-    console.error("[LinkCreatePopup] Failed to open:", error);
+    linkCommandsError("Failed to open:", error);
   }
 }
 

@@ -30,7 +30,7 @@ import {
   remove,
 } from "@tauri-apps/plugin-fs";
 import { appDataDir, join } from "@tauri-apps/api/path";
-import { historyLog } from "@/utils/debug";
+import { historyLog, historyError } from "@/utils/debug";
 import {
   type Snapshot,
   type HistoryIndex,
@@ -96,12 +96,12 @@ export async function getHistoryIndex(
     const content = await readTextFile(indexPath);
     const index = parseHistoryIndex(JSON.parse(content));
     if (!index) {
-      console.error("[History] Invalid index file format");
+      historyError("Invalid index file format");
       return null;
     }
     return index;
   } catch (error) {
-    console.error("[History] Failed to read index:", error);
+    historyError("Failed to read index:", error);
     return null;
   }
 }
@@ -225,7 +225,7 @@ export async function createSnapshot(
 
     historyLog(`Created ${type} snapshot:`, snapshotId);
   } catch (error) {
-    console.error("[History] Failed to create snapshot:", error);
+    historyError("Failed to create snapshot:", error);
     throw error;
   }
 }
@@ -252,13 +252,13 @@ export async function loadSnapshot(
     const snapshotPath = await join(historyDir, `${snapshotId}.md`);
 
     if (!(await exists(snapshotPath))) {
-      console.error("[History] Snapshot not found:", snapshotId);
+      historyError("Snapshot not found:", snapshotId);
       return null;
     }
 
     return await readTextFile(snapshotPath);
   } catch (error) {
-    console.error("[History] Failed to load snapshot:", error);
+    historyError("Failed to load snapshot:", error);
     return null;
   }
 }
@@ -327,7 +327,7 @@ export async function pruneSnapshots(documentPath: string): Promise<void> {
     }
   } catch (error) {
     /* v8 ignore next -- @preserve reason: catch only fires on Tauri filesystem errors; not reproducible in mocked tests */
-    console.error("[History] Failed to prune snapshots:", error);
+    historyError("Failed to prune snapshots:", error);
   }
 }
 
@@ -361,7 +361,7 @@ export async function deleteSnapshot(
     historyLog("Deleted snapshot:", snapshotId);
   } catch (error) {
     /* v8 ignore next -- @preserve reason: catch only fires on Tauri filesystem errors; not reproducible in mocked tests */
-    console.error("[History] Failed to delete snapshot:", error);
+    historyError("Failed to delete snapshot:", error);
   }
 }
 

@@ -17,7 +17,7 @@ import { message } from "@tauri-apps/plugin-dialog";
 import { copyImageToAssets, insertBlockImageNode } from "@/hooks/useImageOperations";
 import { useSettingsStore } from "@/stores/settingsStore";
 import type { ImagePathResult } from "@/utils/imagePathDetection";
-import { imageHandlerWarn } from "@/utils/debug";
+import { imageHandlerWarn, imageHandlerError } from "@/utils/debug";
 import {
   isViewConnected,
   getActiveFilePathForCurrentWindow,
@@ -52,7 +52,7 @@ async function resolveImagePath(
       }
       return await copyImageToAssets(sourcePath, filePath);
     } catch (error) {
-      console.error("Failed to copy image to assets:", error);
+      imageHandlerError("Failed to copy image to assets:", error);
       await message("Failed to copy image to assets folder.", { kind: "error" });
       return null;
     }

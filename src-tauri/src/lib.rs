@@ -112,14 +112,17 @@ fn write_temp_html(app: tauri::AppHandle, html: String) -> Result<String, String
     // Clean up stale temp files (older than 1 hour)
     cleanup_stale_temp_files(&dir);
 
-    let unique_id = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|d| d.as_nanos())
-        .unwrap_or(0);
-    let filename = format!("vmark-export-{}-{}.html", std::process::id(), unique_id);
-    let path = dir.join(filename);
-    let mut file = std::fs::File::create(&path).map_err(|e| e.to_string())?;
-    file.write_all(html.as_bytes()).map_err(|e| e.to_string())?;
+    // Use tempfile for kernel-guaranteed unique filename (no PID+time guessability)
+    let mut temp = tempfile::Builder::new()
+        .prefix("vmark-export-")
+        .suffix(".html")
+        .tempfile_in(&dir)
+        .map_err(|e| format!("Failed to create temp file: {}", e))?;
+
+    // Write content first, then persist (keep on disk after handle drops)
+    temp.write_all(html.as_bytes()).map_err(|e| e.to_string())?;
+    let path = temp.path().to_path_buf();
+    temp.persist(&path).map_err(|e| format!("Failed to persist temp file: {}", e))?;
     Ok(path.to_string_lossy().into_owned())
 }
 
@@ -130,7 +133,7 @@ fn cleanup_stale_temp_files(dir: &std::path::Path) {
     for entry in entries.flatten() {
         let path = entry.path();
         let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
-        if !name.starts_with("vmark-") && !name.starts_with("print-") {
+        if !name.starts_with("vmark-export-") && !name.starts_with("print-") {
             continue;
         }
         if !name.ends_with(".html") {
@@ -754,6 +757,15 @@ pub fn run() {
                                         };
                                         let _ = main_window.emit("app:open-file", payload);
                                     }
+                                } else {
+                                    // Window disappeared between decision and emit — queue and create
+                                    FRONTEND_READY.store(false, Ordering::SeqCst);
+                                    if let Ok(mut pending) = PENDING_FILE_OPENS.lock() {
+                                        window_manager::queue_pending_file_opens(
+                                            &mut pending, paths, ws,
+                                        );
+                                    }
+                                    let _ = window_manager::create_main_window(app);
                                 }
                             }
                             window_manager::FileOpenAction::QueueAndCreateWindow => {

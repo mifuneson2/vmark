@@ -23,6 +23,7 @@ import { getWindowLabel } from "@/hooks/useWindowFocus";
 import { useDocumentStore } from "@/stores/documentStore";
 import { useTabStore } from "@/stores/tabStore";
 import { hasVideoExtension, hasAudioExtension } from "@/utils/mediaPathDetection";
+import { mediaHandlerError } from "@/utils/debug";
 
 const mediaHandlerPluginKey = new PluginKey("mediaHandler");
 
@@ -90,7 +91,7 @@ async function handleDroppedMediaFile(view: EditorView, file: File): Promise<voi
       insertBlockAudioNode(view, relativePath);
     }
   } catch (error) {
-    console.error("Failed to handle dropped media file:", error);
+    mediaHandlerError("Failed to handle dropped media file:", error);
     await message(
       `Failed to save media file: ${error instanceof Error ? error.message : String(error)}`,
       { title: "Error", kind: "error" }
@@ -146,7 +147,7 @@ function handlePaste(view: EditorView, event: ClipboardEvent): boolean {
         }
       })
       .catch((error) => {
-        console.error("Failed to copy media from pasted path:", error);
+        mediaHandlerError("Failed to copy media from pasted path:", error);
         // Fallback: insert with original path
         if (isVideo) {
           insertBlockVideoNode(view, trimmed);

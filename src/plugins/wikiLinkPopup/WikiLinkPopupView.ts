@@ -12,7 +12,7 @@ import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import i18n from "@/i18n";
 import { useWikiLinkPopupStore } from "@/stores/wikiLinkPopupStore";
 import { useWorkspaceStore } from "@/stores/workspaceStore";
-import { wikiLinkPopupWarn } from "@/utils/debug";
+import { wikiLinkPopupWarn, wikiLinkPopupError } from "@/utils/debug";
 import {
   calculatePopupPosition,
   getBoundaryRects,
@@ -293,7 +293,7 @@ export class WikiLinkPopupView {
 
       this.targetInput.focus();
     } catch (error) {
-      console.error("[WikiLinkPopup] Browse failed:", error);
+      wikiLinkPopupError("Browse failed:", error);
     }
   };
 
@@ -314,7 +314,7 @@ export class WikiLinkPopupView {
       await currentWindow.emit("open-file", { path: filePath });
       useWikiLinkPopupStore.getState().closePopup();
     } catch (error) {
-      console.error("[WikiLinkPopup] Failed to open file:", error);
+      wikiLinkPopupError("Failed to open file:", error);
     }
   };
 
@@ -325,7 +325,7 @@ export class WikiLinkPopupView {
         await navigator.clipboard.writeText(target);
         // Keep popup open for further actions - don't close
       } catch (err) {
-        console.error("[WikiLinkPopup] Failed to copy:", err);
+        wikiLinkPopupError("Failed to copy:", err);
       }
     }
   };

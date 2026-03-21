@@ -65,6 +65,7 @@ vi.mock("@/utils/clipboardUrl", () => ({
 
 vi.mock("@/utils/debug", () => ({
   wikiLinkPopupWarn: vi.fn(),
+  linkCommandsError: vi.fn(),
 }));
 
 const mockExpandedToggleMark = vi.fn(() => true);
@@ -77,6 +78,8 @@ const {
   handleUnlinkShortcut,
   handleWikiLinkShortcut,
 } = await import("./linkCommands");
+
+const { linkCommandsError } = await import("@/utils/debug");
 
 // --- Schema ---
 
@@ -597,7 +600,7 @@ describe("handleSmartLinkShortcut - openLinkCreatePopup error", () => {
   });
 
   it("catches error when coordsAtPos throws in openLinkCreatePopup", async () => {
-    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    
     const view = createView("hello", 3);
     // Make coordsAtPos throw for the create popup path
     view.coordsAtPos = vi.fn(() => { throw new Error("coords fail"); });
@@ -605,13 +608,13 @@ describe("handleSmartLinkShortcut - openLinkCreatePopup error", () => {
     handleSmartLinkShortcut(view);
 
     await vi.waitFor(() => {
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        "[LinkCreatePopup] Failed to open:",
+      expect(linkCommandsError).toHaveBeenCalledWith(
+        "Failed to open:",
         expect.any(Error)
       );
     });
 
-    consoleErrorSpy.mockRestore();
+    
     view.destroy();
   });
 });

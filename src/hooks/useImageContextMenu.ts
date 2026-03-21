@@ -23,7 +23,7 @@ import type { EditorView } from "@tiptap/pm/view";
 import { useImageContextMenuStore } from "@/stores/imageContextMenuStore";
 import { copyImageToAssets } from "@/hooks/useImageOperations";
 import { useDocumentFilePath } from "@/hooks/useDocumentState";
-import { imageContextMenuWarn } from "@/utils/debug";
+import { imageContextMenuWarn, imageContextMenuError } from "@/utils/debug";
 import i18n from "@/i18n";
 
 type GetEditorView = () => EditorView | null;
@@ -49,7 +49,7 @@ async function resolveImagePath(
     const cleanPath = imageSrc.replace(/^\.\//, "");
     return await join(docDir, cleanPath);
   } catch (error) {
-    console.error("Failed to resolve image path:", error);
+    imageContextMenuError("Failed to resolve image path:", error);
     return null;
   }
 }
@@ -115,7 +115,7 @@ export function useImageContextMenu(getEditorView: GetEditorView) {
 
             dispatch(tr);
           } catch (error) {
-            console.error("Failed to change image:", error);
+            imageContextMenuError("Failed to change image:", error);
             await message(i18n.t("dialog:toast.failedToChangeImage"), { kind: "error" });
           } finally {
             isChangingImage = false;
@@ -151,7 +151,7 @@ export function useImageContextMenu(getEditorView: GetEditorView) {
               await navigator.clipboard.writeText(absolutePath);
               toast.success(i18n.t("dialog:toast.imagePathCopied"));
             } catch (error) {
-              console.error("Failed to copy path:", error);
+              imageContextMenuError("Failed to copy path:", error);
               await message(i18n.t("dialog:toast.failedToCopyImagePath"), { kind: "error" });
             }
           }
@@ -171,7 +171,7 @@ export function useImageContextMenu(getEditorView: GetEditorView) {
             try {
               await revealItemInDir(absolutePath);
             } catch (error) {
-              console.error("Failed to reveal in Finder:", error);
+              imageContextMenuError("Failed to reveal in Finder:", error);
               await message(i18n.t("dialog:toast.failedToRevealImage"), {
                 kind: "error",
               });

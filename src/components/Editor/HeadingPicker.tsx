@@ -58,6 +58,7 @@ export function HeadingPicker() {
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const previousFocusRef = useRef<Element | null>(null);
   const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
 
   // Find editor container for portal mounting
@@ -72,19 +73,29 @@ export function HeadingPicker() {
     return h.text.toLowerCase().includes(search) || h.id.toLowerCase().includes(search);
   });
 
+  const restoreFocus = useCallback(() => {
+    const el = previousFocusRef.current;
+    previousFocusRef.current = null;
+    if (el instanceof HTMLElement && document.contains(el)) {
+      requestAnimationFrame(() => el.focus());
+    }
+  }, []);
+
   const handleClose = useCallback(() => {
     useHeadingPickerStore.getState().closePicker();
     setFilter("");
     setSelectedIndex(0);
-  }, []);
+    restoreFocus();
+  }, [restoreFocus]);
 
   const handleSelect = useCallback(
     (heading: HeadingWithId) => {
       useHeadingPickerStore.getState().selectHeading(heading);
       setFilter("");
       setSelectedIndex(0);
+      restoreFocus();
     },
-    []
+    [restoreFocus]
   );
 
   const handleKeyDown = useCallback(
@@ -92,7 +103,23 @@ export function HeadingPicker() {
       if (isImeKeyEvent(e.nativeEvent) || ime.isComposing()) return;
       const maxIndex = filteredHeadings.length - 1;
       /* v8 ignore start -- @preserve reason: else-if chain branches not fully exercised in tests */
-      if (e.key === "Escape") {
+      if (e.key === "Tab") {
+        // Focus trap: cycle within the picker
+        const focusable = containerRef.current?.querySelectorAll<HTMLElement>(
+          'input, button, [tabindex]:not([tabindex="-1"])'
+        );
+        if (focusable && focusable.length > 0) {
+          const first = focusable[0];
+          const last = focusable[focusable.length - 1];
+          if (e.shiftKey && document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
+          } else if (!e.shiftKey && document.activeElement === last) {
+            e.preventDefault();
+            first.focus();
+          }
+        }
+      } else if (e.key === "Escape") {
         e.preventDefault();
         handleClose();
       } else if (e.key === "ArrowDown") {
@@ -191,9 +218,10 @@ export function HeadingPicker() {
     }
   }, [selectedIndex]);
 
-  // Focus input when opening
+  // Save previous focus and auto-focus input when opening
   useEffect(() => {
     if (isOpen) {
+      previousFocusRef.current = document.activeElement;
       requestAnimationFrame(() => {
         inputRef.current?.focus();
       });
@@ -209,6 +237,10 @@ export function HeadingPicker() {
     <div
       ref={containerRef}
       className="heading-picker"
+      role="dialog"
+      aria-modal="true"
+      aria-label={t("headingPicker.ariaLabel")}
+      tabIndex={-1}
       style={{
         position: portalTarget ? "absolute" : "fixed",
         top: `${position.top}px`,

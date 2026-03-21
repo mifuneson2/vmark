@@ -462,6 +462,7 @@ describe("useSourceOutlineSync hook — additional branch coverage", () => {
 
     await vi.waitFor(() => {
       expect(consoleSpy).toHaveBeenCalledWith(
+        "[OutlineSync]",
         "Failed to setup source outline scroll listener:",
         expect.any(Error)
       );

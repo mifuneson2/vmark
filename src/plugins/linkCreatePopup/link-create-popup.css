@@ -46,6 +46,11 @@
   background: var(--subtle-bg);
 }
 
+.link-create-popup-input:focus-visible {
+  outline: none;
+  background: var(--hover-bg);
+}
+
 .link-create-popup-input::placeholder {
   color: var(--text-secondary);
   opacity: 0.5;

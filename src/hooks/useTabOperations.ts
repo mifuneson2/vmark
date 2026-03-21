@@ -20,6 +20,7 @@
  * @module hooks/useTabOperations
  */
 
+import { fileOpsError } from "@/utils/debug";
 import { promptSaveForDirtyDocument } from "@/hooks/closeSave";
 import { useTabStore } from "@/stores/tabStore";
 import { useDocumentStore } from "@/stores/documentStore";
@@ -51,7 +52,7 @@ async function cleanupOrphansIfEnabled(
     }
   } catch (error) {
     // Silent failure - don't block close for cleanup errors
-    console.error("[OrphanCleanup] Error during close cleanup:", error);
+    fileOpsError("OrphanCleanup error during close cleanup:", error);
   }
 }
 

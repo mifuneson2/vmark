@@ -37,6 +37,7 @@ import { detectLinebreaks } from "@/utils/linebreakDetection";
 import { reloadTabFromDisk } from "@/utils/reloadFromDisk";
 import { matchesPendingSave, hasPendingSave } from "@/utils/pendingSaves";
 import { getFileName } from "@/utils/paths";
+import { fileOpsError } from "@/utils/debug";
 
 /** Pending dirty file change awaiting user decision */
 interface PendingDirtyChange {
@@ -144,7 +145,7 @@ export function useExternalFileChanges(): void {
         try {
           await reloadTabFromDisk(tabId, filePath);
         } catch (error) {
-          console.error("[ExternalChange] Failed to reload file:", filePath, error);
+          fileOpsError("Failed to reload file:", filePath, error);
           useDocumentStore.getState().markMissing(tabId);
         }
         return;
@@ -198,7 +199,7 @@ export function useExternalFileChanges(): void {
             try {
               await reloadTabFromDisk(tabId, filePath);
             } catch (error) {
-              console.error("[ExternalChange] Failed to reload file:", filePath, error);
+              fileOpsError("Failed to reload file:", filePath, error);
               useDocumentStore.getState().markMissing(tabId);
             }
           }

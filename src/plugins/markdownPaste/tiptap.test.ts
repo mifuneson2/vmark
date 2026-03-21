@@ -1,4 +1,8 @@
 import { describe, it, expect, vi } from "vitest";
+
+vi.mock("@/utils/debug", () => ({
+  pasteError: vi.fn(),
+}));
 import StarterKit from "@tiptap/starter-kit";
 import { getSchema } from "@tiptap/core";
 import { EditorState, TextSelection, SelectionRange, type Transaction } from "@tiptap/pm/state";
@@ -7,6 +11,7 @@ import { readText } from "@tauri-apps/plugin-clipboard-manager";
 import type { Node as PMNode } from "@tiptap/pm/model";
 import { Slice } from "@tiptap/pm/model";
 import { MultiSelection } from "@/plugins/multiCursor/MultiSelection";
+import { pasteError } from "@/utils/debug";
 import type { MarkdownPasteMode } from "@/stores/settingsStore";
 import {
   createMarkdownPasteSlice,
@@ -424,14 +429,12 @@ describe("createMarkdownPasteTransaction error handling", () => {
     };
     const patchedState = { ...state, tr: patchedTr, schema: state.schema };
 
-    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const tr = createMarkdownPasteTransaction(patchedState as unknown as typeof state, "# Heading");
     expect(tr).toBeNull();
-    expect(consoleSpy).toHaveBeenCalledWith(
-      "[MarkdownPaste] Failed to parse markdown:",
+    expect(pasteError).toHaveBeenCalledWith(
+      "Failed to parse markdown:",
       expect.any(Error)
     );
-    consoleSpy.mockRestore();
   });
 });
 

@@ -13,6 +13,7 @@ import {
   getBoundaryRects,
   getViewportBounds,
 } from "@/utils/popupPosition";
+import { sourceActionError } from "@/utils/debug";
 import { isImeKeyEvent } from "@/utils/imeGuard";
 import { popupIcons } from "@/utils/popupComponents";
 import { getPopupHostForDom, toHostCoordsForDom } from "@/plugins/sourcePopup";
@@ -294,7 +295,7 @@ export class SourceLinkCreatePopupView {
       useLinkCreatePopupStore.getState().closePopup();
       this.editorView.focus();
     } catch (error) {
-      console.error("[SourceLinkCreatePopup] Save failed:", error);
+      sourceActionError("Save failed:", error);
       useLinkCreatePopupStore.getState().closePopup();
     }
   };

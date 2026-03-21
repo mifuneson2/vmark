@@ -22,6 +22,7 @@ import {
 } from "@/hooks/useHistoryOperations";
 import { buildHistorySettings, HISTORY_CLEARED_EVENT } from "@/utils/historyTypes";
 import { formatSnapshotTime, groupByDay } from "@/utils/dateUtils";
+import { historyError } from "@/utils/debug";
 
 /** Renders the document version history sidebar with revert and delete actions. */
 export function HistoryView() {
@@ -55,7 +56,7 @@ export function HistoryView() {
         }
       } catch (error) {
         if (currentRequestId === requestIdRef.current) {
-          console.error("Failed to fetch snapshots:", error);
+          historyError("Failed to fetch snapshots:", error);
           setSnapshots([]);
         }
       } finally {
@@ -82,7 +83,7 @@ export function HistoryView() {
       await deleteSnapshot(filePath, snapshot.id);
       setRefreshKey((k) => k + 1);
     } catch (error) {
-      console.error("Failed to delete snapshot:", error);
+      historyError("Failed to delete snapshot:", error);
     } finally {
       isMutatingRef.current = false;
     }
@@ -123,7 +124,7 @@ export function HistoryView() {
         setSnapshots(snaps);
       }
     } catch (error) {
-      console.error("Failed to revert:", error);
+      historyError("Failed to revert:", error);
     } finally {
       isMutatingRef.current = false;
     }

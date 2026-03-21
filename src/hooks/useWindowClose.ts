@@ -37,7 +37,7 @@ import {
 } from "@/hooks/closeSave";
 import { closeTabWithDirtyCheck } from "@/hooks/useTabOperations";
 import { persistWorkspaceSession } from "@/hooks/workspaceSession";
-import { windowCloseWarn } from "@/utils/debug";
+import { windowCloseLog, windowCloseWarn, windowCloseError } from "@/utils/debug";
 
 // Dev-only logging for debugging window close issues
 // Logs to console and Rust debug_log
@@ -45,10 +45,10 @@ import { windowCloseWarn } from "@/utils/debug";
 const closeLog = import.meta.env.DEV
   ? (label: string, ...args: unknown[]) => {
       const msg = `[WindowClose:${label}] ${args.map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' ')}`;
-      console.log(msg);
+      windowCloseLog(msg);
       // Log to terminal via Rust (fire-and-forget, but log failures in dev)
       invoke("debug_log", { message: msg }).catch((e) => {
-        console.warn("[closeLog] debug_log invoke failed:", e);
+        windowCloseWarn("debug_log invoke failed:", e);
       });
     }
   : () => {};
@@ -146,7 +146,7 @@ export function useWindowClose() {
       await invoke("close_window", { label: windowLabel });
       return true;
     } catch (error) {
-      console.error("Failed to close window:", error);
+      windowCloseError("Failed to close window:", error);
       return false;
     } finally {
       isClosingRef.current = false;
@@ -174,7 +174,7 @@ export function useWindowClose() {
             try {
               await closeTabWithDirtyCheck(windowLabel, activeTabId);
             } catch (error) {
-              console.error("[WindowClose] menu:close tab close failed:", error);
+              windowCloseError("menu:close tab close failed:", error);
             }
           }
         }

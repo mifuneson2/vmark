@@ -30,7 +30,7 @@ import type { McpRequestEvent, McpRequestEventRaw } from "./types";
 import { respond } from "./utils";
 import { useEditorStore } from "@/stores/editorStore";
 import { isBlockedInSourceMode, SOURCE_MODE_ERROR } from "./sourceModeGuard";
-import { mcpBridgeLog } from "@/utils/debug";
+import { mcpBridgeLog, mcpBridgeError } from "@/utils/debug";
 
 // Document handlers (read-only operations)
 import {
@@ -549,7 +549,7 @@ export function useMcpBridge(): void {
           success: false,
           error: "Invalid JSON in request args",
         }).catch((err) => {
-          console.error("[MCP Bridge] Failed to respond to malformed request:", err);
+          mcpBridgeError("Failed to respond to malformed request:", err);
         });
         return;
       }
@@ -561,7 +561,7 @@ export function useMcpBridge(): void {
       };
       // Fire-and-forget with error logging to prevent unhandled rejections
       handleRequest(parsed).catch((err) => {
-        console.error("[MCP Bridge] Unhandled error in request handler:", err);
+        mcpBridgeError("Unhandled error in request handler:", err);
       });
     }).then((fn) => {
       // If unmounted before Promise resolved, clean up immediately
@@ -571,7 +571,7 @@ export function useMcpBridge(): void {
       }
       unlisten = fn;
     }).catch((err) => {
-      console.error("[MCP Bridge] Failed to register event listener:", err);
+      mcpBridgeError("Failed to register event listener:", err);
     });
 
     return () => {

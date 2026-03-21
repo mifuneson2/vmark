@@ -35,6 +35,7 @@ import { getSourceMultiSelectionContext } from "@/plugins/toolbarActions/multiSe
 import { formatMarkdown, formatSelection } from "@/lib/cjkFormatter";
 import { resolveHardBreakStyle } from "@/utils/linebreaks";
 import { getWindowLabel } from "@/hooks/useWindowFocus";
+import { exportError } from "@/utils/debug";
 import { setHeadingLevel, convertToHeading } from "@/plugins/sourceContextDetection/headingDetection";
 import { getHeadingInfo } from "@/plugins/sourceContextDetection/headingDetection";
 import { getListItemInfo, toBulletList, toOrderedList, toTaskList, removeList } from "@/plugins/sourceContextDetection/listDetection";
@@ -229,7 +230,7 @@ export function copySelectionAsHtml(view: EditorView): boolean {
     : view.state.doc.sliceString(from, to);
 
   // Dynamic import to avoid loading exportStyles.css at startup
-  void import("@/export").then(({ copyAsHtml }) => copyAsHtml(markdown)).catch((error) => console.error("[CopyAsHtml]", error));
+  void import("@/export").then(({ copyAsHtml }) => copyAsHtml(markdown)).catch((error) => exportError("CopyAsHtml failed:", error));
   return true;
 }
 

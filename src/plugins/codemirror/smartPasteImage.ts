@@ -16,7 +16,7 @@ import { EditorView } from "@codemirror/view";
 import { message } from "@tauri-apps/plugin-dialog";
 import { copyImageToAssets } from "@/hooks/useImageOperations";
 import { useImagePasteToastStore } from "@/stores/imagePasteToastStore";
-import { smartPasteWarn } from "@/utils/debug";
+import { smartPasteWarn, smartPasteError } from "@/utils/debug";
 import { detectMultipleImagePaths, type ImagePathResult } from "@/utils/imagePathDetection";
 import { encodeMarkdownUrl } from "@/utils/markdownUrl";
 import { parseMultiplePaths } from "@/utils/multiImageParsing";
@@ -74,7 +74,7 @@ async function insertImageMarkdown(
 
       imagePath = await copyImageToAssets(sourcePath, filePath);
     } catch (error) {
-      console.error("[smartPaste] Failed to copy image to assets:", error);
+      smartPasteError("Failed to copy image to assets:", error);
       await message("Failed to copy image to assets folder.", { kind: "error" });
       return;
     }
@@ -133,7 +133,7 @@ function showImagePasteToast(
         return;
       }
       insertImageMarkdown(view, detection, capturedFrom, capturedTo, altText).catch((error) => {
-        console.error("[smartPaste] Failed to insert image:", error);
+        smartPasteError("Failed to insert image:", error);
       });
     },
     onDismiss: () => {
@@ -273,7 +273,7 @@ function showMultiImagePasteToast(
         return;
       }
       insertMultipleImageMarkdown(view, results, capturedFrom, capturedTo).catch((error) => {
-        console.error("[smartPaste] Failed to insert images:", error);
+        smartPasteError("Failed to insert images:", error);
       });
     },
     onDismiss: () => {
@@ -331,7 +331,7 @@ async function insertMultipleImageMarkdown(
 
         imagePath = await copyImageToAssets(sourcePath, filePath);
       } catch (error) {
-        console.error("[smartPaste] Failed to copy image to assets:", error);
+        smartPasteError("Failed to copy image to assets:", error);
         await message("Failed to copy image to assets folder.", { kind: "error" });
         return;
       }
@@ -420,7 +420,7 @@ export function tryImagePaste(view: EditorView, originalText: string): boolean {
 
     // For local paths, validate async then show toast
     validateAndShowToast(view, result, originalText, insertFrom, insertTo, altText).catch((error) => {
-      console.error("[smartPaste] Failed to validate path:", error);
+      smartPasteError("Failed to validate path:", error);
       /* v8 ignore next -- @preserve Race-condition guard in error handler: view destroyed between async rejection and fallback paste; not testable */
       if (isViewConnected(view)) {
         pasteAsText(view, originalText, insertFrom, insertTo);
@@ -431,7 +431,7 @@ export function tryImagePaste(view: EditorView, originalText: string): boolean {
 
   // Multiple images: new behavior (no alt text for multi-image)
   validateAndShowMultiToast(view, detection.results, originalText, insertFrom, insertTo).catch((error) => {
-    console.error("[smartPaste] Failed to validate multi-image paths:", error);
+    smartPasteError("Failed to validate multi-image paths:", error);
     /* v8 ignore next -- @preserve Race-condition guard in error handler: view destroyed between async rejection and fallback paste; not testable */
     if (isViewConnected(view)) {
       pasteAsText(view, originalText, insertFrom, insertTo);

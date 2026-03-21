@@ -37,6 +37,7 @@ vi.mock("@/stores/settingsStore", () => ({
 
 vi.mock("@/utils/debug", () => ({
   imageHandlerWarn: vi.fn(),
+  imageHandlerError: vi.fn(),
 }));
 
 // Mock reentryGuard to just execute the function directly
@@ -107,6 +108,7 @@ vi.mock("@/utils/multiImageParsing", () => ({
 import { Schema } from "@tiptap/pm/model";
 import { EditorState } from "@tiptap/pm/state";
 import { imageHandlerExtension } from "./tiptap";
+import { imageHandlerError } from "@/utils/debug";
 
 // --- Helpers ---
 
@@ -1063,17 +1065,15 @@ describe("imageHandler plugin handler integration", () => {
         posAtCoords: vi.fn(() => ({ pos: 3 })),
       };
 
-      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
       const result = handleDrop(view, event, null, false);
       expect(result).toBe(true);
 
       // Wait for the rejection to be caught
       await new Promise((r) => setTimeout(r, 50));
-      expect(consoleSpy).toHaveBeenCalledWith(
+      expect(imageHandlerError).toHaveBeenCalledWith(
         "Failed to insert dropped images:",
         expect.any(Error)
       );
-      consoleSpy.mockRestore();
     });
 
     it("catches error from insertMultipleImages in text drop path", async () => {
@@ -1106,16 +1106,14 @@ describe("imageHandler plugin handler integration", () => {
         posAtCoords: vi.fn(() => ({ pos: 3 })),
       };
 
-      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
       const result = handleDrop(view, event, null, false);
       expect(result).toBe(true);
 
       await new Promise((r) => setTimeout(r, 50));
-      expect(consoleSpy).toHaveBeenCalledWith(
+      expect(imageHandlerError).toHaveBeenCalledWith(
         "Failed to insert dropped images:",
         expect.any(Error)
       );
-      consoleSpy.mockRestore();
     });
   });
 

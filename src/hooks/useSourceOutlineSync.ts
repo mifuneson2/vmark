@@ -17,6 +17,7 @@ import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { EditorView } from "@codemirror/view";
 import type { Text } from "@codemirror/state";
 import { safeUnlisten } from "@/utils/safeUnlisten";
+import { outlineSyncError } from "@/utils/debug";
 import { useUIStore } from "@/stores/uiStore";
 import { parseFenceDelimiter } from "@/components/Sidebar/outlineUtils";
 
@@ -124,7 +125,7 @@ export function useSourceOutlineSync(
           unlistenRef.current = unlisten;
         }
       } catch (error) {
-        console.error("Failed to setup source outline scroll listener:", error);
+        outlineSyncError("Failed to setup source outline scroll listener:", error);
       }
     };
 

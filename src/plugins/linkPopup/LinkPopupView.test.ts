@@ -13,6 +13,10 @@
 
 // ---------------------------------------------------------------------------
 // Mocks (must be before imports)
+
+vi.mock("@/utils/debug", () => ({
+  linkPopupError: vi.fn(),
+}));
 // ---------------------------------------------------------------------------
 
 vi.mock("./link-popup.css", () => ({}));
@@ -56,6 +60,7 @@ vi.mock("@tauri-apps/plugin-opener", () => ({
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 // isImeKeyEvent is mocked above — no direct import needed
+import { linkPopupError } from "@/utils/debug";
 import { findHeadingById } from "@/utils/headingSlug";
 
 // ---------------------------------------------------------------------------
@@ -255,7 +260,6 @@ describe("LinkPopupView", () => {
   // ---------------------------------------------------------------------------
 
   it("handleSave catch block logs error and closes popup on dispatch failure", () => {
-    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const viewWithError = createMockEditorView();
     viewWithError.dispatch = vi.fn(() => { throw new Error("dispatch failed"); });
 
@@ -265,15 +269,14 @@ describe("LinkPopupView", () => {
     const saveBtn = popup["saveBtn"] as HTMLElement;
     saveBtn.click();
 
-    expect(consoleSpy).toHaveBeenCalledWith(
-      expect.stringContaining("[LinkPopup] Save failed:"),
+    expect(linkPopupError).toHaveBeenCalledWith(
+      "Save failed:",
       expect.any(Error)
     );
     expect(mockClosePopup).toHaveBeenCalled();
 
     popup.destroy();
     viewWithError._editorContainer.remove();
-    consoleSpy.mockRestore();
   });
 
   // ---------------------------------------------------------------------------
@@ -281,7 +284,7 @@ describe("LinkPopupView", () => {
   // ---------------------------------------------------------------------------
 
   it("handleOpen bookmark catch block logs error when navigation fails", () => {
-    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.mocked(linkPopupError).mockClear();
 
     // findHeadingById returns a position so navigation is attempted
     vi.mocked(findHeadingById).mockReturnValue(1);
@@ -296,14 +299,13 @@ describe("LinkPopupView", () => {
     const openBtn = popup["openBtn"] as HTMLElement;
     openBtn.click();
 
-    expect(consoleSpy).toHaveBeenCalledWith(
-      expect.stringContaining("[LinkPopup] Navigation failed:"),
+    expect(linkPopupError).toHaveBeenCalledWith(
+      "Navigation failed:",
       expect.any(Error)
     );
 
     popup.destroy();
     viewWithError._editorContainer.remove();
-    consoleSpy.mockRestore();
   });
 
   // ---------------------------------------------------------------------------
@@ -311,7 +313,7 @@ describe("LinkPopupView", () => {
   // ---------------------------------------------------------------------------
 
   it("handleCopy logs error when clipboard.writeText fails", async () => {
-    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.mocked(linkPopupError).mockClear();
 
     // jsdom doesn't provide navigator.clipboard — install a mock that rejects
     const origClipboard = navigator.clipboard;
@@ -330,13 +332,12 @@ describe("LinkPopupView", () => {
     // Wait for async clipboard to settle
     await new Promise((r) => setTimeout(r, 10));
 
-    expect(consoleSpy).toHaveBeenCalledWith(
-      expect.stringContaining("Failed to copy URL:"),
+    expect(linkPopupError).toHaveBeenCalledWith(
+      "Failed to copy URL:",
       expect.any(Error)
     );
 
     popup.destroy();
-    consoleSpy.mockRestore();
 
     // Restore original clipboard
     Object.defineProperty(navigator, "clipboard", {
@@ -443,7 +444,7 @@ describe("LinkPopupView", () => {
   // ---------------------------------------------------------------------------
 
   it("handleRemove catch block logs error and closes popup on dispatch failure", () => {
-    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.mocked(linkPopupError).mockClear();
     const viewWithError = createMockEditorView();
     viewWithError.dispatch = vi.fn(() => { throw new Error("remove dispatch failed"); });
 
@@ -453,14 +454,13 @@ describe("LinkPopupView", () => {
     const deleteBtn = popup["deleteBtn"] as HTMLElement;
     deleteBtn.click();
 
-    expect(consoleSpy).toHaveBeenCalledWith(
-      expect.stringContaining("[LinkPopup] Remove failed:"),
+    expect(linkPopupError).toHaveBeenCalledWith(
+      "Remove failed:",
       expect.any(Error)
     );
     expect(mockClosePopup).toHaveBeenCalled();
 
     popup.destroy();
     viewWithError._editorContainer.remove();
-    consoleSpy.mockRestore();
   });
 });

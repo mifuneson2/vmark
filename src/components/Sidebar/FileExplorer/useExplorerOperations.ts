@@ -36,6 +36,7 @@ import { useTabStore } from "@/stores/tabStore";
 import { reconcilePathChange } from "@/utils/pathReconciliation";
 import { applyPathReconciliation } from "@/hooks/commands";
 import { showError, FileErrors } from "@/utils/errorDialog";
+import { fileExplorerError } from "@/utils/debug";
 
 // Re-entry guards
 const isCreatingRef = { current: false };
@@ -62,7 +63,7 @@ export function useExplorerOperations() {
         await writeTextFile(filePath, "");
         return filePath;
       } catch (error) {
-        console.error("[Explorer] Failed to create file:", error);
+        fileExplorerError(" Failed to create file:", error);
         await showError(FileErrors.createFailed(fileName));
         return null;
       } finally {
@@ -88,7 +89,7 @@ export function useExplorerOperations() {
         await mkdir(folderPath);
         return folderPath;
       } catch (error) {
-        console.error("[Explorer] Failed to create folder:", error);
+        fileExplorerError(" Failed to create folder:", error);
         await showError(FileErrors.createFailed(name));
         return null;
       } finally {
@@ -143,7 +144,7 @@ export function useExplorerOperations() {
 
         return newPath;
       } catch (error) {
-        console.error("[Explorer] Failed to rename:", error);
+        fileExplorerError(" Failed to rename:", error);
         await showError(FileErrors.renameFailed(newName));
         return null;
       } finally {
@@ -191,7 +192,7 @@ export function useExplorerOperations() {
 
         return true;
       } catch (error) {
-        console.error("[Explorer] Failed to delete:", error);
+        fileExplorerError(" Failed to delete:", error);
         const name = await basename(path);
         await showError(FileErrors.deleteFailed(name));
         return false;
@@ -238,7 +239,7 @@ export function useExplorerOperations() {
 
         return destPath;
       } catch (error) {
-        console.error("[Explorer] Failed to move:", error);
+        fileExplorerError(" Failed to move:", error);
         await showError(FileErrors.moveFailed(name));
         return null;
       }
@@ -255,7 +256,7 @@ export function useExplorerOperations() {
       const { openPath } = await import("@tauri-apps/plugin-opener");
       await openPath(path);
     } catch (error) {
-      console.error("[Explorer] Failed to open with default app:", error);
+      fileExplorerError(" Failed to open with default app:", error);
       const name = await basename(path);
       toast.error(i18n.t("dialog:toast.failedToOpenWithDefaultApp", { name }));
     }
@@ -277,7 +278,7 @@ export function useExplorerOperations() {
         while (await exists(newPath)) {
           counter++;
           if (counter > MAX_COPIES) {
-            console.error("[Explorer] Too many copies exist, cannot duplicate:", path);
+            fileExplorerError(" Too many copies exist, cannot duplicate:", path);
             await showError(FileErrors.tooManyCopies(name));
             return null;
           }
@@ -291,7 +292,7 @@ export function useExplorerOperations() {
 
         return newPath;
       } catch (error) {
-        console.error("[Explorer] Failed to duplicate:", error);
+        fileExplorerError(" Failed to duplicate:", error);
         await showError(FileErrors.duplicateFailed(name));
         return null;
       }
@@ -304,7 +305,7 @@ export function useExplorerOperations() {
       await writeText(path);
       toast.success(i18n.t("dialog:toast.pathCopiedExplorer"));
     } catch (error) {
-      console.error("[Explorer] Failed to copy path:", error);
+      fileExplorerError(" Failed to copy path:", error);
       await showError(FileErrors.copyFailed);
     }
   }, []);
@@ -313,7 +314,7 @@ export function useExplorerOperations() {
     try {
       await revealItemInDir(path);
     } catch (error) {
-      console.error("[Explorer] Failed to reveal in Finder:", error);
+      fileExplorerError(" Failed to reveal in Finder:", error);
     }
   }, []);
 

@@ -29,6 +29,7 @@ vi.mock("./media-popup.css", () => ({}));
 
 vi.mock("@/utils/debug", () => ({
   mediaPopupWarn: vi.fn(),
+  mediaPopupError: vi.fn(),
 }));
 
 vi.mock("@/stores/mediaPopupStore", () => {

@@ -14,6 +14,7 @@ import { useMediaPopupStore } from "@/stores/mediaPopupStore";
 import { copyImageToAssets } from "@/hooks/useImageOperations";
 import { withReentryGuard } from "@/utils/reentryGuard";
 import { getWindowLabel } from "@/hooks/useWindowFocus";
+import { sourceActionError } from "@/utils/debug";
 import { runOrQueueCodeMirrorAction } from "@/utils/imeGuard";
 
 /**
@@ -159,7 +160,7 @@ export async function browseImage(view: EditorView): Promise<boolean> {
 
       return true;
     } catch (error) {
-      console.error("[SourceImagePopup] Browse failed:", error);
+      sourceActionError("Browse failed:", error);
       await message("Failed to change image.", { kind: "error" });
       return false;
     }
@@ -181,7 +182,7 @@ export async function copyImagePath(): Promise<void> {
   try {
     await writeText(imageSrc);
   } catch (error) {
-    console.error("[SourceImagePopup] Copy failed:", error);
+    sourceActionError("Copy failed:", error);
   }
 }
 

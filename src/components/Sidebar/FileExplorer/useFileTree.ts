@@ -28,6 +28,7 @@ import type { FileNode, FsChangeEvent, DirectoryEntry } from "./types";
 import { shouldRefreshTree } from "@/utils/fsEventFilter";
 import { isMarkdownFileName, stripMarkdownExtension } from "@/utils/dropPaths";
 import { shouldIncludeEntry, type FileTreeFilterOptions } from "./fileTreeFilters";
+import { fileExplorerError } from "@/utils/debug";
 
 type LoadOptions = FileTreeFilterOptions;
 
@@ -35,7 +36,7 @@ async function listDirectoryEntries(dirPath: string): Promise<DirectoryEntry[]> 
   try {
     return await invoke<DirectoryEntry[]>("list_directory_entries", { path: dirPath });
   } catch (error) {
-    console.error("[FileTree] Failed to read directory:", dirPath, error);
+    fileExplorerError(" Failed to read directory:", dirPath, error);
     return [];
   }
 }
@@ -82,7 +83,7 @@ async function loadDirectoryRecursive(
       return a.name.localeCompare(b.name);
     });
   } catch (error) {
-    console.error("[FileTree] Failed to load directory:", dirPath, error);
+    fileExplorerError(" Failed to load directory:", dirPath, error);
     return [];
   }
 }
@@ -134,7 +135,7 @@ export function useFileTree(
         setTree(nodes);
       }
     } catch (error) {
-      console.error("[FileTree] Failed to load tree:", error);
+      fileExplorerError(" Failed to load tree:", error);
       if (currentRequestId === requestIdRef.current) {
         setTree([]);
       }
@@ -170,7 +171,7 @@ export function useFileTree(
         unlistenRef.current = unlisten;
       }
     }).catch((error: unknown) => {
-      console.error("[FileTree] Failed to listen for fs changes:",
+      fileExplorerError(" Failed to listen for fs changes:",
         error instanceof Error ? error.message : String(error));
     });
 

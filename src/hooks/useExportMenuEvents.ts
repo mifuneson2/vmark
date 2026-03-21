@@ -23,6 +23,7 @@ import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { safeUnlistenAll } from "@/utils/safeUnlisten";
 // Export module is dynamically imported to avoid loading exportStyles.css at startup.
 // This prevents CSS cascade conflicts between dev and prod builds.
+import { menuError } from "@/utils/debug";
 import { getDirectory } from "@/utils/pathUtils";
 import { getExportFolderName } from "@/utils/exportNaming";
 import { flushActiveWysiwygNow } from "@/utils/wysiwygFlush";
@@ -66,7 +67,7 @@ export function useExportMenuEvents(): void {
               sourceFilePath: doc.filePath,
             });
           } catch (error) {
-            console.error("[Menu] Failed to export HTML:", error);
+            menuError("Failed to export HTML:", error);
           }
         });
       });
@@ -85,7 +86,7 @@ export function useExportMenuEvents(): void {
             const { exportToPdf } = await import("@/export");
             await exportToPdf({ markdown: doc.content });
           } catch (error) {
-            console.error("[Menu] Failed to print:", error);
+            menuError("Failed to print:", error);
           }
         });
       });
@@ -109,7 +110,7 @@ export function useExportMenuEvents(): void {
               sourceFilePath: doc.filePath,
             });
           } catch (error) {
-            console.error("[Menu] Failed to export PDF:", error);
+            menuError("Failed to export PDF:", error);
           }
         });
       });
@@ -138,7 +139,7 @@ export function useExportMenuEvents(): void {
                 sourceDirectory: defaultDir,
               });
             } catch (error) {
-              console.error(`[Menu] Failed to export via Pandoc (${fmt}):`, error);
+              menuError(`Failed to export via Pandoc (${fmt}):`, error);
               const { toast } = await import("sonner");
               const i18nMod = await import("@/i18n");
               toast.error(i18nMod.default.t("dialog:toast.pandocExportFailed"));
@@ -169,7 +170,7 @@ export function useExportMenuEvents(): void {
             const { copyAsHtml } = await import("@/export");
             await copyAsHtml(doc.content);
           } catch (error) {
-            console.error("[Menu] Failed to copy HTML:", error);
+            menuError("Failed to copy HTML:", error);
           }
         });
       });

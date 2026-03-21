@@ -11,6 +11,7 @@
 
 import { invoke } from "@tauri-apps/api/core";
 import { useWorkspaceStore, type WorkspaceConfig } from "@/stores/workspaceStore";
+import { workspaceError } from "@/utils/debug";
 /** Reads workspace config from disk and opens the workspace in the store; returns the config or null on failure. */
 export async function openWorkspaceWithConfig(
   rootPath: string
@@ -22,7 +23,7 @@ export async function openWorkspaceWithConfig(
     useWorkspaceStore.getState().openWorkspace(rootPath, config);
     return config;
   } catch (error) {
-    console.error("[Workspace] Failed to load config:", error);
+    workspaceError("Failed to load config:", error);
     useWorkspaceStore.getState().openWorkspace(rootPath);
     return null;
   }

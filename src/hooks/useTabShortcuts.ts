@@ -24,6 +24,7 @@ import { useSearchStore } from "@/stores/searchStore";
 import { useShortcutsStore } from "@/stores/shortcutsStore";
 import { useUIStore } from "@/stores/uiStore";
 import { closeTabWithDirtyCheck } from "@/hooks/useTabOperations";
+import { fileOpsError } from "@/utils/debug";
 import { isImeKeyEvent } from "@/utils/imeGuard";
 import { matchesShortcutEvent } from "@/utils/shortcutMatch";
 
@@ -60,7 +61,7 @@ export function useTabShortcuts() {
         if (activeTabId) {
           /* v8 ignore start -- @preserve .catch() callback only fires on unexpected tab-close errors; not triggered in mocked tests */
           closeTabWithDirtyCheck(windowLabel, activeTabId).catch((error) => {
-            console.error("[TabShortcuts] Cmd+W tab close failed:", error);
+            fileOpsError("Cmd+W tab close failed:", error);
           });
           /* v8 ignore stop */
         }

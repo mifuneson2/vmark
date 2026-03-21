@@ -29,6 +29,7 @@ import { useTabStore } from "@/stores/tabStore";
 import { useDropZoneStore } from "@/stores/dropZoneStore";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { saveImageToAssets } from "@/hooks/useImageOperations";
+import { dragDropError } from "@/utils/debug";
 import { safeUnlisten } from "@/utils/safeUnlisten";
 import { hasImageExtension } from "@/utils/imagePathDetection";
 import { getFilename } from "@/utils/imageUtils";
@@ -229,7 +230,7 @@ export function useImageDragDrop({
 
             processedPaths.push(insertPath);
           } catch (error) {
-            console.error("[ImageDragDrop] Failed to process image:", imagePath, error);
+            dragDropError("Failed to process image:", imagePath, error);
             await message("Failed to insert dropped image.", { kind: "error" });
           }
         }

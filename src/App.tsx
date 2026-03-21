@@ -12,6 +12,7 @@ import { TerminalPanel } from "@/components/Terminal";
 import { SettingsPage } from "@/pages/Settings";
 import { PdfExportPage } from "@/pages/PdfExportPage";
 import { WindowProvider, useIsDocumentWindow, useWindowLabel } from "@/contexts/WindowContext";
+import { appError } from "@/utils/debug";
 
 // Error Boundary to catch and display React errors
 interface ErrorBoundaryState {
@@ -27,8 +28,8 @@ class ErrorBoundary extends Component<{ children: ReactNode }, ErrorBoundaryStat
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error("[ErrorBoundary] Caught error:", error);
-    console.error("[ErrorBoundary] Error info:", errorInfo);
+    appError("Caught error:", error);
+    appError("Error info:", errorInfo);
   }
 
   render() {

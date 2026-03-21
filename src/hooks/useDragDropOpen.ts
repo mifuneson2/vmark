@@ -34,6 +34,7 @@ import { getReplaceableTab, findExistingTabForPath } from "@/hooks/useReplaceabl
 import { detectLinebreaks } from "@/utils/linebreakDetection";
 import { openWorkspaceWithConfig } from "@/hooks/openWorkspaceWithConfig";
 import { safeUnlisten } from "@/utils/safeUnlisten";
+import { dragDropError } from "@/utils/debug";
 import { getFileName } from "@/utils/pathUtils";
 
 /**
@@ -57,7 +58,7 @@ async function openFileInNewTab(windowLabel: string, path: string): Promise<void
     useDocumentStore.getState().setLineMetadata(tabId, detectLinebreaks(content));
     useRecentFilesStore.getState().addFile(path);
   } catch (error) {
-    console.error("[DragDrop] Failed to open file:", path, error);
+    dragDropError("Failed to open file:", path, error);
     const filename = getFileName(path) || path;
     toast.error(i18n.t("dialog:toast.failedToOpen", { filename }));
   }
@@ -161,7 +162,7 @@ export function useDragDropOpen(): void {
                 filePaths: files,
               });
             } catch (error) {
-              console.error("[DragDrop] Failed to open workspace in new window:", error);
+              dragDropError("Failed to open workspace in new window:", error);
               toast.error(i18n.t("dialog:toast.failedToOpenFilesInNewWindow"));
             }
           }
@@ -170,7 +171,7 @@ export function useDragDropOpen(): void {
             try {
               await invoke("open_file_in_new_window", { path });
             } catch (error) {
-              console.error("[DragDrop] Failed to open file in new window:", error);
+              dragDropError("Failed to open file in new window:", error);
               const filename = getFileName(path) || path;
               toast.error(i18n.t("dialog:toast.failedToOpen", { filename }));
             }
@@ -206,7 +207,7 @@ export function useDragDropOpen(): void {
                   replaceableTabUsed = true;
                   continue;
                 } catch (error) {
-                  console.error("[DragDrop] Failed to replace tab with file:", path, error);
+                  dragDropError("Failed to replace tab with file:", path, error);
                   const filename = getFileName(path) || path;
                   toast.error(i18n.t("dialog:toast.failedToOpen", { filename }));
                 }
@@ -252,7 +253,7 @@ export function useDragDropOpen(): void {
                 useRecentFilesStore.getState().addFile(path);
                 replaceableTabUsed = true;
               } catch (error) {
-                console.error("[DragDrop] Failed to replace tab with file:", path, error);
+                dragDropError("Failed to replace tab with file:", path, error);
                 const filename = getFileName(path) || path;
                 toast.error(i18n.t("dialog:toast.failedToOpen", { filename }));
               }
@@ -264,7 +265,7 @@ export function useDragDropOpen(): void {
                   filePath: decision.filePath,
                 });
               } catch (error) {
-                console.error("[DragDrop] Failed to open workspace in new window:", path, error);
+                dragDropError("Failed to open workspace in new window:", path, error);
                 const filename = getFileName(path) || path;
                 toast.error(i18n.t("dialog:toast.failedToOpen", { filename }));
               }

@@ -24,6 +24,7 @@ import { copyImageToAssets } from "@/hooks/useImageOperations";
 import { copyMediaToAssets } from "@/hooks/useMediaOperations";
 import { withReentryGuard } from "@/utils/reentryGuard";
 import { getWindowLabel } from "@/hooks/useWindowFocus";
+import { mediaPopupError } from "@/utils/debug";
 
 import type { MediaNodeType } from "@/stores/mediaPopupStore";
 
@@ -95,7 +96,7 @@ export async function browseAndReplaceMedia(
       useMediaPopupStore.getState().setSrc(relativePath);
       return true;
     } catch (error) {
-      console.error("[MediaPopup] Browse failed:", error);
+      mediaPopupError("Browse failed:", error);
       await message("Failed to change media file.", { kind: "error" });
       return false;
     }

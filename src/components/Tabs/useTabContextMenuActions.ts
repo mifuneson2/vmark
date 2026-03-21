@@ -35,7 +35,7 @@ import { reloadTabFromDisk } from "@/utils/reloadFromDisk";
 import { getRelativePath, isWithinRoot } from "@/utils/paths";
 import { restoreTransferredTab } from "@/components/StatusBar/tabTransferActions";
 import type { TabTransferPayload } from "@/types/tabTransfer";
-import { windowCloseWarn } from "@/utils/debug";
+import { windowCloseWarn, tabContextError } from "@/utils/debug";
 import i18n from "@/i18n";
 
 /** Definition for a single item in the tab context menu. */
@@ -147,7 +147,7 @@ export function useTabContextMenuActions({
           label: "Undo",
           onClick: () => {
             void restoreTransferredTab(windowLabel, createdWindowLabel, transferData).catch((error) => {
-              console.error("[TabContextMenu] Undo move-to-new-window failed:", error);
+              tabContextError(" Undo move-to-new-window failed:", error);
               toast.error(i18n.t("dialog:toast.undoTabMoveFailed"));
             });
           },
@@ -162,7 +162,7 @@ export function useTabContextMenuActions({
         });
       }
     } catch (error) {
-      console.error("[TabContextMenu] Move to new window failed:", error);
+      tabContextError(" Move to new window failed:", error);
       toast.error(i18n.t("dialog:toast.failedToMoveTabToNewWindow"));
     } finally {
       onClose();
@@ -211,7 +211,7 @@ export function useTabContextMenuActions({
       await writeText(filePath);
       toast.success(i18n.t("dialog:toast.pathCopied"));
     } catch (error) {
-      console.error("[TabContextMenu] Failed to copy path:", error);
+      tabContextError(" Failed to copy path:", error);
       toast.error(i18n.t("dialog:toast.failedToCopyPath"));
     }
     onClose();
@@ -227,7 +227,7 @@ export function useTabContextMenuActions({
       await writeText(relativePath);
       toast.success(i18n.t("dialog:toast.relativePathCopied"));
     } catch (error) {
-      console.error("[TabContextMenu] Failed to copy relative path:", error);
+      tabContextError(" Failed to copy relative path:", error);
       toast.error(i18n.t("dialog:toast.failedToCopyRelativePath"));
     }
     onClose();
@@ -238,7 +238,7 @@ export function useTabContextMenuActions({
     try {
       await revealItemInDir(filePath);
     } catch (error) {
-      console.error("[TabContextMenu] Failed to reveal file:", error);
+      tabContextError(" Failed to reveal file:", error);
       toast.error(i18n.t("dialog:toast.failedToRevealInFileManager"));
     }
     onClose();

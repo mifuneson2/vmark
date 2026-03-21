@@ -17,7 +17,7 @@ import type { SessionData } from './types';
 import { HOT_EXIT_EVENTS } from './types';
 import { migrateSession, canMigrate, needsMigration, SCHEMA_VERSION } from './schemaMigration';
 import { restoreMainWindowState } from './useHotExitRestore';
-import { hotExitLog, hotExitWarn } from '@/utils/debug';
+import { hotExitLog, hotExitWarn, hotExitError } from '@/utils/debug';
 
 /** Default timeout for restore operation in milliseconds */
 const DEFAULT_RESTORE_TIMEOUT_MS = 15000;
@@ -75,7 +75,7 @@ export async function restartWithHotExit(): Promise<void> {
     });
   } catch (error) {
     const captureError = error instanceof Error ? error : new Error(String(error));
-    console.error('[HotExit] Failed to capture session before restart:', captureError); // intentional: critical error before relaunch
+    hotExitError('Failed to capture session before restart:', captureError);
     // Continue to relaunch - user already confirmed restart
   }
 
@@ -83,7 +83,7 @@ export async function restartWithHotExit(): Promise<void> {
   try {
     await relaunch();
   } catch (error) {
-    console.error('[HotExit] Failed to relaunch:', error); // intentional: critical relaunch failure
+    hotExitError('Failed to relaunch:', error);
     throw error;
   }
 }

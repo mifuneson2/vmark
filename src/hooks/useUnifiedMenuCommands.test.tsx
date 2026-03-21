@@ -810,7 +810,8 @@ describe("useUnifiedMenuCommands", () => {
 
     await waitFor(() => {
       expect(consoleSpy).toHaveBeenCalledWith(
-        "[UnifiedMenuDispatcher] Failed to register listener:",
+        "[Menu]",
+        "Failed to register listener:",
         expect.any(Error)
       );
     });

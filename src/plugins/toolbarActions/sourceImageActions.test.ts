@@ -48,6 +48,10 @@ vi.mock("@/stores/tabStore", () => ({
   },
 }));
 
+vi.mock("@/utils/debug", () => ({
+  sourceActionError: vi.fn(),
+}));
+
 vi.mock("@/hooks/useWindowFocus", () => ({
   getWindowLabel: vi.fn(() => "main"),
 }));
@@ -73,6 +77,7 @@ vi.mock("./sourceAdapterLinks", () => ({
   findWordAtCursorSource: vi.fn(() => null),
 }));
 
+import { sourceActionError } from "@/utils/debug";
 import { unlinkAtCursor, insertImage, insertVideoTag, insertAudioTag } from "./sourceImageActions";
 import { insertText } from "./sourceAdapterHelpers";
 import { findMarkdownLinkAtPosition, findWikiLinkAtPosition } from "@/utils/markdownLinkPatterns";
@@ -472,7 +477,7 @@ describe("insertImage (async paths)", () => {
   });
 
   it("logs error when insertImageAsync throws (line 310)", async () => {
-    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    
 
     const view = createView("", [{ from: 0, to: 0 }]);
     // Make readClipboardImagePath reject (throw) → insertImageAsync rejects → catch at line 309
@@ -481,14 +486,13 @@ describe("insertImage (async paths)", () => {
     insertImage(view);
 
     await vi.waitFor(() => {
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        "[SourceAdapter] insertImage failed:",
+      expect(sourceActionError).toHaveBeenCalledWith(
+        "insertImage failed:",
         expect.any(Error)
       );
     });
     view.destroy();
-    consoleErrorSpy.mockRestore();
-  });
+      });
 });
 
 describe("getActiveFilePath — error path (line 42)", () => {

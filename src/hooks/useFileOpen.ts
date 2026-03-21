@@ -15,6 +15,7 @@ import i18n from "@/i18n";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import { readTextFile } from "@tauri-apps/plugin-fs";
+import { fileOpsError } from "@/utils/debug";
 import { perfReset, perfStart, perfEnd, perfMark } from "@/utils/perfLog";
 import { useDocumentStore } from "@/stores/documentStore";
 import { useTabStore } from "@/stores/tabStore";
@@ -70,7 +71,7 @@ export async function openFileInNewTabCore(
     useRecentFilesStore.getState().addFile(path);
     perfMark("openFileInNewTab:complete");
   } catch (error) {
-    console.error("[FileOps] Failed to open file:", path, error);
+    fileOpsError("Failed to open file:", path, error);
     // Clean up the orphaned tab — without initDocument, it renders blank.
     // Use detachTab (not closeTab) to avoid polluting the "reopen closed tab" history.
     useTabStore.getState().detachTab(windowLabel, tabId);
@@ -175,7 +176,7 @@ export async function handleOpen(windowLabel: string): Promise<void> {
           useRecentFilesStore.getState().addFile(path);
           perfMark("handleOpen:replacedTab");
         } catch (error) {
-          console.error("[FileOps] Failed to replace tab with file:", error);
+          fileOpsError("Failed to replace tab with file:", error);
         }
         break;
       case "open_workspace_in_new_window":
@@ -185,7 +186,7 @@ export async function handleOpen(windowLabel: string): Promise<void> {
             filePath: decision.filePath,
           });
         } catch (error) {
-          console.error("[FileOps] Failed to open workspace in new window:", error);
+          fileOpsError("Failed to open workspace in new window:", error);
         }
         break;
       case "no_op":

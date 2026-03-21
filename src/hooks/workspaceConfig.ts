@@ -9,6 +9,7 @@
  */
 
 import { invoke } from "@tauri-apps/api/core";
+import { workspaceError } from "@/utils/debug";
 import { useWorkspaceStore, type WorkspaceConfig } from "@/stores/workspaceStore";
 
 /** Merges partial updates into the workspace config and persists to disk via Rust. */
@@ -30,7 +31,7 @@ export async function updateWorkspaceConfig(
       config: updatedConfig,
     });
   } catch (error) {
-    console.error("Failed to save workspace config:", error);
+    workspaceError("Failed to save workspace config:", error);
   }
 }
 

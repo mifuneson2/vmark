@@ -15,6 +15,7 @@ import {
   prosemirrorToTauri,
 } from "@/stores/shortcutsStore";
 import { SettingRow, Toggle, SettingsGroup, Select } from "./components";
+import { i18nWarn } from "@/utils/debug";
 
 /** All supported languages. Labels use native script so users can always find their language. */
 const ALL_LANGUAGES = [
@@ -90,7 +91,7 @@ export function LanguageSettings() {
       // Only persist after everything succeeds
       updateGeneralSetting("language", value);
     } catch (e) {
-      console.warn("[i18n] Failed to switch language:", e);
+      i18nWarn(" Failed to switch language:", e);
       // Revert both JS and Rust locale to previous
       await i18n.changeLanguage(previousLang);
       invoke("set_locale", { locale: previousLang }).catch(() => {});

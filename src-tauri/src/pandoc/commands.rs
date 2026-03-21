@@ -14,10 +14,56 @@ use tauri::command;
 use crate::ai_provider::{build_command, login_shell_path, which_command};
 
 /// Allowed output extensions (strict allowlist).
-const ALLOWED_EXTENSIONS: &[&str] = &["docx", "epub", "tex", "odt", "rtf", "txt"];
+pub(crate) const ALLOWED_EXTENSIONS: &[&str] = &["docx", "epub", "tex", "odt", "rtf", "txt"];
 
 /// Maximum time to wait for Pandoc to finish (2 minutes).
 const PANDOC_TIMEOUT: Duration = Duration::from_secs(120);
+
+/// Validate that a file extension is in the allowed set.
+///
+/// Extracts the extension from the given path, lowercases it, and checks
+/// against `ALLOWED_EXTENSIONS`. Returns `Ok(())` on success or an error
+/// message describing the unsupported format.
+pub(crate) fn validate_extension(output_path: &str) -> Result<(), String> {
+    let ext = std::path::Path::new(output_path)
+        .extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or("")
+        .to_lowercase();
+
+    if ALLOWED_EXTENSIONS.contains(&ext.as_str()) {
+        Ok(())
+    } else {
+        Err(format!(
+            "Unsupported format '.{}'. Supported: {}",
+            ext,
+            ALLOWED_EXTENSIONS.join(", ")
+        ))
+    }
+}
+
+/// Build the Pandoc CLI argument list as owned strings.
+///
+/// Returns the base args (`-f markdown -o <path> --standalone`) plus an
+/// optional `--resource-path=<dir>` when `source_dir` is provided.
+pub(crate) fn build_pandoc_args(
+    output_path: &str,
+    source_dir: Option<&str>,
+) -> Vec<String> {
+    let mut args = vec![
+        "-f".to_string(),
+        "markdown".to_string(),
+        "-o".to_string(),
+        output_path.to_string(),
+        "--standalone".to_string(),
+    ];
+
+    if let Some(dir) = source_dir {
+        args.push(format!("--resource-path={}", dir));
+    }
+
+    args
+}
 
 /// Pandoc detection result: availability, absolute path, and version string.
 #[derive(serde::Serialize)]
@@ -69,26 +115,40 @@ pub async fn export_via_pandoc(
     source_dir: Option<String>,
 ) -> Result<(), String> {
     // Validate extension against strict allowlist
-    let ext = std::path::Path::new(&output_path)
-        .extension()
-        .and_then(|e| e.to_str())
-        .unwrap_or("")
-        .to_lowercase();
+    validate_extension(&output_path)?;
 
-    if !ALLOWED_EXTENSIONS.contains(&ext.as_str()) {
-        return Err(format!(
-            "Unsupported format '.{}'. Supported: {}",
-            ext,
-            ALLOWED_EXTENSIONS.join(", ")
-        ));
+    // Reject path traversal in output path
+    if output_path.contains("..") {
+        return Err("Path traversal not allowed in output path".into());
     }
+
+    // Validate source_dir if provided (reject traversal, verify it exists and is a directory)
+    let validated_source_dir = match &source_dir {
+        Some(dir) => {
+            if dir.is_empty() {
+                return Err("source_dir cannot be empty".into());
+            }
+            if dir.contains("..") {
+                return Err("Path traversal not allowed in source_dir".into());
+            }
+            let path = std::path::Path::new(dir);
+            let canonical = path.canonicalize().map_err(|e| {
+                format!("Invalid source_dir '{}': {}", dir, e)
+            })?;
+            if !canonical.is_dir() {
+                return Err(format!("source_dir '{}' is not a directory", dir));
+            }
+            Some(canonical.to_string_lossy().into_owned())
+        }
+        None => None,
+    };
 
     // Resolve Pandoc path once (avoid TOCTOU with detect)
     let pandoc_exe = resolve_pandoc_path().ok_or("Pandoc not found on PATH")?;
 
     // Run blocking I/O on a dedicated thread with timeout
     let result = tokio::task::spawn_blocking(move || {
-        run_pandoc(&pandoc_exe, &markdown, &output_path, source_dir.as_deref())
+        run_pandoc(&pandoc_exe, &markdown, &output_path, validated_source_dir.as_deref())
     })
     .await
     .map_err(|e| format!("Pandoc task panicked: {}", e))?;
@@ -125,14 +185,8 @@ fn run_pandoc(
 ) -> Result<(), String> {
     use std::io::Write;
 
-    let mut args: Vec<&str> = vec!["-f", "markdown", "-o", output_path, "--standalone"];
-
-    // Set resource path for resolving relative image/asset paths
-    let resource_flag;
-    if let Some(dir) = source_dir {
-        resource_flag = format!("--resource-path={}", dir);
-        args.push(&resource_flag);
-    }
+    let args_owned = build_pandoc_args(output_path, source_dir);
+    let args: Vec<&str> = args_owned.iter().map(|s| s.as_str()).collect();
 
     let mut child = build_command(pandoc_exe, &args)
         .env("PATH", login_shell_path())
@@ -194,5 +248,237 @@ fn run_pandoc(
             }
             Err(e) => return Err(format!("Failed to wait for Pandoc: {}", e)),
         }
+    }
+}
+
+// ============================================================================
+// Tests
+// ============================================================================
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ---- ALLOWED_EXTENSIONS constant ----
+
+    // Constant-membership tests removed — the behavioral tests on
+    // validate_extension() + the length assertion below cover these with better signal.
+
+    #[test]
+    fn allowed_extensions_rejects_dangerous() {
+        for ext in &["exe", "sh", "bat", "html", "pdf", "js", "py"] {
+            assert!(!ALLOWED_EXTENSIONS.contains(ext), "{} should not be allowed", ext);
+        }
+    }
+
+    #[test]
+    fn allowed_extensions_rejects_pdf() {
+        assert!(!ALLOWED_EXTENSIONS.contains(&"pdf"));
+    }
+
+    #[test]
+    fn allowed_extensions_rejects_js() {
+        assert!(!ALLOWED_EXTENSIONS.contains(&"js"));
+    }
+
+    #[test]
+    fn allowed_extensions_has_exactly_six_entries() {
+        assert_eq!(ALLOWED_EXTENSIONS.len(), 6);
+    }
+
+    // ---- validate_extension ----
+
+    #[test]
+    fn validate_extension_accepts_docx() {
+        assert!(validate_extension("/tmp/output.docx").is_ok());
+    }
+
+    #[test]
+    fn validate_extension_accepts_epub() {
+        assert!(validate_extension("/tmp/book.epub").is_ok());
+    }
+
+    #[test]
+    fn validate_extension_accepts_tex() {
+        assert!(validate_extension("/home/user/paper.tex").is_ok());
+    }
+
+    #[test]
+    fn validate_extension_accepts_odt() {
+        assert!(validate_extension("document.odt").is_ok());
+    }
+
+    #[test]
+    fn validate_extension_accepts_rtf() {
+        assert!(validate_extension("notes.rtf").is_ok());
+    }
+
+    #[test]
+    fn validate_extension_accepts_txt() {
+        assert!(validate_extension("readme.txt").is_ok());
+    }
+
+    #[test]
+    fn validate_extension_is_case_insensitive() {
+        assert!(validate_extension("file.DOCX").is_ok());
+        assert!(validate_extension("file.Docx").is_ok());
+        assert!(validate_extension("file.DocX").is_ok());
+        assert!(validate_extension("file.EPUB").is_ok());
+        assert!(validate_extension("file.TXT").is_ok());
+    }
+
+    #[test]
+    fn validate_extension_rejects_exe() {
+        let err = validate_extension("malware.exe").unwrap_err();
+        assert!(err.contains("Unsupported format"));
+        assert!(err.contains(".exe"));
+    }
+
+    #[test]
+    fn validate_extension_rejects_sh() {
+        assert!(validate_extension("script.sh").is_err());
+    }
+
+    #[test]
+    fn validate_extension_rejects_html() {
+        assert!(validate_extension("page.html").is_err());
+    }
+
+    #[test]
+    fn validate_extension_rejects_pdf() {
+        assert!(validate_extension("document.pdf").is_err());
+    }
+
+    #[test]
+    fn validate_extension_rejects_js() {
+        assert!(validate_extension("app.js").is_err());
+    }
+
+    #[test]
+    fn validate_extension_rejects_py() {
+        assert!(validate_extension("script.py").is_err());
+    }
+
+    #[test]
+    fn validate_extension_rejects_bat() {
+        assert!(validate_extension("run.bat").is_err());
+    }
+
+    #[test]
+    fn validate_extension_rejects_no_extension() {
+        let err = validate_extension("/tmp/output").unwrap_err();
+        assert!(err.contains("Unsupported format"));
+        // Empty extension shows as '.'
+        assert!(err.contains("'.'"));
+    }
+
+    #[test]
+    fn validate_extension_uses_last_extension_for_double_dot() {
+        // "file.tar.gz" — only the last extension ("gz") is checked
+        assert!(validate_extension("archive.tar.gz").is_err());
+    }
+
+    #[test]
+    fn validate_extension_handles_dot_only_filename() {
+        // ".docx" — on Unix this is a hidden file named "docx" with no extension
+        // std::path::Path::new(".docx").extension() returns None
+        assert!(validate_extension(".docx").is_err());
+    }
+
+    #[test]
+    fn validate_extension_handles_path_with_spaces() {
+        assert!(validate_extension("/tmp/my documents/output file.docx").is_ok());
+    }
+
+    #[test]
+    fn validate_extension_error_lists_supported_formats() {
+        let err = validate_extension("bad.xyz").unwrap_err();
+        assert!(err.contains("docx"));
+        assert!(err.contains("epub"));
+        assert!(err.contains("tex"));
+        assert!(err.contains("odt"));
+        assert!(err.contains("rtf"));
+        assert!(err.contains("txt"));
+    }
+
+    // ---- build_pandoc_args ----
+
+    #[test]
+    fn build_pandoc_args_base_without_source_dir() {
+        let args = build_pandoc_args("/tmp/out.docx", None);
+        assert_eq!(args, vec!["-f", "markdown", "-o", "/tmp/out.docx", "--standalone"]);
+    }
+
+    #[test]
+    fn build_pandoc_args_with_source_dir() {
+        let args = build_pandoc_args("/tmp/out.epub", Some("/home/user/docs"));
+        assert_eq!(
+            args,
+            vec![
+                "-f",
+                "markdown",
+                "-o",
+                "/tmp/out.epub",
+                "--standalone",
+                "--resource-path=/home/user/docs",
+            ]
+        );
+    }
+
+    #[test]
+    fn build_pandoc_args_source_dir_with_spaces() {
+        let args = build_pandoc_args("out.docx", Some("/home/user/my docs"));
+        let last = args.last().unwrap();
+        assert_eq!(last, "--resource-path=/home/user/my docs");
+    }
+
+    #[test]
+    fn build_pandoc_args_always_uses_standalone() {
+        let args = build_pandoc_args("out.tex", None);
+        assert!(args.contains(&"--standalone".to_string()));
+    }
+
+    #[test]
+    fn build_pandoc_args_always_specifies_markdown_format() {
+        let args = build_pandoc_args("out.txt", None);
+        let f_idx = args.iter().position(|a| a == "-f").unwrap();
+        assert_eq!(args[f_idx + 1], "markdown");
+    }
+
+    #[test]
+    fn build_pandoc_args_output_path_follows_o_flag() {
+        let args = build_pandoc_args("/custom/path.rtf", None);
+        let o_idx = args.iter().position(|a| a == "-o").unwrap();
+        assert_eq!(args[o_idx + 1], "/custom/path.rtf");
+    }
+
+    // ---- resolve_pandoc_path ----
+
+    #[test]
+    fn resolve_pandoc_path_returns_option() {
+        // This test verifies the function returns Some or None without panicking.
+        // On CI without pandoc, this returns None. On dev machines with pandoc, Some.
+        let result = resolve_pandoc_path();
+        match &result {
+            Some(path) => {
+                // If found, the path should be non-empty and point to a real file
+                assert!(!path.is_empty());
+                assert!(
+                    std::path::Path::new(path).exists(),
+                    "Resolved path '{}' should exist on disk",
+                    path
+                );
+            }
+            None => {
+                // Pandoc not installed — this is valid in CI
+            }
+        }
+    }
+
+    // ---- PANDOC_TIMEOUT constant ----
+
+    #[test]
+    fn pandoc_timeout_is_two_minutes() {
+        assert_eq!(PANDOC_TIMEOUT, Duration::from_secs(120));
     }
 }

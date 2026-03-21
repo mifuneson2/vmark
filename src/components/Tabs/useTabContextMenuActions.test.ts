@@ -94,6 +94,7 @@ vi.mock("@/components/StatusBar/tabTransferActions", () => ({
 
 vi.mock("@/utils/debug", () => ({
   windowCloseWarn: vi.fn(),
+  tabContextError: vi.fn(),
 }));
 
 const { mockGetRelativePath } = vi.hoisted(() => ({

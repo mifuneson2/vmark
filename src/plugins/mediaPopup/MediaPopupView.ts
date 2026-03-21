@@ -23,7 +23,7 @@
 
 import "./media-popup.css";
 import type { EditorView } from "@tiptap/pm/view";
-import { mediaPopupWarn } from "@/utils/debug";
+import { mediaPopupWarn, mediaPopupError } from "@/utils/debug";
 import { useMediaPopupStore, type MediaNodeType } from "@/stores/mediaPopupStore";
 import {
   calculatePopupPosition,
@@ -291,7 +291,7 @@ export class MediaPopupView {
       state.closePopup();
       this.editorView.focus();
     } catch (error) {
-      console.error("[MediaPopup] Save failed:", error);
+      mediaPopupError("Save failed:", error);
       state.closePopup();
     }
   };
@@ -323,7 +323,7 @@ export class MediaPopupView {
 
       useMediaPopupStore.getState().closePopup();
     } catch (error) {
-      console.error("[MediaPopup] Toggle failed:", error);
+      mediaPopupError("Toggle failed:", error);
     }
   };
 
@@ -370,7 +370,7 @@ export class MediaPopupView {
       try {
         await navigator.clipboard.writeText(mediaSrc);
       } catch (err) {
-        console.error("Failed to copy media path:", err);
+        mediaPopupError("Failed to copy media path:", err);
       }
     }
     useMediaPopupStore.getState().closePopup();
@@ -393,7 +393,7 @@ export class MediaPopupView {
       state.closePopup();
       this.editorView.focus();
     } catch (error) {
-      console.error("[MediaPopup] Remove failed:", error);
+      mediaPopupError("Remove failed:", error);
       state.closePopup();
     }
   };

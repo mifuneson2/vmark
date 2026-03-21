@@ -38,6 +38,7 @@ vi.mock('./useHotExitRestore', () => ({
 vi.mock('@/utils/debug', () => ({
   hotExitLog: vi.fn(),
   hotExitWarn: vi.fn(),
+  hotExitError: vi.fn(),
 }));
 
 import { restartWithHotExit, checkAndRestoreSession } from './restartWithHotExit';

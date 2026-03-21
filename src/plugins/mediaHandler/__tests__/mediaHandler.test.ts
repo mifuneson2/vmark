@@ -4,6 +4,7 @@
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { hasVideoExtension, hasAudioExtension, getMediaType } from "@/utils/mediaPathDetection";
+import { mediaHandlerError } from "@/utils/debug";
 import { mediaHandlerExtension } from "../tiptap";
 import type { EditorView } from "@tiptap/pm/view";
 
@@ -23,6 +24,10 @@ vi.mock("@/hooks/useMediaOperations", () => ({
 const mockMessage = vi.fn(() => Promise.resolve());
 vi.mock("@tauri-apps/plugin-dialog", () => ({
   message: (...args: unknown[]) => mockMessage(...args),
+}));
+
+vi.mock("@/utils/debug", () => ({
+  mediaHandlerError: vi.fn(),
 }));
 
 vi.mock("@/hooks/useWindowFocus", () => ({
@@ -652,8 +657,7 @@ describe("handleDroppedMediaFile async flow", () => {
       preventDefault: vi.fn(),
     } as unknown as DragEvent;
 
-    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-
+    
     handleDrop(mockView, event, null as never, false);
 
     await vi.waitFor(() => {
@@ -663,7 +667,6 @@ describe("handleDroppedMediaFile async flow", () => {
       );
     }, { timeout: 200 });
 
-    consoleSpy.mockRestore();
   });
 
   it("handles getDocumentPath error (catch branch)", async () => {
@@ -724,20 +727,18 @@ describe("handlePaste copyMediaToAssets catch fallback", () => {
       preventDefault: vi.fn(),
     } as unknown as ClipboardEvent;
 
-    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-
+    
     const result = handlePaste(mockView, event, null as never);
     expect(result).toBe(true);
 
     await vi.waitFor(() => {
-      expect(consoleSpy).toHaveBeenCalledWith(
+      expect(mediaHandlerError).toHaveBeenCalledWith(
         "Failed to copy media from pasted path:",
         expect.any(Error)
       );
     }, { timeout: 200 });
 
     expect(mockInsertBlockVideoNode).toHaveBeenCalledWith(mockView, "/path/to/video.mp4");
-    consoleSpy.mockRestore();
   });
 
   it("falls back to original audio path when copyMediaToAssets rejects", async () => {
@@ -754,15 +755,13 @@ describe("handlePaste copyMediaToAssets catch fallback", () => {
       preventDefault: vi.fn(),
     } as unknown as ClipboardEvent;
 
-    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-
+    
     handlePaste(mockView, event, null as never);
 
     await vi.waitFor(() => {
       expect(mockInsertBlockAudioNode).toHaveBeenCalledWith(mockView, "/path/to/song.mp3");
     }, { timeout: 200 });
 
-    consoleSpy.mockRestore();
   });
 
   it("inserts via copyMediaToAssets success path for local audio", async () => {
@@ -879,8 +878,7 @@ describe("mediaHandler — handleDroppedMediaFile non-Error catch branch (line 9
       preventDefault: vi.fn(),
     } as unknown as DragEvent;
 
-    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-
+    
     handleDrop(mockView, event, null as never, false);
 
     await vi.waitFor(() => {
@@ -890,7 +888,6 @@ describe("mediaHandler — handleDroppedMediaFile non-Error catch branch (line 9
       );
     }, { timeout: 200 });
 
-    consoleSpy.mockRestore();
   });
 });
 

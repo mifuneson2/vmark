@@ -28,6 +28,7 @@ vi.mock("@tauri-apps/api/path", () => ({
 
 vi.mock("@/utils/debug", () => ({
   historyLog: vi.fn(),
+  historyError: vi.fn(),
 }));
 
 const mockGetHistoryBaseDir = vi.fn(() => Promise.resolve("/appdata/history"));
@@ -145,13 +146,12 @@ describe("deleteDocumentHistory", () => {
   it("catches error when hashPath throws (line 181)", async () => {
     mockHashPath.mockRejectedValueOnce(new Error("hash failed"));
 
-    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     await deleteDocumentHistory("/docs/broken.md");
-    expect(errorSpy).toHaveBeenCalledWith(
-      "[History] Failed to delete document history:",
+    const { historyError } = await import("@/utils/debug");
+    expect(vi.mocked(historyError)).toHaveBeenCalledWith(
+      "Failed to delete document history:",
       expect.any(Error),
     );
-    errorSpy.mockRestore();
   });
 });
 

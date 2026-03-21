@@ -21,6 +21,7 @@ import { readDir, remove, exists } from "@tauri-apps/plugin-fs";
 import { dirname, join } from "@tauri-apps/api/path";
 import { confirm, message } from "@tauri-apps/plugin-dialog";
 import { ASSETS_FOLDER, IMAGE_EXTENSIONS } from "./imageUtils";
+import { orphanCleanupError } from "@/utils/debug";
 
 export interface OrphanedImage {
   filename: string;
@@ -148,7 +149,7 @@ export async function deleteOrphanedImages(images: OrphanedImage[]): Promise<num
       await remove(image.fullPath);
       deletedCount++;
     } catch (error) {
-      console.error(`[OrphanCleanup] Failed to delete ${image.filename}:`, error);
+      orphanCleanupError(` Failed to delete ${image.filename}:`, error);
     }
   }
 

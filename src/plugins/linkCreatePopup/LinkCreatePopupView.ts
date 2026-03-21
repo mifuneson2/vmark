@@ -13,6 +13,7 @@ import {
   getViewportBounds,
 } from "@/utils/popupPosition";
 import { isImeKeyEvent } from "@/utils/imeGuard";
+import { linkPopupError } from "@/utils/debug";
 import { popupIcons } from "@/utils/popupComponents";
 import { getPopupHostForDom, toHostCoordsForDom } from "@/plugins/sourcePopup";
 import type { EditorViewLike } from "@/plugins/shared/types";
@@ -313,7 +314,7 @@ export class LinkCreatePopupView {
       useLinkCreatePopupStore.getState().closePopup();
       this.editorView.focus();
     } catch (error) {
-      console.error("[LinkCreatePopup] Save failed:", error);
+      linkPopupError("Save failed:", error);
       useLinkCreatePopupStore.getState().closePopup();
     }
   };

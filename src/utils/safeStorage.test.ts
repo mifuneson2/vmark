@@ -134,7 +134,9 @@ describe("createSafeStorage", () => {
 
       storage.setItem("key1", "value");
       expect(consoleErrorSpy).toHaveBeenCalledTimes(1);
+      // safeStorageError logs as: ("[SafeStorage]", "QuotaExceededError for key ...")
       expect(consoleErrorSpy).toHaveBeenCalledWith(
+        "[SafeStorage]",
         expect.stringContaining("QuotaExceededError"),
       );
     });
@@ -163,7 +165,9 @@ describe("createSafeStorage", () => {
       });
 
       storage.setItem("my-store", "data");
+      // safeStorageError logs as: ("[SafeStorage]", "QuotaExceededError for key ...")
       expect(consoleErrorSpy).toHaveBeenCalledWith(
+        "[SafeStorage]",
         expect.stringContaining("my-store"),
       );
     });

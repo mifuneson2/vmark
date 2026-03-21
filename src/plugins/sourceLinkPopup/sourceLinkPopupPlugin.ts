@@ -8,7 +8,7 @@
 import { type Extension } from "@codemirror/state";
 import { ViewPlugin, type EditorView } from "@codemirror/view";
 import { createSourcePopupPlugin } from "@/plugins/sourcePopup";
-import { sourceLinkError } from "@/utils/debug";
+import { sourceLinkError, sourceActionError } from "@/utils/debug";
 import { useLinkPopupStore } from "@/stores/linkPopupStore";
 import { SourceLinkPopupView } from "./SourceLinkPopupView";
 import { findMarkdownLinkAtPosition } from "@/utils/markdownLinkPatterns";
@@ -142,7 +142,7 @@ function createCmdClickPlugin(): Extension {
           openUrl(href).catch((error: unknown) => {
             sourceLinkError("Failed to open link:", error);
           });
-        }).catch(console.error);
+        }).catch((e: unknown) => sourceActionError("Failed:", e));
       };
     }
   );

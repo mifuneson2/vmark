@@ -11,7 +11,7 @@ import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { useWikiLinkPopupStore } from "@/stores/wikiLinkPopupStore";
 import { useWorkspaceStore } from "@/stores/workspaceStore";
 import { runOrQueueCodeMirrorAction } from "@/utils/imeGuard";
-import { sourcePopupWarn } from "@/utils/debug";
+import { sourcePopupWarn, sourceActionError } from "@/utils/debug";
 
 /**
  * Build wiki link markdown syntax.
@@ -121,7 +121,7 @@ export async function openWikiLink(): Promise<void> {
     await currentWindow.emit("open-file", { path: filePath });
     useWikiLinkPopupStore.getState().closePopup();
   } catch (error) {
-    console.error("[SourceWikiLinkPopup] Failed to open file:", error);
+    sourceActionError("Failed to open file:", error);
   }
 }
 
@@ -138,7 +138,7 @@ export async function copyWikiLinkTarget(): Promise<void> {
   try {
     await writeText(target);
   } catch (error) {
-    console.error("[SourceWikiLinkPopup] Copy failed:", error);
+    sourceActionError("Copy failed:", error);
   }
 }
 

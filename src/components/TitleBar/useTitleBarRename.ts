@@ -22,7 +22,7 @@ import { useState, useCallback, useRef } from "react";
 import { rename, exists } from "@tauri-apps/plugin-fs";
 import { join, basename } from "@tauri-apps/api/path";
 import { useDocumentActions } from "@/hooks/useDocumentState";
-import { titleBarWarn } from "@/utils/debug";
+import { titleBarWarn, fileOpsError } from "@/utils/debug";
 
 /** Hook that performs file rename operations triggered from the title bar. */
 export function useTitleBarRename() {
@@ -62,7 +62,7 @@ export function useTitleBarRename() {
 
         return true;
       } catch (error) {
-        console.error("[TitleBar] Failed to rename file:", error);
+        fileOpsError("Failed to rename file:", error);
         return false;
       } finally {
         isRenamingRef.current = false;

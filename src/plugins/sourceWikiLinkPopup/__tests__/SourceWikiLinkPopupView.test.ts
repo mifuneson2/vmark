@@ -428,7 +428,7 @@ describe("SourceWikiLinkPopupView", () => {
       await new Promise((r) => setTimeout(r, 10));
 
       expect(consoleSpy).toHaveBeenCalledWith(
-        "[SourceWikiLinkPopup] Browse failed:",
+        "[SourceAction]", "Browse failed:",
         expect.any(Error)
       );
 

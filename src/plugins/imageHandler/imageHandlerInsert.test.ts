@@ -32,6 +32,7 @@ vi.mock("@/stores/settingsStore", () => ({
 
 vi.mock("@/utils/debug", () => ({
   imageHandlerWarn: vi.fn(),
+  imageHandlerError: vi.fn(),
 }));
 
 const mockIsViewConnected = vi.fn(() => true);

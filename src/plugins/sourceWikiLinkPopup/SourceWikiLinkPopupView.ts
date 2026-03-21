@@ -11,6 +11,7 @@ import i18n from "@/i18n";
 import { SourcePopupView, type StoreApi } from "@/plugins/sourcePopup";
 import { useWikiLinkPopupStore } from "@/stores/wikiLinkPopupStore";
 import { useWorkspaceStore } from "@/stores/workspaceStore";
+import { sourceActionError } from "@/utils/debug";
 import { popupIcons } from "@/utils/popupComponents";
 import {
   copyWikiLinkTarget,
@@ -186,7 +187,7 @@ export class SourceWikiLinkPopupView extends SourcePopupView<WikiLinkPopupStoreS
 
       this.targetInput.focus();
     } catch (error) {
-      console.error("[SourceWikiLinkPopup] Browse failed:", error);
+      sourceActionError("Browse failed:", error);
     }
   }
 

@@ -2,7 +2,7 @@ import { useEffect, useRef, useCallback, forwardRef, useImperativeHandle } from 
 import { EditorContent, useEditor } from "@tiptap/react";
 import { parseMarkdown } from "@/utils/markdownPipeline";
 import { createExportExtensions } from "./createExportExtensions";
-import { exportWarn } from "@/utils/debug";
+import { exportWarn, exportError } from "@/utils/debug";
 import "./exportStyles.css";
 
 /** Props for the ExportSurface component. */
@@ -171,7 +171,7 @@ export const ExportSurface = forwardRef<ExportSurfaceRef, ExportSurfaceProps>(
         // Start stability check
         waitForStability();
       } catch (error) {
-        console.error("[ExportSurface] Failed to parse markdown:", error);
+        exportError("Failed to parse markdown for export surface:", error);
         /* v8 ignore next -- @preserve catch block not triggered in tests; markdown parse errors require malformed input */
         onError?.(error instanceof Error ? error : new Error(String(error)));
       }

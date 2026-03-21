@@ -8,6 +8,7 @@
  */
 
 import type { StateStorage } from "zustand/middleware";
+import { safeStorageError } from "@/utils/debug";
 
 let quotaWarned = false;
 
@@ -24,8 +25,8 @@ export function createSafeStorage(): StateStorage {
         ) {
           if (!quotaWarned) {
             quotaWarned = true;
-            console.error(
-              `[Storage] QuotaExceededError for key "${name}" — localStorage is full`
+            safeStorageError(
+              `QuotaExceededError for key "${name}" — localStorage is full`
             );
           }
         } else {

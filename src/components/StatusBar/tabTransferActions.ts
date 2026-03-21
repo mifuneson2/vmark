@@ -27,7 +27,7 @@ import { useTabStore } from "@/stores/tabStore";
 import { useWorkspaceStore } from "@/stores/workspaceStore";
 import type { DragOutPoint } from "@/hooks/useTabDragOut";
 import type { TabTransferPayload } from "@/types/tabTransfer";
-import { windowCloseWarn } from "@/utils/debug";
+import { windowCloseWarn, tabContextError } from "@/utils/debug";
 import i18n from "@/i18n";
 
 interface DragOutTransferOptions {
@@ -113,7 +113,7 @@ export async function transferTabFromDragOut({
           label: "Undo",
           onClick: () => {
             void restoreTransferredTab(windowLabel, targetWindowLabel, transferData).catch((error) => {
-              console.error("[StatusBar] Undo cross-window move failed:", error);
+              tabContextError("Undo cross-window move failed:", error);
             });
           },
         },
@@ -128,7 +128,7 @@ export async function transferTabFromDragOut({
           label: "Undo",
           onClick: () => {
             void restoreTransferredTab(windowLabel, createdWindowLabel, transferData).catch((error) => {
-              console.error("[StatusBar] Undo detach failed:", error);
+              tabContextError("Undo detach failed:", error);
             });
           },
         },
@@ -147,7 +147,7 @@ export async function transferTabFromDragOut({
       });
     }
   } catch (error) {
-    console.error("[StatusBar] drag-out failed:", error);
+    tabContextError("drag-out failed:", error);
     triggerSnapback(tabId);
     announce(`Failed to move tab ${tab.title}.`);
   }

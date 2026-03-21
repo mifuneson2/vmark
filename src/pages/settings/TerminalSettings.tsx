@@ -10,6 +10,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { useTranslation } from "react-i18next";
 import { useSettingsStore, type TerminalPosition, type TerminalCursorStyle } from "@/stores/settingsStore";
 import { SettingRow, SettingsGroup, Select, Toggle } from "./components";
+import { terminalSettingsWarn } from "@/utils/debug";
 
 const panelSizeOptions = [
   { value: "0.1", label: "10%" },
@@ -71,10 +72,10 @@ export function TerminalSettings() {
 
   useEffect(() => {
     invoke<string[]>("list_available_shells").then(setShells).catch((e) => {
-      console.warn("[TerminalSettings] Failed to list shells:", e);
+      terminalSettingsWarn(" Failed to list shells:", e);
     });
     invoke<string>("get_default_shell").then(setDefaultShell).catch((e) => {
-      console.warn("[TerminalSettings] Failed to get default shell:", e);
+      terminalSettingsWarn(" Failed to get default shell:", e);
     });
   }, []);
 

@@ -31,7 +31,7 @@ import { joinPath } from "@/utils/pathUtils";
 import { getSaveFileName } from "@/utils/exportNaming";
 import { isWithinRoot, getParentDir } from "@/utils/paths";
 import { saveAllDocuments, type CloseSaveContext } from "@/hooks/closeSave";
-import { fileOpsLog, fileOpsWarn } from "@/utils/debug";
+import { fileOpsLog, fileOpsWarn, fileOpsError } from "@/utils/debug";
 
 /**
  * Open a native save dialog and return the chosen path (or null on cancel).
@@ -73,7 +73,7 @@ export async function moveTabToNewWorkspaceWindow(
       filePath: filePath,
     });
   } catch (error) {
-    console.error("[FileOps] Failed to open workspace in new window:", error);
+    fileOpsError("Failed to open workspace in new window:", error);
     toast.error(i18n.t("dialog:toast.failedToMoveToNewWindow"));
     return;
   }
@@ -152,7 +152,7 @@ export async function handleSave(windowLabel: string): Promise<void> {
         path = await saveDialogWithFallback(defaultPath);
         fileOpsLog("Save dialog returned:", path ?? "(cancelled)");
       } catch (error) {
-        console.error("[FileOps] Save dialog threw:", error);
+        fileOpsError("Save dialog threw:", error);
         toast.error(
           i18n.t("dialog:toast.saveDialogFailed", { error: error instanceof Error ? error.message : String(error) })
         );
@@ -190,7 +190,7 @@ export async function handleSave(windowLabel: string): Promise<void> {
         try {
           await openWorkspaceWithConfig(postSaveAction.workspaceRoot);
         } catch (error) {
-          console.error("[FileOps] Failed to open workspace after save:", error);
+          fileOpsError("Failed to open workspace after save:", error);
         }
       }
     }
@@ -221,7 +221,7 @@ export async function handleSaveAs(windowLabel: string): Promise<void> {
     try {
       path = await saveDialogWithFallback(defaultPath);
     } catch (error) {
-      console.error("[FileOps] Save As dialog threw:", error);
+      fileOpsError("Save As dialog threw:", error);
       toast.error(
         i18n.t("dialog:toast.saveDialogFailed", { error: error instanceof Error ? error.message : String(error) })
       );
@@ -257,7 +257,7 @@ export async function handleMoveTo(windowLabel: string): Promise<void> {
     try {
       newPath = await saveDialogWithFallback(defaultPath);
     } catch (error) {
-      console.error("[FileOps] Move To dialog threw:", error);
+      fileOpsError("Move To dialog threw:", error);
       toast.error(
         i18n.t("dialog:toast.saveDialogFailed", { error: error instanceof Error ? error.message : String(error) })
       );
@@ -275,7 +275,7 @@ export async function handleMoveTo(windowLabel: string): Promise<void> {
       try {
         await remove(oldPath);
       } catch (error) {
-        console.error("[FileOps] Failed to delete old file during move:", error);
+        fileOpsError("Failed to delete old file during move:", error);
         // File was saved to new location, but old file couldn't be deleted
         toast.warning(i18n.t("dialog:toast.fileMovedCantDeleteOriginal"));
       }
@@ -343,7 +343,7 @@ export async function handleSaveAllQuit(windowLabel: string): Promise<void> {
       }
       // If cancelled, do nothing (stay in app)
     } catch (error) {
-      console.error("[SaveAllQuit] Failed:", error);
+      fileOpsError("SaveAllQuit failed:", error);
       toast.error(i18n.t("dialog:toast.failedToSaveDocuments"));
     }
   });

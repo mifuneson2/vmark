@@ -15,7 +15,7 @@ import { useEditorStore } from '@/stores/editorStore';
 import { useUnifiedHistoryStore } from '@/stores/unifiedHistoryStore';
 import type { WindowState, TabState, CaptureRequest, CaptureResponse, CursorInfo } from './types';
 import { HOT_EXIT_EVENTS, MAIN_WINDOW_LABEL } from './types';
-import { hotExitWarn } from '@/utils/debug';
+import { hotExitWarn, hotExitError } from '@/utils/debug';
 import type { LineEnding as StoreLineEnding } from '@/utils/linebreakDetection';
 import type { HistoryCheckpoint as StoreHistoryCheckpoint } from '@/stores/unifiedHistoryStore';
 import type { CursorInfo as StoreCursorInfo } from '@/stores/documentStore';
@@ -228,7 +228,7 @@ export function useHotExitCapture() {
         const windowState = captureWindowState(windowLabel, isMainWindow);
         response = buildCaptureResponse(captureId, windowLabel, windowState);
       } catch (error) {
-        console.error('[HotExit] Failed to capture window state:', error); // intentional: critical capture failure
+        hotExitError('Failed to capture window state:', error);
 
         // Build fallback state - getUiStateSafe won't throw
         const fallbackState: WindowState = {
@@ -249,7 +249,7 @@ export function useHotExitCapture() {
         await currentWindow.emit(HOT_EXIT_EVENTS.CAPTURE_RESPONSE, response);
       } catch (emitError) {
         // This is critical - log prominently
-        console.error('[HotExit] CRITICAL: Failed to emit capture response:', emitError); // intentional: critical emit failure
+        hotExitError('CRITICAL: Failed to emit capture response:', emitError);
         // No fallback possible - coordinator will timeout
       }
     });

@@ -12,7 +12,7 @@ import { createRoot } from "react-dom/client";
 import React from "react";
 
 import { ExportSurface, type ExportSurfaceRef } from "./ExportSurface";
-import { exportWarn } from "@/utils/debug";
+import { exportWarn, exportError, pdfError, printError } from "@/utils/debug";
 import i18n from "@/i18n";
 import { exportHtml } from "./htmlExport";
 import { waitForAssets } from "./waitForAssets";
@@ -216,7 +216,7 @@ export async function exportToHtml(
     toast.success(i18n.t("dialog:toast.exportHtmlSuccess"));
     return true;
   } catch (error) {
-    console.error("[Export] Failed to export HTML:", error);
+    exportError("Failed to export HTML:", error);
     const detail = error instanceof Error ? error.message : String(error);
     await showError(FileErrors.exportFailed("HTML"), detail);
     return false;
@@ -295,7 +295,7 @@ export async function exportToPdfNative(options: ExportToPdfOptions): Promise<vo
       defaultName,
     });
   } catch (error) {
-    console.error("[PDF] Failed to open PDF dialog:", error);
+    pdfError("Failed to open PDF dialog:", error);
     toast.error(i18n.t("dialog:toast.failedToPreparePdf"));
   }
 }
@@ -363,7 +363,7 @@ ${html}
     const { invoke } = await import("@tauri-apps/api/core");
     await invoke("print_document", { html: fullHtml });
   } catch (error) {
-    console.error("[Print] Failed to print:", error);
+    printError("Failed to print:", error);
     toast.error(i18n.t("dialog:toast.failedToOpenPrintDialog"));
   }
 }
@@ -390,7 +390,7 @@ export async function copyAsHtml(
     toast.success(i18n.t("dialog:toast.htmlCopied"));
     return true;
   } catch (error) {
-    console.error("[Export] Failed to copy HTML:", error);
+    exportError("Failed to copy HTML:", error);
     await showError(FileErrors.copyFailed);
     return false;
   }

@@ -23,7 +23,7 @@ import { convertFileSrc } from "@tauri-apps/api/core";
 import { dirname, join } from "@tauri-apps/api/path";
 import { useDocumentStore } from "@/stores/documentStore";
 import { useTabStore } from "@/stores/tabStore";
-import { renderWarn } from "@/utils/debug";
+import { renderWarn, imagePreviewError } from "@/utils/debug";
 import { getWindowLabel } from "@/hooks/useWindowFocus";
 import {
   calculatePopupPosition,
@@ -110,7 +110,7 @@ async function resolveImageSrc(src: string): Promise<string> {
       const absolutePath = await join(docDir, cleanPath);
       return convertFileSrc(normalizePathForAsset(absolutePath));
     } catch (error) {
-      console.error("[ImagePreview] Failed to resolve path:", error);
+      imagePreviewError("Failed to resolve path:", error);
       return src;
     }
   }

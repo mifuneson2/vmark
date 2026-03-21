@@ -42,6 +42,7 @@ vi.mock("@/hooks/useDocumentState", () => ({
 
 vi.mock("@/utils/debug", () => ({
   imageContextMenuWarn: vi.fn(),
+  imageContextMenuError: vi.fn(),
 }));
 
 import { useImageContextMenu } from "./useImageContextMenu";

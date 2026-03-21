@@ -424,7 +424,8 @@ describe("useWindowClose — menu:close", () => {
     });
 
     expect(consoleSpy).toHaveBeenCalledWith(
-      expect.stringContaining("menu:close"),
+      "[WindowClose]",
+      "menu:close tab close failed:",
       expect.any(Error)
     );
     consoleSpy.mockRestore();
@@ -503,7 +504,8 @@ describe("useWindowClose — closeLog debug_log catch (line 50)", () => {
     await new Promise((r) => setTimeout(r, 50));
 
     expect(warnSpy).toHaveBeenCalledWith(
-      "[closeLog] debug_log invoke failed:",
+      "[WindowClose]",
+      "debug_log invoke failed:",
       expect.any(Error)
     );
     warnSpy.mockRestore();
@@ -536,6 +538,7 @@ describe("useWindowClose — handleCloseRequest catch block (lines 144-146)", ()
     });
 
     expect(consoleSpy).toHaveBeenCalledWith(
+      "[WindowClose]",
       "Failed to close window:",
       expect.any(Error)
     );

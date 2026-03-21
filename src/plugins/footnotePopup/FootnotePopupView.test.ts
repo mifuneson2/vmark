@@ -49,6 +49,7 @@ vi.mock("./tiptapDomUtils", () => ({
 
 vi.mock("@/utils/debug", () => ({
   footnotePopupWarn: vi.fn(),
+  footnotePopupError: vi.fn(),
 }));
 
 // ---------------------------------------------------------------------------
@@ -87,6 +88,7 @@ vi.mock("@/stores/footnotePopupStore", () => ({
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { FootnotePopupView } from "./FootnotePopupView";
+import { footnotePopupError } from "@/utils/debug";
 import { handlePopupTabNavigation } from "@/utils/popupComponents";
 
 // ---------------------------------------------------------------------------
@@ -321,8 +323,7 @@ describe("FootnotePopupView", () => {
   // -------------------------------------------------------------------------
 
   it("handleSave catch block logs error and closes popup when dispatch throws", () => {
-    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-
+    
     const viewWithError = createMockView({
       dispatch: vi.fn(() => { throw new Error("save dispatch failed"); }),
     });
@@ -340,14 +341,13 @@ describe("FootnotePopupView", () => {
     const event = new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true });
     textarea.dispatchEvent(event);
 
-    expect(consoleSpy).toHaveBeenCalledWith(
-      expect.stringContaining("[FootnotePopup] Save failed:"),
+    expect(footnotePopupError).toHaveBeenCalledWith(
+      "Save failed:",
       expect.any(Error)
     );
     expect(mockClosePopup).toHaveBeenCalled();
 
     popup.destroy();
     viewWithError._editorContainer.remove();
-    consoleSpy.mockRestore();
   });
 });

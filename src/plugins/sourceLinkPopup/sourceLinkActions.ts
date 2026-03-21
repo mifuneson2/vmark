@@ -8,6 +8,7 @@
 import type { EditorView } from "@codemirror/view";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { useLinkPopupStore } from "@/stores/linkPopupStore";
+import { sourceActionError } from "@/utils/debug";
 import { runOrQueueCodeMirrorAction } from "@/utils/imeGuard";
 import { findHeadingByIdCM } from "@/utils/headingSlug";
 
@@ -126,7 +127,7 @@ export async function openLink(view: EditorView): Promise<void> {
     await openUrl(href);
   } catch (error) {
     /* v8 ignore next -- @preserve reason: dynamic import failure not tested */
-    console.error("[SourceLinkPopup] Failed to open link:", error);
+    sourceActionError("Failed to open link:", error);
   }
 }
 
@@ -143,7 +144,7 @@ export async function copyLinkHref(): Promise<void> {
   try {
     await writeText(href);
   } catch (error) {
-    console.error("[SourceLinkPopup] Copy failed:", error);
+    sourceActionError("Copy failed:", error);
   }
 }
 

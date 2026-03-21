@@ -32,7 +32,7 @@ import { detectLinebreaks } from "@/utils/linebreakDetection";
 import { openWorkspaceWithConfig } from "@/hooks/openWorkspaceWithConfig";
 import { isWithinRoot } from "@/utils/paths";
 import { waitForRestoreComplete, RESTORE_WAIT_TIMEOUT_MS } from "@/utils/hotExit/hotExitCoordination";
-import { finderFileOpenWarn } from "@/utils/debug";
+import { finderFileOpenWarn, finderFileOpenError } from "@/utils/debug";
 
 interface OpenFilePayload {
   path: string;
@@ -123,7 +123,7 @@ export function useFinderFileOpen(): void {
           await loadFileIntoTab(replaceableTab.tabId, path, false);
           useTabStore.getState().updateTabPath(replaceableTab.tabId, path);
         } catch (error) {
-          console.error("[FinderFileOpen] Failed to load file:", path, error);
+          finderFileOpenError("Failed to load file:", path, error);
         }
         return;
       }
@@ -146,7 +146,7 @@ export function useFinderFileOpen(): void {
         try {
           await loadFileIntoTab(tabId, path, true);
         } catch (error) {
-          console.error("[FinderFileOpen] Failed to load file:", path, error);
+          finderFileOpenError("Failed to load file:", path, error);
           useDocumentStore.getState().initDocument(tabId, "", null);
         }
       } else {
@@ -161,7 +161,7 @@ export function useFinderFileOpen(): void {
             await invoke("open_file_in_new_window", { path });
           }
         } catch (error) {
-          console.error("[FinderFileOpen] Failed to open in new window:", path, error);
+          finderFileOpenError("Failed to open in new window:", path, error);
         }
       }
     };
@@ -236,7 +236,7 @@ export function useFinderFileOpen(): void {
         }
         /* v8 ignore stop */
       } catch (error) {
-        console.error("[FinderFileOpen] Init failed:", error);
+        finderFileOpenError("Init failed:", error);
       }
     })();
 

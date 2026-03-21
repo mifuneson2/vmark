@@ -28,6 +28,7 @@ import { parseMarkdown } from "@/utils/markdownPipeline";
 import type { MarkdownPipelineOptions } from "@/utils/markdownPipeline/types";
 import { isMarkdownPasteCandidate } from "@/utils/markdownPasteDetection";
 import { isSubstantialHtml } from "@/utils/htmlToMarkdown";
+import { pasteError } from "@/utils/debug";
 import { useSettingsStore, type MarkdownPasteMode } from "@/stores/settingsStore";
 import { isMultiSelection, isSelectionInCode } from "@/utils/pasteUtils";
 
@@ -78,7 +79,7 @@ export function createMarkdownPasteTransaction(
     const slice = createMarkdownPasteSlice(state, markdown, options);
     return state.tr.replaceSelection(slice);
   } catch (error) {
-    console.error("[MarkdownPaste] Failed to parse markdown:", error);
+    pasteError("Failed to parse markdown:", error);
     return null;
   }
 }
@@ -116,14 +117,14 @@ async function readClipboardPlainText(): Promise<string> {
     const text = await readText();
     if (text) return text;
   } catch (error) {
-    console.error("[MarkdownPaste] Failed to read clipboard:", error);
+    pasteError("Failed to read clipboard:", error);
   }
 
   if (typeof navigator !== "undefined" && navigator.clipboard?.readText) {
     try {
       return await navigator.clipboard.readText();
     } catch (error) {
-      console.error("[MarkdownPaste] Failed to read web clipboard:", error);
+      pasteError("Failed to read web clipboard:", error);
     }
   }
 

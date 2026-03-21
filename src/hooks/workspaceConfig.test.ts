@@ -123,6 +123,7 @@ describe("workspaceConfig", () => {
     await updateWorkspaceConfig({ showHiddenFiles: true });
 
     expect(consoleSpy).toHaveBeenCalledWith(
+      "[Workspace]",
       "Failed to save workspace config:",
       expect.any(Error)
     );

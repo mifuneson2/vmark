@@ -168,6 +168,7 @@ describe("useOutlineSync — scroll-to-heading listener", () => {
 
     // Wait for the error to be caught
     await vi.waitFor(() => expect(errorSpy).toHaveBeenCalledWith(
+      "[OutlineSync]",
       "Failed to setup outline scroll listener:",
       expect.any(Error)
     ));

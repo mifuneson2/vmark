@@ -49,6 +49,7 @@ vi.mock("@/stores/workspaceStore", () => ({
 const mockWikiLinkPopupWarn = vi.fn();
 vi.mock("@/utils/debug", () => ({
   wikiLinkPopupWarn: (...args: unknown[]) => mockWikiLinkPopupWarn(...args),
+  wikiLinkPopupError: vi.fn(),
 }));
 
 vi.mock("@/utils/imeGuard", () => ({
@@ -91,6 +92,7 @@ vi.mock("@tauri-apps/api/webviewWindow", () => ({
 }));
 
 // Import after mocking
+import { wikiLinkPopupError } from "@/utils/debug";
 import { WikiLinkPopupView } from "../WikiLinkPopupView";
 
 // Helper functions
@@ -787,7 +789,6 @@ describe("WikiLinkPopupView", () => {
     it("catches and logs error from open dialog", async () => {
       const { open: mockDialogOpen } = await import("@tauri-apps/plugin-dialog");
       vi.mocked(mockDialogOpen).mockRejectedValue(new Error("dialog error"));
-      const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
       emitStateChange({ isOpen: true, target: "", nodePos: 10, anchorRect });
       await new Promise((r) => requestAnimationFrame(r));
@@ -796,15 +797,13 @@ describe("WikiLinkPopupView", () => {
       browseBtn!.click();
 
       await new Promise((r) => setTimeout(r, 50));
-      expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("Browse failed"), expect.any(Error));
-      errorSpy.mockRestore();
+      expect(wikiLinkPopupError).toHaveBeenCalledWith("Browse failed:", expect.any(Error));
     });
   });
 
   describe("Copy — error handling", () => {
     it("catches clipboard write error", async () => {
       Object.assign(navigator, { clipboard: { writeText: vi.fn(() => Promise.reject(new Error("copy fail"))) } });
-      const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
       emitStateChange({ isOpen: true, target: "Target", nodePos: 10, anchorRect });
       await new Promise((r) => requestAnimationFrame(r));
@@ -816,8 +815,7 @@ describe("WikiLinkPopupView", () => {
       copyBtn!.click();
 
       await new Promise((r) => setTimeout(r, 50));
-      expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("Failed to copy"), expect.any(Error));
-      errorSpy.mockRestore();
+      expect(wikiLinkPopupError).toHaveBeenCalledWith("Failed to copy:", expect.any(Error));
     });
   });
 
@@ -847,7 +845,6 @@ describe("WikiLinkPopupView", () => {
     it("catches emit error gracefully", async () => {
       const { getCurrentWebviewWindow } = await import("@tauri-apps/api/webviewWindow");
       vi.mocked(getCurrentWebviewWindow).mockReturnValue({ emit: vi.fn(() => Promise.reject(new Error("emit fail"))) } as ReturnType<typeof getCurrentWebviewWindow>);
-      const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
       emitStateChange({ isOpen: true, target: "Page", nodePos: 10, anchorRect });
       await new Promise((r) => requestAnimationFrame(r));
@@ -859,8 +856,7 @@ describe("WikiLinkPopupView", () => {
       openBtn.click();
 
       await new Promise((r) => setTimeout(r, 50));
-      expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("Failed to open file"), expect.any(Error));
-      errorSpy.mockRestore();
+      expect(wikiLinkPopupError).toHaveBeenCalledWith("Failed to open file:", expect.any(Error));
     });
 
   });

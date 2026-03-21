@@ -33,7 +33,7 @@ import { useSettingsStore } from "@/stores/settingsStore";
 import { detectMultipleImagePaths } from "@/utils/imagePathDetection";
 import { parseMultiplePaths } from "@/utils/multiImageParsing";
 import { withReentryGuard } from "@/utils/reentryGuard";
-import { imageHandlerWarn } from "@/utils/debug";
+import { imageHandlerWarn, imageHandlerError } from "@/utils/debug";
 import { insertMultipleImages } from "./imageHandlerInsert";
 import { tryTextImagePaste } from "./imageHandlerToast";
 import {
@@ -190,7 +190,7 @@ function handleDrop(view: EditorView, event: DragEvent, _slice: unknown, moved: 
             dispatch(tr);
 
             insertMultipleImages(view, detection.results, insertPos, insertPos).catch((error) => {
-              console.error("Failed to insert dropped images:", error);
+              imageHandlerError("Failed to insert dropped images:", error);
             });
 
             return true;
@@ -207,8 +207,8 @@ function handleDrop(view: EditorView, event: DragEvent, _slice: unknown, moved: 
     const insertPos = dropPos ? dropPos.pos : view.state.selection.from;
 
     processDroppedFiles(view, imageFiles, insertPos).catch((error) => {
-      console.error("Failed to process dropped images:", error);
-      message("Failed to save dropped images.", { kind: "error" }).catch(console.error);
+      imageHandlerError("Failed to process dropped images:", error);
+      message("Failed to save dropped images.", { kind: "error" }).catch(imageHandlerError);
     });
 
     return true;
@@ -235,7 +235,7 @@ function handleDrop(view: EditorView, event: DragEvent, _slice: unknown, moved: 
 
         // Insert images
         insertMultipleImages(view, detection.results, insertPos, insertPos).catch((error) => {
-          console.error("Failed to insert dropped images:", error);
+          imageHandlerError("Failed to insert dropped images:", error);
         });
 
         return true;
@@ -255,8 +255,8 @@ function handlePaste(view: EditorView, event: ClipboardEvent): boolean {
     if (item.type.startsWith("image/")) {
       event.preventDefault();
       processClipboardImage(view, item).catch((error) => {
-        console.error("Failed to process clipboard image:", error);
-        message("Failed to save image from clipboard.", { kind: "error" }).catch(console.error);
+        imageHandlerError("Failed to process clipboard image:", error);
+        message("Failed to save image from clipboard.", { kind: "error" }).catch(imageHandlerError);
       });
       return true;
     }

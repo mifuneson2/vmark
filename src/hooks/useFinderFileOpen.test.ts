@@ -113,6 +113,7 @@ vi.mock("@/utils/hotExit/hotExitCoordination", () => ({
 
 vi.mock("@/utils/debug", () => ({
   finderFileOpenWarn: vi.fn(),
+  finderFileOpenError: vi.fn(),
 }));
 
 import { useFinderFileOpen } from "./useFinderFileOpen";

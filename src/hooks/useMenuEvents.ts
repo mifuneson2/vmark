@@ -23,7 +23,7 @@ import { useTabStore } from "@/stores/tabStore";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { clearAllHistory, clearWorkspaceHistory } from "@/hooks/useHistoryRecovery";
 import { useWorkspaceStore } from "@/stores/workspaceStore";
-import { historyLog } from "@/utils/debug";
+import { historyLog, historyError, menuError } from "@/utils/debug";
 import { emitHistoryCleared } from "@/utils/historyTypes";
 import { withReentryGuard } from "@/utils/reentryGuard";
 import { runOrphanCleanup } from "@/utils/orphanAssetCleanup";
@@ -78,7 +78,7 @@ export function useMenuEvents(): void {
               historyLog("All history cleared");
               emitHistoryCleared();
             } catch (error) {
-              console.error("[History] Failed to clear history:", error);
+              historyError("Failed to clear history:", error);
             }
           }
         });
@@ -161,7 +161,7 @@ export function useMenuEvents(): void {
           await mkdir(dir, { recursive: true });
           await revealItemInDir(dir);
         } catch (error) {
-          console.error("[Menu] Failed to open genies folder:", error);
+          menuError("Failed to open genies folder:", error);
         }
       });
       if (cancelled) { unlistenOpenGeniesFolder(); return; }
@@ -169,7 +169,7 @@ export function useMenuEvents(): void {
     };
 
     setupListeners().catch((error) => {
-      console.error("[useMenuEvents] Failed to setup listeners:", error);
+      menuError("Failed to setup listeners:", error);
     });
 
     return () => {

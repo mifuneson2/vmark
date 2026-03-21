@@ -46,6 +46,7 @@ import { resolveHardBreakStyle } from "@/utils/linebreaks";
 import { extractTiptapContext } from "@/plugins/formatToolbar/tiptapContext";
 import { useImageDragDrop } from "@/hooks/useImageDragDrop";
 import { handleTableScrollToSelection } from "@/plugins/tableScroll/scrollGuard";
+import { tiptapError } from "@/utils/debug";
 import { ImageContextMenu } from "./ImageContextMenu";
 
 /**
@@ -106,7 +107,7 @@ function syncMarkdownToEditor(
     lastExternalContent.current = markdown;
     return true;
   } catch (error) {
-    console.error("[TiptapEditor] Failed to sync markdown:", error);
+    tiptapError(" Failed to sync markdown:", error);
     return false;
   }
 }
@@ -235,7 +236,7 @@ export function TiptapEditorInner({ hidden = false }: TiptapEditorInnerProps) {
         setContentWithoutHistory(editor, doc);
         editorInitialized.current = true;
       } catch (error) {
-        console.error("[TiptapEditor] Failed to parse initial markdown:", error);
+        tiptapError(" Failed to parse initial markdown:", error);
       }
 
       cursorTrackingEnabled.current = false;

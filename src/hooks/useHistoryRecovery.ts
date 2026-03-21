@@ -20,7 +20,7 @@ import {
   remove,
 } from "@tauri-apps/plugin-fs";
 import { join } from "@tauri-apps/api/path";
-import { historyLog } from "@/utils/debug";
+import { historyLog, historyError } from "@/utils/debug";
 import {
   INDEX_FILE,
   hashPath,
@@ -42,7 +42,7 @@ export async function deleteHistory(pathHash: string): Promise<void> {
       historyLog("Deleted history for:", pathHash);
     }
   } catch (error) {
-    console.error("[History] Failed to delete history:", error);
+    historyError("Failed to delete history:", error);
   }
 }
 
@@ -57,7 +57,7 @@ export async function clearAllHistory(): Promise<void> {
       historyLog("Cleared all history");
     }
   } catch (error) {
-    console.error("[History] Failed to clear all history:", error);
+    historyError("Failed to clear all history:", error);
   }
 }
 
@@ -71,7 +71,7 @@ export async function deleteDocumentHistory(
     const hash = await hashPath(documentPath);
     await deleteHistory(hash);
   } catch (error) {
-    console.error("[History] Failed to delete document history:", error);
+    historyError("Failed to delete document history:", error);
   }
 }
 
@@ -117,7 +117,7 @@ export async function clearWorkspaceHistory(
     historyLog(`Cleared workspace history: ${count} document(s)`);
     return count;
   } catch (error) {
-    console.error("[History] Failed to clear workspace history:", error);
+    historyError("Failed to clear workspace history:", error);
     return 0;
   }
 }

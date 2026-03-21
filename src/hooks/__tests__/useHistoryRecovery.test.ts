@@ -71,6 +71,7 @@ vi.mock("@tauri-apps/api/path", () => ({
 
 vi.mock("@/utils/debug", () => ({
   historyLog: vi.fn(),
+  historyError: vi.fn(),
 }));
 
 // Track which hash each doc path maps to

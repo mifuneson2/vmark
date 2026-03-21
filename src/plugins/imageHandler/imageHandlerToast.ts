@@ -16,7 +16,7 @@ import { useImagePasteToastStore } from "@/stores/imagePasteToastStore";
 import { detectMultipleImagePaths, type ImagePathResult } from "@/utils/imagePathDetection";
 import { parseMultiplePaths } from "@/utils/multiImageParsing";
 import { insertImageFromPath, insertMultipleImages, pasteAsText } from "./imageHandlerInsert";
-import { imageHandlerWarn } from "@/utils/debug";
+import { imageHandlerWarn, imageHandlerError } from "@/utils/debug";
 import {
   isViewConnected,
   validateLocalPath,
@@ -57,7 +57,7 @@ export function tryTextImagePaste(view: EditorView, text: string): boolean {
 
     // For local paths, validate first
     validateAndShowToast(view, result, text, from, to, capturedAltText).catch((error) => {
-      console.error("[imageHandler] Failed to validate path:", error);
+      imageHandlerError("Failed to validate path:", error);
       if (isViewConnected(view)) {
         pasteAsText(view, text, from, to);
       }
@@ -67,7 +67,7 @@ export function tryTextImagePaste(view: EditorView, text: string): boolean {
 
   // Multiple images: new behavior (alt text only applies to single image)
   validateAndShowMultiToast(view, detection.results, text, from, to).catch((error) => {
-    console.error("[imageHandler] Failed to validate multi-image paths:", error);
+    imageHandlerError("Failed to validate multi-image paths:", error);
     if (isViewConnected(view)) {
       pasteAsText(view, text, from, to);
     }
@@ -148,7 +148,7 @@ function showImagePasteToast(
         return;
       }
       insertImageFromPath(view, detection, capturedFrom, capturedTo, capturedAltText).catch((error) => {
-        console.error("Failed to insert image:", error);
+        imageHandlerError("Failed to insert image:", error);
       });
     },
     /* v8 ignore stop */
@@ -241,7 +241,7 @@ function showMultiImagePasteToast(
         return;
       }
       insertMultipleImages(view, results, capturedFrom, capturedTo).catch((error) => {
-        console.error("Failed to insert images:", error);
+        imageHandlerError("Failed to insert images:", error);
       });
     },
     /* v8 ignore stop */

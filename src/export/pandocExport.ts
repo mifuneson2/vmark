@@ -16,6 +16,7 @@ import { save } from "@tauri-apps/plugin-dialog";
 import { toast } from "sonner";
 import i18n from "@/i18n";
 import { joinPath } from "@/utils/pathUtils";
+import { exportError } from "@/utils/debug";
 
 /** Pandoc detection result from Rust backend. */
 interface PandocInfo {
@@ -97,7 +98,7 @@ export async function exportViaPandoc(options: {
     toast.success(i18n.t("dialog:toast.pandocExportSuccess"));
     return true;
   } catch (error) {
-    console.error("[Export] Pandoc export failed:", error);
+    exportError("Pandoc export failed:", error);
     const detail = error instanceof Error ? error.message : String(error);
     toast.error(i18n.t("dialog:toast.pandocExportError", { error: detail }));
     return false;

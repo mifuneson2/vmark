@@ -54,8 +54,10 @@ vi.mock("@/utils/imeGuard", () => ({
 
 vi.mock("@/utils/debug", () => ({
   sourcePopupWarn: vi.fn(),
+  sourceActionError: vi.fn(),
 }));
 
+import { sourceActionError } from "@/utils/debug";
 import {
   saveWikiLinkChanges,
   openWikiLink,
@@ -195,14 +197,12 @@ describe("openWikiLink", () => {
 
   it("handles emit error gracefully", async () => {
     mockEmit.mockRejectedValueOnce(new Error("emit failed"));
-    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
-
+    
     wikiLinkStoreState.target = "Page";
 
     await openWikiLink();
 
-    expect(consoleError).toHaveBeenCalled();
-    consoleError.mockRestore();
+    expect(sourceActionError).toHaveBeenCalled();
   });
 });
 
@@ -229,14 +229,12 @@ describe("copyWikiLinkTarget", () => {
 
   it("handles clipboard error gracefully", async () => {
     mockWriteText.mockRejectedValueOnce(new Error("clipboard failed"));
-    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
-
+    
     wikiLinkStoreState.target = "Page";
 
     await copyWikiLinkTarget();
 
-    expect(consoleError).toHaveBeenCalled();
-    consoleError.mockRestore();
+    expect(sourceActionError).toHaveBeenCalled();
   });
 });
 

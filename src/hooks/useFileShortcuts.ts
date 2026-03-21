@@ -22,7 +22,7 @@ import { safeUnlistenAll } from "@/utils/safeUnlisten";
 
 import { handleSave, handleSaveAs, handleMoveTo, handleSaveAllQuit } from "./useFileSave";
 import { handleOpen, handleOpenFile, handleNew } from "./useFileOpen";
-import { fileOpsLog } from "@/utils/debug";
+import { fileOpsLog, fileOpsError } from "@/utils/debug";
 
 /**
  * Set up all file operation menu listeners and keyboard shortcuts.
@@ -125,7 +125,7 @@ export function useFileShortcuts(windowLabel: string): void {
         e.preventDefault();
         /* v8 ignore next 2 -- @preserve reason: .catch() error handler fires only on async rejection; mock always resolves */
         void handleSaveAs(windowLabel).catch((err) =>
-          console.error("[FileOps] Save As failed:", err)
+          fileOpsError("Save As failed:", err)
         );
         return;
       }
@@ -137,7 +137,7 @@ export function useFileShortcuts(windowLabel: string): void {
         fileOpsLog("Cmd+S keyboard shortcut matched");
         e.preventDefault();
         void handleSave(windowLabel).catch((err) =>
-          console.error("[FileOps] Save failed:", err)
+          fileOpsError("Save failed:", err)
         );
         return;
       }

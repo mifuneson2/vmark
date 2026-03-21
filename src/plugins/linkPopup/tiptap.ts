@@ -11,6 +11,7 @@ import { Plugin, PluginKey } from "@tiptap/pm/state";
 import { TextSelection } from "@tiptap/pm/state";
 import type { EditorView } from "@tiptap/pm/view";
 import type { Mark } from "@tiptap/pm/model";
+import { linkPopupError } from "@/utils/debug";
 import { useLinkPopupStore } from "@/stores/linkPopupStore";
 import { useLinkCreatePopupStore } from "@/stores/linkCreatePopupStore";
 import { findHeadingById } from "@/utils/headingSlug";
@@ -120,7 +121,7 @@ function navigateToFragment(view: EditorView, targetId: string): boolean {
     view.focus();
     return true;
   } catch (error) {
-    console.error("[LinkPopup] Fragment navigation error:", error);
+    linkPopupError("Fragment navigation error:", error);
     return false;
   }
 }
@@ -150,8 +151,8 @@ function handleClick(view: EditorView, pos: number, event: MouseEvent): boolean 
 
           // External link - open in browser
           import("@tauri-apps/plugin-opener").then(({ openUrl }) => {
-            openUrl(href).catch(console.error);
-          }).catch(console.error);
+            openUrl(href).catch(linkPopupError);
+          }).catch(linkPopupError);
           event.preventDefault();
           return true;
         }
@@ -199,7 +200,7 @@ function handleClick(view: EditorView, pos: number, event: MouseEvent): boolean 
 
     return false;
   } catch (error) {
-    console.error("[LinkPopup] Click handler error:", error);
+    linkPopupError("Click handler error:", error);
     return false;
   }
 }

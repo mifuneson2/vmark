@@ -18,6 +18,7 @@ import { useMediaPopupStore, type MediaNodeType } from "@/stores/mediaPopupStore
 import { hasVideoExtension, hasAudioExtension } from "@/utils/mediaPathDetection";
 import { useTabStore } from "@/stores/tabStore";
 import { getWindowLabel } from "@/hooks/useWindowFocus";
+import { sourceActionError } from "@/utils/debug";
 import { insertText } from "./sourceAdapterHelpers";
 import { findWordAtCursorSource } from "./sourceAdapterLinks";
 import {
@@ -311,7 +312,7 @@ function insertImageTemplate(
  */
 export function insertImage(view: EditorView): boolean {
   insertImageAsync(view).catch((error) => {
-    console.error("[SourceAdapter] insertImage failed:", error);
+    sourceActionError("insertImage failed:", error);
   });
   return true;
 }

@@ -22,6 +22,7 @@ import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { Selection } from "@tiptap/pm/state";
 import type { EditorView } from "@tiptap/pm/view";
 import type { Node } from "@tiptap/pm/model";
+import { outlineSyncError } from "@/utils/debug";
 import { useUIStore } from "@/stores/uiStore";
 import { getTiptapEditorDom } from "@/utils/tiptapView";
 import { safeUnlisten } from "@/utils/safeUnlisten";
@@ -134,7 +135,7 @@ export function useOutlineSync(getEditorView: EditorViewGetter) {
           unlistenRef.current = unlisten;
         }
       } catch (error) {
-        console.error("Failed to setup outline scroll listener:", error);
+        outlineSyncError("Failed to setup outline scroll listener:", error);
       }
     };
 

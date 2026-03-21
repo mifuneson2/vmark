@@ -65,6 +65,7 @@ vi.mock("@/hooks/useImageOperations", () => ({
 
 vi.mock("@/utils/debug", () => ({
   smartPasteWarn: (...args: unknown[]) => mockSmartPasteWarn(...args),
+  smartPasteError: vi.fn(),
 }));
 
 vi.mock("@/utils/markdownUrl", () => ({

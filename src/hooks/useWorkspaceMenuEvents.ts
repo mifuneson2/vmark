@@ -25,7 +25,7 @@ import { persistWorkspaceSession } from "@/hooks/workspaceSession";
 import { detectLinebreaks } from "@/utils/linebreakDetection";
 import { openWorkspaceWithConfig } from "@/hooks/openWorkspaceWithConfig";
 import { safeUnlistenAll } from "@/utils/safeUnlisten";
-import { workspaceWarn } from "@/utils/debug";
+import { workspaceWarn, workspaceError } from "@/utils/debug";
 import i18n from "@/i18n";
 
 /**
@@ -109,7 +109,7 @@ export function useWorkspaceMenuEvents() {
             }
           }
         } catch (error) {
-          console.error("Failed to open folder:", error);
+          workspaceError("Failed to open folder:", error);
         }
       });
       if (cancelled) {

@@ -110,6 +110,7 @@ vi.mock("@/utils/hotExit/hotExitCoordination", () => ({
 
 vi.mock("@/utils/debug", () => ({
   finderFileOpenWarn: vi.fn(),
+  finderFileOpenError: vi.fn(),
 }));
 
 import { useFinderFileOpen } from "./useFinderFileOpen";
@@ -294,7 +295,7 @@ describe("useFinderFileOpen", () => {
     mockGetReplaceableTab.mockReturnValue({ tabId: "empty-tab", filePath: null });
     mockReadTextFile.mockRejectedValue(new Error("read error"));
 
-    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { finderFileOpenError } = await import("@/utils/debug");
 
     await act(async () => {
       render(<TestComponent />);
@@ -311,12 +312,11 @@ describe("useFinderFileOpen", () => {
     });
 
     // Should not crash, error is caught
-    expect(errorSpy).toHaveBeenCalledWith(
+    expect(finderFileOpenError).toHaveBeenCalledWith(
       expect.stringContaining("Failed to load file"),
       "/docs/broken.md",
       expect.any(Error)
     );
-    errorSpy.mockRestore();
   });
 
   it("warns when hot exit restore times out", async () => {
@@ -359,7 +359,7 @@ describe("useFinderFileOpen", () => {
   it("handles init failure gracefully", async () => {
     // Force listen to reject
     listenMock.mockRejectedValueOnce(new Error("listen failed"));
-    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { finderFileOpenError } = await import("@/utils/debug");
 
     await act(async () => {
       render(<TestComponent />);
@@ -368,12 +368,10 @@ describe("useFinderFileOpen", () => {
       await Promise.resolve();
     });
 
-    expect(errorSpy).toHaveBeenCalledWith(
+    expect(finderFileOpenError).toHaveBeenCalledWith(
       expect.stringContaining("Init failed"),
       expect.any(Error)
     );
-
-    errorSpy.mockRestore();
     // Reset listen mock
     listenMock.mockImplementation((_eventName: string, handler: ListenHandler) => {
       listenHandler = handler;

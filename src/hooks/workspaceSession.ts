@@ -9,6 +9,7 @@
  * @module hooks/workspaceSession
  */
 import { invoke } from "@tauri-apps/api/core";
+import { workspaceError } from "@/utils/debug";
 import { useWorkspaceStore } from "@/stores/workspaceStore";
 import { useTabStore } from "@/stores/tabStore";
 
@@ -35,6 +36,6 @@ export async function persistWorkspaceSession(windowLabel: string): Promise<void
       config: updatedConfig,
     });
   } catch (error) {
-    console.error("Failed to save workspace config:", error);
+    workspaceError("Failed to save workspace config:", error);
   }
 }

@@ -111,6 +111,7 @@ vi.mock("@/hooks/closeSave", () => ({
 vi.mock("@/utils/debug", () => ({
   fileOpsLog: vi.fn(),
   fileOpsWarn: vi.fn(),
+  fileOpsError: vi.fn(),
 }));
 
 import {
@@ -802,7 +803,7 @@ describe("handleSave — additional branches", () => {
   });
 
   it("handles openWorkspaceWithConfig failure gracefully", async () => {
-    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { fileOpsError } = await import("@/utils/debug");
     vi.mocked(useDocumentStore.getState).mockReturnValue({
       getDocument: vi.fn(() => ({
         content: "# New",
@@ -824,9 +825,8 @@ describe("handleSave — additional branches", () => {
 
     await handleSave("main");
 
-    // Should not throw
-    expect(errorSpy).toHaveBeenCalled();
-    errorSpy.mockRestore();
+    // Should not throw — error is logged via fileOpsError (mocked)
+    expect(fileOpsError).toHaveBeenCalled();
   });
 
   it("logs warning when re-entry guard blocks save", async () => {

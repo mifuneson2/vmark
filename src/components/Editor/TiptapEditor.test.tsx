@@ -997,8 +997,10 @@ describe("TiptapEditorInner — external content sync effect", () => {
     rerender(<TiptapEditorInner hidden={false} />);
 
     // Should log error but not throw
+    // tiptapError logs as: ("[Tiptap]", "Failed to sync markdown:", error)
     expect(errorSpy).toHaveBeenCalledWith(
-      expect.stringContaining("[TiptapEditor]"),
+      "[Tiptap]",
+      expect.stringContaining("Failed to sync markdown"),
       expect.any(Error)
     );
     errorSpy.mockRestore();

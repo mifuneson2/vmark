@@ -254,6 +254,94 @@ mod tests {
         assert!(!is_read_only_operation("tabs.switch"));
     }
 
+    /// Exhaustive coverage of all known write operations from the frontend MCP
+    /// bridge. This ensures no write operation is accidentally classified as
+    /// read-only in a future refactor.
+    #[test]
+    fn exhaustive_write_operations_not_read_only() {
+        let write_ops = [
+            // Document mutations
+            "document.insert",
+            "document.insertAtCursor",
+            "document.insertAtPosition",
+            "document.replaceInSource",
+            "document.setContent",
+            // Selection/cursor mutations
+            "selection.replace",
+            "selection.set",
+            "cursor.setPosition",
+            // Editor commands
+            "editor.undo",
+            "editor.redo",
+            "editor.focus",
+            "editor.setMode",
+            // Format operations
+            "format.clear",
+            "format.removeLink",
+            "format.setLink",
+            "format.toggle",
+            // List operations
+            "list.batchModify",
+            "list.decreaseIndent",
+            "list.increaseIndent",
+            "list.toggle",
+            // Block operations
+            "block.insertHorizontalRule",
+            "block.setType",
+            // Table operations
+            "table.batchModify",
+            "table.delete",
+            "table.insert",
+            // Mutation/batch operations
+            "mutation.applyDiff",
+            "mutation.batchEdit",
+            "mutation.replaceAnchored",
+            // Section operations
+            "section.insert",
+            "section.move",
+            "section.update",
+            // Paragraph write
+            "paragraph.write",
+            // Suggestion mutations
+            "suggestion.accept",
+            "suggestion.acceptAll",
+            "suggestion.reject",
+            "suggestion.rejectAll",
+            // Tab mutations
+            "tabs.create",
+            "tabs.close",
+            "tabs.switch",
+            "tabs.reopenClosed",
+            // Window mutations
+            "windows.focus",
+            // Workspace mutations
+            "workspace.closeWindow",
+            "workspace.newDocument",
+            "workspace.openDocument",
+            "workspace.reloadDocument",
+            "workspace.saveDocument",
+            "workspace.saveDocumentAs",
+            // Genie invocation (side-effecting)
+            "genies.invoke",
+            // VMark-specific commands
+            "vmark.cjkPunctuationConvert",
+            "vmark.cjkSpacingFix",
+            "vmark.insertMarkmap",
+            "vmark.insertMathBlock",
+            "vmark.insertMathInline",
+            "vmark.insertMermaid",
+            "vmark.insertSvg",
+            "vmark.insertWikiLink",
+        ];
+        for op in &write_ops {
+            assert!(
+                !is_read_only_operation(op),
+                "Expected '{}' to be classified as a write (non-read-only) operation",
+                op
+            );
+        }
+    }
+
     #[test]
     fn unknown_operations_not_read_only() {
         assert!(!is_read_only_operation(""));
@@ -261,28 +349,291 @@ mod tests {
         assert!(!is_read_only_operation("document.getContent ")); // trailing space
     }
 
+    /// Case sensitivity: operation names are exact-match. Upper/mixed case
+    /// variants must not accidentally match.
+    #[test]
+    fn is_read_only_is_case_sensitive() {
+        assert!(!is_read_only_operation("Document.GetContent"));
+        assert!(!is_read_only_operation("DOCUMENT.GETCONTENT"));
+        assert!(!is_read_only_operation("document.getcontent"));
+        assert!(!is_read_only_operation("SELECTION.GET"));
+        assert!(!is_read_only_operation("Outline.Get"));
+    }
+
+    /// Whitespace edge cases: leading, trailing, embedded spaces must not match.
+    #[test]
+    fn is_read_only_rejects_whitespace_variants() {
+        assert!(!is_read_only_operation(" document.getContent"));
+        assert!(!is_read_only_operation("document.getContent "));
+        assert!(!is_read_only_operation(" document.getContent "));
+        assert!(!is_read_only_operation("document .getContent"));
+        assert!(!is_read_only_operation("document. getContent"));
+        assert!(!is_read_only_operation("\tdocument.getContent"));
+        assert!(!is_read_only_operation("document.getContent\n"));
+    }
+
+    /// Partial/substring matches must not trigger a read-only classification.
+    #[test]
+    fn is_read_only_rejects_partial_matches() {
+        assert!(!is_read_only_operation("document"));
+        assert!(!is_read_only_operation("getContent"));
+        assert!(!is_read_only_operation("document."));
+        assert!(!is_read_only_operation(".getContent"));
+        assert!(!is_read_only_operation("document.getContent.extra"));
+        assert!(!is_read_only_operation("prefix.document.getContent"));
+    }
+
+    /// Unicode and special character strings should never match.
+    #[test]
+    fn is_read_only_rejects_unicode_and_special_chars() {
+        assert!(!is_read_only_operation("document.getContent\u{200B}")); // zero-width space
+        assert!(!is_read_only_operation("döcument.getContent"));
+        assert!(!is_read_only_operation("文档.获取内容"));
+        assert!(!is_read_only_operation("document\0getContent")); // null byte
+    }
+
+    /// Very long strings should not cause issues.
+    #[test]
+    fn is_read_only_handles_long_strings() {
+        let long_op = "a".repeat(10_000);
+        assert!(!is_read_only_operation(&long_op));
+    }
+
     // -- webview heartbeat ----------------------------------------------------
+    //
+    // WEBVIEW_ALIVE is a global AtomicBool shared across all parallel tests.
+    // Multi-step set→assert sequences are inherently racy when other tests
+    // also call set_webview_alive. To avoid flakiness, all webview alive
+    // tests are consolidated into one #[test] that runs sequentially.
 
     #[test]
-    fn webview_alive_defaults_to_true() {
-        // Reset to known state
+    fn webview_alive_behavior() {
+        // --- basic set/get ---
         set_webview_alive(true);
-        assert!(is_webview_alive());
-    }
+        assert!(is_webview_alive(), "should be true after set(true)");
 
-    #[test]
-    fn set_webview_alive_false() {
         set_webview_alive(false);
-        assert!(!is_webview_alive());
-        // Restore default
-        set_webview_alive(true);
-    }
+        assert!(!is_webview_alive(), "should be false after set(false)");
 
-    #[test]
-    fn set_webview_alive_round_trip() {
+        // --- round-trip ---
         set_webview_alive(false);
         assert!(!is_webview_alive());
         set_webview_alive(true);
         assert!(is_webview_alive());
+
+        // --- idempotent repeated sets ---
+        for _ in 0..3 {
+            set_webview_alive(true);
+        }
+        assert!(is_webview_alive());
+
+        for _ in 0..3 {
+            set_webview_alive(false);
+        }
+        assert!(!is_webview_alive());
+
+        // --- rapid toggling converges to last value ---
+        for _ in 0..1000 {
+            set_webview_alive(false);
+            set_webview_alive(true);
+        }
+        assert!(is_webview_alive());
+
+        for _ in 0..1000 {
+            set_webview_alive(true);
+            set_webview_alive(false);
+        }
+        assert!(!is_webview_alive());
+
+        // Restore
+        set_webview_alive(true);
+    }
+
+    /// Multiple threads toggling the flag concurrently.
+    /// We cannot predict the final value, but the test verifies no panic,
+    /// no UB, and the flag is readable afterwards.
+    #[test]
+    fn webview_alive_concurrent_access() {
+        use std::sync::Arc;
+        use std::sync::Barrier;
+
+        let barrier = Arc::new(Barrier::new(4));
+        let mut handles = Vec::new();
+
+        for i in 0..4 {
+            let b = barrier.clone();
+            handles.push(std::thread::spawn(move || {
+                b.wait();
+                for _ in 0..500 {
+                    set_webview_alive(i % 2 == 0);
+                }
+            }));
+        }
+
+        for h in handles {
+            h.join().unwrap();
+        }
+
+        // The value is non-deterministic after concurrent access;
+        // just confirm the call doesn't panic.
+        let _ = is_webview_alive();
+
+        // Restore
+        set_webview_alive(true);
+    }
+
+    // -- bridge state initialization ------------------------------------------
+
+    /// Bridge state is initialized and accessible. Because OnceLock is
+    /// shared across tests (which run in parallel), we only assert
+    /// structural invariants rather than exact initial values.
+    #[tokio::test]
+    async fn bridge_state_is_accessible() {
+        let state = get_bridge_state();
+        let guard = state.lock().await;
+        // The maps may have been touched by parallel tests, but the lock
+        // itself must be acquirable without panic.
+        let _ = guard.clients.len();
+        let _ = guard.pending.len();
+        assert!(guard.next_client_id >= 1);
+    }
+
+    /// Calling get_bridge_state() multiple times returns the same Arc.
+    #[tokio::test]
+    async fn bridge_state_is_singleton() {
+        let s1 = get_bridge_state();
+        let s2 = get_bridge_state();
+        assert!(Arc::ptr_eq(&s1, &s2));
+    }
+
+    /// Mutations through one Arc reference are visible through another.
+    /// Uses the `pending` map (keyed by a unique test marker) to avoid
+    /// interference with other tests that mutate `next_client_id`.
+    #[tokio::test]
+    async fn bridge_state_shared_mutation() {
+        let s1 = get_bridge_state();
+        let s2 = get_bridge_state();
+
+        let marker = "__test_shared_mutation__".to_string();
+
+        {
+            let mut guard = s1.lock().await;
+            let (tx, _rx) = oneshot::channel::<McpResponse>();
+            guard
+                .pending
+                .insert(marker.clone(), PendingRequest { response_tx: tx });
+        }
+
+        {
+            let guard = s2.lock().await;
+            assert!(guard.pending.contains_key(&marker));
+        }
+
+        // Clean up
+        {
+            let mut guard = s1.lock().await;
+            guard.pending.remove(&marker);
+        }
+    }
+
+    /// Multiple tasks concurrently insert into the `pending` map. The Mutex
+    /// guarantees all insertions succeed without data loss.
+    #[tokio::test]
+    async fn bridge_state_concurrent_pending_insert() {
+        let state = get_bridge_state();
+        let mut handles = Vec::new();
+
+        for i in 0..10 {
+            let s = state.clone();
+            handles.push(tokio::spawn(async move {
+                let mut guard = s.lock().await;
+                let (tx, _rx) = oneshot::channel::<McpResponse>();
+                guard
+                    .pending
+                    .insert(format!("__concurrent_test_{i}__"), PendingRequest { response_tx: tx });
+            }));
+        }
+
+        for h in handles {
+            h.await.unwrap();
+        }
+
+        {
+            let mut guard = state.lock().await;
+            for i in 0..10 {
+                let key = format!("__concurrent_test_{i}__");
+                assert!(guard.pending.contains_key(&key), "missing key: {key}");
+                guard.pending.remove(&key);
+            }
+        }
+    }
+
+    // -- shutdown holder ------------------------------------------------------
+
+    #[tokio::test]
+    async fn shutdown_holder_is_singleton() {
+        let h1 = get_shutdown_holder();
+        let h2 = get_shutdown_holder();
+        assert!(Arc::ptr_eq(&h1, &h2));
+    }
+
+    /// Store a sender, take it back, fire it, and verify the receiver
+    /// gets the signal. Covers the full lifecycle of the shutdown holder.
+    #[tokio::test]
+    async fn shutdown_holder_store_take_fire() {
+        let holder = get_shutdown_holder();
+
+        let (tx, rx) = oneshot::channel::<()>();
+        {
+            let mut guard = holder.write().await;
+            *guard = Some(tx);
+        }
+
+        // Take and fire
+        {
+            let mut guard = holder.write().await;
+            let tx = guard.take();
+            assert!(tx.is_some());
+            assert!(guard.is_none()); // gone after take
+            tx.unwrap().send(()).unwrap();
+        }
+
+        // Receiver got the signal
+        assert!(rx.await.is_ok());
+    }
+
+    // -- write lock -----------------------------------------------------------
+
+    #[tokio::test]
+    async fn write_lock_is_singleton() {
+        let l1 = get_write_lock();
+        let l2 = get_write_lock();
+        assert!(Arc::ptr_eq(&l1, &l2));
+    }
+
+    /// Verify the write lock serializes concurrent access.
+    #[tokio::test]
+    async fn write_lock_serializes_access() {
+        let lock = get_write_lock();
+        let counter = Arc::new(std::sync::atomic::AtomicU32::new(0));
+        let mut handles = Vec::new();
+
+        for _ in 0..5 {
+            let l = lock.clone();
+            let c = counter.clone();
+            handles.push(tokio::spawn(async move {
+                let _guard = l.lock().await;
+                // Read, yield, write pattern — would race without the lock
+                let val = c.load(Ordering::SeqCst);
+                tokio::task::yield_now().await;
+                c.store(val + 1, Ordering::SeqCst);
+            }));
+        }
+
+        for h in handles {
+            h.await.unwrap();
+        }
+
+        assert_eq!(counter.load(Ordering::SeqCst), 5);
     }
 }

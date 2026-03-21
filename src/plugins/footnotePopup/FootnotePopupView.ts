@@ -18,7 +18,7 @@
  */
 
 import { useFootnotePopupStore } from "@/stores/footnotePopupStore";
-import { footnotePopupWarn } from "@/utils/debug";
+import { footnotePopupWarn, footnotePopupError } from "@/utils/debug";
 import {
   calculatePopupPosition,
   getBoundaryRects,
@@ -303,7 +303,7 @@ export class FootnotePopupView {
 
       this.closeAndFocus();
     } catch (error) {
-      console.error("[FootnotePopup] Save failed:", error);
+      footnotePopupError("Save failed:", error);
       this.closeAndFocus();
     }
   };
@@ -365,7 +365,7 @@ export class FootnotePopupView {
       dispatch(tr);
       this.closeAndFocus();
     } catch (error) {
-      console.error("[FootnotePopup] Delete failed:", error);
+      footnotePopupError("Delete failed:", error);
       this.closeAndFocus();
     }
   };

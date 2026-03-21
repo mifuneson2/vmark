@@ -129,7 +129,8 @@ describe("useWindowClose — menu:close", () => {
     });
 
     expect(errorSpy).toHaveBeenCalledWith(
-      "[WindowClose] menu:close tab close failed:",
+      "[WindowClose]",
+      "menu:close tab close failed:",
       expect.any(Error)
     );
     errorSpy.mockRestore();

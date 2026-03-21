@@ -25,7 +25,7 @@ import { useGenieInvocation } from "@/hooks/useGenieInvocation";
 import { matchesShortcutEvent } from "@/utils/shortcutMatch";
 import { isImeKeyEvent } from "@/utils/imeGuard";
 import type { GenieDefinition, GenieMetadata, GenieScope } from "@/types/aiGenies";
-import { genieWarn } from "@/utils/debug";
+import { genieWarn, genieError } from "@/utils/debug";
 
 /** Build menu-id → accelerator map for the genies menu. */
 function getMenuShortcuts(): Record<string, string> | null {
@@ -87,7 +87,7 @@ export function useGenieShortcuts() {
   // On unmount (feature disabled), remove the Genies submenu from the native menu
   useEffect(() => {
     loadAndSyncMenu().catch((e) =>
-      console.error("[useGenieShortcuts] Failed to load genies:", e)
+      genieError("Failed to load genies:", e)
     );
     initSuggestionTabWatcher(useTabStore.subscribe);
     return () => {
@@ -116,10 +116,10 @@ export function useGenieShortcuts() {
             source: "global",
           };
           void invokeGenie(genie).catch((invokeErr: unknown) => {
-            console.error("[useGenieShortcuts] Failed to invoke genie:", invokeErr);
+            genieError("Failed to invoke genie:", invokeErr);
           });
         } catch (e) {
-          console.error("[useGenieShortcuts] Failed to read genie:", e);
+          genieError("Failed to read genie:", e);
         }
       }
     );
@@ -139,7 +139,7 @@ export function useGenieShortcuts() {
   useEffect(() => {
     const unlisten = listen("menu:reload-genies", () => {
       loadAndSyncMenu().catch((e) =>
-        console.error("[useGenieShortcuts] Failed to reload genies:", e)
+        genieError("Failed to reload genies:", e)
       );
     });
     return () => safeUnlistenAsync(unlisten);

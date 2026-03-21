@@ -47,7 +47,7 @@ import { performUnifiedUndo, performUnifiedRedo } from "@/hooks/useUnifiedHistor
 import { shouldBlockMenuAction } from "@/utils/focusGuard";
 import { runOrQueueCodeMirrorAction } from "@/utils/imeGuard";
 import { safeUnlistenAll } from "@/utils/safeUnlisten";
-import { menuDispatcherLog, menuDispatcherWarn } from "@/utils/debug";
+import { menuDispatcherLog, menuDispatcherWarn, menuError } from "@/utils/debug";
 
 /**
  * Map action IDs to the internal adapter action names.
@@ -376,7 +376,7 @@ export function useUnifiedMenuCommands(): void {
         if (result.status === "fulfilled") {
           unlisteners.push(result.value);
         } else {
-          console.error("[UnifiedMenuDispatcher] Failed to register listener:", result.reason);
+          menuError("Failed to register listener:", result.reason);
         }
       }
       unlistenRefs.current = unlisteners;

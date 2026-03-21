@@ -107,6 +107,7 @@ describe("persistWorkspaceSession", () => {
     await persistWorkspaceSession(WINDOW_LABEL);
 
     expect(consoleSpy).toHaveBeenCalledWith(
+      "[Workspace]",
       "Failed to save workspace config:",
       expect.any(Error)
     );
