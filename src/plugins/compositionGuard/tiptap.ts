@@ -272,6 +272,7 @@ export const compositionGuardExtension = Extension.create({
                 // Stale callback — a new composition started before this fired
                 if (compositionStartPos !== snapshotStartPos) return;
 
+                /* v8 ignore start -- @preserve reason: IME composition split fallback; requires real ProseMirror + IME interaction not reproducible in unit tests */
                 if (snapshotSplit) {
                   // Heading was split but filterTransaction didn't prevent it
                   // (shouldn't happen, but defensive fallback)
@@ -290,6 +291,7 @@ export const compositionGuardExtension = Extension.create({
                     }
                   }
                 }
+                /* v8 ignore stop */
                 // Normal pinyin cleanup
                 scheduleImeCleanup(view);
                 flushProseMirrorCompositionQueue(view);

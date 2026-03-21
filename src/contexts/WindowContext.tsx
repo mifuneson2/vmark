@@ -287,6 +287,7 @@ export function WindowProvider({ children }: WindowProviderProps) {
                   windowContextError("Failed to load file:", filePath, error);
                   // Initialize with empty content if file can't be read
                   useDocumentStore.getState().initDocument(tabId, "", null);
+                  /* v8 ignore next -- @preserve reason: getFileName always returns a value for valid paths; || filePath is a defensive fallback */
                   const filename = getFileName(filePath) || filePath;
                   toast.error(`Failed to open ${filename}`);
                 }

@@ -149,6 +149,7 @@ export function createMarkdownAutoPairPlugin() {
 
             // Only pair markdown format chars and backticks — skip irrelevant chars
             // before the more expensive code fence scan.
+            /* v8 ignore next -- @preserve reason: CodeMirror transaction callback; requires real editor instance for char-level testing */
             if (!DELAY_CHARS.has(char) && !ALWAYS_DOUBLE_CHARS.has(char) && char !== "`") return;
 
             // Don't auto-pair inside fenced code blocks

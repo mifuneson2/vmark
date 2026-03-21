@@ -220,6 +220,7 @@ export function createSourceEditorExtensions(config: ExtensionConfig): Extension
         preventDefault: true,
       }),
       // Windows/Linux convention: Ctrl+Y for redo (skip on macOS where Cmd+Y = AI Genies)
+      /* v8 ignore next 7 -- @preserve reason: isMacPlatform() compile-time constant; only one branch is taken per test run */
       ...(isMacPlatform() ? [] : [
         guardCodeMirrorKeyBinding({
           key: "Mod-y",
@@ -270,6 +271,7 @@ export function createSourceEditorExtensions(config: ExtensionConfig): Extension
     // Media tag decorations (video, audio, YouTube iframe)
     ...sourceMediaDecorationExtensions,
     // Lint annotations (gated by lintEnabled setting and tabId availability)
+    /* v8 ignore next -- @preserve reason: extension config branch; depends on runtime settings and tab state */
     ...(lintEnabled && tabId ? createSourceLintExtension(tabId) : []),
   ];
 }

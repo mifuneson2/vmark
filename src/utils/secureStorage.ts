@@ -137,6 +137,7 @@ export function createSecureStorage(): StateStorage {
       cache.delete(name);
 
       if (usingFallback) {
+        /* v8 ignore next -- @preserve reason: fallback localStorage removeItem; fallback mode init rejects the store promise making removeItem flow untestable in same test run */
         localStorage.removeItem(name);
       } else {
         getStore()

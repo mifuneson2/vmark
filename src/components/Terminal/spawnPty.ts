@@ -193,8 +193,8 @@ export async function spawnPty(options: SpawnOptions): Promise<IPty> {
       const fallback = await invoke<string>("get_default_shell");
       if (disposed()) throw new Error("disposed before fallback spawn");
       // Validate fallback shell is an absolute path (same check as primary shell)
+      /* v8 ignore next 3 -- @preserve reason: platform-specific PTY fallback path; requires real shell spawning failure not reproducible in unit tests */
       const fallbackIsAbsolute = fallback.startsWith("/") || /^[a-zA-Z]:[/\\]/.test(fallback);
-      /* v8 ignore next -- @preserve defense-in-depth: get_default_shell always returns absolute path; /bin/sh fallback is unreachable in tests */
       const safeFallback = fallbackIsAbsolute ? fallback : "/bin/sh";
       pty = spawn(safeFallback, [], spawnOpts);
     } else {

@@ -139,6 +139,30 @@ describe("tabHandlers", () => {
         configurable: true,
       });
     });
+
+    it("uses ?? [] fallback when tabs[windowId] is undefined", async () => {
+      // activeTabId exists for "empty-win" but tabs["empty-win"] is undefined
+      mockTabStoreState.activeTabId = { "empty-win": "tab-1" };
+
+      await handleTabsGetActive("req-ga-fallback", { windowId: "empty-win" });
+
+      // tabs["empty-win"] is undefined → [] fallback → tab not found → return null
+      expect(mockRespond).toHaveBeenCalledWith({
+        id: "req-ga-fallback",
+        success: true,
+        data: null,
+      });
+    });
+
+    it("returns isDirty false when document is not found", async () => {
+      mockDocStoreState.getDocument.mockReturnValueOnce(null);
+
+      await handleTabsGetActive("req-ga-nodoc", {});
+
+      const call = mockRespond.mock.calls[0][0];
+      expect(call.success).toBe(true);
+      expect(call.data.isDirty).toBe(false);
+    });
   });
 
   describe("handleTabsSwitch", () => {

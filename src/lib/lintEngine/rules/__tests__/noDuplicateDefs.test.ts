@@ -128,7 +128,7 @@ describe("E07 noDuplicateDefs", () => {
     expect(diagnostics[0].messageParams.ref).toBe("myid");
   });
 
-  it("falls back to empty string when both label and identifier are null", () => {
+  it("falls back to empty string when both label and identifier are empty string", () => {
     const mdast: Root = {
       type: "root",
       children: [
@@ -154,6 +154,35 @@ describe("E07 noDuplicateDefs", () => {
     };
 
     const diagnostics = noDuplicateDefs("", mdast);
+    expect(diagnostics).toHaveLength(1);
+  });
+
+  it("falls back to empty string via ?? when both label and identifier are undefined/null", () => {
+    // Both label and identifier are undefined — exercises the ?? "" fallback at line 21
+    const mdast: Root = {
+      type: "root",
+      children: [
+        {
+          type: "definition",
+          url: "https://a.com",
+          position: {
+            start: { line: 1, column: 1, offset: 0 },
+            end: { line: 1, column: 21, offset: 20 },
+          },
+        } as unknown as Definition,
+        {
+          type: "definition",
+          url: "https://b.com",
+          position: {
+            start: { line: 2, column: 1, offset: 21 },
+            end: { line: 2, column: 21, offset: 41 },
+          },
+        } as unknown as Definition,
+      ],
+    };
+
+    const diagnostics = noDuplicateDefs("", mdast);
+    // Both have same normalized label (""), so second is flagged
     expect(diagnostics).toHaveLength(1);
   });
 

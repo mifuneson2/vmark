@@ -71,6 +71,50 @@ describe("lintStore", () => {
     expect(useLintStore.getState().selectedIndexByTab["nonexistent"]).toBeUndefined();
   });
 
+  it("selectNext falls back to 0 when selectedIndexByTab entry is missing", () => {
+    // Use a doc that triggers multiple diagnostics so (0+1)%count != 0
+    useLintStore.getState().runLint("tab-x", "# Title\n\n### Skip\n\n![](img.png)");
+    const count = useLintStore.getState().diagnosticsByTab["tab-x"]!.length;
+    expect(count).toBeGreaterThanOrEqual(2);
+    // Manually remove the selectedIndex entry to force the ?? 0 fallback
+    useLintStore.setState((s) => {
+      const { ["tab-x"]: _, ...rest } = s.selectedIndexByTab;
+      return { selectedIndexByTab: rest };
+    });
+    expect(useLintStore.getState().selectedIndexByTab["tab-x"]).toBeUndefined();
+    useLintStore.getState().selectNext("tab-x");
+    // ?? 0 fallback means current=0, so (0+1) % count = 1
+    expect(useLintStore.getState().selectedIndexByTab["tab-x"]).toBe(1);
+  });
+
+  it("selectPrev falls back to 0 when selectedIndexByTab entry is missing", () => {
+    // Use a doc that triggers multiple diagnostics
+    useLintStore.getState().runLint("tab-y", "# Title\n\n### Skip\n\n![](img.png)");
+    const count = useLintStore.getState().diagnosticsByTab["tab-y"]!.length;
+    expect(count).toBeGreaterThanOrEqual(2);
+    // Manually remove the selectedIndex entry to force the ?? 0 fallback
+    useLintStore.setState((s) => {
+      const { ["tab-y"]: _, ...rest } = s.selectedIndexByTab;
+      return { selectedIndexByTab: rest };
+    });
+    expect(useLintStore.getState().selectedIndexByTab["tab-y"]).toBeUndefined();
+    useLintStore.getState().selectPrev("tab-y");
+    // ?? 0 fallback means current=0, 0 <= 0 so wraps to last
+    expect(useLintStore.getState().selectedIndexByTab["tab-y"]).toBe(count - 1);
+  });
+
+  it("selectPrev decrements when current > 0", () => {
+    useLintStore.getState().runLint("tab-z", "# Title\n\n### Skip\n\n![](img.png)");
+    const count = useLintStore.getState().diagnosticsByTab["tab-z"]!.length;
+    expect(count).toBeGreaterThanOrEqual(2);
+    // Move forward first so current > 0
+    useLintStore.getState().selectNext("tab-z");
+    expect(useLintStore.getState().selectedIndexByTab["tab-z"]).toBe(1);
+    // Now selectPrev should decrement to 0 (current - 1 branch)
+    useLintStore.getState().selectPrev("tab-z");
+    expect(useLintStore.getState().selectedIndexByTab["tab-z"]).toBe(0);
+  });
+
   it("resets selectedIndexByTab when running lint on new content", () => {
     useLintStore.getState().runLint("tab-1", "# Title\n\n### Skip\n\n![](img.png)");
     // Move to index 1

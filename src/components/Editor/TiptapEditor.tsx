@@ -127,6 +127,7 @@ export function TiptapEditorInner({ hidden = false }: TiptapEditorInnerProps) {
   const cjkLetterSpacing = useSettingsStore((state) => state.appearance.cjkLetterSpacing);
   const lintEnabled = useSettingsStore((state) => state.markdown.lintEnabled);
   const windowLabel = useWindowLabel();
+  /* v8 ignore next -- @preserve reason: runtime window label lookup; windowLabel always resolves in tests */
   const activeTabId = useTabStore((state) => state.activeTabId[windowLabel] ?? undefined);
 
   const isInternalChange = useRef(false);

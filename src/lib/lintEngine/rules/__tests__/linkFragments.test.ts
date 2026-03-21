@@ -155,6 +155,48 @@ describe("W04 linkFragments", () => {
     expect(diagnostics).toHaveLength(0);
   });
 
+  it("extracts text from heading with nested children (emphasis/strong)", () => {
+    // Exercises the recursive extractHeadingText branch at line 20-21
+    // where a node has "children" array (e.g., emphasis wrapping text)
+    const mdast: Root = {
+      type: "root",
+      children: [
+        {
+          type: "heading",
+          depth: 1,
+          children: [
+            {
+              type: "emphasis",
+              children: [{ type: "text", value: "italic" }],
+            },
+            { type: "text", value: " text" },
+          ],
+          position: {
+            start: { line: 1, column: 1, offset: 0 },
+            end: { line: 1, column: 15, offset: 14 },
+          },
+        },
+        {
+          type: "paragraph",
+          children: [
+            {
+              type: "link",
+              url: "#italic-text",
+              children: [{ type: "text", value: "link" }],
+              position: {
+                start: { line: 3, column: 1, offset: 16 },
+                end: { line: 3, column: 25, offset: 40 },
+              },
+            },
+          ],
+        },
+      ],
+    };
+
+    const diagnostics = linkFragments("", mdast);
+    expect(diagnostics).toHaveLength(0);
+  });
+
   it("uses offset fallback when position.start.offset is undefined", () => {
     // Exercises the `offset ?? 0` branch (line 63)
     const mdast: Root = {

@@ -76,6 +76,7 @@ export function HeadingPicker() {
   const restoreFocus = useCallback(() => {
     const el = previousFocusRef.current;
     previousFocusRef.current = null;
+    /* v8 ignore next 3 -- @preserve reason: DOM focus restoration depends on runtime element lifecycle; not exercisable in jsdom tests */
     if (el instanceof HTMLElement && document.contains(el)) {
       requestAnimationFrame(() => el.focus());
     }

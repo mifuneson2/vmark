@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { lintMarkdown } from "../../linter";
+import { noUnusedDefs } from "../noUnusedDefs";
+import type { Root, Definition } from "mdast";
 
 describe("W03 noUnusedDefs", () => {
   it.each([
@@ -83,5 +85,88 @@ describe("W03 noUnusedDefs", () => {
     expect(d!.uiHint).toBe("block");
     expect(d!.messageKey).toBe("lint.W03");
     expect(d!.messageParams.ref).toBe("ref");
+  });
+
+  it("skips definition nodes without position", () => {
+    const mdast: Root = {
+      type: "root",
+      children: [
+        {
+          type: "definition",
+          identifier: "orphan",
+          label: "orphan",
+          url: "https://example.com",
+          // No position — should be skipped
+        } as Definition,
+      ],
+    };
+
+    const diagnostics = noUnusedDefs("", mdast);
+    expect(diagnostics).toHaveLength(0);
+  });
+
+  it("falls back to identifier when label is null", () => {
+    const mdast: Root = {
+      type: "root",
+      children: [
+        {
+          type: "definition",
+          identifier: "myid",
+          url: "https://example.com",
+          position: {
+            start: { line: 1, column: 1, offset: 0 },
+            end: { line: 1, column: 25, offset: 24 },
+          },
+        } as Definition,
+      ],
+    };
+
+    // No references in source, so the definition should be flagged
+    const diagnostics = noUnusedDefs("", mdast);
+    expect(diagnostics).toHaveLength(1);
+    expect(diagnostics[0].messageParams.ref).toBe("myid");
+  });
+
+  it("falls back to empty string when both label and identifier are null", () => {
+    const mdast: Root = {
+      type: "root",
+      children: [
+        {
+          type: "definition",
+          identifier: "",
+          url: "https://example.com",
+          position: {
+            start: { line: 1, column: 1, offset: 0 },
+            end: { line: 1, column: 25, offset: 24 },
+          },
+        } as Definition,
+      ],
+    };
+
+    const diagnostics = noUnusedDefs("", mdast);
+    expect(diagnostics).toHaveLength(1);
+    expect(diagnostics[0].messageParams.ref).toBe("");
+  });
+
+  it("uses offset fallback when position.start.offset is undefined", () => {
+    const mdast: Root = {
+      type: "root",
+      children: [
+        {
+          type: "definition",
+          identifier: "ref",
+          label: "ref",
+          url: "https://example.com",
+          position: {
+            start: { line: 1, column: 1 },
+            end: { line: 1, column: 25 },
+          },
+        } as unknown as Definition,
+      ],
+    };
+
+    const diagnostics = noUnusedDefs("", mdast);
+    expect(diagnostics).toHaveLength(1);
+    expect(diagnostics[0].offset).toBe(0);
   });
 });

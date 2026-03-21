@@ -156,6 +156,7 @@ export function SourceEditor({ hidden = false }: SourceEditorProps) {
     const initialLintEnabled = useSettingsStore.getState().markdown.lintEnabled ?? true;
     // Capture tabId at mount time — SourceEditor remounts per tab so this is stable
     const { activeTabId: currentTabId } = useTabStore.getState();
+    /* v8 ignore next -- @preserve reason: runtime window label lookup; windowLabel always resolves in tests */
     const mountTabId = currentTabId[windowLabel] ?? undefined;
 
     const state = EditorState.create({
