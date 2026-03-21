@@ -110,6 +110,10 @@ export const ko = {
               text: "PR이 아닌 Issue를 올리는 이유",
               link: "/ko/guide/users-as-developers/why-issues-not-prs",
             },
+            {
+              text: "비용 및 공수 평가",
+              link: "/ko/guide/users-as-developers/cost-evaluation",
+            },
           ],
         },
       ],

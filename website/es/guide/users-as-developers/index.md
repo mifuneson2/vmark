@@ -24,6 +24,7 @@ No se necesita configuración adicional. Solo empieza a pedirle ayuda a tu IA.
 5. **[Los Prompts en Inglés Funcionan Mejor](/es/guide/users-as-developers/prompt-refinement)** — Traducción, refinamiento y el gancho `::`
 6. **[Verificación Cruzada de Modelos](/es/guide/users-as-developers/cross-model-verification)** — Uso de Claude + Codex para auditarse mutuamente y obtener mejor código
 7. **[Por Qué Issues, No PRs](/es/guide/users-as-developers/why-issues-not-prs)** — Por qué aceptamos issues pero no pull requests en un código base mantenido por IA
+8. **[Evaluación de costos y esfuerzo](/es/guide/users-as-developers/cost-evaluation)** — Cuánto costaría construir VMark con un equipo humano vs. la realidad del desarrollo asistido por IA
 
 ¿Ya familiarizado con los conceptos básicos? Salta a [Verificación Cruzada de Modelos](/es/guide/users-as-developers/cross-model-verification) para el flujo de trabajo avanzado, o sigue leyendo para entender cómo funciona la configuración de IA de VMark bajo el capó.
 

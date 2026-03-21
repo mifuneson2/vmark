@@ -116,6 +116,10 @@ export const de = {
               text: "Warum Issues statt PRs",
               link: "/de/guide/users-as-developers/why-issues-not-prs",
             },
+            {
+              text: "Kosten- und Aufwandsanalyse",
+              link: "/de/guide/users-as-developers/cost-evaluation",
+            },
           ],
         },
       ],

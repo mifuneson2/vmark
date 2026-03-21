@@ -104,6 +104,10 @@ export const zhTW = {
               text: "為什麼提 Issue 而非 PR",
               link: "/zh-TW/guide/users-as-developers/why-issues-not-prs",
             },
+            {
+              text: "成本與工作量評估",
+              link: "/zh-TW/guide/users-as-developers/cost-evaluation",
+            },
           ],
         },
       ],

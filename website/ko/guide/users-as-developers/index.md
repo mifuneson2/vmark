@@ -24,6 +24,7 @@ AI 보조 개발이 처음이신가요? 이 페이지들은 서로 연결되어 
 5. **[영어 프롬프트가 더 잘 작동하는 이유](/ko/guide/users-as-developers/prompt-refinement)** — 번역, 정제, 그리고 `::` 훅
 6. **[교차 모델 검증](/ko/guide/users-as-developers/cross-model-verification)** — 더 나은 코드를 위해 Claude + Codex를 서로 감사하는 데 사용하기
 7. **[왜 PR이 아닌 이슈인가](/ko/guide/users-as-developers/why-issues-not-prs)** — AI 유지 코드베이스에서 풀 리퀘스트가 아닌 이슈를 수락하는 이유
+8. **[비용 및 공수 평가](/ko/guide/users-as-developers/cost-evaluation)** —— 인간 팀이 VMark를 구축하는 비용 vs. AI 보조 개발의 실제 비용
 
 기초가 이미 익숙하신가요? 고급 워크플로우를 위해 [교차 모델 검증](/ko/guide/users-as-developers/cross-model-verification)으로 바로 이동하거나, VMark의 AI 설정이 내부적으로 어떻게 작동하는지 계속 읽어보세요.
 

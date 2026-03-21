@@ -50,6 +50,7 @@ export const en = {
             { text: "English Prompts Work Better", link: "/guide/users-as-developers/prompt-refinement" },
             { text: "Cross-Model Verification", link: "/guide/users-as-developers/cross-model-verification" },
             { text: "Why Issues, Not PRs", link: "/guide/users-as-developers/why-issues-not-prs" },
+            { text: "Cost & Effort Evaluation", link: "/guide/users-as-developers/cost-evaluation" },
           ],
         },
       ],

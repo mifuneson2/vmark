@@ -110,6 +110,10 @@ export const ja = {
               text: "PR ではなく Issue を出す理由",
               link: "/ja/guide/users-as-developers/why-issues-not-prs",
             },
+            {
+              text: "コストと工数の評価",
+              link: "/ja/guide/users-as-developers/cost-evaluation",
+            },
           ],
         },
       ],

@@ -119,6 +119,10 @@ export const ptBR = {
               text: "Por que Issues e não PRs",
               link: "/pt-BR/guide/users-as-developers/why-issues-not-prs",
             },
+            {
+              text: "Avaliação de custo e esforço",
+              link: "/pt-BR/guide/users-as-developers/cost-evaluation",
+            },
           ],
         },
       ],

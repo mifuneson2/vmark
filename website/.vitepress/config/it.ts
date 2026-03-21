@@ -116,6 +116,10 @@ export const it = {
               text: "Perché Issue e non PR",
               link: "/it/guide/users-as-developers/why-issues-not-prs",
             },
+            {
+              text: "Valutazione di costi e impegno",
+              link: "/it/guide/users-as-developers/cost-evaluation",
+            },
           ],
         },
       ],

@@ -24,6 +24,7 @@ Nuovo allo sviluppo assistito dall'IA? Queste pagine si costruiscono l'una sull'
 5. **[I Prompt in Inglese Funzionano Meglio](/it/guide/users-as-developers/prompt-refinement)** — Traduzione, raffinamento e il gancio `::`
 6. **[Verifica Cross-Model](/it/guide/users-as-developers/cross-model-verification)** — Usare Claude + Codex per auditarsi a vicenda per un codice migliore
 7. **[Perché Issue, Non PR](/it/guide/users-as-developers/why-issues-not-prs)** — Perché accettiamo issue ma non pull request in un codebase mantenuto dall'IA
+8. **[Valutazione di costi e impegno](/it/guide/users-as-developers/cost-evaluation)** — Quanto costerebbe costruire VMark con un team umano vs. la realtà dello sviluppo assistito dall'IA
 
 Già familiare con le basi? Salta direttamente a [Verifica Cross-Model](/it/guide/users-as-developers/cross-model-verification) per il flusso di lavoro avanzato, o continua a leggere per capire come funziona la configurazione IA di VMark sotto il cofano.
 

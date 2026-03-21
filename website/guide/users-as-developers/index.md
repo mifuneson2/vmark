@@ -24,6 +24,7 @@ New to AI-assisted development? These pages build on each other:
 5. **[English Prompts Work Better](/guide/users-as-developers/prompt-refinement)** — Translation, refinement, and the `::` hook
 6. **[Cross-Model Verification](/guide/users-as-developers/cross-model-verification)** — Using Claude + Codex to audit each other for better code
 7. **[Why Issues, Not PRs](/guide/users-as-developers/why-issues-not-prs)** — Why we accept issues but not pull requests in an AI-maintained codebase
+8. **[Cost & Effort Evaluation](/guide/users-as-developers/cost-evaluation)** — What VMark would cost to build with a human team vs. AI-assisted reality
 
 Already familiar with the basics? Jump to [Cross-Model Verification](/guide/users-as-developers/cross-model-verification) for the advanced workflow, or read on for how VMark's AI setup works under the hood.
 

@@ -24,6 +24,7 @@ Neu bei der KI-gestützten Entwicklung? Diese Seiten bauen aufeinander auf:
 5. **[Englische Prompts funktionieren besser](/de/guide/users-as-developers/prompt-refinement)** — Übersetzung, Verfeinerung und der `::`-Hook
 6. **[Modellübergreifende Verifikation](/de/guide/users-as-developers/cross-model-verification)** — Claude und Codex gegenseitig prüfen lassen für besseren Code
 7. **[Warum Issues, nicht PRs](/de/guide/users-as-developers/why-issues-not-prs)** — Warum wir Issues akzeptieren, aber keine Pull Requests in einer KI-gepflegten Codebasis
+8. **[Kosten- und Aufwandsanalyse](/de/guide/users-as-developers/cost-evaluation)** — Was VMark mit einem menschlichen Team kosten würde vs. die Realität der KI-gestützten Entwicklung
 
 Bereits mit den Grundlagen vertraut? Springen Sie zu [Modellübergreifende Verifikation](/de/guide/users-as-developers/cross-model-verification) für den fortgeschrittenen Arbeitsablauf, oder lesen Sie weiter, wie VMark's KI-Einrichtung unter der Haube funktioniert.
 
