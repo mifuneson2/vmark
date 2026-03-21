@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { lintMarkdown } from "../../linter";
+import { noDuplicateDefs } from "../noDuplicateDefs";
+import type { Root, Definition } from "mdast";
 
 describe("E07 noDuplicateDefs", () => {
   it.each([
@@ -63,5 +65,95 @@ describe("E07 noDuplicateDefs", () => {
     expect(d!.messageKey).toBe("lint.E07");
     expect(d!.messageParams.ref).toBe("ref");
     expect(d!.line).toBe(2);
+  });
+
+  it("skips definition nodes without position", () => {
+    // Synthetic MDAST with a duplicate definition that lacks position
+    const mdast: Root = {
+      type: "root",
+      children: [
+        {
+          type: "definition",
+          identifier: "ref",
+          label: "ref",
+          url: "https://a.com",
+          position: {
+            start: { line: 1, column: 1, offset: 0 },
+            end: { line: 1, column: 21, offset: 20 },
+          },
+        },
+        {
+          type: "definition",
+          identifier: "ref",
+          label: "ref",
+          url: "https://b.com",
+          // No position — should be skipped
+        } as Definition,
+      ],
+    };
+
+    const diagnostics = noDuplicateDefs("", mdast);
+    // The duplicate without position is skipped
+    expect(diagnostics).toHaveLength(0);
+  });
+
+  it("falls back to identifier when label is null", () => {
+    // Synthetic MDAST where label is undefined, falls back to identifier
+    const mdast: Root = {
+      type: "root",
+      children: [
+        {
+          type: "definition",
+          identifier: "myid",
+          url: "https://a.com",
+          position: {
+            start: { line: 1, column: 1, offset: 0 },
+            end: { line: 1, column: 21, offset: 20 },
+          },
+        } as Definition,
+        {
+          type: "definition",
+          identifier: "myid",
+          url: "https://b.com",
+          position: {
+            start: { line: 2, column: 1, offset: 21 },
+            end: { line: 2, column: 21, offset: 41 },
+          },
+        } as Definition,
+      ],
+    };
+
+    const diagnostics = noDuplicateDefs("", mdast);
+    expect(diagnostics).toHaveLength(1);
+    expect(diagnostics[0].messageParams.ref).toBe("myid");
+  });
+
+  it("falls back to empty string when both label and identifier are null", () => {
+    const mdast: Root = {
+      type: "root",
+      children: [
+        {
+          type: "definition",
+          identifier: "",
+          url: "https://a.com",
+          position: {
+            start: { line: 1, column: 1, offset: 0 },
+            end: { line: 1, column: 21, offset: 20 },
+          },
+        } as Definition,
+        {
+          type: "definition",
+          identifier: "",
+          url: "https://b.com",
+          position: {
+            start: { line: 2, column: 1, offset: 21 },
+            end: { line: 2, column: 21, offset: 41 },
+          },
+        } as Definition,
+      ],
+    };
+
+    const diagnostics = noDuplicateDefs("", mdast);
+    expect(diagnostics).toHaveLength(1);
   });
 });

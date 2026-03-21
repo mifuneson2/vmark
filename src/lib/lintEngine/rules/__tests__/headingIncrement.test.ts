@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { lintMarkdown } from "../../linter";
+import { headingIncrement } from "../headingIncrement";
+import type { Root, Heading } from "mdast";
 
 describe("W01 headingIncrement", () => {
   it.each([
@@ -64,5 +66,46 @@ describe("W01 headingIncrement", () => {
     expect(d!.messageParams.from).toBe("1");
     expect(d!.messageParams.to).toBe("3");
     expect(d!.line).toBe(3);
+  });
+
+  it("skips heading without position but still updates prevDepth", () => {
+    // Create synthetic MDAST with a heading that skips a level
+    // but the second heading has no position — should not produce a diagnostic
+    const mdast: Root = {
+      type: "root",
+      children: [
+        {
+          type: "heading",
+          depth: 1,
+          children: [{ type: "text", value: "H1" }],
+          position: {
+            start: { line: 1, column: 1, offset: 0 },
+            end: { line: 1, column: 5, offset: 4 },
+          },
+        },
+        {
+          type: "heading",
+          depth: 3,
+          children: [{ type: "text", value: "H3 no position" }],
+          // No position — should be skipped without a diagnostic
+        } as Heading,
+        {
+          type: "heading",
+          depth: 5,
+          children: [{ type: "text", value: "H5" }],
+          position: {
+            start: { line: 5, column: 1, offset: 30 },
+            end: { line: 5, column: 9, offset: 38 },
+          },
+        },
+      ],
+    };
+
+    const diagnostics = headingIncrement("", mdast);
+    // The h3 (no position) is skipped for diagnostic, but prevDepth is updated to 3.
+    // h5 follows h3 (skip of 2) and has position, so it produces one diagnostic.
+    expect(diagnostics).toHaveLength(1);
+    expect(diagnostics[0].messageParams.from).toBe("3");
+    expect(diagnostics[0].messageParams.to).toBe("5");
   });
 });

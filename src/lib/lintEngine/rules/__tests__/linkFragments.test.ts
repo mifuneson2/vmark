@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { lintMarkdown } from "../../linter";
+import { linkFragments } from "../linkFragments";
+import type { Root, Link } from "mdast";
 
 describe("W04 linkFragments", () => {
   it.each([
@@ -78,5 +80,114 @@ describe("W04 linkFragments", () => {
     expect(d!.uiHint).toBe("exact");
     expect(d!.messageKey).toBe("lint.W04");
     expect(d!.messageParams.anchor).toBe("broken-anchor");
+  });
+
+  it("clean: heading with nested emphasis — fragment matches slug from recursive text extraction", () => {
+    // Heading like # **bold** text produces a strong node with children
+    // This exercises the recursive extractHeadingText branch (lines 20-21)
+    const result = lintMarkdown("# **bold** text\n\n[link](#bold-text)");
+    const matches = result.filter((d) => d.ruleId === "W04");
+    expect(matches).toHaveLength(0);
+  });
+
+  it("clean: heading with deeply nested markup — recursive extraction", () => {
+    // # ***bold italic*** exercises emphasis > strong > text
+    const result = lintMarkdown("# ***bold italic***\n\n[link](#bold-italic)");
+    const matches = result.filter((d) => d.ruleId === "W04");
+    expect(matches).toHaveLength(0);
+  });
+
+  it("skips link nodes without position", () => {
+    // Synthetic MDAST: link without position should be skipped
+    const mdast: Root = {
+      type: "root",
+      children: [
+        {
+          type: "heading",
+          depth: 1,
+          children: [{ type: "text", value: "Title" }],
+          position: {
+            start: { line: 1, column: 1, offset: 0 },
+            end: { line: 1, column: 8, offset: 7 },
+          },
+        },
+        {
+          type: "paragraph",
+          children: [
+            {
+              type: "link",
+              url: "#nonexistent",
+              children: [{ type: "text", value: "link" }],
+              // No position — should be skipped
+            } as Link,
+          ],
+        },
+      ],
+    };
+
+    const diagnostics = linkFragments("", mdast);
+    expect(diagnostics).toHaveLength(0);
+  });
+
+  it("skips link node where url is undefined (falls back to empty string)", () => {
+    // Exercises the `node.url ?? ""` branch (line 47)
+    const mdast: Root = {
+      type: "root",
+      children: [
+        {
+          type: "paragraph",
+          children: [
+            {
+              type: "link",
+              children: [{ type: "text", value: "link" }],
+              position: {
+                start: { line: 1, column: 1, offset: 0 },
+                end: { line: 1, column: 10, offset: 9 },
+              },
+            } as unknown as Link,
+          ],
+        },
+      ],
+    };
+
+    const diagnostics = linkFragments("", mdast);
+    // url is undefined → falls back to "" → does not start with # → no diagnostic
+    expect(diagnostics).toHaveLength(0);
+  });
+
+  it("uses offset fallback when position.start.offset is undefined", () => {
+    // Exercises the `offset ?? 0` branch (line 63)
+    const mdast: Root = {
+      type: "root",
+      children: [
+        {
+          type: "heading",
+          depth: 1,
+          children: [{ type: "text", value: "Title" }],
+          position: {
+            start: { line: 1, column: 1, offset: 0 },
+            end: { line: 1, column: 8, offset: 7 },
+          },
+        },
+        {
+          type: "paragraph",
+          children: [
+            {
+              type: "link",
+              url: "#nonexistent",
+              children: [{ type: "text", value: "link" }],
+              position: {
+                start: { line: 3, column: 1 },
+                end: { line: 3, column: 20 },
+              },
+            } as unknown as Link,
+          ],
+        },
+      ],
+    };
+
+    const diagnostics = linkFragments("", mdast);
+    expect(diagnostics).toHaveLength(1);
+    expect(diagnostics[0].offset).toBe(0);
   });
 });

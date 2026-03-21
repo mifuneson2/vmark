@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { useLintStore } from "../lintStore";
+import { useSettingsStore } from "../settingsStore";
 
 describe("lintStore", () => {
   beforeEach(() => {
@@ -87,5 +88,42 @@ describe("lintStore", () => {
     useLintStore.getState().selectNext("tab-1");
     expect(useLintStore.getState().selectedIndexByTab["tab-1"]).toBe(1);
     expect(useLintStore.getState().selectedIndexByTab["tab-2"]).toBe(0);
+  });
+
+  describe("settings subscription", () => {
+    it("clears all diagnostics when lint is disabled", () => {
+      // Ensure lint is enabled first
+      useSettingsStore.setState({
+        markdown: { ...useSettingsStore.getState().markdown, lintEnabled: true },
+      });
+
+      // Add some diagnostics
+      useLintStore.getState().runLint("tab-1", "# Title\n\n### Skip");
+      expect(Object.keys(useLintStore.getState().diagnosticsByTab).length).toBeGreaterThan(0);
+
+      // Disable lint
+      useSettingsStore.setState({
+        markdown: { ...useSettingsStore.getState().markdown, lintEnabled: false },
+      });
+
+      // Diagnostics should be cleared
+      expect(useLintStore.getState().diagnosticsByTab).toEqual({});
+    });
+
+    it("does not clear diagnostics when lint stays enabled", () => {
+      useSettingsStore.setState({
+        markdown: { ...useSettingsStore.getState().markdown, lintEnabled: true },
+      });
+
+      useLintStore.getState().runLint("tab-1", "# Title\n\n### Skip");
+      const before = Object.keys(useLintStore.getState().diagnosticsByTab).length;
+
+      // Toggle another setting (lint stays enabled)
+      useSettingsStore.setState({
+        markdown: { ...useSettingsStore.getState().markdown, lintEnabled: true },
+      });
+
+      expect(Object.keys(useLintStore.getState().diagnosticsByTab).length).toBe(before);
+    });
   });
 });

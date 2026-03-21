@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { lintMarkdown } from "../../linter";
+import { requireAltText } from "../requireAltText";
+import type { Root, Image } from "mdast";
 
 describe("W02 requireAltText", () => {
   it.each([
@@ -62,5 +64,79 @@ describe("W02 requireAltText", () => {
     expect(d!.uiHint).toBe("exact");
     expect(d!.messageKey).toBe("lint.W02");
     expect(d!.line).toBe(1);
+  });
+
+  it("skips image nodes without position", () => {
+    const mdast: Root = {
+      type: "root",
+      children: [
+        {
+          type: "paragraph",
+          children: [
+            {
+              type: "image",
+              url: "image.png",
+              alt: "",
+              // No position — should be skipped
+            } as Image,
+          ],
+        },
+      ],
+    };
+
+    const diagnostics = requireAltText("", mdast);
+    expect(diagnostics).toHaveLength(0);
+  });
+
+  it("flags image where alt is null (falls back to empty string)", () => {
+    const mdast: Root = {
+      type: "root",
+      children: [
+        {
+          type: "paragraph",
+          children: [
+            {
+              type: "image",
+              url: "image.png",
+              alt: null,
+              position: {
+                start: { line: 1, column: 1, offset: 0 },
+                end: { line: 1, column: 15, offset: 14 },
+              },
+            } as unknown as Image,
+          ],
+        },
+      ],
+    };
+
+    const diagnostics = requireAltText("", mdast);
+    expect(diagnostics).toHaveLength(1);
+    expect(diagnostics[0].ruleId).toBe("W02");
+  });
+
+  it("uses offset fallback when position.start.offset is undefined", () => {
+    const mdast: Root = {
+      type: "root",
+      children: [
+        {
+          type: "paragraph",
+          children: [
+            {
+              type: "image",
+              url: "image.png",
+              alt: "",
+              position: {
+                start: { line: 1, column: 1 },
+                end: { line: 1, column: 15 },
+              },
+            } as unknown as Image,
+          ],
+        },
+      ],
+    };
+
+    const diagnostics = requireAltText("", mdast);
+    expect(diagnostics).toHaveLength(1);
+    expect(diagnostics[0].offset).toBe(0);
   });
 });

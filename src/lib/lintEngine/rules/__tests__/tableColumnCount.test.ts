@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { lintMarkdown } from "../../linter";
+import { tableColumnCount } from "../tableColumnCount";
+import type { Root, Table, TableRow, TableCell } from "mdast";
 
 describe("E02 tableColumnCount", () => {
   it.each([
@@ -58,5 +60,84 @@ describe("E02 tableColumnCount", () => {
     expect(d!.messageKey).toBe("lint.E02");
     expect(d!.messageParams.expected).toBe("3");
     expect(d!.messageParams.found).toBe("2");
+  });
+
+  it("skips mismatched rows without position (continue branch)", () => {
+    // Build a synthetic table where a body row has wrong column count but no position
+    const cell = (text: string): TableCell => ({
+      type: "tableCell",
+      children: [{ type: "paragraph", children: [{ type: "text", value: text }] }],
+    }) as unknown as TableCell;
+
+    const headerRow: TableRow = {
+      type: "tableRow",
+      children: [cell("A"), cell("B"), cell("C")],
+      position: {
+        start: { line: 1, column: 1, offset: 0 },
+        end: { line: 1, column: 15, offset: 14 },
+      },
+    };
+
+    const bodyRowNoPosition: TableRow = {
+      type: "tableRow",
+      children: [cell("1"), cell("2")], // mismatch but no position
+    } as TableRow;
+
+    const bodyRowWithPosition: TableRow = {
+      type: "tableRow",
+      children: [cell("x"), cell("y")], // mismatch with position
+      position: {
+        start: { line: 3, column: 1, offset: 30 },
+        end: { line: 3, column: 10, offset: 39 },
+      },
+    };
+
+    const table: Table = {
+      type: "table",
+      children: [headerRow, bodyRowNoPosition, bodyRowWithPosition],
+    } as Table;
+
+    const mdast: Root = { type: "root", children: [table] };
+
+    const diagnostics = tableColumnCount("", mdast);
+    // Only the row with position should produce a diagnostic
+    expect(diagnostics).toHaveLength(1);
+    expect(diagnostics[0].line).toBe(3);
+  });
+
+  it("uses offset fallback when position.start.offset is undefined", () => {
+    const cell = (text: string): TableCell => ({
+      type: "tableCell",
+      children: [{ type: "paragraph", children: [{ type: "text", value: text }] }],
+    }) as unknown as TableCell;
+
+    const headerRow: TableRow = {
+      type: "tableRow",
+      children: [cell("A"), cell("B")],
+      position: {
+        start: { line: 1, column: 1, offset: 0 },
+        end: { line: 1, column: 10, offset: 9 },
+      },
+    };
+
+    const bodyRow: TableRow = {
+      type: "tableRow",
+      children: [cell("1")], // mismatch
+      position: {
+        start: { line: 2, column: 1 },
+        end: { line: 2, column: 5 },
+      },
+    } as unknown as TableRow;
+
+    const table: Table = {
+      type: "table",
+      children: [headerRow, bodyRow],
+    } as Table;
+
+    const mdast: Root = { type: "root", children: [table] };
+
+    const diagnostics = tableColumnCount("", mdast);
+    expect(diagnostics).toHaveLength(1);
+    expect(diagnostics[0].offset).toBe(0);
   });
 });

@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { lintMarkdown } from "../../linter";
+import { noEmptyLinkText } from "../noEmptyLinkText";
+import type { Root, Link } from "mdast";
 
 describe("E06 noEmptyLinkText", () => {
   it.each([
@@ -62,5 +64,161 @@ describe("E06 noEmptyLinkText", () => {
     expect(d!.uiHint).toBe("exact");
     expect(d!.messageKey).toBe("lint.E06");
     expect(d!.line).toBe(1);
+  });
+
+  it("clean: link with nested strong text extracts content recursively", () => {
+    // [**bold**](url) — the strong node has children, exercising recursive extraction (lines 24-25)
+    const result = lintMarkdown("[**bold**](https://example.com)");
+    const matches = result.filter((d) => d.ruleId === "E06");
+    expect(matches).toHaveLength(0);
+  });
+
+  it("flagged: link with empty nested emphasis counts as empty text", () => {
+    // Synthetic MDAST: link with an emphasis child whose only child is whitespace text
+    const mdast: Root = {
+      type: "root",
+      children: [
+        {
+          type: "paragraph",
+          children: [
+            {
+              type: "link",
+              url: "https://example.com",
+              children: [
+                {
+                  type: "emphasis",
+                  children: [{ type: "text", value: "  " }],
+                },
+              ],
+              position: {
+                start: { line: 1, column: 1, offset: 0 },
+                end: { line: 1, column: 30, offset: 29 },
+              },
+            } as unknown as Link,
+          ],
+        },
+      ],
+    };
+
+    const diagnostics = noEmptyLinkText("", mdast);
+    expect(diagnostics).toHaveLength(1);
+  });
+
+  it("clean: link with deeply nested text via emphasis extracts content", () => {
+    // Synthetic MDAST: emphasis > strong > text, exercising deeper recursion
+    const mdast: Root = {
+      type: "root",
+      children: [
+        {
+          type: "paragraph",
+          children: [
+            {
+              type: "link",
+              url: "https://example.com",
+              children: [
+                {
+                  type: "emphasis",
+                  children: [
+                    {
+                      type: "strong",
+                      children: [{ type: "text", value: "deep" }],
+                    },
+                  ],
+                },
+              ],
+              position: {
+                start: { line: 1, column: 1, offset: 0 },
+                end: { line: 1, column: 30, offset: 29 },
+              },
+            } as unknown as Link,
+          ],
+        },
+      ],
+    };
+
+    const diagnostics = noEmptyLinkText("", mdast);
+    expect(diagnostics).toHaveLength(0);
+  });
+
+  it("clean: link with image child (null alt) uses 'img' fallback", () => {
+    // Exercises the `child.alt ?? "img"` branch (line 23)
+    const mdast: Root = {
+      type: "root",
+      children: [
+        {
+          type: "paragraph",
+          children: [
+            {
+              type: "link",
+              url: "https://example.com",
+              children: [
+                {
+                  type: "image",
+                  url: "photo.png",
+                  alt: null,
+                },
+              ],
+              position: {
+                start: { line: 1, column: 1, offset: 0 },
+                end: { line: 1, column: 30, offset: 29 },
+              },
+            } as unknown as Link,
+          ],
+        },
+      ],
+    };
+
+    const diagnostics = noEmptyLinkText("", mdast);
+    // Image with null alt falls back to "img", so link is not empty
+    expect(diagnostics).toHaveLength(0);
+  });
+
+  it("uses offset fallback when position.start.offset is undefined", () => {
+    // Exercises the `offset ?? 0` branch (line 48)
+    const mdast: Root = {
+      type: "root",
+      children: [
+        {
+          type: "paragraph",
+          children: [
+            {
+              type: "link",
+              url: "https://example.com",
+              children: [{ type: "text", value: "" }],
+              position: {
+                start: { line: 1, column: 1 },
+                end: { line: 1, column: 25 },
+              },
+            } as unknown as Link,
+          ],
+        },
+      ],
+    };
+
+    const diagnostics = noEmptyLinkText("", mdast);
+    expect(diagnostics).toHaveLength(1);
+    expect(diagnostics[0].offset).toBe(0);
+  });
+
+  it("skips link nodes without position", () => {
+    const mdast: Root = {
+      type: "root",
+      children: [
+        {
+          type: "paragraph",
+          children: [
+            {
+              type: "link",
+              url: "https://example.com",
+              children: [],
+              // No position — should be skipped
+            } as Link,
+          ],
+        },
+      ],
+    };
+
+    const diagnostics = noEmptyLinkText("", mdast);
+    expect(diagnostics).toHaveLength(0);
   });
 });
