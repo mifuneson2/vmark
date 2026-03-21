@@ -10,8 +10,8 @@ Maps every known failure mode to its recovery path and test coverage.
 | 2 | Auto-save write fails (EACCES) | Same as ENOSPC — error toast, retry | Yes | `useAutoSave.fault.test.ts` |
 | 3 | Hot exit capture timeout (>15s) | Coordinator proceeds without state, fresh start on restart | Partial | `hotExitCoordination.test.ts` |
 | 4 | Hot exit storage write fails | Session not saved, logged to stderr | Yes | `storage.rs` tests |
-| 5 | Hot exit session.json corrupted | Falls back to session.prev.json backup | Yes | `settingsStore.fault.test.ts` |
-| 6 | Hot exit both session files corrupted | Fresh start, no session restored | Yes | `settingsStore.fault.test.ts` |
+| 5 | Hot exit session.json corrupted | Falls back to session.prev.json backup | Yes | `src-tauri/src/hot_exit/storage.rs` (Rust tests) |
+| 6 | Hot exit both session files corrupted | Fresh start, no session restored | Yes | `src-tauri/src/hot_exit/storage.rs` (Rust tests) |
 | 7 | Crash recovery snapshot write fails | Silent, retried next 10s cycle | Yes | `crashRecovery.test.ts` |
 | 8 | Crash recovery snapshot corrupted | Skipped individually, other snapshots still restored | Partial | `useCrashRecoveryStartup.test.ts` |
 | 9 | Crash recovery dir not readable | Silent failure, no recovery | No | — |
@@ -53,7 +53,7 @@ Maps every known failure mode to its recovery path and test coverage.
 |---|-------------|---------------|---------|-----------|
 | 26 | MCP handler throws | Error sent back to client, other handlers unaffected | Yes | `mcpBridge/__tests__/` |
 | 27 | MCP bridge WebSocket drops | Client gets no response, timeout on their side | Partial | — |
-| 28 | MCP client sends invalid auth token | Connection rejected with error message | Yes | `state.rs` auth tests |
+| 28 | MCP client sends invalid auth token | Connection rejected with error message | Partial | `state.rs` (token generation only — server handshake needs integration test) |
 | 29 | MCP bridge respond() fails | Logged, client gets no response (timeout) | Partial | — |
 
 ## Editor

@@ -209,17 +209,11 @@ async fn handle_connection(stream: TcpStream, addr: SocketAddr, app: AppHandle, 
                                     return Ok(false);
                                 }
                             }
-                            // Allow identify messages before auth (backwards compat)
-                            if ws_msg.msg_type == "identify" {
-                                // Old client without auth — accept but log warning
-                                log::warn!(
-                                    "[MCP Bridge] Client {} sent identify without auth (legacy client)",
-                                    client_id
-                                );
-                                // Process the identify message
-                                let _ = handle_message(&text, client_id, &app).await;
-                                return Ok(true);
-                            }
+                            // Reject any non-auth first message (including identify)
+                            log::warn!(
+                                "[MCP Bridge] Client {} sent '{}' before auth — rejected",
+                                client_id, ws_msg.msg_type
+                            );
                         }
                         // Unknown first message — reject
                         return Ok(false);
@@ -265,6 +259,8 @@ async fn handle_connection(stream: TcpStream, addr: SocketAddr, app: AppHandle, 
     }
 
     if !authenticated {
+        // Give sender task a moment to flush the auth failure message
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
         // Cleanup and disconnect
         let state = get_bridge_state();
         let mut guard = state.lock().await;
