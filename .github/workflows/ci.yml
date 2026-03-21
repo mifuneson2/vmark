@@ -61,6 +61,21 @@ jobs:
           key: rust-test-${{ runner.os }}-${{ hashFiles('src-tauri/Cargo.lock') }}
           restore-keys: rust-test-${{ runner.os }}-
 
+      - name: Create sidecar stub for Tauri build script
+        shell: bash
+        run: |
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            triple="x86_64-pc-windows-msvc"
+            ext=".exe"
+          elif [[ "$RUNNER_OS" == "Linux" ]]; then
+            triple="x86_64-unknown-linux-gnu"
+            ext=""
+          else
+            triple="aarch64-apple-darwin"
+            ext=""
+          fi
+          touch "src-tauri/binaries/vmark-mcp-server-${triple}${ext}"
+
       - run: cargo test --manifest-path src-tauri/Cargo.toml
 
       - name: Install cargo-audit
