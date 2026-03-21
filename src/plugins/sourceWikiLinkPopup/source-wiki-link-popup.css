@@ -46,13 +46,17 @@
   outline: none;
 }
 
-/* Input focus: caret is the indicator (per design rules) */
-.source-wiki-link-popup-target:focus,
-.source-wiki-link-popup-target:focus-visible {
+/* Input focus: caret is the primary indicator */
+.source-wiki-link-popup-target:focus {
   border: none;
   outline: none;
   box-shadow: none;
-  /* Caret visibility indicates focus */
+}
+
+/* Keyboard focus: subtle background hint alongside caret */
+.source-wiki-link-popup-target:focus-visible {
+  outline: none;
+  background: var(--hover-bg);
 }
 
 .source-wiki-link-popup-target::placeholder {

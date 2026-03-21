@@ -46,13 +46,17 @@
   line-height: 1.4;
 }
 
-/* Input focus: caret is the indicator (per design rules) */
-.footnote-popup-textarea:focus,
-.footnote-popup-textarea:focus-visible {
+/* Input focus: caret is the primary indicator */
+.footnote-popup-textarea:focus {
   border: none;
   outline: none;
   box-shadow: none;
-  /* Caret visibility indicates focus */
+}
+
+/* Keyboard focus: subtle background hint alongside caret */
+.footnote-popup-textarea:focus-visible {
+  outline: none;
+  background: var(--hover-bg);
 }
 
 .footnote-popup-textarea::placeholder {

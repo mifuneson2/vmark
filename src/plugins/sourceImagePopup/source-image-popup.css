@@ -59,15 +59,19 @@
   outline: none;
 }
 
-/* Input focus: caret is the indicator (per design rules) */
+/* Input focus: caret is the primary indicator */
 .source-image-popup-src:focus,
-.source-image-popup-src:focus-visible,
-.source-image-popup-alt:focus,
-.source-image-popup-alt:focus-visible {
+.source-image-popup-alt:focus {
   border: none;
   outline: none;
   box-shadow: none;
-  /* Caret visibility indicates focus */
+}
+
+/* Keyboard focus: subtle background hint alongside caret */
+.source-image-popup-src:focus-visible,
+.source-image-popup-alt:focus-visible {
+  outline: none;
+  background: var(--hover-bg);
 }
 
 .source-image-popup-src::placeholder,
