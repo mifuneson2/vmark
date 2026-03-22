@@ -43,13 +43,19 @@ npm install -g @openai/codex
 codex login                   # 使用 ChatGPT 訂閱登入（推薦）
 ```
 
-2. 在 Claude Code 中安裝並啟用 codex-toolkit 插件：
+2. 新增 xiaolai 插件市集（僅首次需要）：
+
+```bash
+claude plugin marketplace add xiaolai/claude-plugin-marketplace
+```
+
+3. 在 Claude Code 中安裝並啟用 codex-toolkit 插件：
 
 ```bash
 claude plugin install codex-toolkit@xiaolai --scope project
 ```
 
-3. 確認 Codex 可用：
+4. 確認 Codex 可用：
 
 ```bash
 codex --version

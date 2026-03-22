@@ -43,13 +43,19 @@ npm install -g @openai/codex
 codex login                   # Iniciar sesión con suscripción ChatGPT (recomendado)
 ```
 
-2. Instala y habilita el plugin codex-toolkit en Claude Code:
+2. Añade el marketplace de plugins xiaolai (solo la primera vez):
+
+```bash
+claude plugin marketplace add xiaolai/claude-plugin-marketplace
+```
+
+3. Instala y habilita el plugin codex-toolkit en Claude Code:
 
 ```bash
 claude plugin install codex-toolkit@xiaolai --scope project
 ```
 
-3. Verifica que Codex está disponible:
+4. Verifica que Codex está disponible:
 
 ```bash
 codex --version

@@ -43,13 +43,19 @@ npm install -g @openai/codex
 codex login                   # ChatGPT 구독으로 로그인 (권장)
 ```
 
-2. Claude Code에 codex-toolkit 플러그인 설치 및 활성화:
+2. xiaolai 플러그인 마켓플레이스 추가 (처음 한 번만):
+
+```bash
+claude plugin marketplace add xiaolai/claude-plugin-marketplace
+```
+
+3. Claude Code에 codex-toolkit 플러그인 설치 및 활성화:
 
 ```bash
 claude plugin install codex-toolkit@xiaolai --scope project
 ```
 
-3. Codex가 사용 가능한지 확인:
+4. Codex가 사용 가능한지 확인:
 
 ```bash
 codex --version
