@@ -2,12 +2,18 @@
  * Tests for safeStorage.ts — safe localStorage wrapper for Zustand.
  *
  * Covers: getItem, setItem, removeItem, QuotaExceededError handling,
- * non-quota error re-throwing, and single-warning behavior.
+ * per-key toast warnings, non-quota error re-throwing, and multi-instance behavior.
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
-// We need fresh imports to reset the quotaWarned closure
+const mockToastWarning = vi.fn();
+
+vi.mock("sonner", () => ({
+  toast: { warning: mockToastWarning },
+}));
+
+// We need fresh imports to reset the warnedKeys closure
 async function freshImport() {
   vi.resetModules();
   return import("./safeStorage");
@@ -16,6 +22,7 @@ async function freshImport() {
 describe("createSafeStorage", () => {
   beforeEach(() => {
     localStorage.clear();
+    mockToastWarning.mockClear();
   });
 
   // ---- getItem ----
@@ -109,63 +116,136 @@ describe("createSafeStorage", () => {
     });
 
     function createQuotaError(): DOMException {
-      const error = new DOMException("Storage quota exceeded", "QuotaExceededError");
-      return error;
+      return new DOMException("Storage quota exceeded", "QuotaExceededError");
     }
 
     it("catches QuotaExceededError without throwing", async () => {
       const { createSafeStorage } = await freshImport();
       const storage = createSafeStorage();
 
-      setItemSpy = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
-        throw createQuotaError();
-      });
+      setItemSpy = vi
+        .spyOn(Storage.prototype, "setItem")
+        .mockImplementation(() => {
+          throw createQuotaError();
+        });
 
       expect(() => storage.setItem("big-key", "x".repeat(1000))).not.toThrow();
     });
 
-    it("logs error on first QuotaExceededError", async () => {
+    it("logs error on every QuotaExceededError", async () => {
       const { createSafeStorage } = await freshImport();
       const storage = createSafeStorage();
 
-      setItemSpy = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
-        throw createQuotaError();
-      });
+      setItemSpy = vi
+        .spyOn(Storage.prototype, "setItem")
+        .mockImplementation(() => {
+          throw createQuotaError();
+        });
 
       storage.setItem("key1", "value");
       expect(consoleErrorSpy).toHaveBeenCalledTimes(1);
-      // safeStorageError logs as: ("[SafeStorage]", "QuotaExceededError for key ...")
       expect(consoleErrorSpy).toHaveBeenCalledWith(
         "[SafeStorage]",
         expect.stringContaining("QuotaExceededError"),
       );
     });
 
-    it("only logs once for repeated QuotaExceededErrors", async () => {
+    it("shows toast warning per unique key", async () => {
       const { createSafeStorage } = await freshImport();
       const storage = createSafeStorage();
 
-      setItemSpy = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
-        throw createQuotaError();
-      });
+      setItemSpy = vi
+        .spyOn(Storage.prototype, "setItem")
+        .mockImplementation(() => {
+          throw createQuotaError();
+        });
+
+      storage.setItem("store-a", "value1");
+      storage.setItem("store-b", "value2");
+
+      expect(mockToastWarning).toHaveBeenCalledTimes(2);
+    });
+
+    it("shows toast only once per key on repeated failures", async () => {
+      const { createSafeStorage } = await freshImport();
+      const storage = createSafeStorage();
+
+      setItemSpy = vi
+        .spyOn(Storage.prototype, "setItem")
+        .mockImplementation(() => {
+          throw createQuotaError();
+        });
+
+      storage.setItem("store-a", "v1");
+      storage.setItem("store-a", "v2");
+      storage.setItem("store-a", "v3");
+
+      expect(mockToastWarning).toHaveBeenCalledTimes(1);
+    });
+
+    it("toast message includes the key name", async () => {
+      const { createSafeStorage } = await freshImport();
+      const storage = createSafeStorage();
+
+      setItemSpy = vi
+        .spyOn(Storage.prototype, "setItem")
+        .mockImplementation(() => {
+          throw createQuotaError();
+        });
+
+      storage.setItem("my-store", "data");
+
+      expect(mockToastWarning).toHaveBeenCalledWith(
+        expect.stringContaining("my-store"),
+      );
+    });
+
+    it("uses custom resolver when registered", async () => {
+      const { createSafeStorage, setSafeStorageMessageResolver } =
+        await freshImport();
+      setSafeStorageMessageResolver(
+        (key) => `Custom: ${key} is full`,
+      );
+      const storage = createSafeStorage();
+
+      setItemSpy = vi
+        .spyOn(Storage.prototype, "setItem")
+        .mockImplementation(() => {
+          throw createQuotaError();
+        });
+
+      storage.setItem("settings", "data");
+      expect(mockToastWarning).toHaveBeenCalledWith("Custom: settings is full");
+    });
+
+    it("logs error on every attempt even if toast is suppressed", async () => {
+      const { createSafeStorage } = await freshImport();
+      const storage = createSafeStorage();
+
+      setItemSpy = vi
+        .spyOn(Storage.prototype, "setItem")
+        .mockImplementation(() => {
+          throw createQuotaError();
+        });
 
       storage.setItem("key1", "value1");
-      storage.setItem("key2", "value2");
-      storage.setItem("key3", "value3");
+      storage.setItem("key1", "value2");
+      storage.setItem("key1", "value3");
 
-      expect(consoleErrorSpy).toHaveBeenCalledTimes(1);
+      expect(consoleErrorSpy).toHaveBeenCalledTimes(3);
     });
 
     it("includes key name in error message", async () => {
       const { createSafeStorage } = await freshImport();
       const storage = createSafeStorage();
 
-      setItemSpy = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
-        throw createQuotaError();
-      });
+      setItemSpy = vi
+        .spyOn(Storage.prototype, "setItem")
+        .mockImplementation(() => {
+          throw createQuotaError();
+        });
 
       storage.setItem("my-store", "data");
-      // safeStorageError logs as: ("[SafeStorage]", "QuotaExceededError for key ...")
       expect(consoleErrorSpy).toHaveBeenCalledWith(
         "[SafeStorage]",
         expect.stringContaining("my-store"),
@@ -176,9 +256,11 @@ describe("createSafeStorage", () => {
       const { createSafeStorage } = await freshImport();
       const storage = createSafeStorage();
 
-      setItemSpy = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
-        throw new DOMException("Access denied", "SecurityError");
-      });
+      setItemSpy = vi
+        .spyOn(Storage.prototype, "setItem")
+        .mockImplementation(() => {
+          throw new DOMException("Access denied", "SecurityError");
+        });
 
       expect(() => storage.setItem("key", "val")).toThrow("Access denied");
     });
@@ -187,9 +269,11 @@ describe("createSafeStorage", () => {
       const { createSafeStorage } = await freshImport();
       const storage = createSafeStorage();
 
-      setItemSpy = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
-        throw new TypeError("Something went wrong");
-      });
+      setItemSpy = vi
+        .spyOn(Storage.prototype, "setItem")
+        .mockImplementation(() => {
+          throw new TypeError("Something went wrong");
+        });
 
       expect(() => storage.setItem("key", "val")).toThrow(TypeError);
     });
@@ -198,9 +282,11 @@ describe("createSafeStorage", () => {
       const { createSafeStorage } = await freshImport();
       const storage = createSafeStorage();
 
-      setItemSpy = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
-        throw new Error("Unknown error");
-      });
+      setItemSpy = vi
+        .spyOn(Storage.prototype, "setItem")
+        .mockImplementation(() => {
+          throw new Error("Unknown error");
+        });
 
       expect(() => storage.setItem("key", "val")).toThrow("Unknown error");
     });

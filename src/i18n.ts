@@ -23,6 +23,7 @@ import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 import resourcesToBackend from "i18next-resources-to-backend";
 import { useSettingsStore } from "@/stores/settingsStore";
+import { setSafeStorageMessageResolver } from "@/utils/safeStorage";
 
 const localeModules = import.meta.glob("./locales/*/*.json");
 
@@ -68,6 +69,11 @@ i18n
 
 // Set <html lang> on initial load for accessibility/spellcheck
 document.documentElement.lang = i18n.resolvedLanguage ?? i18n.language ?? "en";
+
+// Wire up i18n-aware messages for safeStorage quota warnings
+setSafeStorageMessageResolver((key) =>
+  i18n.t("dialog:toast.localStorageQuotaExceeded", { key })
+);
 /* v8 ignore stop */
 
 // Update <html lang> on subsequent language changes

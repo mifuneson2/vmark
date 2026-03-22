@@ -119,6 +119,7 @@
     "failedToSaveDroppedImages": "Failed to save dropped images.",
     "failedToSaveClipboardImage": "Failed to save image from clipboard.",
     "failedToResolveHomePath": "Failed to resolve home directory path.",
-    "failedToCopyToAssets": "Failed to copy image to assets folder."
+    "failedToCopyToAssets": "Failed to copy image to assets folder.",
+    "localStorageQuotaExceeded": "存储空间已满 — 在释放空间之前，对\"{{key}}\"的更改将不会被保存。"
   }
 }

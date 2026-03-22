@@ -119,6 +119,7 @@
     "failedToSaveDroppedImages": "Failed to save dropped images.",
     "failedToSaveClipboardImage": "Failed to save image from clipboard.",
     "failedToResolveHomePath": "Failed to resolve home directory path.",
-    "failedToCopyToAssets": "Failed to copy image to assets folder."
+    "failedToCopyToAssets": "Failed to copy image to assets folder.",
+    "localStorageQuotaExceeded": "Almacenamiento lleno — los cambios en \"{{key}}\" no se guardarán hasta que se libere espacio."
   }
 }
