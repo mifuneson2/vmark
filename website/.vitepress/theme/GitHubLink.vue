@@ -2,7 +2,7 @@
   <a
     href="https://github.com/xiaolai/vmark"
     target="_blank"
-    rel="noopener"
+    rel="noopener noreferrer"
     class="github-link"
     title="View on GitHub"
   >

@@ -196,7 +196,7 @@ onMounted(() => {
 
     <!-- Error state - show fallback without alarming message -->
     <div v-else-if="error" class="fallback">
-      <a :href="`https://github.com/${REPO_OWNER}/${REPO_NAME}/releases`" target="_blank" class="fallback-button">
+      <a :href="`https://github.com/${REPO_OWNER}/${REPO_NAME}/releases`" target="_blank" rel="noopener noreferrer" class="fallback-button">
         View Downloads on GitHub →
       </a>
     </div>
@@ -234,7 +234,7 @@ onMounted(() => {
       </div>
 
       <p class="all-releases">
-        <a :href="`https://github.com/${REPO_OWNER}/${REPO_NAME}/releases`" target="_blank">
+        <a :href="`https://github.com/${REPO_OWNER}/${REPO_NAME}/releases`" target="_blank" rel="noopener noreferrer">
           View all releases on GitHub →
         </a>
       </p>
