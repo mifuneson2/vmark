@@ -366,6 +366,28 @@ Some text
   });
 });
 
+describe("large document handling (issue #523)", () => {
+  it("extractHeadings handles a 500KB document without truncation", () => {
+    // Build a ~500K character document with headings scattered throughout
+    const sectionBody = "Word ".repeat(400); // ~2000 chars per section
+    const sections: string[] = [];
+    for (let i = 0; i < 50; i++) {
+      sections.push(`## Section ${i + 1}\n\n${sectionBody}`);
+    }
+    const bigDoc = `# Title\n\n${sections.join("\n\n")}`;
+
+    expect(bigDoc.length).toBeGreaterThan(100000); // exceeds old threshold
+    expect(bigDoc.length).toBeLessThan(500000); // within new threshold
+
+    const headings = extractHeadings(bigDoc);
+
+    expect(headings).toHaveLength(51); // 1 H1 title + 50 H2 sections
+    expect(headings[0]).toMatchObject({ level: 1, text: "Title" });
+    expect(headings[1]).toMatchObject({ level: 2, text: "Section 1" });
+    expect(headings[50]).toMatchObject({ level: 2, text: "Section 50" });
+  });
+});
+
 describe("integration: collapsed state with level:text key", () => {
   // This documents the expected behavior for duplicate heading texts
   it("same text at different levels should be distinguishable", () => {

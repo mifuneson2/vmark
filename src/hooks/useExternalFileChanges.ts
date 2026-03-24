@@ -16,6 +16,8 @@
  *     prevents false-positive "file deleted" on atomic write renames
  *   - handleModifyEvent() is shared by modify/create and rename-fallback
  *   - Deleted files get isMissing flag (no auto-close — user may want to save)
+ *   - Divergent docs auto-recover when disk content matches editor content —
+ *     e.g. git checkout restoring the same content the user has locally
  *
  * @coordinates-with useWindowFileWatcher.ts — starts/stops the Rust watcher
  * @coordinates-with documentStore.ts — reads dirty state, updates content on reload
@@ -268,6 +270,13 @@ export function useExternalFileChanges(): void {
 
       // Disk matches what we last wrote — no actual external change
       if (diskContent === doc.lastDiskContent) {
+        return;
+      }
+
+      // Divergent doc: disk now matches editor — auto-clear divergent state so auto-save resumes.
+      // This happens when e.g. git checkout restores the same content that's in the editor.
+      if (doc.isDivergent && diskContent === doc.content) {
+        useDocumentStore.getState().loadContent(tabId, diskContent, changedPath, detectLinebreaks(diskContent));
         return;
       }
 

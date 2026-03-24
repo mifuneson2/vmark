@@ -1541,3 +1541,111 @@ describe("useExternalFileChanges — multi-file batch dialog", () => {
     errorSpy.mockRestore();
   });
 });
+
+describe("useExternalFileChanges — divergent auto-recovery (issue #522)", () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+    mocks.listen.mockImplementation(() => Promise.resolve(() => {}));
+    mocks.matchesPendingSave.mockReturnValue(false);
+    mocks.hasPendingSave.mockReturnValue(false);
+  });
+
+  function seedDivergentStore(editorContent: string, diskLastContent: string) {
+    useTabStore.setState({
+      tabs: {
+        main: [{ id: "tab-1", title: "test.md", filePath: "/workspace/test.md", isPinned: false }],
+      },
+      activeTabId: { main: "tab-1" },
+      untitledCounter: 0,
+      closedTabs: {},
+    });
+
+    useDocumentStore.setState({
+      documents: {
+        "tab-1": {
+          content: editorContent,
+          savedContent: diskLastContent,
+          lastDiskContent: diskLastContent,
+          filePath: "/workspace/test.md",
+          isDirty: true,
+          documentId: 0,
+          cursorInfo: null,
+          lastAutoSave: null,
+          isMissing: false,
+          isDivergent: true, // User previously chose "Keep my changes"
+          lineEnding: "unknown",
+          hardBreakStyle: "unknown",
+        },
+      },
+    });
+  }
+
+  it("auto-clears divergent when disk content matches editor content (git checkout restores same content)", async () => {
+    // Scenario: user edited doc → chose "Keep my changes" → isDivergent = true
+    // Then git checkout restores the original file (same content as what user has)
+    seedDivergentStore("my local content", "old disk content");
+    mocks.readTextFile.mockResolvedValue("my local content"); // disk now matches editor
+
+    const callback = await setupHookAndCallback();
+
+    await callback({
+      payload: {
+        watchId: "main",
+        rootPath: "/workspace",
+        paths: ["/workspace/test.md"],
+        kind: "modify",
+      },
+    });
+
+    const doc = useDocumentStore.getState().documents["tab-1"];
+    // isDivergent must be cleared — auto-save can resume
+    expect(doc?.isDivergent).toBe(false);
+    // Content stays the same (no reload needed)
+    expect(doc?.content).toBe("my local content");
+    // No prompt shown to user
+    expect(mocks.dialogMessage).not.toHaveBeenCalled();
+  });
+
+  it("does NOT auto-clear divergent when disk content still differs from editor", async () => {
+    // Scenario: divergent doc, disk changes again but still doesn't match editor
+    seedDivergentStore("my local content", "old disk content");
+    mocks.readTextFile.mockResolvedValue("yet another external change"); // still different from editor
+
+    const callback = await setupHookAndCallback();
+
+    await callback({
+      payload: {
+        watchId: "main",
+        rootPath: "/workspace",
+        paths: ["/workspace/test.md"],
+        kind: "modify",
+      },
+    });
+
+    // Should still be divergent — disk doesn't match editor
+    const doc = useDocumentStore.getState().documents["tab-1"];
+    expect(doc?.isDivergent).toBe(true);
+  });
+
+  it("does not trigger divergent recovery when disk matches lastDiskContent (no-op write)", async () => {
+    // Scenario: divergent doc, disk write is a no-op (matches lastDiskContent, not editor)
+    seedDivergentStore("my local content", "old disk content");
+    mocks.readTextFile.mockResolvedValue("old disk content"); // matches lastDiskContent (early return)
+
+    const callback = await setupHookAndCallback();
+
+    await callback({
+      payload: {
+        watchId: "main",
+        rootPath: "/workspace",
+        paths: ["/workspace/test.md"],
+        kind: "modify",
+      },
+    });
+
+    // Early return from lastDiskContent check — isDivergent unchanged
+    const doc = useDocumentStore.getState().documents["tab-1"];
+    expect(doc?.isDivergent).toBe(true);
+    expect(mocks.dialogMessage).not.toHaveBeenCalled();
+  });
+});

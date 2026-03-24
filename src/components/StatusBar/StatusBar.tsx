@@ -114,7 +114,7 @@ export function StatusBar() {
     // Dismiss error in status bar — user can retry from the picker or resubmit
     useAiInvocationStore.getState().dismissError();
   }, []);
-  const showAutoSavePaused = isMissing && autoSaveEnabled;
+  const showAutoSavePaused = (isMissing || isDivergent) && autoSaveEnabled;
 
   const tabs = useTabStore((state) => (isDocumentWindow ? state.tabs[windowLabel] ?? EMPTY_TABS : EMPTY_TABS));
   const activeTabId = useTabStore((state) => (isDocumentWindow ? state.activeTabId[windowLabel] : null));

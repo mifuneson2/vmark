@@ -283,7 +283,15 @@ export class WebSocketBridge implements Bridge {
     const port = this.resolvePort();
     if (port === undefined) {
       this.connecting = false;
-      // Let the caller (scheduleReconnect's catch block) handle reconnection
+      // Port file not present yet (VMark hasn't started). If autoReconnect is
+      // enabled, schedule a retry so the sidecar keeps polling until VMark
+      // writes the port file. Without this call the reconnect loop never starts
+      // because handleDisconnect() (which normally triggers scheduleReconnect)
+      // is never reached when no WebSocket is created. See issue #524.
+      if (this.autoReconnect && !this.intentionalDisconnect) {
+        this.logger.debug('Port not available yet, scheduling reconnect...');
+        this.scheduleReconnect();
+      }
       throw new Error(
         'Cannot determine VMark port. Is VMark running? ' +
           'The port file (mcp-port) was not found in the app data directory.'

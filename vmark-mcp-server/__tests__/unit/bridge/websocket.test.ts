@@ -350,6 +350,83 @@ describe('WebSocketBridge', () => {
       // Restart server for afterEach cleanup
       server = new WebSocketServer({ port: TEST_PORT });
     });
+
+    it('should schedule reconnect when port is undefined and autoReconnect is true', async () => {
+      // Simulates the case where VMark has not started yet and the port file
+      // does not exist. The portResolver returns undefined, connect() throws,
+      // but a reconnect must still be scheduled so the sidecar retries later.
+      const portUnavailableBridge = new WebSocketBridge({
+        portResolver: () => undefined,
+        autoReconnect: true,
+        reconnectDelay: 100,
+        maxReconnectAttempts: 3,
+      });
+
+      const scheduleSpy = vi.spyOn(
+        portUnavailableBridge as unknown as { scheduleReconnect: () => void },
+        'scheduleReconnect'
+      );
+
+      try {
+        await portUnavailableBridge.connect();
+      } catch {
+        // Expected to throw because port is undefined
+      }
+
+      expect(scheduleSpy).toHaveBeenCalled();
+
+      // Clean up — cancel the pending reconnect timer
+      await portUnavailableBridge.disconnect();
+    });
+
+    it('should NOT schedule reconnect when port is undefined and autoReconnect is false', async () => {
+      const portUnavailableBridge = new WebSocketBridge({
+        portResolver: () => undefined,
+        autoReconnect: false,
+      });
+
+      const scheduleSpy = vi.spyOn(
+        portUnavailableBridge as unknown as { scheduleReconnect: () => void },
+        'scheduleReconnect'
+      );
+
+      try {
+        await portUnavailableBridge.connect();
+      } catch {
+        // Expected to throw
+      }
+
+      expect(scheduleSpy).not.toHaveBeenCalled();
+    });
+
+    it('should cancel reconnect timer when disconnect is called after port-unavailable retry is scheduled', async () => {
+      // When port is unavailable, a reconnect is scheduled. If the user then
+      // calls disconnect() explicitly, the scheduled timer must be cleared so
+      // no further reconnect attempts happen.
+      const portUnavailableBridge = new WebSocketBridge({
+        portResolver: () => undefined,
+        autoReconnect: true,
+        reconnectDelay: 200,
+        maxReconnectAttempts: 5,
+      });
+
+      // connect() will throw (port unavailable) but scheduleReconnect() will
+      // have been called, setting an internal reconnectTimer.
+      try {
+        await portUnavailableBridge.connect();
+      } catch {
+        // Expected
+      }
+
+      // disconnect() should cancel the pending timer and set intentionalDisconnect.
+      await portUnavailableBridge.disconnect();
+
+      // After disconnect, no further reconnection should occur.
+      // We verify by checking the bridge stays disconnected after the would-be
+      // reconnect delay.
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      expect(portUnavailableBridge.isConnected()).toBe(false);
+    });
   });
 
   describe('connection lost during request', () => {
