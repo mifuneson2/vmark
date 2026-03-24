@@ -36,6 +36,7 @@
  * @coordinates-with useWorkspaceSync.ts — cross-window workspace config rehydration
  * @coordinates-with openPolicy.ts — resolves workspace root for external files
  * @coordinates-with lib.rs (Rust) — listens for "ready" event per window
+ * @coordinates-with tabCleanup.ts — cleanupTabState used in removeTransferredTabData
  * @module contexts/WindowContext
  */
 import { createContext, useContext, useEffect, useState, useRef, type ReactNode } from "react";

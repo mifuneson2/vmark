@@ -18,6 +18,7 @@
  *
  * @coordinates-with TabContextMenu.tsx — renders the items this hook produces
  * @coordinates-with tabTransferActions.ts — restoreTransferredTab for undo
+ * @coordinates-with tabCleanup.ts — cleanupTabState used on "Move to New Window" detach
  * @module components/Tabs/useTabContextMenuActions
  */
 import { useCallback, useMemo } from "react";
