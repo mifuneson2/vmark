@@ -3,6 +3,8 @@
 //! These commands provide session capture, restore, and management for the hot exit feature.
 //! They are used both in production (update restart flow) and for developer testing.
 
+use std::sync::LazyLock;
+use tokio::sync::Mutex;
 use tauri::AppHandle;
 use super::session::{SessionData, WindowState};
 use super::storage::{read_session, delete_session, write_session_atomic};
@@ -17,6 +19,11 @@ use super::coordinator::{
     RestoreMultiWindowResult,
 };
 
+/// Serialization guard for the read-merge-write section of `hot_exit_capture`.
+/// Prevents TOCTOU races when two concurrent captures (e.g., restart + settings button)
+/// both read the previous session, merge independently, and clobber each other's result.
+static CAPTURE_LOCK: LazyLock<Mutex<()>> = LazyLock::new(|| Mutex::new(()));
+
 /// Capture session from all windows and persist to disk atomically.
 ///
 /// If the capture is partial (some windows timed out), merges with the
@@ -24,6 +31,7 @@ use super::coordinator::{
 /// instead of being silently dropped.
 #[tauri::command]
 pub async fn hot_exit_capture(app: AppHandle) -> Result<SessionData, String> {
+    let _guard = CAPTURE_LOCK.lock().await;
     let CaptureResult { mut session, expected_labels } = capture_session(&app).await?;
 
     // Merge partial captures: only resurrect windows that were expected (alive
