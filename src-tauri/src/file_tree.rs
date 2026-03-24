@@ -9,6 +9,8 @@
 //!     plus FILE_ATTRIBUTE_HIDDEN/SYSTEM on Windows.
 //!   - Errors on individual entries are silently skipped so one bad symlink
 //!     doesn't break the entire listing.
+//!   - Results are capped at MAX_DIR_ENTRIES (10,000) to prevent unbounded
+//!     memory use on directories with millions of files.
 
 use serde::Serialize;
 use std::fs;
