@@ -42,6 +42,9 @@ fn is_hidden_by_metadata(_: &fs::Metadata) -> bool {
     false
 }
 
+/// Maximum directory entries to return (safety limit for huge directories).
+pub const MAX_DIR_ENTRIES: usize = 10_000;
+
 /// List immediate children of a directory for the file explorer sidebar.
 ///
 /// Returns name, path, directory flag, and hidden flag for each entry.
@@ -55,6 +58,10 @@ pub fn list_directory_entries(path: &str) -> Result<Vec<DirectoryEntry>, String>
     let mut results = Vec::new();
 
     for entry in entries {
+        if results.len() >= MAX_DIR_ENTRIES {
+            break;
+        }
+
         let entry = match entry {
             Ok(entry) => entry,
             Err(_) => continue,
@@ -89,6 +96,25 @@ mod tests {
     use super::*;
     use std::fs;
     use tempfile::tempdir;
+
+    #[test]
+    fn list_directory_entries_constant_exists() {
+        assert!(MAX_DIR_ENTRIES >= 1000);
+        assert!(MAX_DIR_ENTRIES <= 100_000);
+    }
+
+    #[test]
+    fn list_directory_entries_under_limit_returns_all() {
+        let dir = tempdir().unwrap();
+        let root = dir.path();
+
+        for i in 0..5 {
+            fs::write(root.join(format!("file_{i}.md")), "content").unwrap();
+        }
+
+        let entries = list_directory_entries(root.to_str().unwrap()).unwrap();
+        assert_eq!(entries.len(), 5);
+    }
 
     #[test]
     fn list_directory_entries_marks_dotfiles_hidden() {
