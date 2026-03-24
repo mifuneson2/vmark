@@ -214,8 +214,26 @@ export async function restoreTabs(windowLabel: string, windowState: WindowState)
   // Build tab ID mapping: session tab ID -> new tab ID
   const tabIdMap = new Map<string, string>();
 
+  // Deduplicate tabs by file_path before restoring.
+  // tabStore.createTab deduplicates by file_path, so a second createTab with the same
+  // path returns the first tab's ID — causing restoreDocumentState to overwrite the
+  // first tab's content. We skip later duplicates here to prevent silent data loss.
+  const seenFilePaths = new Set<string>();
+  const deduplicatedTabs = windowState.tabs.filter((tabState) => {
+    if (!tabState.file_path) return true; // untitled tabs are never duplicates
+    const normalized = tabState.file_path.toLowerCase();
+    if (seenFilePaths.has(normalized)) {
+      hotExitWarn(
+        `Skipping duplicate tab '${tabState.id}' with file_path '${tabState.file_path}' during restore`
+      );
+      return false;
+    }
+    seenFilePaths.add(normalized);
+    return true;
+  });
+
   // Restore each tab
-  for (const tabState of windowState.tabs) {
+  for (const tabState of deduplicatedTabs) {
     // Create tab (createTab auto-activates, but we'll set active tab explicitly after)
     const newTabId = tabStore.createTab(windowLabel, tabState.file_path);
 

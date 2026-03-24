@@ -1107,8 +1107,8 @@ describe('restoreHelpers', () => {
       const ws = makeWindowState({
         active_tab_id: 'saved-2',
         tabs: [
-          makeTabState({ id: 'saved-1' }),
-          makeTabState({ id: 'saved-2' }),
+          makeTabState({ id: 'saved-1', file_path: '/path/to/a.md' }),
+          makeTabState({ id: 'saved-2', file_path: '/path/to/b.md' }),
         ],
       });
 
@@ -1155,6 +1155,47 @@ describe('restoreHelpers', () => {
       await restoreTabs('main', ws);
 
       expect(mockCreateTab).not.toHaveBeenCalled();
+    });
+
+    it('should skip duplicate file_path tabs and only restore the first', async () => {
+      mockGetTabsByWindow.mockReturnValue([]);
+      let callCount = 0;
+      mockCreateTab.mockImplementation(() => `new-tab-${++callCount}`);
+
+      const ws = makeWindowState({
+        active_tab_id: 'tab-1',
+        tabs: [
+          makeTabState({ id: 'tab-1', file_path: '/path/to/file.md', title: 'file.md' }),
+          makeTabState({ id: 'tab-2', file_path: '/path/to/file.md', title: 'file.md (dup)' }),
+          makeTabState({ id: 'tab-3', file_path: '/path/to/other.md', title: 'other.md' }),
+        ],
+      });
+
+      await restoreTabs('main', ws);
+
+      // Only 2 tabs created (duplicate skipped)
+      expect(mockCreateTab).toHaveBeenCalledTimes(2);
+      expect(mockCreateTab).toHaveBeenCalledWith('main', '/path/to/file.md');
+      expect(mockCreateTab).toHaveBeenCalledWith('main', '/path/to/other.md');
+    });
+
+    it('should not deduplicate untitled tabs (null file_path)', async () => {
+      mockGetTabsByWindow.mockReturnValue([]);
+      let callCount = 0;
+      mockCreateTab.mockImplementation(() => `new-tab-${++callCount}`);
+
+      const ws = makeWindowState({
+        active_tab_id: 'tab-1',
+        tabs: [
+          makeTabState({ id: 'tab-1', file_path: null, title: 'Untitled 1' }),
+          makeTabState({ id: 'tab-2', file_path: null, title: 'Untitled 2' }),
+        ],
+      });
+
+      await restoreTabs('main', ws);
+
+      // Both untitled tabs should be created
+      expect(mockCreateTab).toHaveBeenCalledTimes(2);
     });
   });
 

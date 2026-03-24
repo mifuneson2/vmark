@@ -32,7 +32,27 @@ pub fn validate_and_repair(session: &mut SessionData) -> Vec<String> {
             ));
         }
 
-        // 2. Fix active_tab_id referencing a nonexistent tab
+        // 2. Remove duplicate file_path tabs (keep first occurrence)
+        //    tabStore.createTab deduplicates by file_path, so duplicates cause
+        //    restoreDocumentState to overwrite the first tab's content silently.
+        let mut seen_paths = HashSet::new();
+        let pre_path_count = window.tabs.len();
+        window.tabs.retain(|tab| {
+            match &tab.file_path {
+                Some(path) => seen_paths.insert(path.to_lowercase()),
+                None => true, // untitled tabs are never duplicates
+            }
+        });
+
+        let path_removed = pre_path_count - window.tabs.len();
+        if path_removed > 0 {
+            warnings.push(format!(
+                "Window '{}': removed {} tab(s) with duplicate file_path",
+                window.window_label, path_removed
+            ));
+        }
+
+        // 3. Fix active_tab_id referencing a nonexistent tab
         if let Some(active_id) = &window.active_tab_id {
             let exists = window.tabs.iter().any(|t| t.id == *active_id);
             if !exists {
@@ -47,7 +67,7 @@ pub fn validate_and_repair(session: &mut SessionData) -> Vec<String> {
             }
         }
 
-        // 3. Warn about empty windows (no tabs)
+        // 4. Warn about empty windows (no tabs)
         if window.tabs.is_empty() {
             warnings.push(format!(
                 "Window '{}': contains no tabs",
@@ -102,6 +122,12 @@ mod tests {
                 redo_history: Vec::new(),
             },
         }
+    }
+
+    fn make_tab_with_path(id: &str, path: &str) -> TabState {
+        let mut tab = make_tab(id);
+        tab.file_path = Some(path.to_string());
+        tab
     }
 
     fn make_window(label: &str, tab_ids: &[&str], active: Option<&str>) -> WindowState {
@@ -256,5 +282,59 @@ mod tests {
 
         let warnings = validate_and_repair(&mut session);
         assert!(warnings.is_empty());
+    }
+
+    #[test]
+    fn removes_duplicate_file_paths() {
+        let mut session = make_session(vec![{
+            let mut w = make_window("main", &[], Some("t1"));
+            w.tabs = vec![
+                make_tab_with_path("t1", "/path/to/file.md"),
+                make_tab_with_path("t2", "/path/to/file.md"),
+                make_tab_with_path("t3", "/path/to/other.md"),
+            ];
+            w
+        }]);
+
+        let warnings = validate_and_repair(&mut session);
+
+        assert!(warnings.iter().any(|w| w.contains("duplicate file_path")));
+        let ids: Vec<&str> = session.windows[0]
+            .tabs
+            .iter()
+            .map(|t| t.id.as_str())
+            .collect();
+        assert_eq!(ids, vec!["t1", "t3"]);
+    }
+
+    #[test]
+    fn duplicate_file_path_is_case_insensitive() {
+        let mut session = make_session(vec![{
+            let mut w = make_window("main", &[], Some("t1"));
+            w.tabs = vec![
+                make_tab_with_path("t1", "/Path/To/File.md"),
+                make_tab_with_path("t2", "/path/to/file.md"),
+            ];
+            w
+        }]);
+
+        let warnings = validate_and_repair(&mut session);
+
+        assert!(warnings.iter().any(|w| w.contains("duplicate file_path")));
+        assert_eq!(session.windows[0].tabs.len(), 1);
+        assert_eq!(session.windows[0].tabs[0].id, "t1");
+    }
+
+    #[test]
+    fn untitled_tabs_are_not_deduplicated_by_path() {
+        let mut session = make_session(vec![
+            make_window("main", &["t1", "t2", "t3"], Some("t1")),
+        ]);
+        // All tabs have file_path: None (untitled) — no dedup should occur
+
+        let warnings = validate_and_repair(&mut session);
+
+        assert!(warnings.is_empty());
+        assert_eq!(session.windows[0].tabs.len(), 3);
     }
 }
