@@ -9,7 +9,7 @@
  * - Plugin view: event listener wiring, replace operations
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { Schema } from "@tiptap/pm/model";
 import { EditorState } from "@tiptap/pm/state";
 import { DecorationSet } from "@tiptap/pm/view";
@@ -51,7 +51,7 @@ vi.mock("@/stores/searchStore", () => ({
   },
 }));
 
-import { searchExtension } from "./tiptap";
+import { searchExtension, SEARCH_DOC_CHANGE_DEBOUNCE_MS } from "./tiptap";
 
 /** Flush pending microtasks (used because setMatches is deferred via queueMicrotask) */
 const flushMicrotasks = () => new Promise<void>((r) => queueMicrotask(r));
@@ -639,7 +639,7 @@ describe("search plugin integration", () => {
     expect(mockSearchState.setMatches).toHaveBeenCalledWith(1, 0);
   });
 
-  it("rebuilds decorations on doc change", async () => {
+  it("rebuilds decorations on doc change (after debounce fires)", async () => {
     const plugin = getPlugin();
     const doc = createDoc(["hello world"]);
 
@@ -647,16 +647,24 @@ describe("search plugin integration", () => {
     mockSearchState.query = "hello";
 
     const state = EditorState.create({ doc, schema, plugins: [plugin] });
-    // Trigger query detection
+    // Trigger query detection (immediate rebuild for first query)
     const state2 = state.apply(state.tr);
 
-    // Now change the doc
-    const tr = state2.tr.insertText(" hello", state2.doc.content.size - 1);
-    const _state3 = state2.apply(tr);
-    const _pluginState = plugin.getState(_state3);
+    await flushMicrotasks();
+    expect(mockSearchState.setMatches).toHaveBeenCalledWith(1, 0);
+    mockSearchState.setMatches.mockClear();
+
+    // Change the doc — this schedules a debounced rebuild (no immediate re-scan)
+    const insertTr = state2.tr.insertText(" hello", state2.doc.content.size - 1);
+    const state3 = state2.apply(insertTr);
+
+    // Simulate the debounce timer firing by applying a transaction with the
+    // SEARCH_DEBOUNCED_REBUILD_META key (this is what setTimeout dispatches in production).
+    const debouncedTr = state3.tr.setMeta("searchDebouncedRebuild", true);
+    const _state4 = state3.apply(debouncedTr);
 
     await flushMicrotasks();
-    // Should have found more matches after the insert
+    // After the debounced rebuild, setMatches should reflect the updated doc (2 matches)
     expect(mockSearchState.setMatches).toHaveBeenLastCalledWith(2, 0);
   });
 

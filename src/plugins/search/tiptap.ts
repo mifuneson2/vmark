@@ -14,6 +14,9 @@
  *   - Store subscription uses field-by-field equality (not JSON.stringify)
  *   - Replace operations use imeGuard to avoid conflicts with IME composition
  *   - Regex mode catches invalid patterns gracefully (shows 0 matches, no error)
+ *   - Doc-change rebuilds are debounced by SEARCH_DOC_CHANGE_DEBOUNCE_MS (200ms) to
+ *     avoid rescanning the entire document on every keystroke; query/option changes
+ *     still trigger immediate rebuilds for responsive search-box feedback
  *
  * @coordinates-with searchStore.ts — query, options, match navigation state
  * @coordinates-with FindBar.tsx — UI for find/replace controls
@@ -29,6 +32,15 @@ import { runOrQueueProseMirrorAction } from "@/utils/imeGuard";
 import "./search.css";
 
 const searchPluginKey = new PluginKey("search");
+
+/** Meta key used to trigger a debounced full rebuild transaction from the timeout. */
+const SEARCH_DEBOUNCED_REBUILD_META = "searchDebouncedRebuild";
+
+/**
+ * Milliseconds to wait after a doc change before performing a full match re-scan.
+ * Query/option changes bypass this debounce and rebuild immediately.
+ */
+export const SEARCH_DOC_CHANGE_DEBOUNCE_MS = 200;
 
 interface Match {
   from: number;
@@ -103,6 +115,12 @@ export const searchExtension = Extension.create({
     let lastUseRegex = false;
     let matches: Match[] = [];
 
+    // Debounce state: pending timeout ID and a weak reference to the view
+    // used to dispatch the deferred rebuild transaction.
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+    // eslint-disable-next-line prefer-const
+    let viewRef: { current: import("@tiptap/pm/view").EditorView | null } = { current: null };
+
     return [
       new Plugin({
         key: searchPluginKey,
@@ -118,9 +136,8 @@ export const searchExtension = Extension.create({
               state.wholeWord !== lastWholeWord ||
               state.useRegex !== lastUseRegex;
 
-            const needsRebuild = (queryChanged || tr.docChanged) && (state.isOpen || state.query);
-
-            if (needsRebuild) {
+            // Helper: build and return a new state after a full match re-scan.
+            const fullRebuild = () => {
               lastQuery = state.query;
               lastCaseSensitive = state.caseSensitive;
               lastWholeWord = state.wholeWord;
@@ -134,29 +151,76 @@ export const searchExtension = Extension.create({
                 state.useRegex
               );
 
-              // Defer store update out of ProseMirror's apply() to avoid side-effects during state computation
               const matchCount = matches.length;
               const initialIndex = matchCount > 0 ? 0 : -1;
+              // Defer store update out of ProseMirror's apply() to avoid side-effects during state computation
               queueMicrotask(() => {
                 useSearchStore.getState().setMatches(matchCount, initialIndex);
               });
+
+              const currentIndex = useSearchStore.getState().currentIndex;
+              let decorationSet = DecorationSet.empty;
+              if (state.isOpen && state.query && matches.length > 0) {
+                const decorations = matches.map((match: Match, i: number) =>
+                  Decoration.inline(match.from, match.to, {
+                    class: i === currentIndex ? "search-match search-match-active" : "search-match",
+                  })
+                );
+                decorationSet = DecorationSet.create(tr.doc, decorations);
+              }
+              return { matches, currentIndex, decorationSet };
+            };
+
+            // Path 1 — Debounce timer fired: do the full rebuild now.
+            if (tr.getMeta(SEARCH_DEBOUNCED_REBUILD_META) && (state.isOpen || state.query)) {
+              debounceTimer = null;
+              return fullRebuild();
+            }
+
+            // Path 2 — Query/options changed: immediate rebuild (user expects instant feedback).
+            if (queryChanged && (state.isOpen || state.query)) {
+              // Cancel any pending debounced rebuild since we're doing a full one now
+              if (debounceTimer !== null) {
+                clearTimeout(debounceTimer);
+                debounceTimer = null;
+              }
+              return fullRebuild();
+            }
+
+            // Path 3 — Document changed while search is open (but query unchanged): debounce.
+            // Map existing decorations through the change to keep them roughly positioned,
+            // then schedule a full re-scan after SEARCH_DOC_CHANGE_DEBOUNCE_MS.
+            if (tr.docChanged && (state.isOpen || state.query)) {
+              // Coalesce rapid edits: reset timer on each doc change
+              if (debounceTimer !== null) {
+                clearTimeout(debounceTimer);
+              }
+              debounceTimer = setTimeout(() => {
+                debounceTimer = null;
+                const view = viewRef.current;
+                if (!view || view.isDestroyed) return;
+                runOrQueueProseMirrorAction(view, () => {
+                  view.dispatch(view.state.tr.setMeta(SEARCH_DEBOUNCED_REBUILD_META, true));
+                });
+              }, SEARCH_DOC_CHANGE_DEBOUNCE_MS);
+
+              // Return mapped (stale) decorations until the debounce fires
+              const mappedDecorationSet = value.decorationSet.map(tr.mapping, tr.doc);
+              const currentIndex = useSearchStore.getState().currentIndex;
+              return { matches, currentIndex, decorationSet: mappedDecorationSet };
             }
 
             const currentIndex = useSearchStore.getState().currentIndex;
 
-            // Rebuild decorations only when matches, index, or open state changed
-            if (
-              needsRebuild ||
-              currentIndex !== value.currentIndex
-            ) {
+            // Path 4 — No structural change; only update decorations if active index changed.
+            if (currentIndex !== value.currentIndex) {
               let decorationSet = DecorationSet.empty;
               if (state.isOpen && state.query && matches.length > 0) {
-                const decorations = matches.map((match: Match, i: number) => {
-                  const isActive = i === currentIndex;
-                  return Decoration.inline(match.from, match.to, {
-                    class: isActive ? "search-match search-match-active" : "search-match",
-                  });
-                });
+                const decorations = matches.map((match: Match, i: number) =>
+                  Decoration.inline(match.from, match.to, {
+                    class: i === currentIndex ? "search-match search-match-active" : "search-match",
+                  })
+                );
                 decorationSet = DecorationSet.create(tr.doc, decorations);
               }
               return { matches, currentIndex, decorationSet };
@@ -172,6 +236,8 @@ export const searchExtension = Extension.create({
           },
         },
         view(editorView) {
+          // Store the view reference so the debounce timer can dispatch into it
+          viewRef.current = editorView;
           let lastScrollKey = "";
 
           const scrollToMatch = () => {
@@ -281,6 +347,12 @@ export const searchExtension = Extension.create({
 
           return {
             destroy() {
+              // Clear any pending debounce timer so it won't dispatch into a destroyed view
+              if (debounceTimer !== null) {
+                clearTimeout(debounceTimer);
+                debounceTimer = null;
+              }
+              viewRef.current = null;
               unsubscribe();
               window.removeEventListener("search:replace-current", handleReplaceCurrent);
               window.removeEventListener("search:replace-all", handleReplaceAll);
