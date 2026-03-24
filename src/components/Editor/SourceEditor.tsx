@@ -113,11 +113,11 @@ export function SourceEditor({ hidden = false }: SourceEditorProps) {
     if (!containerRef.current || viewRef.current) return; // Guard: effect deps=[] ensures single run
 
     const searchCounter = createDebouncedSearchCounter(
-      (content, query, caseSensitive, wholeWord, useRegex) => {
-        // Re-read fresh state: search may have closed during the debounce delay
+      (content, _query, _caseSensitive, _wholeWord, _useRegex) => {
+        // Re-read fresh state: search params may have changed during the debounce delay
         const freshState = useSearchStore.getState();
         if (!freshState.isOpen || !freshState.query) return;
-        const matchCount = countMatches(content, query, caseSensitive, wholeWord, useRegex);
+        const matchCount = countMatches(content, freshState.query, freshState.caseSensitive, freshState.wholeWord, freshState.useRegex);
         // Keep currentIndex valid: reset to 0 if out of bounds or -1
         let newIndex = freshState.currentIndex;
         if (matchCount === 0) {

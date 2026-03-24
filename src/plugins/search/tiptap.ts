@@ -204,10 +204,24 @@ export const searchExtension = Extension.create({
                 });
               }, SEARCH_DOC_CHANGE_DEBOUNCE_MS);
 
-              // Return mapped (stale) decorations until the debounce fires
+              // Return mapped decorations and matches until the debounce fires.
+              // Map match positions so navigate/replace targets correct text.
               const mappedDecorationSet = value.decorationSet.map(tr.mapping, tr.doc);
+              // Update the module-level matches cache so Path 4 reads correct positions
+              matches = matches
+                .map((m: Match) => ({ from: tr.mapping.map(m.from), to: tr.mapping.map(m.to) }))
+                .filter((m: Match) => m.from < m.to);
               const currentIndex = useSearchStore.getState().currentIndex;
-              return { matches, currentIndex, decorationSet: mappedDecorationSet };
+              // Adjust index if matches were lost due to mapping collapse
+              const adjustedIndex = matches.length === 0
+                ? -1
+                : currentIndex >= matches.length
+                  ? 0
+                  : currentIndex;
+              queueMicrotask(() => {
+                useSearchStore.getState().setMatches(matches.length, adjustedIndex);
+              });
+              return { matches, currentIndex: adjustedIndex, decorationSet: mappedDecorationSet };
             }
 
             const currentIndex = useSearchStore.getState().currentIndex;

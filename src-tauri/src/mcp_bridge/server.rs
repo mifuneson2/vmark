@@ -4,9 +4,9 @@
 //! and request routing to the frontend.
 
 use super::state::{
-    generate_auth_token, get_bridge_state, get_shutdown_holder, get_write_lock,
-    is_read_only_operation, is_webview_alive, remove_port_file, set_webview_alive,
-    write_port_file, ClientConnection, PendingRequest,
+    cleanup_stale_pending, generate_auth_token, get_bridge_state, get_shutdown_holder,
+    get_write_lock, is_read_only_operation, is_webview_alive, remove_port_file,
+    set_webview_alive, write_port_file, ClientConnection, PendingRequest,
 };
 use super::types::{
     ClientIdentity, McpRequest, McpRequestEvent, McpResponse, WsMessage,
@@ -468,10 +468,11 @@ async fn handle_message(text: &str, client_id: u64, app: &AppHandle) -> Result<(
     let request_id = msg.id.clone();
     let request_type_for_log = request.request_type.clone();
 
-    // Store the pending request
+    // Store the pending request (clean up stale entries first)
     {
         let state = get_bridge_state();
         let mut guard = state.lock().await;
+        cleanup_stale_pending(&mut guard);
         guard.pending.insert(
             request_id.clone(),
             PendingRequest {

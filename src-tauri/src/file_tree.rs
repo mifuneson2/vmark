@@ -59,8 +59,10 @@ pub fn list_directory_entries(path: &str) -> Result<Vec<DirectoryEntry>, String>
     let entries = fs::read_dir(path).map_err(|e| format!("Failed to read dir: {e}"))?;
     let mut results = Vec::new();
 
+    let mut truncated = false;
     for entry in entries {
         if results.len() >= MAX_DIR_ENTRIES {
+            truncated = true;
             break;
         }
 
@@ -88,6 +90,13 @@ pub fn list_directory_entries(path: &str) -> Result<Vec<DirectoryEntry>, String>
             is_directory,
             is_hidden,
         });
+    }
+
+    if truncated {
+        eprintln!(
+            "[file_tree] Warning: directory listing truncated at {} entries for: {}",
+            MAX_DIR_ENTRIES, path
+        );
     }
 
     Ok(results)

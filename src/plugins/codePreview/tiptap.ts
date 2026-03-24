@@ -276,13 +276,25 @@ export const codePreviewExtension = Extension.create({
               };
             }
 
-            // Fast path: if doc changed but the change doesn't touch any code block,
-            // map existing decorations through the transaction and skip the full scan.
+            // Fast path: if doc changed but the change doesn't touch any code block
+            // AND the number of code blocks hasn't changed, skip the full scan.
+            // We count code blocks in the new doc to catch insertions/deletions.
+            let newCodeBlockCount = 0;
+            if (tr.docChanged && !editingChanged && !settingsChanged && state.decorations !== DecorationSet.empty) {
+              newState.doc.forEach((node) => {
+                if ((node.type.name === "codeBlock" || node.type.name === "code_block") &&
+                    PREVIEW_ONLY_LANGUAGES.has((node.attrs.language ?? "").toLowerCase())) {
+                  newCodeBlockCount++;
+                }
+              });
+            }
+
             if (
               tr.docChanged &&
               !editingChanged &&
               !settingsChanged &&
               state.decorations !== DecorationSet.empty &&
+              newCodeBlockCount === state.codeBlockRanges.length &&
               !changesIntersectRanges(tr, state.codeBlockRanges)
             ) {
               return {
