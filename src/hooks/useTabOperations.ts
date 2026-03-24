@@ -16,7 +16,7 @@
  * @coordinates-with closeSave.ts — promptSaveForDirtyDocument dialog
  * @coordinates-with tabStore.ts — removeTab mutations
  * @coordinates-with workspaceSession.ts — persists session before closing window
- * @coordinates-with useUnifiedHistory.ts — clearDocumentHistory on close
+ * @coordinates-with tabCleanup.ts — cleanupTabState centralises all per-tab store cleanup
  * @module hooks/useTabOperations
  */
 
@@ -26,7 +26,7 @@ import { useTabStore } from "@/stores/tabStore";
 import { useDocumentStore } from "@/stores/documentStore";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { findOrphanedImages, deleteOrphanedImages } from "@/utils/orphanAssetCleanup";
-import { clearDocumentHistory } from "@/hooks/useUnifiedHistory";
+import { cleanupTabState } from "@/utils/tabCleanup";
 import { invoke } from "@tauri-apps/api/core";
 import { persistWorkspaceSession } from "@/hooks/workspaceSession";
 import { createUntitledTab } from "@/utils/newFile";
@@ -110,8 +110,7 @@ export async function closeTabWithDirtyCheck(
     if (!doc.isDirty) {
       await cleanupOrphansIfEnabled(doc.filePath, doc.content);
       useTabStore.getState().closeTab(windowLabel, tabId);
-      useDocumentStore.getState().removeDocument(tabId);
-      clearDocumentHistory(tabId);
+      cleanupTabState(tabId);
       await closeWindowIfEmpty(windowLabel);
       return true;
     }
@@ -141,8 +140,7 @@ export async function closeTabWithDirtyCheck(
 
     // Proceed to close
     useTabStore.getState().closeTab(windowLabel, tabId);
-    useDocumentStore.getState().removeDocument(tabId);
-    clearDocumentHistory(tabId);
+    cleanupTabState(tabId);
     await closeWindowIfEmpty(windowLabel);
     return true;
   } finally {

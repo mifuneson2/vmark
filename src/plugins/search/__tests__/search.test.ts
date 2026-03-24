@@ -214,3 +214,11 @@ describe("searchExtension", () => {
     expect(searchExtension.name).toBe("search");
   });
 });
+
+describe("search rebuild debounce", () => {
+  it("search extension exports SEARCH_DOC_CHANGE_DEBOUNCE_MS constant", async () => {
+    const mod = await import("../tiptap");
+    expect((mod as any).SEARCH_DOC_CHANGE_DEBOUNCE_MS).toBeGreaterThanOrEqual(100);
+    expect((mod as any).SEARCH_DOC_CHANGE_DEBOUNCE_MS).toBeLessThanOrEqual(500);
+  });
+});

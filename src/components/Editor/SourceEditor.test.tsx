@@ -556,6 +556,8 @@ describe("SourceEditor", () => {
           view: mockEditorViewInstance,
         });
 
+        vi.advanceTimersByTime(300);
+
         expect(mockCountMatches).toHaveBeenCalledWith(
           "# Hello World",
           "Hello",
@@ -584,6 +586,8 @@ describe("SourceEditor", () => {
           view: mockEditorViewInstance,
         });
 
+        vi.advanceTimersByTime(300);
+
         expect(mockSetMatches).toHaveBeenCalledWith(0, -1);
       });
 
@@ -605,6 +609,8 @@ describe("SourceEditor", () => {
           view: mockEditorViewInstance,
         });
 
+        vi.advanceTimersByTime(300);
+
         expect(mockSetMatches).toHaveBeenCalledWith(2, 0);
       });
 
@@ -625,6 +631,8 @@ describe("SourceEditor", () => {
           state: { doc: { toString: () => "# HHH" } },
           view: mockEditorViewInstance,
         });
+
+        vi.advanceTimersByTime(300);
 
         expect(mockSetMatches).toHaveBeenCalledWith(3, 0);
       });

@@ -36,6 +36,7 @@
  * @coordinates-with useWorkspaceSync.ts — cross-window workspace config rehydration
  * @coordinates-with openPolicy.ts — resolves workspace root for external files
  * @coordinates-with lib.rs (Rust) — listens for "ready" event per window
+ * @coordinates-with tabCleanup.ts — cleanupTabState used in removeTransferredTabData
  * @module contexts/WindowContext
  */
 import { createContext, useContext, useEffect, useState, useRef, type ReactNode } from "react";
@@ -61,6 +62,7 @@ import { isWithinRoot } from "../utils/paths";
 import type { TabTransferPayload } from "@/types/tabTransfer";
 import { windowCloseWarn, windowContextError } from "@/utils/debug";
 import { getFileName } from "@/utils/pathUtils";
+import { cleanupTabState } from "@/utils/tabCleanup";
 
 async function applyTabTransferData(label: string, data: TabTransferPayload): Promise<void> {
   // Set up workspace: prefer transferred root, fall back to file's parent
@@ -94,7 +96,7 @@ async function applyTabTransferData(label: string, data: TabTransferPayload): Pr
 
 async function removeTransferredTabData(label: string, tabId: string): Promise<void> {
   useTabStore.getState().detachTab(label, tabId);
-  useDocumentStore.getState().removeDocument(tabId);
+  cleanupTabState(tabId);
 
   const remaining = useTabStore.getState().getTabsByWindow(label);
   if (remaining.length === 0 && label !== "main") {

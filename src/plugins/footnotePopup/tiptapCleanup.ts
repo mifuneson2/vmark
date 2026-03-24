@@ -8,6 +8,8 @@
  *   - Renumbering scans all references in document order and assigns sequential labels
  *   - Orphan cleanup runs after deletion to remove definitions with no matching reference
  *   - Both operations are combined into a single transaction for atomicity
+ *   - collectFootnoteNodes does a single doc traversal returning both refs and defs,
+ *     avoiding repeated walks in createRenumberTransaction and createCleanupAndRenumberTransaction
  *
  * @coordinates-with tiptap.ts — calls these functions from appendTransaction
  * @coordinates-with tiptapNodes.ts — footnote node type definitions
@@ -17,42 +19,43 @@
 import type { EditorState, Transaction } from "@tiptap/pm/state";
 import type { Node as PMNode, NodeType } from "@tiptap/pm/model";
 
-export function getReferenceLabels(doc: PMNode): Set<string> {
-  const labels = new Set<string>();
-  doc.descendants((node) => {
-    if (node.type.name === "footnote_reference") {
-      labels.add(String(node.attrs.label ?? ""));
-    }
-    return true;
-  });
-  return labels;
-}
-
-export function getDefinitionInfo(doc: PMNode): Array<{ label: string; pos: number; size: number }> {
+export function collectFootnoteNodes(doc: PMNode): {
+  refs: Array<{ label: string; pos: number; size: number }>;
+  defs: Array<{ label: string; pos: number; size: number }>;
+  refLabels: Set<string>;
+} {
+  const refs: Array<{ label: string; pos: number; size: number }> = [];
   const defs: Array<{ label: string; pos: number; size: number }> = [];
+  const refLabels = new Set<string>();
+
   doc.descendants((node, pos) => {
-    if (node.type.name === "footnote_definition") {
+    if (node.type.name === "footnote_reference") {
+      const label = String(node.attrs.label ?? "");
+      refs.push({ label, pos, size: node.nodeSize });
+      refLabels.add(label);
+    } else if (node.type.name === "footnote_definition") {
       defs.push({ label: String(node.attrs.label ?? ""), pos, size: node.nodeSize });
     }
     return true;
   });
-  return defs;
+
+  return { refs, defs, refLabels };
+}
+
+export function getReferenceLabels(doc: PMNode): Set<string> {
+  return collectFootnoteNodes(doc).refLabels;
+}
+
+export function getDefinitionInfo(doc: PMNode): Array<{ label: string; pos: number; size: number }> {
+  return collectFootnoteNodes(doc).defs;
 }
 
 export function createRenumberTransaction(state: EditorState, refType: NodeType, defType: NodeType): Transaction | null {
   const { doc, schema } = state;
 
-  const refs: Array<{ label: string; pos: number; size: number }> = [];
-  doc.descendants((node, pos) => {
-    if (node.type.name === "footnote_reference") {
-      refs.push({ label: String(node.attrs.label ?? ""), pos, size: node.nodeSize });
-    }
-    return true;
-  });
+  const { refs, defs } = collectFootnoteNodes(doc);
 
   if (refs.length === 0) return null;
-
-  const defs = getDefinitionInfo(doc);
 
   const labelMap = new Map<string, string>();
   refs.forEach((ref, index) => {
@@ -136,15 +139,7 @@ export function createCleanupAndRenumberTransaction(
 ): Transaction | null {
   const { doc, schema } = state;
 
-  const refs: Array<{ label: string; pos: number; size: number }> = [];
-  doc.descendants((node, pos) => {
-    if (node.type.name === "footnote_reference") {
-      refs.push({ label: String(node.attrs.label ?? ""), pos, size: node.nodeSize });
-    }
-    return true;
-  });
-
-  const allDefs = getDefinitionInfo(doc);
+  const { refs, defs: allDefs } = collectFootnoteNodes(doc);
 
   const labelMap = new Map<string, string>();
   refs.forEach((ref, index) => {

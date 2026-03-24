@@ -8,6 +8,7 @@ use crate::app_paths;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::time::Instant;
 use tauri::AppHandle;
 use tokio::sync::{mpsc, oneshot, Mutex, RwLock};
 
@@ -43,9 +44,22 @@ pub(crate) struct BridgeState {
     pub next_client_id: u64,
 }
 
+/// Maximum number of pending requests allowed at once.
+pub(crate) const MAX_PENDING_REQUESTS: usize = 1000;
+
+/// TTL in seconds for pending requests before they are considered stale.
+pub(crate) const PENDING_TTL_SECS: u64 = 60;
+
 /// Pending request with client ID for routing response.
 pub(crate) struct PendingRequest {
     pub response_tx: oneshot::Sender<McpResponse>,
+    pub created_at: Instant,
+}
+
+/// Remove pending requests older than `PENDING_TTL_SECS` seconds.
+pub(crate) fn cleanup_stale_pending(state: &mut BridgeState) {
+    let cutoff = Instant::now() - std::time::Duration::from_secs(PENDING_TTL_SECS);
+    state.pending.retain(|_, req| req.created_at > cutoff);
 }
 
 /// Global bridge state.
@@ -555,7 +569,7 @@ mod tests {
             let (tx, _rx) = oneshot::channel::<McpResponse>();
             guard
                 .pending
-                .insert(marker.clone(), PendingRequest { response_tx: tx });
+                .insert(marker.clone(), PendingRequest { response_tx: tx, created_at: Instant::now() });
         }
 
         {
@@ -584,7 +598,7 @@ mod tests {
                 let (tx, _rx) = oneshot::channel::<McpResponse>();
                 guard
                     .pending
-                    .insert(format!("__concurrent_test_{i}__"), PendingRequest { response_tx: tx });
+                    .insert(format!("__concurrent_test_{i}__"), PendingRequest { response_tx: tx, created_at: Instant::now() });
             }));
         }
 
@@ -697,5 +711,49 @@ mod tests {
         let tokens: std::collections::HashSet<String> =
             (0..100).map(|_| generate_auth_token()).collect();
         assert_eq!(tokens.len(), 100, "100 tokens should all be unique");
+    }
+
+    // -- pending request TTL --------------------------------------------------
+
+    #[tokio::test]
+    async fn pending_request_has_created_at() {
+        let (tx, _rx) = oneshot::channel::<McpResponse>();
+        let req = PendingRequest {
+            response_tx: tx,
+            created_at: std::time::Instant::now(),
+        };
+        assert!(req.created_at.elapsed().as_secs() < 1);
+    }
+
+    #[tokio::test]
+    async fn cleanup_stale_pending_removes_old_entries() {
+        use std::time::Duration;
+
+        let state = get_bridge_state();
+
+        let marker_stale = "__test_stale_cleanup__".to_string();
+        let marker_fresh = "__test_fresh_cleanup__".to_string();
+
+        {
+            let mut guard = state.lock().await;
+            let (tx1, _rx1) = oneshot::channel::<McpResponse>();
+            guard.pending.insert(marker_stale.clone(), PendingRequest {
+                response_tx: tx1,
+                created_at: std::time::Instant::now() - Duration::from_secs(120),
+            });
+            let (tx2, _rx2) = oneshot::channel::<McpResponse>();
+            guard.pending.insert(marker_fresh.clone(), PendingRequest {
+                response_tx: tx2,
+                created_at: std::time::Instant::now(),
+            });
+        }
+
+        {
+            let mut guard = state.lock().await;
+            cleanup_stale_pending(&mut guard);
+            assert!(!guard.pending.contains_key(&marker_stale));
+            assert!(guard.pending.contains_key(&marker_fresh));
+            guard.pending.remove(&marker_fresh);
+        }
     }
 }

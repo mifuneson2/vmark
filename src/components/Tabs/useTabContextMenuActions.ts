@@ -18,6 +18,7 @@
  *
  * @coordinates-with TabContextMenu.tsx — renders the items this hook produces
  * @coordinates-with tabTransferActions.ts — restoreTransferredTab for undo
+ * @coordinates-with tabCleanup.ts — cleanupTabState used on "Move to New Window" detach
  * @module components/Tabs/useTabContextMenuActions
  */
 import { useCallback, useMemo } from "react";
@@ -36,6 +37,7 @@ import { getRelativePath, isWithinRoot } from "@/utils/paths";
 import { restoreTransferredTab } from "@/components/StatusBar/tabTransferActions";
 import type { TabTransferPayload } from "@/types/tabTransfer";
 import { windowCloseWarn, tabContextError } from "@/utils/debug";
+import { cleanupTabState } from "@/utils/tabCleanup";
 import i18n from "@/i18n";
 
 /** Definition for a single item in the tab context menu. */
@@ -140,7 +142,7 @@ export function useTabContextMenuActions({
     try {
       const createdWindowLabel = await invoke<string>("detach_tab_to_new_window", { data: transferData });
       useTabStore.getState().detachTab(windowLabel, tab.id);
-      useDocumentStore.getState().removeDocument(tab.id);
+      cleanupTabState(tab.id);
 
       toast.message(i18n.t("dialog:toast.tabMoved", { title: tab.title }), {
         action: {

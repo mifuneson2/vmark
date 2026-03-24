@@ -47,6 +47,7 @@ import { computeSourceCursorContext } from "@/plugins/sourceContextDetection/cur
 import { useImageDragDrop } from "@/hooks/useImageDragDrop";
 import { useSourceOutlineSync } from "@/hooks/useSourceOutlineSync";
 import { countMatches } from "@/utils/sourceEditorSearch";
+import { createDebouncedSearchCounter } from "@/utils/debouncedSearchCount";
 import {
   createSourceEditorExtensions,
   shortcutKeymapCompartment,
@@ -111,6 +112,23 @@ export function SourceEditor({ hidden = false }: SourceEditorProps) {
     /* v8 ignore next -- @preserve guard: true branch fires only when container unmounts mid-init */
     if (!containerRef.current || viewRef.current) return; // Guard: effect deps=[] ensures single run
 
+    const searchCounter = createDebouncedSearchCounter(
+      (content, _query, _caseSensitive, _wholeWord, _useRegex) => {
+        // Re-read fresh state: search params may have changed during the debounce delay
+        const freshState = useSearchStore.getState();
+        if (!freshState.isOpen || !freshState.query) return;
+        const matchCount = countMatches(content, freshState.query, freshState.caseSensitive, freshState.wholeWord, freshState.useRegex);
+        // Keep currentIndex valid: reset to 0 if out of bounds or -1
+        let newIndex = freshState.currentIndex;
+        if (matchCount === 0) {
+          newIndex = -1;
+        } else if (newIndex < 0 || newIndex >= matchCount) {
+          newIndex = 0;
+        }
+        useSearchStore.getState().setMatches(matchCount, newIndex);
+      }
+    );
+
     const updateListener = EditorView.updateListener.of((update) => {
       // Skip updates when hidden — prevents polluting document store
       if (hiddenRef.current) return;
@@ -122,24 +140,16 @@ export function SourceEditor({ hidden = false }: SourceEditorProps) {
         requestAnimationFrame(() => {
           isInternalChange.current = false;
         });
-        // Update match count when document changes and search is open
+        // Update match count when document changes and search is open (debounced)
         const searchState = useSearchStore.getState();
         if (searchState.isOpen && searchState.query) {
-          const matchCount = countMatches(
+          searchCounter.schedule(
             newContent,
             searchState.query,
             searchState.caseSensitive,
             searchState.wholeWord,
             searchState.useRegex
           );
-          // Keep currentIndex valid: reset to 0 if out of bounds or -1
-          let newIndex = searchState.currentIndex;
-          if (matchCount === 0) {
-            newIndex = -1;
-          } else if (newIndex < 0 || newIndex >= matchCount) {
-            newIndex = 0;
-          }
-          useSearchStore.getState().setMatches(matchCount, newIndex);
         }
       }
       // Track cursor position for mode sync
@@ -221,6 +231,7 @@ export function SourceEditor({ hidden = false }: SourceEditorProps) {
 
     return () => {
       if (focusTimeoutId !== null) clearTimeout(focusTimeoutId);
+      searchCounter.cancel();
       unsubscribeShortcuts();
       useActiveEditorStore.getState().clearSourceViewIfMatch(view);
       view.destroy();

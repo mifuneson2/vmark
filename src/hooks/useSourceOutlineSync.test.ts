@@ -512,11 +512,12 @@ describe("useSourceOutlineSync hook — additional branch coverage", () => {
     expect(true).toBe(true);
   });
 
-  it("handleUpdate cancels previous animationFrame and schedules new one (L156-157)", async () => {
+  it("handleUpdate cancels previous debounce timer and schedules new one", async () => {
+    vi.useFakeTimers();
     const { renderHook, act } = await import("@testing-library/react");
 
-    const cancelRafSpy = vi.spyOn(window, "cancelAnimationFrame");
-    const rafSpy = vi.spyOn(window, "requestAnimationFrame").mockReturnValue(42);
+    const clearTimeoutSpy = vi.spyOn(window, "clearTimeout");
+    const setTimeoutSpy = vi.spyOn(window, "setTimeout");
 
     const mockAddEventListener = vi.fn();
     const mockRemoveEventListener = vi.fn();
@@ -541,24 +542,25 @@ describe("useSourceOutlineSync hook — additional branch coverage", () => {
     const handleUpdate = keyupCall?.[1] as (() => void) | undefined;
 
     act(() => {
-      // Call handleUpdate twice — second call should cancel the first animFrameId
+      // Call handleUpdate twice — second call should cancel the first debounce timer
       handleUpdate?.();
       handleUpdate?.();
     });
 
-    // cancelAnimationFrame should have been called on the second handleUpdate call
-    expect(cancelRafSpy).toHaveBeenCalled();
-    expect(rafSpy).toHaveBeenCalled();
+    // clearTimeout should have been called on the second handleUpdate call
+    expect(clearTimeoutSpy).toHaveBeenCalled();
+    expect(setTimeoutSpy).toHaveBeenCalled();
 
-    cancelRafSpy.mockRestore();
-    rafSpy.mockRestore();
+    clearTimeoutSpy.mockRestore();
+    setTimeoutSpy.mockRestore();
+    vi.useRealTimers();
   });
 
-  it("cleanup cancels animationFrame when animFrameId is set (L168)", async () => {
+  it("cleanup cancels debounce timer when debounceTimerId is set", async () => {
+    vi.useFakeTimers();
     const { renderHook, act } = await import("@testing-library/react");
 
-    const cancelRafSpy = vi.spyOn(window, "cancelAnimationFrame");
-    vi.spyOn(window, "requestAnimationFrame").mockReturnValue(99);
+    const clearTimeoutSpy = vi.spyOn(window, "clearTimeout");
 
     const mockAddEventListener = vi.fn();
     const mockRemoveEventListener = vi.fn();
@@ -579,17 +581,18 @@ describe("useSourceOutlineSync hook — additional branch coverage", () => {
     const { useSourceOutlineSync } = await import("./useSourceOutlineSync");
     const { unmount } = renderHook(() => useSourceOutlineSync(viewRef as never, false));
 
-    // Trigger handleUpdate to set animFrameId
+    // Trigger handleUpdate to set debounceTimerId
     const keyupCall = mockAddEventListener.mock.calls.find(([evt]) => evt === "keyup");
     const handleUpdate = keyupCall?.[1] as (() => void) | undefined;
     act(() => { handleUpdate?.(); });
 
-    // Unmount — cleanup should cancel the pending animFrameId
+    // Unmount — cleanup should cancel the pending debounce timer
     unmount();
 
-    expect(cancelRafSpy).toHaveBeenCalledWith(99);
+    expect(clearTimeoutSpy).toHaveBeenCalled();
 
-    cancelRafSpy.mockRestore();
+    clearTimeoutSpy.mockRestore();
+    vi.useRealTimers();
   });
 });
 

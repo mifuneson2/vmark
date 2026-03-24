@@ -421,28 +421,30 @@ describe("useOutlineSync — cursor tracking", () => {
     expect(true).toBe(true); // no crash means guard worked
   });
 
-  it("handleUpdate schedules RAF and cancels previous one (line 168)", () => {
+  it("handleUpdate cancels previous debounce timer and schedules new one", () => {
+    vi.useFakeTimers();
     const dom = document.createElement("div");
     mockDom = dom;
 
     const view = createMockView([0, 50], 10);
     const getView = () => view as unknown as ReturnType<() => import("@tiptap/pm/view").EditorView>;
 
-    const rafSpy = vi.spyOn(globalThis, "requestAnimationFrame");
-    const cancelSpy = vi.spyOn(globalThis, "cancelAnimationFrame");
+    const clearTimeoutSpy = vi.spyOn(globalThis, "clearTimeout");
+    const setTimeoutSpy = vi.spyOn(globalThis, "setTimeout");
 
     renderHook(() => useOutlineSync(getView));
 
-    // Trigger two rapid keyup events — second should cancel first RAF
+    // Trigger two rapid keyup events — second should cancel first debounce timer
     dom.dispatchEvent(new Event("keyup"));
     dom.dispatchEvent(new Event("keyup"));
 
-    // cancelAnimationFrame should have been called to cancel pending RAF
-    expect(cancelSpy).toHaveBeenCalled();
-    expect(rafSpy).toHaveBeenCalled();
+    // clearTimeout should have been called to cancel pending debounce timer
+    expect(clearTimeoutSpy).toHaveBeenCalled();
+    expect(setTimeoutSpy).toHaveBeenCalled();
 
-    rafSpy.mockRestore();
-    cancelSpy.mockRestore();
+    clearTimeoutSpy.mockRestore();
+    setTimeoutSpy.mockRestore();
+    vi.useRealTimers();
   });
 
   it("cleans up poll timeout on unmount before DOM is ready", () => {
@@ -463,25 +465,27 @@ describe("useOutlineSync — cursor tracking", () => {
     vi.useRealTimers();
   });
 
-  it("cancels animation frame on unmount", () => {
+  it("cancels debounce timer on unmount", () => {
+    vi.useFakeTimers();
     const dom = document.createElement("div");
     mockDom = dom;
 
     const view = createMockView([0, 50], 10);
     const getView = () => view as unknown as ReturnType<() => import("@tiptap/pm/view").EditorView>;
 
-    const cancelSpy = vi.spyOn(globalThis, "cancelAnimationFrame");
+    const clearTimeoutSpy = vi.spyOn(globalThis, "clearTimeout");
 
     const { unmount } = renderHook(() => useOutlineSync(getView));
 
-    // Trigger a keyup to schedule rAF
+    // Trigger a keyup to schedule debounce timer
     dom.dispatchEvent(new Event("keyup"));
 
     unmount();
 
-    // cancelAnimationFrame should be called during cleanup
-    expect(cancelSpy).toHaveBeenCalled();
-    cancelSpy.mockRestore();
+    // clearTimeout should be called during cleanup
+    expect(clearTimeoutSpy).toHaveBeenCalled();
+    clearTimeoutSpy.mockRestore();
+    vi.useRealTimers();
   });
 
   it("findHeadingPosition early-returns for nodes visited after target found (branch 0, line 44)", async () => {
