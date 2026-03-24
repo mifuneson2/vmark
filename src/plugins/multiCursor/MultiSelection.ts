@@ -48,7 +48,8 @@ export class MultiSelection extends Selection {
    */
   map(doc: Node, mapping: Mappable): Selection {
     const mappedRanges = this.ranges.map((range) => {
-      const from = mapping.map(range.$from.pos, -1);
+      const isCollapsed = range.$from.pos === range.$to.pos;
+      const from = mapping.map(range.$from.pos, isCollapsed ? 1 : -1);
       const to = mapping.map(range.$to.pos, 1);
       const $from = doc.resolve(from);
       const $to = doc.resolve(to);

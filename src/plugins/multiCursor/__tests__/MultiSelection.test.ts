@@ -194,6 +194,31 @@ describe("MultiSelection", () => {
       expect(mapped.ranges[0].$to.pos).toBe(8);
     });
 
+    it("keeps collapsed cursors collapsed when insertion happens at cursor position (#526)", () => {
+      const state = createState("hello world");
+      const doc = state.doc;
+
+      const $pos1 = doc.resolve(1);
+      const $pos2 = doc.resolve(7);
+
+      const ranges = [
+        new SelectionRange($pos1, $pos1),
+        new SelectionRange($pos2, $pos2),
+      ];
+      const multiSel = new MultiSelection(ranges, 0);
+
+      // Insert "XX" at exactly position 7 (where second cursor sits)
+      const tr = state.tr.insertText("XX", 7, 7);
+      const mapped = multiSel.map(tr.doc, tr.mapping) as MultiSelection;
+
+      // Both cursors must remain collapsed (from === to)
+      for (const range of mapped.ranges) {
+        expect(range.$from.pos).toBe(range.$to.pos);
+      }
+      // Second cursor should have moved past the insertion
+      expect(mapped.ranges[1].$from.pos).toBe(9);
+    });
+
     it("preserves primaryIndex through mapping", () => {
       const state = createState("hello world");
       const doc = state.doc;
