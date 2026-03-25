@@ -73,7 +73,7 @@ pub async fn run_ai_prompt(
                 &window,
                 &request_id,
                 "codex",
-                vec!["exec".into(), prompt],
+                vec!["exec".into(), "--skip-git-repo-check".into(), prompt],
                 None,
                 cli_path,
             )
