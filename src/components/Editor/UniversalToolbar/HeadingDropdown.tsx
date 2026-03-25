@@ -103,6 +103,8 @@ const HeadingDropdown = forwardRef<HTMLDivElement, HeadingDropdownProps>(
           <button
             key={option.level}
             type="button"
+            role="menuitemradio"
+            aria-checked={option.level === currentLevel}
             className={`universal-toolbar-dropdown-item${option.level === currentLevel ? " active" : ""}`}
             onClick={() => onSelect(option.level)}
           >
