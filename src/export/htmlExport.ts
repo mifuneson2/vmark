@@ -141,6 +141,10 @@ export async function exportHtml(
   const assetsPath = `${outputPath}/assets`;
   const imagesPath = `${assetsPath}/images`;
 
+  // Track files/directories created during this export so cleanup
+  // only removes what we created — never pre-existing user content.
+  const createdPaths: string[] = [];
+
   try {
     // Create folder structure
     await mkdir(outputPath, { recursive: true });
@@ -192,13 +196,16 @@ export async function exportHtml(
     let embeddedFontCSS = "";  // For standalone.html (data URIs)
     if (fontsToExport.length > 0) {
       await mkdir(fontsPath, { recursive: true });
+      createdPaths.push(fontsPath);
 
       const downloadedFonts: FontFile[] = [];
       const embeddedFonts: EmbeddedFont[] = [];
       for (const font of fontsToExport) {
         const data = await downloadFont(font.url);
         if (data) {
-          await writeFile(`${fontsPath}/${font.filename}`, data);
+          const fontPath = `${fontsPath}/${font.filename}`;
+          await writeFile(fontPath, data);
+          createdPaths.push(fontPath);
           totalSize += data.length;
           downloadedFonts.push(font);
           // Also create embedded version for standalone
@@ -232,13 +239,17 @@ export async function exportHtml(
 
     // Write assets/vmark-reader.css
     if (includeReader) {
-      await writeTextFile(`${assetsPath}/vmark-reader.css`, readerCSS);
+      const readerCSSPath = `${assetsPath}/vmark-reader.css`;
+      await writeTextFile(readerCSSPath, readerCSS);
+      createdPaths.push(readerCSSPath);
       totalSize += new TextEncoder().encode(readerCSS).length;
     }
 
     // Write assets/vmark-reader.js
     if (includeReader) {
-      await writeTextFile(`${assetsPath}/vmark-reader.js`, readerJS);
+      const readerJSPath = `${assetsPath}/vmark-reader.js`;
+      await writeTextFile(readerJSPath, readerJS);
+      createdPaths.push(readerJSPath);
       totalSize += new TextEncoder().encode(readerJS).length;
     }
 
@@ -251,6 +262,7 @@ export async function exportHtml(
       isDark: useDarkTheme,
     });
     await writeTextFile(indexPath, indexHtml);
+    createdPaths.push(indexPath);
     totalSize += new TextEncoder().encode(indexHtml).length;
 
     // Generate and write standalone.html (with embedded images and fonts)
@@ -264,6 +276,7 @@ export async function exportHtml(
       isDark: useDarkTheme,
     });
     await writeTextFile(standalonePath, standaloneHtml);
+    createdPaths.push(standalonePath);
     totalSize += new TextEncoder().encode(standaloneHtml).length;
 
     return {
@@ -277,12 +290,15 @@ export async function exportHtml(
       warnings,
     };
   } catch (error) {
-    // Clean up partially-created output folder to avoid leaving
-    // incomplete files on disk (e.g., index.html without standalone.html)
-    try {
-      await remove(outputPath, { recursive: true });
-    } catch {
-      // Best-effort cleanup — folder may not exist yet if mkdir failed
+    // Clean up only files/directories created during this export.
+    // Removing the entire outputPath would delete pre-existing user
+    // content when re-exporting to the same folder (data loss).
+    for (const p of createdPaths.reverse()) {
+      try {
+        await remove(p);
+      } catch {
+        // Best-effort cleanup — file may not exist if write failed
+      }
     }
 
     return {
