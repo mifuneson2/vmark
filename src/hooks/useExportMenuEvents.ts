@@ -59,7 +59,7 @@ export function useExportMenuEvents(): void {
           const defaultName = getExportFolderName(doc.content, doc.filePath);
           const defaultDir = doc.filePath ? getDirectory(doc.filePath) : undefined;
           try {
-            const { exportToHtml } = await import("@/export");
+            const { exportToHtml } = await import("@/export/useExportOperations");
             await exportToHtml({
               markdown: doc.content,
               defaultName,
@@ -83,7 +83,7 @@ export function useExportMenuEvents(): void {
           const doc = getActiveDocument(windowLabel);
           if (!doc) return;
           try {
-            const { exportToPdf } = await import("@/export");
+            const { exportToPdf } = await import("@/export/useExportOperations");
             await exportToPdf({ markdown: doc.content });
           } catch (error) {
             menuError("Failed to print:", error);
@@ -103,7 +103,7 @@ export function useExportMenuEvents(): void {
           if (!doc) return;
           const defaultName = getExportFolderName(doc.content, doc.filePath);
           try {
-            const { exportToPdfNative } = await import("@/export");
+            const { exportToPdfNative } = await import("@/export/useExportOperations");
             await exportToPdfNative({
               markdown: doc.content,
               defaultName,
@@ -130,7 +130,7 @@ export function useExportMenuEvents(): void {
             const defaultName = getExportFolderName(doc.content, doc.filePath);
             const defaultDir = doc.filePath ? getDirectory(doc.filePath) : undefined;
             try {
-              const { exportViaPandoc } = await import("@/export");
+              const { exportViaPandoc } = await import("@/export/pandocExport");
               await exportViaPandoc({
                 markdown: doc.content,
                 format: fmt,
@@ -167,7 +167,7 @@ export function useExportMenuEvents(): void {
           const doc = getActiveDocument(windowLabel);
           if (!doc) return;
           try {
-            const { copyAsHtml } = await import("@/export");
+            const { copyAsHtml } = await import("@/export/useExportOperations");
             await copyAsHtml(doc.content);
           } catch (error) {
             menuError("Failed to copy HTML:", error);
