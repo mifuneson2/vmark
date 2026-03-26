@@ -390,4 +390,37 @@ describe("useFinderFileOpen", () => {
       expect(mockInvoke).toHaveBeenCalledWith("open_workspace_in_new_window", expect.any(Object));
     });
   });
+
+  it("recovers the processing chain after an unhandled error in processFileOpen", async () => {
+    // First file: findExistingTabForPath throws (uncaught path before the fix)
+    let callCount = 0;
+    mockFindExistingTabForPath.mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) {
+        throw new Error("unexpected error");
+      }
+      return null;
+    });
+
+    let handler: ((event: { payload: OpenFilePayload }) => void) | null = null;
+    mockListen.mockImplementation((_event: string, cb: (event: { payload: OpenFilePayload }) => void) => {
+      handler = cb;
+      return Promise.resolve(vi.fn());
+    });
+
+    renderHook(() => useFinderFileOpen());
+
+    await vi.waitFor(() => {
+      expect(handler).not.toBeNull();
+    });
+
+    // First file open — triggers the error
+    handler!({ payload: { path: "/fail.md", workspace_root: null } });
+    // Second file open — should still work because chain recovered
+    handler!({ payload: { path: "/ok.md", workspace_root: null } });
+
+    await vi.waitFor(() => {
+      expect(mockCreateTab).toHaveBeenCalledWith("main", "/ok.md");
+    });
+  });
 });
