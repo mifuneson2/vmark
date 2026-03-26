@@ -33,16 +33,8 @@ import {
   type AnchorRect,
 } from "@/utils/popupPosition";
 import { decodeMarkdownUrl } from "@/utils/markdownUrl";
+import { normalizePathForAsset } from "@/utils/resolveMediaSrc";
 import { getPopupHostForDom, toHostCoordsForDom } from "@/plugins/sourcePopup";
-
-/**
- * Normalize path for convertFileSrc on Windows.
- * Windows paths use backslashes which convertFileSrc doesn't handle correctly.
- * See: https://github.com/tauri-apps/tauri/issues/7970
- */
-function normalizePathForAsset(path: string): string {
-  return path.replace(/\\/g, "/");
-}
 
 /** Maximum thumbnail dimensions */
 const MAX_THUMBNAIL_WIDTH = 200;

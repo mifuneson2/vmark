@@ -14,6 +14,7 @@
  * @coordinates-with security.ts — path validation and URL classification
  * @coordinates-with tiptap.ts — registers this NodeView for the image node type
  * @coordinates-with blockImage/BlockImageNodeView.ts — similar logic for block-level images
+ * @coordinates-with utils/resolveMediaSrc.ts — shared path normalization and active tab helpers
  * @module plugins/imageView
  */
 
@@ -24,31 +25,12 @@ import type { Node } from "@tiptap/pm/model";
 import { NodeSelection } from "@tiptap/pm/state";
 import type { NodeView } from "@tiptap/pm/view";
 import { useDocumentStore } from "@/stores/documentStore";
-import { useTabStore } from "@/stores/tabStore";
 import { useImageContextMenuStore } from "@/stores/imageContextMenuStore";
 import { useMediaPopupStore } from "@/stores/mediaPopupStore";
-import { getWindowLabel } from "@/hooks/useWindowFocus";
+import { normalizePathForAsset, getActiveTabIdForCurrentWindow } from "@/utils/resolveMediaSrc";
 import { isRelativePath, isAbsolutePath, isExternalUrl, validateImagePath } from "./security";
 import { decodeMarkdownUrl } from "@/utils/markdownUrl";
 import { imageViewWarn, imagePreviewError } from "@/utils/debug";
-
-/**
- * Normalize path for convertFileSrc on Windows.
- * Windows paths use backslashes which convertFileSrc doesn't handle correctly.
- * See: https://github.com/tauri-apps/tauri/issues/7970
- */
-function normalizePathForAsset(path: string): string {
-  return path.replace(/\\/g, "/");
-}
-
-function getActiveTabIdForCurrentWindow(): string | null {
-  try {
-    const windowLabel = getWindowLabel();
-    return useTabStore.getState().activeTabId[windowLabel] ?? null;
-  } catch {
-    return null;
-  }
-}
 
 /**
  * Convert image path to asset URL for webview rendering.
