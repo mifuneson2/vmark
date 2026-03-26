@@ -168,9 +168,11 @@ export function useFinderFileOpen(): void {
 
     /** Enqueue a file open, serialized to prevent concurrent tab races */
     const enqueueFileOpen = (path: string, workspaceRoot: string | null) => {
-      processingChainRef.current = processingChainRef.current.then(() =>
-        processFileOpen(path, workspaceRoot),
-      );
+      processingChainRef.current = processingChainRef.current
+        .then(() => processFileOpen(path, workspaceRoot))
+        .catch((error) => {
+          finderFileOpenError("Failed to open file:", path, error);
+        });
     };
 
     /**
