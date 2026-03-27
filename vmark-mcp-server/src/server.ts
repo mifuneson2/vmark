@@ -143,7 +143,12 @@ export class VMarkMcpServer implements McpServerInterface {
       throw new Error(`Unknown resource: ${uri}`);
     }
 
-    return await resource.handler(uri);
+    try {
+      return await resource.handler(uri);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`Resource error (${uri}): ${message}`);
+    }
   }
 
   /**
