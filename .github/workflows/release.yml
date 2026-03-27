@@ -363,11 +363,35 @@ jobs:
         continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ needs.create-release.outputs.version }}
+          REPO: ${{ github.repository }}
         run: |
-          VERSION="${{ needs.create-release.outputs.version }}"
           VERSION_NUM="${VERSION#v}"
 
           gh workflow run update-homebrew.yml \
-            --repo "${{ github.repository }}" \
+            --repo "$REPO" \
             -f version="$VERSION_NUM"
           echo "✅ Triggered Homebrew tap update for $VERSION_NUM"
+
+      - name: Clean up old releases (keep latest 2)
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          KEEP=2
+
+          # List all published releases sorted by date (newest first), skip the first $KEEP
+          OLD_TAGS=$(gh release list --repo "$REPO" --exclude-drafts --json tagName,publishedAt \
+            --jq 'sort_by(.publishedAt) | reverse | .['$KEEP':][].tagName')
+
+          if [ -z "$OLD_TAGS" ]; then
+            echo "No old releases to clean up"
+            exit 0
+          fi
+
+          for tag in $OLD_TAGS; do
+            echo "Deleting release $tag..."
+            gh release delete "$tag" --repo "$REPO" --cleanup-tag --yes
+            echo "✅ Deleted $tag"
+          done
