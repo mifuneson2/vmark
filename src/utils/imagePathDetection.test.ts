@@ -197,6 +197,20 @@ describe("detectImagePath", () => {
       expect(result.type).toBe("relativePath");
       expect(result.needsCopy).toBe(false);
     });
+
+    it("detects bare relative paths without ./ prefix", () => {
+      const result = detectImagePath("images/photo.jpg");
+      expect(result.isImage).toBe(true);
+      expect(result.type).toBe("relativePath");
+      expect(result.needsCopy).toBe(false);
+    });
+
+    it("detects bare filename as relative path", () => {
+      const result = detectImagePath("photo.png");
+      expect(result.isImage).toBe(true);
+      expect(result.type).toBe("relativePath");
+      expect(result.needsCopy).toBe(false);
+    });
   });
 
   describe("multi-line input", () => {

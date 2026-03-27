@@ -7,10 +7,14 @@
 import { imageViewWarn } from "@/utils/debug";
 
 /**
- * Check if a path is relative (starts with ./ or assets/).
+ * Check if a path is relative.
+ * A path is relative if it is not an external URL, not an absolute path,
+ * and does not start with parent traversal (../).
  */
 export function isRelativePath(src: string): boolean {
-  return src.startsWith("./") || src.startsWith("assets/");
+  if (!src || isExternalUrl(src) || isAbsolutePath(src)) return false;
+  if (src.startsWith("../") || src === "..") return false;
+  return true;
 }
 
 /**
@@ -48,7 +52,7 @@ export function validateImagePath(src: string): boolean {
     return false;
   }
 
-  // Allow relative paths that start with ./ or assets/
+  // Allow relative paths (bare, ./ prefixed, or assets/)
   return isRelativePath(src);
 }
 

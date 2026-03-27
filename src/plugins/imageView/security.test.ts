@@ -26,11 +26,26 @@ describe("imageView security", () => {
       expect(isRelativePath("assets/nested/image.png")).toBe(true);
     });
 
-    it("returns false for other paths", () => {
-      expect(isRelativePath("image.png")).toBe(false);
+    it("returns true for bare relative paths (no ./ prefix)", () => {
+      expect(isRelativePath("image.png")).toBe(true);
+      expect(isRelativePath("images/photo.jpg")).toBe(true);
+      expect(isRelativePath("nested/deep/image.png")).toBe(true);
+      expect(isRelativePath("my-folder/pic.webp")).toBe(true);
+    });
+
+    it("returns false for absolute paths and URLs", () => {
       expect(isRelativePath("/absolute/path.png")).toBe(false);
-      expect(isRelativePath("../parent/image.png")).toBe(false);
+      expect(isRelativePath("C:\\Users\\image.png")).toBe(false);
       expect(isRelativePath("http://example.com/image.png")).toBe(false);
+      expect(isRelativePath("https://example.com/image.png")).toBe(false);
+      expect(isRelativePath("data:image/png;base64,abc")).toBe(false);
+      expect(isRelativePath("asset://localhost/image.png")).toBe(false);
+      expect(isRelativePath("tauri://localhost/image.png")).toBe(false);
+    });
+
+    it("returns false for parent traversal paths", () => {
+      expect(isRelativePath("../parent/image.png")).toBe(false);
+      expect(isRelativePath("../../etc/passwd")).toBe(false);
     });
   });
 
@@ -129,13 +144,15 @@ describe("imageView security", () => {
         expect(validateImagePath("assets/image.png")).toBe(true);
         expect(validateImagePath("assets/nested/image.png")).toBe(true);
       });
+
+      it("accepts bare relative paths", () => {
+        expect(validateImagePath("image.png")).toBe(true);
+        expect(validateImagePath("images/photo.jpg")).toBe(true);
+        expect(validateImagePath("nested/deep/image.png")).toBe(true);
+      });
     });
 
     describe("edge cases", () => {
-      it("rejects paths without valid prefix", () => {
-        expect(validateImagePath("image.png")).toBe(false);
-        expect(validateImagePath("nested/image.png")).toBe(false);
-      });
 
       it("handles empty string", () => {
         expect(validateImagePath("")).toBe(false);
@@ -159,6 +176,7 @@ describe("imageView security", () => {
       expect(sanitizeImagePath("./image.png")).toBe("./image.png");
       expect(sanitizeImagePath("./assets/image.png")).toBe("./assets/image.png");
       expect(sanitizeImagePath("assets/image.png")).toBe("assets/image.png");
+      expect(sanitizeImagePath("images/photo.jpg")).toBe("images/photo.jpg");
     });
 
     it("returns null for path traversal attempts", () => {

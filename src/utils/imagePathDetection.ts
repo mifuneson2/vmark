@@ -95,10 +95,22 @@ function isHomePath(text: string): boolean {
 
 /**
  * Check if text is a relative path.
- * e.g., ./assets/image.png or ../images/photo.jpg
+ * e.g., ./assets/image.png, ../images/photo.jpg, or images/photo.jpg
+ * A bare filename/path (no prefix) is also relative.
  */
 function isRelativePath(text: string): boolean {
-  return text.startsWith("./") || text.startsWith("../");
+  // Explicit relative prefixes
+  if (text.startsWith("./") || text.startsWith("../")) return true;
+  // Bare paths: not a URL, not absolute, not home — treat as relative
+  if (
+    !text.startsWith("/") &&
+    !text.startsWith("~") &&
+    !/^[A-Za-z]:[\\/]/.test(text) &&
+    !text.includes("://")
+  ) {
+    return true;
+  }
+  return false;
 }
 
 /**

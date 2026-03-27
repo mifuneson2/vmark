@@ -141,6 +141,17 @@ describe("resolveMediaSrc", () => {
         "asset://localhost//Users/test/docs/assets/bar.mp3",
       );
     });
+
+    it("resolves bare relative path without ./ prefix", async () => {
+      const result = await resolveMediaSrc("images/photo.jpg");
+      expect(mockJoin).toHaveBeenCalledWith(
+        "/Users/test/docs",
+        "images/photo.jpg",
+      );
+      expect(result).toBe(
+        "asset://localhost//Users/test/docs/images/photo.jpg",
+      );
+    });
   });
 
   describe("security", () => {
@@ -192,9 +203,9 @@ describe("resolveMediaSrc", () => {
       expect(result).toBe("./local.png");
     });
 
-    it("returns original src for non-external, non-absolute, non-relative paths", async () => {
-      // A bare filename without ./ prefix or absolute path
-      // isRelativePath should return false for such input
+    it("returns original src for bare text when no active document", async () => {
+      // Bare text is treated as relative, but without an active document
+      // there's no directory to resolve against — returns original src
       const result = await resolveMediaSrc("justtext");
       expect(result).toBe("justtext");
     });
