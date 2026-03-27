@@ -641,14 +641,16 @@ fn handle_rust_side(request: &McpRequest, app: &AppHandle) -> Option<McpResponse
                     serde_json::json!({
                         "label": label,
                         "title": window.title().unwrap_or_default(),
-                        "focused": window.is_focused().unwrap_or(false),
+                        "filePath": null,
+                        "isFocused": window.is_focused().unwrap_or(false),
+                        "isAiExposed": true,
                     })
                 })
                 .collect();
 
             Some(McpResponse {
                 success: true,
-                data: Some(serde_json::json!({ "windows": windows })),
+                data: Some(serde_json::to_value(&windows).unwrap_or_default()),
                 error: None,
             })
         }
@@ -661,9 +663,9 @@ fn handle_rust_side(request: &McpRequest, app: &AppHandle) -> Option<McpResponse
 
             Some(McpResponse {
                 success: true,
-                data: Some(serde_json::json!({
-                    "label": focused.unwrap_or_else(|| "main".to_string())
-                })),
+                data: Some(serde_json::Value::String(
+                    focused.unwrap_or_else(|| "main".to_string()),
+                )),
                 error: None,
             })
         }
