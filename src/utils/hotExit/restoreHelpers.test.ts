@@ -386,7 +386,7 @@ describe('restoreHelpers', () => {
       expect(mockSetSidebarWidth).toHaveBeenCalledWith(width);
     });
 
-    it('should validate sidebar_view_mode to "files" or "outline"', () => {
+    it('should validate sidebar_view_mode to "files", "outline", or "history"', () => {
       const ws = makeWindowState({
         ui_state: makeUiState({ sidebar_view_mode: 'outline' }),
       });
@@ -394,6 +394,16 @@ describe('restoreHelpers', () => {
       restoreUiState(ws);
 
       expect(mockSetSidebarViewMode).toHaveBeenCalledWith('outline');
+    });
+
+    it('should accept sidebar_view_mode "history"', () => {
+      const ws = makeWindowState({
+        ui_state: makeUiState({ sidebar_view_mode: 'history' }),
+      });
+
+      restoreUiState(ws);
+
+      expect(mockSetSidebarViewMode).toHaveBeenCalledWith('history');
     });
 
     it('should default sidebar_view_mode to "files" for invalid values', () => {

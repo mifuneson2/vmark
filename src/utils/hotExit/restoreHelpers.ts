@@ -150,7 +150,7 @@ export function restoreUiState(windowState: WindowState): void {
   const editorStore = useEditorStore.getState();
 
   // Validate sidebar_view_mode before setting
-  const viewMode = (ui_state.sidebar_view_mode === 'files' || ui_state.sidebar_view_mode === 'outline')
+  const viewMode = (ui_state.sidebar_view_mode === 'files' || ui_state.sidebar_view_mode === 'outline' || ui_state.sidebar_view_mode === 'history')
     ? ui_state.sidebar_view_mode
     : 'files';
 

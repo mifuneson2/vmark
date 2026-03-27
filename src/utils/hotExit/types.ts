@@ -83,7 +83,7 @@ export interface UiState {
   sidebar_visible: boolean;
   sidebar_width: number;
   outline_visible: boolean;
-  sidebar_view_mode: string; // "files" | "outline"
+  sidebar_view_mode: string; // "files" | "outline" | "history"
   status_bar_visible: boolean;
   source_mode_enabled: boolean;
   focus_mode_enabled: boolean;
