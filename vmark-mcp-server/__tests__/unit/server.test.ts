@@ -267,6 +267,32 @@ describe('VMarkMcpServer', () => {
         'Unknown resource'
       );
     });
+
+    it('should wrap handler errors with resource URI context', async () => {
+      server.registerResource(
+        { uri: 'vmark://failing', name: 'Failing', description: 'Fails' },
+        async () => {
+          throw new Error('Handler exploded');
+        }
+      );
+
+      await expect(server.readResource('vmark://failing')).rejects.toThrow(
+        'Resource error (vmark://failing): Handler exploded'
+      );
+    });
+
+    it('should handle non-Error thrown values in handler', async () => {
+      server.registerResource(
+        { uri: 'vmark://weird', name: 'Weird', description: 'Throws string' },
+        async () => {
+          throw 'String error';
+        }
+      );
+
+      await expect(server.readResource('vmark://weird')).rejects.toThrow(
+        'Resource error (vmark://weird): String error'
+      );
+    });
   });
 
   describe('sendBridgeRequest', () => {
