@@ -47,6 +47,24 @@ describe("imageView security", () => {
       expect(isRelativePath("../parent/image.png")).toBe(false);
       expect(isRelativePath("../../etc/passwd")).toBe(false);
     });
+
+    it("returns false for home-relative paths", () => {
+      expect(isRelativePath("~/photo.png")).toBe(false);
+      expect(isRelativePath("~")).toBe(false);
+    });
+
+    it("returns false for degenerate inputs", () => {
+      expect(isRelativePath("")).toBe(false);
+      expect(isRelativePath("   ")).toBe(false);
+      expect(isRelativePath(".")).toBe(false);
+    });
+
+    it("returns false for non-standard URI schemes", () => {
+      expect(isRelativePath("javascript:alert(1)")).toBe(false);
+      expect(isRelativePath("vbscript:code")).toBe(false);
+      expect(isRelativePath("blob:http://example.com")).toBe(false);
+      expect(isRelativePath("HTTPS://example.com/image.png")).toBe(false);
+    });
   });
 
   describe("isAbsolutePath", () => {
@@ -111,13 +129,18 @@ describe("imageView security", () => {
 
   describe("validateImagePath", () => {
     describe("path traversal attacks", () => {
-      it("rejects paths with .. (parent directory)", () => {
+      it("rejects paths with .. as a path segment", () => {
         expect(validateImagePath("../../../etc/passwd")).toBe(false);
         expect(validateImagePath("./assets/../../../etc/passwd")).toBe(false);
         expect(validateImagePath("assets/../secret.txt")).toBe(false);
         expect(validateImagePath("..")).toBe(false);
-        expect(validateImagePath("a../b")).toBe(false);
         expect(validateImagePath("../")).toBe(false);
+      });
+
+      it("allows filenames containing consecutive dots (not traversal)", () => {
+        expect(validateImagePath("a../b")).toBe(true);
+        expect(validateImagePath("my..photo.png")).toBe(true);
+        expect(validateImagePath("images/v1..2/photo.png")).toBe(true);
       });
 
       it("rejects absolute POSIX paths", () => {

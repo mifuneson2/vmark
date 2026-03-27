@@ -8,12 +8,21 @@ import { imageViewWarn } from "@/utils/debug";
 
 /**
  * Check if a path is relative.
- * A path is relative if it is not an external URL, not an absolute path,
- * and does not start with parent traversal (../).
+ * A path is relative if it is not a URL, not absolute, not home-relative,
+ * not parent traversal, and not degenerate (whitespace, dot-only).
  */
 export function isRelativePath(src: string): boolean {
-  if (!src || isExternalUrl(src) || isAbsolutePath(src)) return false;
-  if (src.startsWith("../") || src === "..") return false;
+  const trimmed = src.trim();
+  if (!trimmed) return false;
+  // Reject any URI scheme (case-insensitive): http:, javascript:, blob:, etc.
+  if (/^[a-z][a-z0-9+.-]*:/i.test(trimmed)) return false;
+  if (isAbsolutePath(trimmed)) return false;
+  // Reject home-relative paths (~/)
+  if (trimmed.startsWith("~/") || trimmed === "~") return false;
+  // Reject parent traversal
+  if (trimmed.startsWith("../") || trimmed === "..") return false;
+  // Reject dot-only
+  if (trimmed === ".") return false;
   return true;
 }
 
@@ -39,11 +48,13 @@ export function isExternalUrl(src: string): boolean {
 
 /**
  * Validate an image path for security.
- * Rejects paths that attempt path traversal via `..`.
+ * Rejects paths that attempt path traversal via `..` segments.
  */
 export function validateImagePath(src: string): boolean {
-  // Reject any path containing parent directory references
-  if (src.includes("..")) {
+  // Reject paths with ".." as a path segment (parent traversal)
+  // Allows filenames like "my..photo.png" where ".." is not a segment
+  const segments = src.replace(/\\/g, "/").split("/");
+  if (segments.some((s) => s === "..")) {
     return false;
   }
 

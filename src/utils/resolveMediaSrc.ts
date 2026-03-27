@@ -78,8 +78,9 @@ export async function resolveMediaSrc(
   if (isAbsolutePath(decodedSrc))
     return convertFileSrc(normalizePathForAsset(decodedSrc));
 
-  // Reject paths with directory traversal regardless of prefix
-  if (decodedSrc.includes("..")) {
+  // Reject paths with ".." as a path segment (parent traversal)
+  const segments = decodedSrc.replace(/\\/g, "/").split("/");
+  if (segments.some((s) => s === "..")) {
     imageViewWarn(`${logPrefix} Rejected path with directory traversal:`, decodedSrc);
     return "";
   }

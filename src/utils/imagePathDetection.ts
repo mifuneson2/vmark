@@ -101,12 +101,14 @@ function isHomePath(text: string): boolean {
 function isRelativePath(text: string): boolean {
   // Explicit relative prefixes
   if (text.startsWith("./") || text.startsWith("../")) return true;
-  // Bare paths: not a URL, not absolute, not home — treat as relative
+  // Bare paths: not a URL, not absolute, not home, not UNC — treat as relative
   if (
-    !text.startsWith("/") &&
+    !isUnixAbsolutePath(text) &&
+    !isWindowsAbsolutePath(text) &&
+    !isHomePath(text) &&
     !text.startsWith("~") &&
-    !/^[A-Za-z]:[\\/]/.test(text) &&
-    !text.includes("://")
+    !text.startsWith("//") &&
+    !/^[a-z][a-z0-9+.-]*:/i.test(text)
   ) {
     return true;
   }

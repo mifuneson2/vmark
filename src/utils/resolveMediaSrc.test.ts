@@ -223,13 +223,11 @@ describe("resolveMediaSrc", () => {
       expect(result).toBe("");
     });
 
-    it("rejects relative path that fails validateImagePath", async () => {
-      // A path that isRelativePath returns true for but validateImagePath rejects
-      // e.g., a path with control characters or invalid extension
+    it("resolves path with dirname failure to original src", async () => {
       setupDocWithPath("/Users/test/docs/readme.md");
-      const result = await resolveMediaSrc("./\x00bad");
-      // validateImagePath rejects paths with control characters
-      expect(typeof result).toBe("string");
+      mockDirname.mockRejectedValueOnce(new Error("dirname failed"));
+      const result = await resolveMediaSrc("images/test.png");
+      expect(result).toBe("images/test.png");
     });
   });
 });
