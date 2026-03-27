@@ -116,7 +116,8 @@
       "@modelcontextprotocol/sdk>ajv": ">=8.18.0",
       "dompurify": ">=3.3.2",
       "qs": ">=6.14.2",
-      "picomatch": ">=4.0.4"
+      "picomatch": ">=4.0.4",
+      "path-to-regexp": ">=8.4.0"
     }
   },
   "devDependencies": {
