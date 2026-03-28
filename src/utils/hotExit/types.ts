@@ -46,6 +46,7 @@ export interface DocumentState {
   is_dirty: boolean;
   is_missing: boolean;
   is_divergent: boolean;
+  is_read_only?: boolean;
   line_ending: LineEnding;
   cursor_info: CursorInfo | null;
   last_modified_timestamp: number | null;

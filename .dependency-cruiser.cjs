@@ -57,6 +57,8 @@ module.exports = {
           "src/utils/hotExit/",
           // Type bridging (imports plugin format types for unified type definitions)
           "src/types/cursorContext",
+          // Read-only guard (reads document store for read-only state)
+          "src/utils/readOnlyGuard",
           // CJK formatter (reads settings for formatting rules)
           "src/lib/cjkFormatter/",
         ],

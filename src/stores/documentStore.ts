@@ -51,6 +51,8 @@ export interface DocumentState {
   isMissing: boolean;
   /** True when user chose "Keep my changes" after external modification - local differs from disk */
   isDivergent: boolean;
+  /** True when document is in read-only mode — blocks new edits but allows save */
+  readOnly: boolean;
   lineEnding: LineEnding;
   hardBreakStyle: HardBreakStyle;
 }
@@ -72,6 +74,10 @@ interface DocumentStore {
   markMissing: (tabId: string) => void;
   clearMissing: (tabId: string) => void;
   markDivergent: (tabId: string) => void;
+
+  setReadOnly: (tabId: string, readOnly: boolean) => void;
+  toggleReadOnly: (tabId: string) => void;
+  isReadOnly: (tabId: string) => boolean;
 
   markSaved: (tabId: string, lastDiskContent?: string) => void;
   markAutoSaved: (tabId: string, lastDiskContent?: string) => void;
@@ -98,6 +104,7 @@ const createInitialDocument = (content = "", filePath: string | null = null): Do
   lastAutoSave: null,
   isMissing: false,
   isDivergent: false,
+  readOnly: false,
   lineEnding: "unknown",
   hardBreakStyle: "unknown",
 });
@@ -185,6 +192,17 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
 
   markDivergent: (tabId) =>
     set((state) => updateDoc(state, tabId, () => ({ isDivergent: true }))),
+
+  setReadOnly: (tabId, readOnly) =>
+    set((state) => updateDoc(state, tabId, () => ({ readOnly }))),
+
+  toggleReadOnly: (tabId) =>
+    set((state) => updateDoc(state, tabId, (doc) => ({ readOnly: !doc.readOnly }))),
+
+  isReadOnly: (tabId) => {
+    const doc = get().documents[tabId];
+    return doc?.readOnly ?? false;
+  },
 
   markSaved: (tabId, lastDiskContent) =>
     set((state) =>

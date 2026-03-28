@@ -13,6 +13,7 @@ import { useEffect, useRef } from "react";
 import { type UnlistenFn } from "@tauri-apps/api/event";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { useEditorStore } from "@/stores/editorStore";
+import { useDocumentStore } from "@/stores/documentStore";
 import { useUIStore } from "@/stores/uiStore";
 import { requestToggleTerminal } from "@/components/Terminal/terminalGate";
 import { useSettingsStore } from "@/stores/settingsStore";
@@ -123,6 +124,14 @@ export function useViewMenuEvents(): void {
       });
       if (cancelled) { unlistenFitTables(); return; }
       unlistenRefs.current.push(unlistenFitTables);
+
+      const unlistenReadOnly = await currentWindow.listen<string>("menu:read-only", (event) => {
+        if (event.payload !== windowLabel) return;
+        const tabId = getActiveTabId(windowLabel);
+        if (tabId) useDocumentStore.getState().toggleReadOnly(tabId);
+      });
+      if (cancelled) { unlistenReadOnly(); return; }
+      unlistenRefs.current.push(unlistenReadOnly);
 
       const unlistenToggleTerminal = await currentWindow.listen<string>("menu:toggle-terminal", (event) => {
         if (event.payload !== windowLabel) return;

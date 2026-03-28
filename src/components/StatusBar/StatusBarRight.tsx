@@ -20,7 +20,7 @@
  */
 import { useTranslation } from "react-i18next";
 import i18n from "@/i18n";
-import { AlertTriangle, Check, Code2, GitFork, Satellite, Save, Sparkles, Terminal, Type } from "lucide-react";
+import { AlertTriangle, Check, Code2, GitFork, Lock, LockOpen, Satellite, Save, Sparkles, Terminal, Type } from "lucide-react";
 import { useImagePasteToastStore } from "@/stores/imagePasteToastStore";
 import { flushActiveWysiwygNow } from "@/utils/wysiwygFlush";
 import { requestToggleTerminal } from "@/components/Terminal/terminalGate";
@@ -89,6 +89,9 @@ interface StatusBarRightProps {
   sourceMode: boolean;
   sourceModeShortcut: string;
   onToggleSourceMode: () => void;
+  readOnly: boolean;
+  readOnlyShortcut: string;
+  onToggleReadOnly: () => void;
 }
 
 /** Right-hand section of the status bar with counts, AI/MCP status, terminal toggle, and mode toggle. */
@@ -116,6 +119,9 @@ export function StatusBarRight({
   sourceMode,
   sourceModeShortcut,
   onToggleSourceMode,
+  readOnly,
+  readOnlyShortcut,
+  onToggleReadOnly,
 }: StatusBarRightProps) {
   const { t } = useTranslation("statusbar");
   return (
@@ -231,6 +237,16 @@ export function StatusBarRight({
         }}
       >
         {sourceMode ? <Code2 size={14} /> : <Type size={12} />}
+      </button>
+
+      <button
+        className={`status-lock${readOnly ? " active" : ""}`}
+        title={readOnly ? t("readOnlyTitle", { shortcut: formatKeyForDisplay(readOnlyShortcut) }) : t("editableTitle", { shortcut: formatKeyForDisplay(readOnlyShortcut) })}
+        aria-label={readOnly ? t("readOnly") : t("editable")}
+        aria-pressed={readOnly}
+        onClick={onToggleReadOnly}
+      >
+        {readOnly ? <Lock size={12} /> : <LockOpen size={12} />}
       </button>
     </div>
   );

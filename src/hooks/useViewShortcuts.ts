@@ -18,6 +18,7 @@
 
 import { useEffect } from "react";
 import { useEditorStore } from "@/stores/editorStore";
+import { useDocumentStore } from "@/stores/documentStore";
 import { useUIStore } from "@/stores/uiStore";
 import { useShortcutsStore } from "@/stores/shortcutsStore";
 import { isImeKeyEvent } from "@/utils/imeGuard";
@@ -97,6 +98,15 @@ export function useViewShortcuts() {
       if (matchesShortcutEvent(e, lineNumbersKey)) {
         e.preventDefault();
         useEditorStore.getState().toggleLineNumbers();
+        return;
+      }
+
+      // Read-only mode
+      const readOnlyKey = shortcuts.getShortcut("readOnly");
+      if (readOnlyKey && matchesShortcutEvent(e, readOnlyKey)) {
+        e.preventDefault();
+        const tabId = getActiveTabId(getCurrentWindowLabel());
+        if (tabId) useDocumentStore.getState().toggleReadOnly(tabId);
         return;
       }
 

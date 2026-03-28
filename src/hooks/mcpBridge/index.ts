@@ -30,6 +30,8 @@ import type { McpRequestEvent, McpRequestEventRaw } from "./types";
 import { respond } from "./utils";
 import { useEditorStore } from "@/stores/editorStore";
 import { isBlockedInSourceMode, SOURCE_MODE_ERROR } from "./sourceModeGuard";
+import { isBlockedInReadOnly, READ_ONLY_ERROR } from "./readOnlyGuard";
+import { isActiveDocReadOnly } from "@/utils/readOnlyGuard";
 import { mcpBridgeLog, mcpBridgeError } from "@/utils/debug";
 
 // Document handlers (read-only operations)
@@ -194,6 +196,12 @@ async function handleRequest(event: McpRequestEvent): Promise<void> {
   const { sourceMode } = useEditorStore.getState();
   if (sourceMode && isBlockedInSourceMode(type)) {
     await respond({ id, success: false, error: SOURCE_MODE_ERROR });
+    return;
+  }
+
+  // Block write operations on read-only documents
+  if (isBlockedInReadOnly(type) && isActiveDocReadOnly()) {
+    await respond({ id, success: false, error: READ_ONLY_ERROR });
     return;
   }
 

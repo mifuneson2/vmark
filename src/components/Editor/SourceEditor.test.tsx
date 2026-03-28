@@ -23,6 +23,7 @@ vi.mock("@codemirror/state", () => ({
       doc: { toString: mockDocToString, length: 7 },
       selection: { main: { head: 0, anchor: 0 } },
     })),
+    readOnly: { of: vi.fn(() => "readOnly") },
   },
   Compartment: vi.fn(() => ({
     of: vi.fn((ext: unknown) => ext),
@@ -200,6 +201,10 @@ vi.mock("@/utils/sourceEditorSearch", () => ({
 vi.mock("@/utils/sourceEditorExtensions", () => ({
   createSourceEditorExtensions: vi.fn(() => []),
   shortcutKeymapCompartment: {
+    of: vi.fn((ext: unknown) => ext),
+    reconfigure: vi.fn((ext: unknown) => ext),
+  },
+  readOnlyCompartment: {
     of: vi.fn((ext: unknown) => ext),
     reconfigure: vi.fn((ext: unknown) => ext),
   },

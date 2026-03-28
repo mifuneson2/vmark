@@ -134,6 +134,7 @@ export function useImageDragDrop({
     (paths: string[]) => {
       const cmView = cmViewRef?.current;
       if (!cmView || paths.length === 0) return;
+      if (cmView.state.readOnly) return;
 
       const { state } = cmView;
       const pos = state.selection.main.head;
@@ -196,6 +197,14 @@ export function useImageDragDrop({
 
         // No images to process
         if (!hasImages) return;
+
+        // Block drops on read-only documents before any file processing
+        if (isSourceMode) {
+          const cmView = cmViewRef?.current;
+          if (cmView?.state.readOnly) return;
+        } else {
+          if (tiptapEditor && tiptapEditor.isEditable === false) return;
+        }
 
         const copyToAssets = useSettingsStore.getState().image.copyToAssets;
         const filePath = getFilePath();

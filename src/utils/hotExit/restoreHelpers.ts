@@ -304,6 +304,9 @@ export async function restoreDocumentState(
   if (docState.is_divergent) {
     documentStore.markDivergent(tabId);
   }
+  if (docState.is_read_only) {
+    documentStore.setReadOnly(tabId, true);
+  }
 
   // Restore cursor info (using shared validation helper)
   const cursorInfo = toStoreCursorInfo(docState.cursor_info);

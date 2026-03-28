@@ -169,6 +169,7 @@ menu:
   view.lineNumbers: "Mostra/Nascondi numeri riga"
   view.diagramPreview: "Mostra/Nascondi anteprima diagramma"
   view.fitTables: "Adatta tabelle alla larghezza"
+  view.readOnly: "Modalità sola lettura"
   view.outline: "Mostra/Nascondi struttura"
   view.fileExplorer: "Mostra/Nascondi file explorer"
   view.history: "Mostra/Nascondi cronologia"

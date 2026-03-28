@@ -114,10 +114,11 @@ function syncMarkdownToEditor(
 
 interface TiptapEditorInnerProps {
   hidden?: boolean;
+  readOnly?: boolean;
 }
 
 /** WYSIWYG rich-text editor built on Tiptap/ProseMirror with adaptive debounced serialization. */
-export function TiptapEditorInner({ hidden = false }: TiptapEditorInnerProps) {
+export function TiptapEditorInner({ hidden = false, readOnly = false }: TiptapEditorInnerProps) {
   const content = useDocumentContent();
   const cursorInfo = useDocumentCursorInfo();
   const { setContent, setCursorInfo } = useDocumentActions();
@@ -211,6 +212,7 @@ export function TiptapEditorInner({ hidden = false }: TiptapEditorInnerProps) {
   );
 
   const editor = useEditor({
+    editable: !readOnly,
     extensions,
     editorProps: {
       attributes: {
@@ -389,6 +391,12 @@ export function TiptapEditorInner({ hidden = false }: TiptapEditorInnerProps) {
       view.dispatch(tr);
     }
   }, [editor, cjkLetterSpacing]);
+
+  // Toggle editor editability when read-only mode changes
+  useEffect(() => {
+    if (!editor) return;
+    editor.setEditable(!readOnly, false);
+  }, [editor, readOnly]);
 
   // Sync external content changes TO the editor.
   // Only runs for SUBSEQUENT content changes after onCreate has initialized the editor.

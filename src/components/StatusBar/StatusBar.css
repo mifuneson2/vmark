@@ -567,11 +567,43 @@
   color: var(--accent-primary);
 }
 
+/* ========================================
+   Read-Only Lock Toggle
+   ======================================== */
+
+.status-lock {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 4px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.status-lock:hover {
+  background-color: var(--hover-bg);
+  color: var(--text-color);
+}
+
+.status-lock:active {
+  background-color: var(--hover-bg-strong);
+}
+
+.status-lock.active {
+  color: var(--accent-primary);
+}
+
 /* Focus indicators for StatusBar buttons */
 .status-sidebar-toggle:focus-visible,
 .status-new-tab:focus-visible,
 .status-mode:focus-visible,
 .status-mcp:focus-visible,
+.status-lock:focus-visible,
 .status-terminal:focus-visible {
   outline: none;
 }
@@ -580,6 +612,7 @@
 .status-new-tab:focus-visible::after,
 .status-mode:focus-visible::after,
 .status-mcp:focus-visible::after,
+.status-lock:focus-visible::after,
 .status-terminal:focus-visible::after {
   content: '';
   position: absolute;

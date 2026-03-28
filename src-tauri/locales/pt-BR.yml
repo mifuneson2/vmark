@@ -169,6 +169,7 @@ menu:
   view.lineNumbers: "Alternar números de linha"
   view.diagramPreview: "Alternar pré-visualização de diagrama"
   view.fitTables: "Ajustar tabelas à largura"
+  view.readOnly: "Modo somente leitura"
   view.outline: "Alternar estrutura"
   view.fileExplorer: "Alternar explorador de arquivos"
   view.history: "Alternar histórico"

@@ -9,14 +9,14 @@ VMark is designed for keyboard-first workflows. Most shortcuts can be customized
 
 ## Function Keys on macOS
 
-VMark uses function keys (F4–F9) for quick mode toggles. On macOS, these keys are mapped to system functions (brightness, volume, etc.) by default.
+VMark uses function keys (F4–F10) for quick mode toggles. On macOS, these keys are mapped to system functions (brightness, volume, etc.) by default.
 
 **To use F-keys directly without holding Fn:**
 
 1. Open **System Settings** → **Keyboard**
 2. Enable **"Use F1, F2, etc. keys as standard function keys"**
 
-Alternatively, hold the **Fn** key when pressing F4–F9 to trigger VMark shortcuts.
+Alternatively, hold the **Fn** key when pressing F4–F10 to trigger VMark shortcuts.
 
 ::: tip
 If you prefer keeping system functions on F-keys, you can customize VMark shortcuts in Settings (`Mod + ,`) to use different key combinations.
@@ -35,6 +35,7 @@ If you prefer keeping system functions on F-keys, you can customize VMark shortc
 | `F7` | Toggle Status Bar |
 | `F8` | Focus Mode |
 | `F9` | Typewriter Mode |
+| `F10` | Read-Only Mode |
 
 ## Edit
 
@@ -151,6 +152,7 @@ If you prefer keeping system functions on F-keys, you can customize VMark shortc
 | Toggle Status Bar | `F7` |
 | Focus Mode | `F8` |
 | Typewriter Mode | `F9` |
+| Read-Only Mode | `F10` |
 | Actual Size | `Mod + 0` |
 | Zoom In | `Mod + =` |
 | Zoom Out | `Mod + -` |

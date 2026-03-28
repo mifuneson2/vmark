@@ -169,6 +169,7 @@ menu:
   view.lineNumbers: "Afficher/masquer les numéros de ligne"
   view.diagramPreview: "Afficher/masquer l'aperçu des diagrammes"
   view.fitTables: "Ajuster les tableaux à la largeur"
+  view.readOnly: "Mode lecture seule"
   view.outline: "Afficher/masquer le plan"
   view.fileExplorer: "Afficher/masquer l'explorateur de fichiers"
   view.history: "Afficher/masquer l'historique"

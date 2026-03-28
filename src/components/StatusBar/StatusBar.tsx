@@ -99,6 +99,7 @@ export function StatusBar() {
   const sidebarVisible = useUIStore((state) => state.sidebarVisible);
   const terminalVisible = useUIStore((state) => state.terminalVisible);
   const sourceModeShortcut = useShortcutsStore((state) => state.getShortcut("sourceMode"));
+  const readOnlyShortcut = useShortcutsStore((state) => state.getShortcut("readOnly"));
   const terminalShortcut = useShortcutsStore((state) => state.getShortcut("toggleTerminal"));
   const saveShortcut = useShortcutsStore((state) => state.getShortcut("save"));
   const aiRunning = useAiInvocationStore((state) => state.isRunning);
@@ -118,6 +119,7 @@ export function StatusBar() {
 
   const tabs = useTabStore((state) => (isDocumentWindow ? state.tabs[windowLabel] ?? EMPTY_TABS : EMPTY_TABS));
   const activeTabId = useTabStore((state) => (isDocumentWindow ? state.activeTabId[windowLabel] : null));
+  const readOnly = useDocumentStore((state) => activeTabId ? state.documents[activeTabId]?.readOnly ?? false : false);
 
   const [contextMenu, setContextMenu] = useState<{
     position: ContextMenuPosition;
@@ -303,6 +305,11 @@ export function StatusBar() {
             sourceMode={sourceMode}
             sourceModeShortcut={sourceModeShortcut}
             onToggleSourceMode={() => useEditorStore.getState().toggleSourceMode()}
+            readOnly={readOnly}
+            readOnlyShortcut={readOnlyShortcut}
+            onToggleReadOnly={() => {
+              if (activeTabId) useDocumentStore.getState().toggleReadOnly(activeTabId);
+            }}
           />
         </div>
       </div>

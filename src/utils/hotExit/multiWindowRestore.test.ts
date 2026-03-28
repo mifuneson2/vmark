@@ -48,6 +48,7 @@ function createMockSession(windowConfigs: Array<{
           is_dirty: false,
           is_missing: false,
           is_divergent: false,
+          is_read_only: false,
           line_ending: '\n' as const,
           cursor_info: null,
           last_modified_timestamp: null,

@@ -169,6 +169,7 @@ menu:
   view.lineNumbers: "行番号の表示切替"
   view.diagramPreview: "ダイアグラムプレビューの切り替え"
   view.fitTables: "テーブルを幅に合わせる"
+  view.readOnly: "読み取り専用モード"
   view.outline: "アウトラインの表示切替"
   view.fileExplorer: "ファイルエクスプローラーの表示切替"
   view.history: "履歴の表示切替"

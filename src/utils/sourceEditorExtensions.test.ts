@@ -15,7 +15,10 @@ vi.mock("@codemirror/state", () => {
   }
   return {
     Compartment: MockCompartment,
-    EditorState: { allowMultipleSelections: { of: vi.fn(() => "allow-multi") } },
+    EditorState: {
+      allowMultipleSelections: { of: vi.fn(() => "allow-multi") },
+      readOnly: { of: vi.fn(() => "readOnly") },
+    },
   };
 });
 
@@ -164,6 +167,7 @@ import {
   autoPairCompartment,
   lineNumbersCompartment,
   shortcutKeymapCompartment,
+  readOnlyCompartment,
 } from "./sourceEditorExtensions";
 import { keymap } from "@codemirror/view";
 import { selectNextOccurrence, selectSelectionMatches } from "@codemirror/search";
@@ -216,12 +220,13 @@ describe("createSourceEditorExtensions", () => {
 });
 
 describe("exported compartments", () => {
-  it("exports all five compartments", () => {
+  it("exports all six compartments", () => {
     expect(lineWrapCompartment).toBeDefined();
     expect(brVisibilityCompartment).toBeDefined();
     expect(autoPairCompartment).toBeDefined();
     expect(lineNumbersCompartment).toBeDefined();
     expect(shortcutKeymapCompartment).toBeDefined();
+    expect(readOnlyCompartment).toBeDefined();
   });
 
   it("compartments have an 'of' method", () => {
@@ -230,6 +235,7 @@ describe("exported compartments", () => {
     expect(typeof autoPairCompartment.of).toBe("function");
     expect(typeof lineNumbersCompartment.of).toBe("function");
     expect(typeof shortcutKeymapCompartment.of).toBe("function");
+    expect(typeof readOnlyCompartment.of).toBe("function");
   });
 });
 

@@ -148,6 +148,9 @@ const baseProps = {
   sourceMode: false,
   sourceModeShortcut: "Mod-/",
   onToggleSourceMode: vi.fn(),
+  readOnly: false,
+  readOnlyShortcut: "F10",
+  onToggleReadOnly: vi.fn(),
 };
 
 describe("StatusBarRight", () => {

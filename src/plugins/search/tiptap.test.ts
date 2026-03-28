@@ -840,6 +840,7 @@ describe("search plugin view lifecycle", () => {
       dom: document.createElement("div"),
       dispatch: vi.fn(),
       coordsAtPos: vi.fn(() => ({ top: 100, bottom: 120, left: 50 })),
+      editable: true,
     };
 
     const viewResult = plugin.spec.view!(mockView as never);

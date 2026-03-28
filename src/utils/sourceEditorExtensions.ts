@@ -87,6 +87,7 @@ export const brVisibilityCompartment = new Compartment();
 export const autoPairCompartment = new Compartment();
 export const lineNumbersCompartment = new Compartment();
 export const shortcutKeymapCompartment = new Compartment();
+export const readOnlyCompartment = new Compartment();
 
 // Custom brackets config for markdown (^, standard brackets)
 const markdownCloseBrackets = markdownLanguage.data.of({
@@ -100,6 +101,7 @@ interface ExtensionConfig {
   initialShowBrTags: boolean;
   initialAutoPair: boolean;
   initialShowLineNumbers: boolean;
+  initialReadOnly?: boolean;
   updateListener: Extension;
   /** Tab ID for per-tab lint diagnostics (required when lintEnabled is true) */
   tabId?: string;
@@ -148,6 +150,8 @@ export function createSourceEditorExtensions(config: ExtensionConfig): Extension
     history(),
     // Shortcuts from settings (dynamic via compartment)
     shortcutKeymapCompartment.of(keymap.of(buildSourceShortcutKeymap())),
+    // Read-only mode (dynamic via compartment)
+    readOnlyCompartment.of(EditorState.readOnly.of(config.initialReadOnly ?? false)),
     // Keymaps (no searchKeymap - we use our unified FindBar)
     keymap.of([
       // Visual line navigation (must be before default keymap to override)

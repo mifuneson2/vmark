@@ -169,6 +169,7 @@ menu:
   view.lineNumbers: "Toggle Line Numbers"
   view.diagramPreview: "Toggle Diagram Preview"
   view.fitTables: "Fit Tables to Width"
+  view.readOnly: "Read-Only Mode"
   view.outline: "Toggle Outline"
   view.fileExplorer: "Toggle File Explorer"
   view.history: "Toggle History"

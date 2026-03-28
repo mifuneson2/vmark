@@ -113,6 +113,7 @@ describe('Schema Migration', () => {
                   is_dirty: false,
                   is_missing: false,
                   is_divergent: false,
+                  is_read_only: false,
                   line_ending: '\n',
                   cursor_info: null,
                   last_modified_timestamp: null,

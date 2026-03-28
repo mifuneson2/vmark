@@ -450,4 +450,56 @@ describe("documentStore", () => {
       expect(getDocument("window-2")?.isDirty).toBe(false);
     });
   });
+
+  describe("readOnly", () => {
+    it("defaults to false on new documents", () => {
+      const { initDocument, getDocument } = useDocumentStore.getState();
+      initDocument(WINDOW_LABEL, "test");
+      expect(getDocument(WINDOW_LABEL)?.readOnly).toBe(false);
+    });
+
+    it("setReadOnly sets readOnly flag", () => {
+      const { initDocument, setReadOnly, getDocument } = useDocumentStore.getState();
+      initDocument(WINDOW_LABEL, "test");
+      setReadOnly(WINDOW_LABEL, true);
+      expect(getDocument(WINDOW_LABEL)?.readOnly).toBe(true);
+      setReadOnly(WINDOW_LABEL, false);
+      expect(getDocument(WINDOW_LABEL)?.readOnly).toBe(false);
+    });
+
+    it("toggleReadOnly toggles readOnly flag", () => {
+      const { initDocument, toggleReadOnly, getDocument } = useDocumentStore.getState();
+      initDocument(WINDOW_LABEL, "test");
+      expect(getDocument(WINDOW_LABEL)?.readOnly).toBe(false);
+      toggleReadOnly(WINDOW_LABEL);
+      expect(getDocument(WINDOW_LABEL)?.readOnly).toBe(true);
+      toggleReadOnly(WINDOW_LABEL);
+      expect(getDocument(WINDOW_LABEL)?.readOnly).toBe(false);
+    });
+
+    it("isReadOnly returns correct value", () => {
+      const { initDocument, setReadOnly, isReadOnly } = useDocumentStore.getState();
+      initDocument(WINDOW_LABEL, "test");
+      expect(isReadOnly(WINDOW_LABEL)).toBe(false);
+      setReadOnly(WINDOW_LABEL, true);
+      expect(isReadOnly(WINDOW_LABEL)).toBe(true);
+    });
+
+    it("isReadOnly returns false for non-existent tab", () => {
+      expect(useDocumentStore.getState().isReadOnly("nonexistent")).toBe(false);
+    });
+
+    it("readOnly survives content updates", () => {
+      const { initDocument, setReadOnly, setContent, getDocument } = useDocumentStore.getState();
+      initDocument(WINDOW_LABEL, "test");
+      setReadOnly(WINDOW_LABEL, true);
+      setContent(WINDOW_LABEL, "updated");
+      expect(getDocument(WINDOW_LABEL)?.readOnly).toBe(true);
+    });
+
+    it("setReadOnly no-ops for non-existent tab", () => {
+      useDocumentStore.getState().setReadOnly("nonexistent", true);
+      expect(useDocumentStore.getState().isReadOnly("nonexistent")).toBe(false);
+    });
+  });
 });

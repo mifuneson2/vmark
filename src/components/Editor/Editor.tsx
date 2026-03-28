@@ -22,6 +22,7 @@
 import { lazy, Suspense } from "react";
 import { useEditorStore } from "@/stores/editorStore";
 import { useSettingsStore } from "@/stores/settingsStore";
+import { useDocumentStore } from "@/stores/documentStore";
 import { useActiveTabId, useDocumentId } from "@/hooks/useDocumentState";
 import { useUnifiedMenuCommands } from "@/hooks/useUnifiedMenuCommands";
 import { TiptapEditorInner } from "./TiptapEditor";
@@ -48,6 +49,7 @@ export function Editor() {
   const htmlRenderingMode = useSettingsStore((s) => s.markdown.htmlRenderingMode);
   const tableFitToWidth = useSettingsStore((s) => s.markdown.tableFitToWidth);
   const keepAlive = useSettingsStore((s) => s.advanced.keepBothEditorsAlive);
+  const readOnly = useDocumentStore((s) => tabId ? s.documents[tabId]?.readOnly ?? false : false);
   // lintEnabled not used directly — lint checks the setting at invocation time
 
   // Mount unified menu dispatcher (handles routing based on mode)
@@ -66,14 +68,14 @@ export function Editor() {
   const editorContent = keepAlive ? (
     <>
       <Suspense fallback={null}>
-        <SourceEditor key={editorKey} hidden={!sourceMode} />
+        <SourceEditor key={editorKey} hidden={!sourceMode} readOnly={readOnly} />
       </Suspense>
-      <TiptapEditorInner key={editorKey} hidden={sourceMode} />
+      <TiptapEditorInner key={editorKey} hidden={sourceMode} readOnly={readOnly} />
     </>
   ) : (
     sourceMode
-      ? <Suspense fallback={null}><SourceEditor key={editorKey} /></Suspense>
-      : <TiptapEditorInner key={editorKey} />
+      ? <Suspense fallback={null}><SourceEditor key={editorKey} readOnly={readOnly} /></Suspense>
+      : <TiptapEditorInner key={editorKey} readOnly={readOnly} />
   );
 
   return (

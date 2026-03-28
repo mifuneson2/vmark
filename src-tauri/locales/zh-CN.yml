@@ -169,6 +169,7 @@ menu:
   view.lineNumbers: "切换行号"
   view.diagramPreview: "切换图表预览"
   view.fitTables: "表格适应宽度"
+  view.readOnly: "只读模式"
   view.outline: "切换大纲"
   view.fileExplorer: "切换文件浏览器"
   view.history: "切换历史记录"

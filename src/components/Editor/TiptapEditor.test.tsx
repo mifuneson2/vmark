@@ -45,6 +45,7 @@ function createMockEditor() {
     schema: {},
     state: { doc: { content: { size: 100 } }, tr: { setMeta: vi.fn().mockReturnThis(), replaceWith: vi.fn().mockReturnThis() } },
     destroy: vi.fn(),
+    setEditable: vi.fn(),
   };
 }
 
