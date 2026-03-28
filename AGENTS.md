@@ -114,6 +114,8 @@ Shared instructions for all AI agents (Claude, Codex, etc.).
 
   - **Close issues when fixed** — close issues after the fix is merged. Use `Closes #N` in PR descriptions to auto-close. Only leave issues open if the fix is partial or needs follow-up.
 
+  - **Cost reports**: Daily cost reports use a single rolling issue (close previous, open new) with data archived to `.github/cost-reports/ledger.json`. Do not keep old cost-report issues open — the workflow handles the lifecycle automatically.
+
 - Key architectural patterns:
 
   - **Menu events**: Generic dispatcher in `menu_events.rs` emits `menu:{id}` to the focused window — no per-item handling needed for simple events.
