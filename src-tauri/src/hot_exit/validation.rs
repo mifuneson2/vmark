@@ -39,7 +39,14 @@ pub fn validate_and_repair(session: &mut SessionData) -> Vec<String> {
         let pre_path_count = window.tabs.len();
         window.tabs.retain(|tab| {
             match &tab.file_path {
-                Some(path) => seen_paths.insert(path.to_lowercase()),
+                Some(path) => {
+                    let key = if cfg!(target_os = "linux") {
+                        path.clone()
+                    } else {
+                        path.to_lowercase()
+                    };
+                    seen_paths.insert(key)
+                }
                 None => true, // untitled tabs are never duplicates
             }
         });
@@ -308,7 +315,7 @@ mod tests {
     }
 
     #[test]
-    fn duplicate_file_path_is_case_insensitive() {
+    fn duplicate_file_path_case_sensitivity_is_platform_aware() {
         let mut session = make_session(vec![{
             let mut w = make_window("main", &[], Some("t1"));
             w.tabs = vec![
@@ -320,9 +327,16 @@ mod tests {
 
         let warnings = validate_and_repair(&mut session);
 
-        assert!(warnings.iter().any(|w| w.contains("duplicate file_path")));
-        assert_eq!(session.windows[0].tabs.len(), 1);
-        assert_eq!(session.windows[0].tabs[0].id, "t1");
+        if cfg!(target_os = "linux") {
+            // Linux: case-sensitive — both tabs are distinct files
+            assert!(!warnings.iter().any(|w| w.contains("duplicate file_path")));
+            assert_eq!(session.windows[0].tabs.len(), 2);
+        } else {
+            // macOS/Windows: case-insensitive — treated as duplicates
+            assert!(warnings.iter().any(|w| w.contains("duplicate file_path")));
+            assert_eq!(session.windows[0].tabs.len(), 1);
+            assert_eq!(session.windows[0].tabs[0].id, "t1");
+        }
     }
 
     #[test]
