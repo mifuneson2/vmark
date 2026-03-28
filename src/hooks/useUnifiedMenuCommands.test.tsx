@@ -214,9 +214,11 @@ describe("useUnifiedMenuCommands", () => {
   afterEach(() => {
     // Force unmount before clearing state to prevent stale listener leaks
     cleanup();
+    vi.useRealTimers();
   });
 
   beforeEach(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
     listeners.clear();
     vi.clearAllMocks();
     sourceMode = false;
@@ -629,7 +631,6 @@ describe("useUnifiedMenuCommands", () => {
     render(<TestHarness />);
     await vi.waitFor(() => expect(listeners.has("menu:italic")).toBe(true));
 
-    vi.useFakeTimers();
     listeners.get("menu:italic")?.({ payload: "main" });
 
     // Not dispatched yet (editor is null)
@@ -643,8 +644,6 @@ describe("useUnifiedMenuCommands", () => {
       "italic",
       expect.objectContaining({ surface: "wysiwyg" })
     );
-
-    vi.useRealTimers();
   });
 
   it("gives up after max retries for WYSIWYG", async () => {
@@ -654,7 +653,6 @@ describe("useUnifiedMenuCommands", () => {
     render(<TestHarness />);
     await vi.waitFor(() => expect(listeners.has("menu:italic")).toBe(true));
 
-    vi.useFakeTimers();
     listeners.get("menu:italic")?.({ payload: "main" });
 
     // Advance past all retries (3 retries * 50ms each + initial 50ms)
@@ -662,8 +660,6 @@ describe("useUnifiedMenuCommands", () => {
 
     // Should not have dispatched (editor never became available)
     expect(performWysiwygToolbarAction).not.toHaveBeenCalled();
-
-    vi.useRealTimers();
   });
 
   it("retries source dispatch when view becomes available after delay", async () => {
@@ -673,7 +669,6 @@ describe("useUnifiedMenuCommands", () => {
     render(<TestHarness />);
     await vi.waitFor(() => expect(listeners.has("menu:italic")).toBe(true));
 
-    vi.useFakeTimers();
     listeners.get("menu:italic")?.({ payload: "main" });
 
     expect(performSourceToolbarAction).not.toHaveBeenCalled();
@@ -683,8 +678,6 @@ describe("useUnifiedMenuCommands", () => {
     await vi.advanceTimersByTimeAsync(60);
 
     expect(performSourceToolbarAction).toHaveBeenCalled();
-
-    vi.useRealTimers();
   });
 
   it("gives up after max retries for source", async () => {
@@ -694,14 +687,11 @@ describe("useUnifiedMenuCommands", () => {
     render(<TestHarness />);
     await vi.waitFor(() => expect(listeners.has("menu:italic")).toBe(true));
 
-    vi.useFakeTimers();
     listeners.get("menu:italic")?.({ payload: "main" });
 
     await vi.advanceTimersByTimeAsync(250);
 
     expect(performSourceToolbarAction).not.toHaveBeenCalled();
-
-    vi.useRealTimers();
   });
 
   it("blocks source-unsupported action in WYSIWYG mode", async () => {
