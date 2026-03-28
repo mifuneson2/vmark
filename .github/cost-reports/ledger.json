@@ -1,0 +1,182 @@
+[
+  {
+    "date": "2026-03-09",
+    "runs": 2,
+    "cost_usd": 17.95,
+    "input_tokens": 13,
+    "output_tokens": 6863,
+    "cache_creation_tokens": 70957,
+    "cache_read_tokens": 466112
+  },
+  {
+    "date": "2026-03-10",
+    "runs": 10,
+    "cost_usd": 43.72,
+    "input_tokens": 30,
+    "output_tokens": 11466,
+    "cache_creation_tokens": 24898,
+    "cache_read_tokens": 1461274
+  },
+  {
+    "date": "2026-03-11",
+    "runs": 7,
+    "cost_usd": 34.26,
+    "input_tokens": 25342,
+    "output_tokens": 40273,
+    "cache_creation_tokens": 528361,
+    "cache_read_tokens": 7528769
+  },
+  {
+    "date": "2026-03-12",
+    "runs": 3,
+    "cost_usd": 13.8,
+    "input_tokens": 6747,
+    "output_tokens": 23136,
+    "cache_creation_tokens": 353477,
+    "cache_read_tokens": 6529728
+  },
+  {
+    "date": "2026-03-13",
+    "runs": 3,
+    "cost_usd": 11.01,
+    "input_tokens": 43,
+    "output_tokens": 14724,
+    "cache_creation_tokens": 257362,
+    "cache_read_tokens": 1430057
+  },
+  {
+    "date": "2026-03-14",
+    "runs": 11,
+    "cost_usd": 17.75,
+    "input_tokens": 589,
+    "output_tokens": 37604,
+    "cache_creation_tokens": 343968,
+    "cache_read_tokens": 8052424
+  },
+  {
+    "date": "2026-03-15",
+    "runs": 6,
+    "cost_usd": 11.49,
+    "input_tokens": 117,
+    "output_tokens": 25331,
+    "cache_creation_tokens": 239838,
+    "cache_read_tokens": 4549927
+  },
+  {
+    "date": "2026-03-16",
+    "runs": 3,
+    "cost_usd": 8.62,
+    "input_tokens": 2389,
+    "output_tokens": 12413,
+    "cache_creation_tokens": 122794,
+    "cache_read_tokens": 1626438
+  },
+  {
+    "date": "2026-03-17",
+    "runs": 6,
+    "cost_usd": 19.2,
+    "input_tokens": 137,
+    "output_tokens": 34746,
+    "cache_creation_tokens": 258173,
+    "cache_read_tokens": 6619420
+  },
+  {
+    "date": "2026-03-18",
+    "runs": 4,
+    "cost_usd": 10.77,
+    "input_tokens": 80,
+    "output_tokens": 18091,
+    "cache_creation_tokens": 137344,
+    "cache_read_tokens": 3715423
+  },
+  {
+    "date": "2026-03-19",
+    "runs": 3,
+    "cost_usd": 10.22,
+    "input_tokens": 56,
+    "output_tokens": 10419,
+    "cache_creation_tokens": 128230,
+    "cache_read_tokens": 2714127
+  },
+  {
+    "date": "2026-03-20",
+    "runs": 9,
+    "cost_usd": 24.39,
+    "input_tokens": 525,
+    "output_tokens": 42197,
+    "cache_creation_tokens": 400946,
+    "cache_read_tokens": 9651026
+  },
+  {
+    "date": "2026-03-21",
+    "runs": 2,
+    "cost_usd": 10.14,
+    "input_tokens": 2257,
+    "output_tokens": 7417,
+    "cache_creation_tokens": 89273,
+    "cache_read_tokens": 1175770
+  },
+  {
+    "date": "2026-03-22",
+    "runs": 1,
+    "cost_usd": 11.65,
+    "input_tokens": 17,
+    "output_tokens": 5572,
+    "cache_creation_tokens": 17000,
+    "cache_read_tokens": 1053926
+  },
+  {
+    "date": "2026-03-23",
+    "runs": 6,
+    "cost_usd": 11.58,
+    "input_tokens": 94,
+    "output_tokens": 16417,
+    "cache_creation_tokens": 205495,
+    "cache_read_tokens": 3652388
+  },
+  {
+    "date": "2026-03-24",
+    "runs": 5,
+    "cost_usd": 14.84,
+    "input_tokens": 123,
+    "output_tokens": 24551,
+    "cache_creation_tokens": 203991,
+    "cache_read_tokens": 5933037
+  },
+  {
+    "date": "2026-03-25",
+    "runs": 3,
+    "cost_usd": 17.66,
+    "input_tokens": 80,
+    "output_tokens": 14879,
+    "cache_creation_tokens": 125650,
+    "cache_read_tokens": 4205244
+  },
+  {
+    "date": "2026-03-26",
+    "runs": 7,
+    "cost_usd": 24.14,
+    "input_tokens": 204,
+    "output_tokens": 38752,
+    "cache_creation_tokens": 327152,
+    "cache_read_tokens": 9484871
+  },
+  {
+    "date": "2026-03-27",
+    "runs": 4,
+    "cost_usd": 14.97,
+    "input_tokens": 131,
+    "output_tokens": 26888,
+    "cache_creation_tokens": 225023,
+    "cache_read_tokens": 6983949
+  },
+  {
+    "date": "2026-03-28",
+    "runs": 3,
+    "cost_usd": 12.11,
+    "input_tokens": 45,
+    "output_tokens": 7025,
+    "cache_creation_tokens": 82000,
+    "cache_read_tokens": 1745821
+  }
+]
