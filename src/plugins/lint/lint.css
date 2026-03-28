@@ -79,3 +79,19 @@
 .lint-badge--warning {
   color: var(--warning-color);
 }
+
+.lint-badge:focus-visible {
+  outline: none;
+  position: relative;
+}
+
+.lint-badge:focus-visible::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  left: 4px;
+  right: 4px;
+  height: 2px;
+  background: var(--primary-color);
+  border-radius: 1px;
+}
