@@ -440,6 +440,25 @@ describe("LinkPopupView", () => {
   });
 
   // ---------------------------------------------------------------------------
+  // handleRemove — preventAutolink meta (#584)
+  // ---------------------------------------------------------------------------
+
+  it("handleRemove sets preventAutolink meta to stop autolink re-adding the mark", () => {
+    const popup = new LinkPopupView(view as never);
+    triggerStore({ isOpen: true, anchorRect: ANCHOR });
+
+    const deleteBtn = popup["deleteBtn"] as HTMLElement;
+    deleteBtn.click();
+
+    expect(view.dispatch).toHaveBeenCalled();
+    // The transaction should have preventAutolink meta set
+    const tr = view.state.tr;
+    expect(tr.setMeta).toHaveBeenCalledWith("preventAutolink", true);
+
+    popup.destroy();
+  });
+
+  // ---------------------------------------------------------------------------
   // handleRemove — lines 232-233: catch block
   // ---------------------------------------------------------------------------
 

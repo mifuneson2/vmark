@@ -237,8 +237,10 @@ export function handleUnlinkShortcut(view: EditorView): boolean {
   const markRange = findMarkRange($from.pos, linkMark, $from.start(), $from.parent);
   if (!markRange) return false;
 
-  // Remove the link mark
-  const tr = state.tr.removeMark(markRange.from, markRange.to, linkMarkType);
+  // Remove the link mark (preventAutolink stops Tiptap's Link extension from re-adding it)
+  const tr = state.tr
+    .removeMark(markRange.from, markRange.to, linkMarkType)
+    .setMeta("preventAutolink", true);
   dispatch(tr);
   view.focus();
   return true;

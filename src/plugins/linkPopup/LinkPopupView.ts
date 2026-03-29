@@ -228,7 +228,9 @@ export class LinkPopupView extends WysiwygPopupView<LinkPopupState> {
       const linkMark = editorState.schema.marks.link;
       if (!linkMark) return;
 
-      const tr = editorState.tr.removeMark(linkFrom, linkTo, linkMark);
+      const tr = editorState.tr
+        .removeMark(linkFrom, linkTo, linkMark)
+        .setMeta("preventAutolink", true);
 
       dispatch(tr);
       this.closePopup();

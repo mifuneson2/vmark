@@ -370,6 +370,23 @@ describe("handleUnlinkShortcut", () => {
     expect(handleUnlinkShortcut(view)).toBe(false);
     view.destroy();
   });
+
+  it("sets preventAutolink meta to stop autolink re-adding the mark (#584)", () => {
+    const view = createViewWithLink("", "https://x.com", "https://x.com", " ", true);
+    mockFindMarkRange.mockReturnValue({ from: 1, to: 14 });
+
+    const origDispatch = view.dispatch.bind(view);
+    let dispatchedTr: { getMeta: (key: string) => unknown } | null = null;
+    vi.spyOn(view, "dispatch").mockImplementation((tr) => {
+      dispatchedTr = tr as typeof dispatchedTr;
+      origDispatch(tr);
+    });
+
+    handleUnlinkShortcut(view);
+    expect(dispatchedTr).not.toBeNull();
+    expect(dispatchedTr!.getMeta("preventAutolink")).toBe(true);
+    view.destroy();
+  });
 });
 
 describe("handleWikiLinkShortcut", () => {
