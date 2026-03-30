@@ -230,28 +230,6 @@ pub fn stop_watching(watch_id: String) -> Result<(), String> {
     Ok(())
 }
 
-/// Stop all watchers.
-#[tauri::command]
-pub fn stop_all_watchers() -> Result<(), String> {
-    let mut guard = WATCHERS.lock().map_err(|e| format!("Lock error: {e}"))?;
-    *guard = None;
-    // Clear debounce state to free memory
-    if let Ok(mut debounce_guard) = LAST_EMITTED.lock() {
-        *debounce_guard = None;
-    }
-    Ok(())
-}
-
-/// Get list of active watcher IDs.
-#[tauri::command]
-pub fn list_watchers() -> Result<Vec<String>, String> {
-    let guard = WATCHERS.lock().map_err(|e| format!("Lock error: {e}"))?;
-    Ok(guard
-        .as_ref()
-        .map(|w| w.keys().cloned().collect())
-        .unwrap_or_default())
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

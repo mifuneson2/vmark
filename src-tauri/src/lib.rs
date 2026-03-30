@@ -489,8 +489,6 @@ pub fn run() {
             quit::set_confirm_quit,
             watcher::start_watching,
             watcher::stop_watching,
-            watcher::stop_all_watchers,
-            watcher::list_watchers,
             file_tree::list_directory_entries,
             workspace::open_folder_dialog,
             workspace::read_workspace_config,
