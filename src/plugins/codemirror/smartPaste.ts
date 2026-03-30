@@ -29,6 +29,7 @@ import { useSettingsStore, type PasteMode } from "@/stores/settingsStore";
 import { getCodeFenceInfo } from "@/plugins/sourceContextDetection/codeFenceDetection";
 import { isValidUrl } from "./smartPasteUtils";
 import { tryImagePaste } from "./smartPasteImage";
+import { handleClipboardImagePaste } from "./smartPasteClipboardImage";
 
 /**
  * Creates an extension that intercepts paste events
@@ -70,6 +71,12 @@ export function createSmartPastePlugin() {
           changes: { from, to, insert: pastedText },
           selection: { anchor: from + pastedText.length },
         });
+        return true;
+      }
+
+      // Clipboard binary image (e.g., screenshot paste)
+      if (handleClipboardImagePaste(view, event)) {
+        event.preventDefault();
         return true;
       }
 
