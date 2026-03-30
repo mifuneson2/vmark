@@ -14,18 +14,19 @@ import { SourceImagePopupView } from "./SourceImagePopupView";
 /**
  * Image range result from detection.
  */
-interface ImageRange {
+interface MediaRange {
   from: number;
   to: number;
   path: string;
   alt: string;
+  mediaType: "image" | "block_image" | "block_video" | "block_audio";
 }
 
 /**
  * Find image markdown at cursor position.
  * Detects: ![alt](path) or ![alt](path "title") or ![alt](<path with spaces>)
  */
-function findImageAtPos(view: EditorView, pos: number): ImageRange | null {
+function findImageAtPos(view: EditorView, pos: number): MediaRange | null {
   const doc = view.state.doc;
   const line = doc.lineAt(pos);
   const lineText = line.text;
@@ -55,6 +56,7 @@ function findImageAtPos(view: EditorView, pos: number): ImageRange | null {
         to: matchEnd,
         path,
         alt,
+        mediaType: "image" as const,
       };
     }
   }
@@ -63,29 +65,67 @@ function findImageAtPos(view: EditorView, pos: number): ImageRange | null {
 }
 
 /**
- * Detect trigger for image popup.
- * Returns the image range if cursor is inside an image, null otherwise.
+ * Find HTML media tag at cursor position.
+ * Detects: <video>, <audio> tags (single-line).
+ */
+function findHtmlMediaAtPos(view: EditorView, pos: number): MediaRange | null {
+  const doc = view.state.doc;
+  const line = doc.lineAt(pos);
+  const lineText = line.text;
+  const lineStart = line.from;
+
+  const mediaPatterns: Array<{ regex: RegExp; type: "block_video" | "block_audio" }> = [
+    { regex: /<video\b[^>]*>.*?<\/video>/gi, type: "block_video" },
+    { regex: /<audio\b[^>]*>.*?<\/audio>/gi, type: "block_audio" },
+    { regex: /<video\b[^>]*\/?>/gi, type: "block_video" },
+    { regex: /<audio\b[^>]*\/?>/gi, type: "block_audio" },
+  ];
+
+  for (const { regex, type } of mediaPatterns) {
+    regex.lastIndex = 0;
+    let match;
+    while ((match = regex.exec(lineText)) !== null) {
+      const matchStart = lineStart + match.index;
+      const matchEnd = matchStart + match[0].length;
+      if (pos >= matchStart && pos <= matchEnd) {
+        const srcMatch = match[0].match(/src=["']([^"']+)["']/);
+        const src = srcMatch?.[1] ?? "";
+        return { from: matchStart, to: matchEnd, path: src, alt: "", mediaType: type };
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Find any media element at cursor position (image markdown or HTML media tag).
+ */
+function findMediaAtPos(view: EditorView, pos: number): MediaRange | null {
+  return findImageAtPos(view, pos) ?? findHtmlMediaAtPos(view, pos);
+}
+
+/**
+ * Detect trigger for media popup.
+ * Returns the media range if cursor is inside any media, null otherwise.
  */
 function detectImageTrigger(view: EditorView): { from: number; to: number } | null {
   const { from, to } = view.state.selection.main;
   if (from !== to) return null;
-  const image = findImageAtPos(view, from);
-  if (!image) {
-    return null;
-  }
-  return { from: image.from, to: image.to };
+  const media = findMediaAtPos(view, from);
+  if (!media) return null;
+  return { from: media.from, to: media.to };
 }
 
 /**
- * Extract image data for the popup.
+ * Extract media data for the popup.
  */
 function extractImageData(
   view: EditorView,
   range: { from: number; to: number }
-): { mediaSrc: string; mediaAlt: string; mediaNodePos: number; mediaNodeType: "image" } {
-  // Re-run detection to get full data
-  const image = findImageAtPos(view, range.from);
-  if (!image) {
+): { mediaSrc: string; mediaAlt: string; mediaNodePos: number; mediaNodeType: "image" | "block_image" | "block_video" | "block_audio" } {
+  const media = findMediaAtPos(view, range.from);
+  if (!media) {
     return {
       mediaSrc: "",
       mediaAlt: "",
@@ -95,10 +135,10 @@ function extractImageData(
   }
 
   return {
-    mediaSrc: image.path,
-    mediaAlt: image.alt,
-    mediaNodePos: image.from,
-    mediaNodeType: "image",
+    mediaSrc: media.path,
+    mediaAlt: media.alt,
+    mediaNodePos: media.from,
+    mediaNodeType: media.mediaType,
   };
 }
 
@@ -113,9 +153,9 @@ export function createSourceImagePopupPlugin() {
     /* v8 ignore stop */
     detectTrigger: detectImageTrigger,
     detectTriggerAtPos: (view, pos) => {
-      const image = findImageAtPos(view, pos);
-      if (!image) return null;
-      return { from: image.from, to: image.to };
+      const media = findMediaAtPos(view, pos);
+      if (!media) return null;
+      return { from: media.from, to: media.to };
     },
     extractData: extractImageData,
     /* v8 ignore start -- @preserve reason: onOpen callback only fires on live editor click; not exercised in unit tests */
