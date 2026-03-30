@@ -53,14 +53,18 @@ export function createSmartPastePlugin() {
           // Skip inside code fences — paste raw text
           const inCodeFence = getCodeFenceInfo(view) !== null;
           if (!inCodeFence) {
-            const markdown = htmlToMarkdown(html);
-            if (markdown && markdown.trim().length >= 2 && markdown.trim() !== pastedText.trim()) {
-              event.preventDefault();
-              view.dispatch({
-                changes: { from, to, insert: markdown },
-                selection: { anchor: from + markdown.length },
-              });
-              return true;
+            try {
+              const markdown = htmlToMarkdown(html);
+              if (markdown && markdown.trim().length >= 2 && markdown.trim() !== pastedText.trim()) {
+                event.preventDefault();
+                view.dispatch({
+                  changes: { from, to, insert: markdown },
+                  selection: { anchor: from + markdown.length },
+                });
+                return true;
+              }
+            } catch {
+              // htmlToMarkdown can throw on malformed HTML — fall through to default paste
             }
           }
         }

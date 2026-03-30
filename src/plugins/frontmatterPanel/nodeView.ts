@@ -18,6 +18,7 @@
 import type { Node as PMNode } from "@tiptap/pm/model";
 import type { EditorView, NodeView } from "@tiptap/pm/view";
 import { isImeKeyEvent } from "@/utils/imeGuard";
+import i18n from "@/i18n";
 import "./frontmatter-panel.css";
 
 function createChevronSvg(): SVGElement {
@@ -56,7 +57,7 @@ class FrontmatterNodeView implements NodeView {
     header.className = "frontmatter-panel-header";
     header.appendChild(createChevronSvg());
     const label = document.createElement("span");
-    label.textContent = "Frontmatter";
+    label.textContent = i18n.t("editor:frontmatter.label");
     header.appendChild(label);
     header.addEventListener("click", this.toggleExpanded);
     this.dom.appendChild(header);

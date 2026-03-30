@@ -185,6 +185,13 @@ import {
   handleGeniesRead,
   handleGeniesInvoke,
 } from "./genieHandlers";
+import { hasSourceHandler } from "./sourceModeGuard";
+import {
+  handleSourceDocumentGetContent,
+  handleSourceOutlineGet,
+  handleSourceMetadataGet,
+  handleSourceEditorFocus,
+} from "./sourceHandlers";
 
 /**
  * Route MCP request to appropriate handler.
@@ -197,6 +204,16 @@ async function handleRequest(event: McpRequestEvent): Promise<void> {
   if (sourceMode && isBlockedInSourceMode(type)) {
     await respond({ id, success: false, error: SOURCE_MODE_ERROR });
     return;
+  }
+
+  // Route source-capable operations to source handlers when in source mode
+  if (sourceMode && hasSourceHandler(type)) {
+    switch (type) {
+      case "document.getContent": await handleSourceDocumentGetContent(id, args); return;
+      case "outline.get": await handleSourceOutlineGet(id); return;
+      case "metadata.get": await handleSourceMetadataGet(id); return;
+      case "editor.focus": await handleSourceEditorFocus(id); return;
+    }
   }
 
   // Block write operations on read-only documents

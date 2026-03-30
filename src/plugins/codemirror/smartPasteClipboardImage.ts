@@ -43,12 +43,15 @@ export function handleClipboardImagePaste(view: EditorView, event: Event): boole
 
   if (imageFiles.length === 0) return false;
 
+  // Capture cursor position synchronously before async I/O
+  const { from, to } = view.state.selection.main;
+
   // Handle async save/insert
-  void saveAndInsertImages(view, imageFiles);
+  void saveAndInsertImages(view, imageFiles, from, to);
   return true;
 }
 
-async function saveAndInsertImages(view: EditorView, files: File[]): Promise<void> {
+async function saveAndInsertImages(view: EditorView, files: File[], capturedFrom: number, capturedTo: number): Promise<void> {
   const windowLabel = getWindowLabel();
   const tabId = useTabStore.getState().activeTabId[windowLabel] ?? null;
   const doc = tabId ? useDocumentStore.getState().getDocument(tabId) : undefined;
@@ -79,11 +82,10 @@ async function saveAndInsertImages(view: EditorView, files: File[]): Promise<voi
   if (insertParts.length === 0) return;
 
   const markdown = insertParts.join("\n") + "\n";
-  const { from, to } = view.state.selection.main;
 
   view.dispatch({
-    changes: { from, to, insert: markdown },
-    selection: { anchor: from + markdown.length },
+    changes: { from: capturedFrom, to: capturedTo, insert: markdown },
+    selection: { anchor: capturedFrom + markdown.length },
   });
   view.focus();
 }
