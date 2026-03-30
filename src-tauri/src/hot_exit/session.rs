@@ -193,12 +193,11 @@ mod tests {
     #[test]
     fn test_session_compatibility() {
         let session = SessionData::new(TEST_VERSION.to_string());
-        assert!(session.is_compatible());
+        assert_eq!(session.version, SCHEMA_VERSION);
 
-        // Create new incompatible session instead of cloning
         let mut old_session = SessionData::new(TEST_VERSION.to_string());
         old_session.version = 0;
-        assert!(!old_session.is_compatible());
+        assert_ne!(old_session.version, SCHEMA_VERSION);
     }
 
     #[test]

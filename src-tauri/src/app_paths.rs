@@ -223,28 +223,6 @@ mod tests {
         assert_eq!(entries.len(), 1); // Only the subdir
     }
 
-    // ------------------------------------------------------------------------
-    // remove_file_if_exists tests
-    // ------------------------------------------------------------------------
-
-    #[test]
-    fn test_remove_file_if_exists_removes_file() {
-        let dir = tempdir().unwrap();
-        let path = dir.path().join("test.txt");
-        fs::write(&path, "content").unwrap();
-
-        remove_file_if_exists(&path).unwrap();
-        assert!(!path.exists());
-    }
-
-    #[test]
-    fn test_remove_file_if_exists_ok_for_missing() {
-        let dir = tempdir().unwrap();
-        let path = dir.path().join("nonexistent.txt");
-
-        // Should not error
-        remove_file_if_exists(&path).unwrap();
-    }
 
     // ------------------------------------------------------------------------
     // cleanup_legacy_home_dir tests
