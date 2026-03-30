@@ -114,6 +114,7 @@ LaTeX-Mathematikausdrücke mit Live-Vorschau bearbeiten.
 
 **Auslöser:**
 - **WYSIWYG:** Auf Inline-Mathematik `$...$` klicken
+- **Quelle:** Cursor innerhalb von `$...$`, `$$...$$` oder ` ```latex `-Blöcken platzieren
 
 **Felder:**
 - **LaTeX-Eingabe** — Den Mathematikausdruck bearbeiten
@@ -123,7 +124,7 @@ LaTeX-Mathematikausdrücke mit Live-Vorschau bearbeiten.
 **Kürzel:**
 - `Mod + Eingabe` — Speichern und schließen
 - `Escape` — Abbrechen und schließen
-- `Umschalt + Rücktaste` — Inline-Mathematik löschen (funktioniert auch bei nicht-leerem Inhalt)
+- `Umschalt + Rücktaste` — Inline-Mathematik löschen (funktioniert auch bei nicht-leerem Inhalt, nur WYSIWYG)
 - `Alt + Mod + M` — Neue Inline-Mathematik einfügen
 
 ::: tip Fehlerhinweise
@@ -131,7 +132,7 @@ Bei einem LaTeX-Syntaxfehler zeigt das Popup hilfreiche Vorschläge wie fehlende
 :::
 
 ::: info Quellmodus
-Im Quellmodus Mathematik direkt im Text bearbeiten. Die Vorschau erscheint im Mermaid/Mathematik-Vorschau-Panel.
+Der Quellmodus bietet dasselbe bearbeitbare Mathematik-Popup wie der WYSIWYG-Modus — ein Textfeld für die LaTeX-Eingabe mit einer Live-KaTeX-Vorschau darunter. Das Popup öffnet sich automatisch, wenn der Cursor in eine Mathematik-Syntax eintritt (`$...$`, `$$...$$` oder ` ```latex `). Drücken Sie `Mod + Eingabe` zum Speichern oder `Escape` zum Abbrechen.
 :::
 
 ## Fußnoten-Popup
@@ -204,7 +205,7 @@ Rechtschreibfehler mit Vorschlägen korrigieren.
 | Bild | Doppelklick | Klick auf `![](pfad)` |
 | Video | Doppelklick | — |
 | Audio | Doppelklick | — |
-| Mathematik | Klick | Direkte Bearbeitung |
+| Mathematik | Klick | Cursor in Mathematik → Popup |
 | Fußnote | Hover | Direkte Bearbeitung |
 | Wiki-Link | Hover | Klick |
 | Tabelle | Symbolleiste | Rechtsklick-Menü |

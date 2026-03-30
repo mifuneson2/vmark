@@ -114,6 +114,7 @@ Edite expressões LaTeX com prévia ao vivo.
 
 **Ativação:**
 - **WYSIWYG:** Clique em matemática inline `$...$`
+- **Fonte:** Posicione o cursor dentro de `$...$`, `$$...$$` ou blocos ` ```latex `
 
 **Campos:**
 - **Entrada LaTeX** — Editar a expressão matemática
@@ -123,7 +124,7 @@ Edite expressões LaTeX com prévia ao vivo.
 **Atalhos:**
 - `Mod + Enter` — Salvar e fechar
 - `Escape` — Cancelar e fechar
-- `Shift + Backspace` — Excluir matemática inline (funciona mesmo quando não vazia)
+- `Shift + Backspace` — Excluir matemática inline (funciona mesmo quando não vazia, apenas WYSIWYG)
 - `Alt + Mod + M` — Inserir nova matemática inline
 
 ::: tip Dicas de Erro
@@ -131,7 +132,7 @@ Quando você tem um erro de sintaxe LaTeX, o popup mostra sugestões úteis como
 :::
 
 ::: info Modo Fonte
-No modo Fonte, edite a matemática diretamente no texto. A prévia aparece no painel de prévia Mermaid/Matemática.
+O modo Fonte fornece o mesmo popup de matemática editável do modo WYSIWYG — uma caixa de texto para entrada LaTeX com uma prévia KaTeX ao vivo abaixo. O popup abre automaticamente quando o cursor entra em qualquer sintaxe matemática (`$...$`, `$$...$$` ou ` ```latex `). Pressione `Mod + Enter` para salvar ou `Escape` para cancelar.
 :::
 
 ## Popup de Rodapé
@@ -204,7 +205,7 @@ Corrija erros de ortografia com sugestões.
 | Imagem | Duplo clique | Clique em `![](caminho)` |
 | Vídeo | Duplo clique | — |
 | Áudio | Duplo clique | — |
-| Matemática | Clique | Edição direta |
+| Matemática | Clique | Cursor na matemática → popup |
 | Rodapé | Passar mouse | Edição direta |
 | Link Wiki | Passar mouse | Clique |
 | Tabela | Barra de ferramentas | Menu de contexto |

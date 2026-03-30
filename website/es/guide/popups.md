@@ -114,6 +114,7 @@ Edita expresiones matemáticas LaTeX con vista previa en tiempo real.
 
 **Activación:**
 - **WYSIWYG:** Haz clic en la matemática en línea `$...$`
+- **Fuente:** Coloca el cursor dentro de `$...$`, `$$...$$` o bloques ` ```latex `
 
 **Campos:**
 - **Entrada LaTeX** — Edita la expresión matemática
@@ -123,7 +124,7 @@ Edita expresiones matemáticas LaTeX con vista previa en tiempo real.
 **Atajos:**
 - `Mod + Enter` — Guardar y cerrar
 - `Escape` — Cancelar y cerrar
-- `Shift + Retroceso` — Eliminar matemática en línea (funciona incluso cuando no está vacía)
+- `Shift + Retroceso` — Eliminar matemática en línea (funciona incluso cuando no está vacía, solo WYSIWYG)
 - `Alt + Mod + M` — Insertar nueva matemática en línea
 
 ::: tip Sugerencias de Error
@@ -131,7 +132,7 @@ Cuando tienes un error de sintaxis LaTeX, el popup muestra sugerencias útiles c
 :::
 
 ::: info Modo Fuente
-En el modo Fuente, edita las matemáticas directamente en el texto. La vista previa aparece en el panel de vista previa de Mermaid/Matemáticas.
+El modo Fuente ofrece el mismo popup editable de matemáticas que el modo WYSIWYG — un área de texto para la entrada LaTeX con una vista previa KaTeX en vivo debajo. El popup se abre automáticamente cuando el cursor entra en una sintaxis matemática (`$...$`, `$$...$$` o ` ```latex `). Pulsa `Mod + Enter` para guardar o `Escape` para cancelar.
 :::
 
 ## Popup de Nota al Pie
@@ -204,7 +205,7 @@ Corrige errores ortográficos con sugerencias.
 | Imagen | Doble clic | Clic en `![](ruta)` |
 | Vídeo | Doble clic | — |
 | Audio | Doble clic | — |
-| Matemáticas | Clic | Edición directa |
+| Matemáticas | Clic | Cursor en matemáticas → popup |
 | Nota al pie | Pasar el ratón | Edición directa |
 | Wiki Link | Pasar el ratón | Clic |
 | Tabla | Barra de herramientas | Menú clic derecho |

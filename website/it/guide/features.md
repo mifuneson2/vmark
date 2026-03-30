@@ -19,7 +19,10 @@ Passa alla modifica Markdown grezzo con evidenziazione completa della sintassi:
 
 - Editor basato su CodeMirror 6
 - Evidenziazione completa della sintassi
-- Esperienza familiare da editor di testo
+- Popup interattivi per matematica, collegamenti, immagini, wiki link e media — stessa esperienza di modifica di WYSIWYG
+- Incolla intelligente — HTML da pagine web e documenti Word viene convertito automaticamente in Markdown pulito
+- Incolla immagini dagli appunti — screenshot e immagini copiate vengono salvati nella cartella delle risorse e inseriti come `![](percorso)`
+- Multi-cursore con riconoscimento dei blocchi di codice e supporto per i confini di parola CJK
 - Perfetta per gli utenti avanzati
 
 Passa da una modalità all'altra con `F6`.
@@ -173,6 +176,18 @@ Supporto completo per i media con tag HTML5:
 - Fallback per la sintassi delle immagini: `![](file.mp4)` viene promosso automaticamente a video
 - Decorazione in modalità sorgente con bordi colorati specifici per tipo
 - [Scopri di più →](/it/guide/media-support)
+
+## Pannello Frontmatter
+
+Modifica il frontmatter YAML direttamente in modalità WYSIWYG senza passare alla modalità Sorgente.
+
+- **Compresso per impostazione predefinita** — una piccola etichetta "Frontmatter" appare nella parte superiore del documento quando è presente il frontmatter
+- **Fai clic per espandere** — apre un editor di testo semplice per il contenuto YAML
+- **`Mod + Invio`** — salva le modifiche e comprimi il pannello
+- **`Escape`** — ripristina l'ultimo valore salvato e comprimi
+- **Salvataggio automatico alla perdita del focus** — se fai clic altrove, le modifiche vengono salvate automaticamente dopo un breve ritardo
+
+Il pannello crea un punto di annullamento nella cronologia dell'editor, quindi puoi sempre usare `Mod + Z` per ripristinare le modifiche al frontmatter.
 
 ## Contenuto Speciale
 

@@ -114,6 +114,7 @@ Modifica le espressioni matematiche LaTeX con anteprima in tempo reale.
 
 **Attivazione:**
 - **WYSIWYG:** Fai clic sulla matematica inline `$...$`
+- **Sorgente:** Posiziona il cursore all'interno di `$...$`, `$$...$$` o blocchi ` ```latex `
 
 **Campi:**
 - **Input LaTeX** — Modifica l'espressione matematica
@@ -123,7 +124,7 @@ Modifica le espressioni matematiche LaTeX con anteprima in tempo reale.
 **Scorciatoie:**
 - `Mod + Invio` — Salva e chiudi
 - `Escape` — Annulla e chiudi
-- `Shift + Backspace` — Elimina matematica inline (funziona anche quando non è vuota)
+- `Shift + Backspace` — Elimina matematica inline (funziona anche quando non è vuota, solo WYSIWYG)
 - `Alt + Mod + M` — Inserisci nuova matematica inline
 
 ::: tip Suggerimenti sugli Errori
@@ -131,7 +132,7 @@ Quando hai un errore di sintassi LaTeX, il popup mostra suggerimenti utili come 
 :::
 
 ::: info Modalità Sorgente
-In modalità Sorgente, modifica la matematica direttamente nel testo. L'anteprima appare nel pannello di anteprima Mermaid/Matematica.
+La modalità Sorgente fornisce lo stesso popup matematico modificabile della modalità WYSIWYG — un'area di testo per l'input LaTeX con un'anteprima KaTeX in tempo reale sottostante. Il popup si apre automaticamente quando il cursore entra in qualsiasi sintassi matematica (`$...$`, `$$...$$` o ` ```latex `). Premi `Mod + Invio` per salvare o `Escape` per annullare.
 :::
 
 ## Popup Note a Piè di Pagina
@@ -204,7 +205,7 @@ Correggi gli errori di ortografia con suggerimenti.
 | Immagine | Doppio clic | Clic su `![](path)` |
 | Video | Doppio clic | — |
 | Audio | Doppio clic | — |
-| Matematica | Clic | Modifica diretta |
+| Matematica | Clic | Cursore nella matematica → popup |
 | Nota a piè di pagina | Passaggio del mouse | Modifica diretta |
 | Wiki Link | Passaggio del mouse | Clic |
 | Tabella | Barra degli strumenti | Menu clic destro |

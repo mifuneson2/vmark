@@ -19,7 +19,10 @@ Passez à l'édition Markdown brute avec une coloration syntaxique complète :
 
 - Éditeur propulsé par CodeMirror 6
 - Coloration syntaxique complète
-- Expérience d'éditeur de texte familière
+- Fenêtres contextuelles interactives pour les maths, liens, images, liens wiki et médias — la même expérience d'édition qu'en WYSIWYG
+- Collage intelligent — le HTML provenant de pages web et de documents Word est automatiquement converti en Markdown propre
+- Collage d'images depuis le presse-papiers — les captures d'écran et images copiées sont enregistrées dans le dossier des ressources et insérées sous la forme `![](chemin)`
+- Multi-curseur adapté aux blocs de code avec prise en charge des limites de mots CJK
 - Idéal pour les utilisateurs avancés
 
 Basculez entre les modes avec `F6`.
@@ -173,6 +176,18 @@ Prise en charge complète des médias avec les balises HTML5 :
 - Repli syntaxique des images : `![](fichier.mp4)` est automatiquement promu en vidéo
 - Décoration en mode Source avec des bordures colorées par type
 - [En savoir plus →](/fr/guide/media-support)
+
+## Panneau Frontmatter
+
+Modifiez le frontmatter YAML directement en mode WYSIWYG sans basculer vers le mode Source.
+
+- **Replié par défaut** — un petit libellé « Frontmatter » apparaît en haut du document lorsque du frontmatter est présent
+- **Cliquer pour déplier** — ouvre un éditeur en texte brut pour le contenu YAML
+- **`Mod + Entrée`** — enregistrer les modifications et replier le panneau
+- **`Échap`** — revenir à la dernière valeur enregistrée et replier
+- **Sauvegarde automatique au défocus** — si vous cliquez ailleurs, les modifications sont enregistrées automatiquement après un bref délai
+
+Le panneau crée un point d'annulation dans l'historique de l'éditeur, vous pouvez donc toujours utiliser `Mod + Z` pour annuler les modifications du frontmatter.
 
 ## Contenu spécial
 

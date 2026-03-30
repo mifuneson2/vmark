@@ -205,7 +205,7 @@ Fix spelling errors with suggestions.
 | Image | Double-click | Click on `![](path)` |
 | Video | Double-click | — |
 | Audio | Double-click | — |
-| Math | Click | Direct edit |
+| Math | Click | Cursor in math → popup |
 | Footnote | Hover | Direct edit |
 | Wiki Link | Hover | Click |
 | Table | Toolbar | Right-click menu |

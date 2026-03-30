@@ -19,7 +19,10 @@ Wechseln Sie zur rohen Markdown-Bearbeitung mit vollständiger Syntaxhervorhebun
 
 - Von CodeMirror 6 betriebener Editor
 - Vollständige Syntaxhervorhebung
-- Vertraute Texteditor-Erfahrung
+- Interaktive Popups für Mathematik, Links, Bilder, Wiki-Links und Medien — dieselbe Bearbeitungserfahrung wie im WYSIWYG-Modus
+- Intelligentes Einfügen — HTML von Webseiten und Word-Dokumenten wird automatisch in sauberes Markdown umgewandelt
+- Bild-Einfügen aus der Zwischenablage — Screenshots und kopierte Bilder werden im Asset-Ordner gespeichert und als `![](pfad)` eingefügt
+- Codeblock-bewusster Mehrcursor mit CJK-Wortgrenzenunterstützung
 - Perfekt für fortgeschrittene Benutzer
 
 Wechseln Sie mit `F6` zwischen den Modi.
@@ -173,6 +176,18 @@ Vollständige Medienunterstützung mit HTML5-Tags:
 - Bild-Syntax-Fallback: `![](datei.mp4)` wird automatisch zu Video hochgestuft
 - Quellmodus-Dekoration mit typspezifischen farbigen Rändern
 - [Mehr erfahren →](/de/guide/media-support)
+
+## Frontmatter-Panel
+
+Bearbeiten Sie YAML-Frontmatter direkt im WYSIWYG-Modus, ohne in den Quellmodus wechseln zu müssen.
+
+- **Standardmäßig eingeklappt** — ein kleines „Frontmatter"-Label erscheint oben im Dokument, wenn Frontmatter vorhanden ist
+- **Klicken zum Aufklappen** — öffnet einen Klartext-Editor für den YAML-Inhalt
+- **`Mod + Eingabe`** — Änderungen speichern und das Panel einklappen
+- **`Escape`** — zum zuletzt gespeicherten Wert zurückkehren und einklappen
+- **Automatisches Speichern bei Fokusverlust** — wenn Sie woanders hinklicken, werden Änderungen nach einer kurzen Verzögerung automatisch gespeichert
+
+Das Panel erstellt einen Rückgängig-Punkt in der Editor-Historie, sodass Sie Frontmatter-Änderungen jederzeit mit `Mod + Z` rückgängig machen können.
 
 ## Spezielle Inhalte
 

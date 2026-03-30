@@ -114,6 +114,7 @@ Modifier les expressions mathématiques LaTeX avec une prévisualisation en dire
 
 **Déclencheur :**
 - **WYSIWYG :** Cliquer sur les maths en ligne `$...$`
+- **Source :** Placer le curseur à l'intérieur de `$...$`, `$$...$$` ou de blocs ` ```latex `
 
 **Champs :**
 - **Saisie LaTeX** — Modifier l'expression mathématique
@@ -123,7 +124,7 @@ Modifier les expressions mathématiques LaTeX avec une prévisualisation en dire
 **Raccourcis :**
 - `Mod + Entrée` — Enregistrer et fermer
 - `Échap` — Annuler et fermer
-- `Shift + Retour arrière` — Supprimer les maths en ligne (fonctionne même si non vide)
+- `Shift + Retour arrière` — Supprimer les maths en ligne (fonctionne même si non vide, WYSIWYG uniquement)
 - `Alt + Mod + M` — Insérer de nouvelles maths en ligne
 
 ::: tip Suggestions d'erreur
@@ -131,7 +132,7 @@ Lorsque vous avez une erreur de syntaxe LaTeX, la fenêtre contextuelle affiche 
 :::
 
 ::: info Mode Source
-En mode Source, modifiez les maths directement dans le texte. La prévisualisation apparaît dans le panneau de prévisualisation Mermaid/Maths.
+Le mode Source propose la même fenêtre contextuelle de maths modifiable que le mode WYSIWYG — une zone de texte pour la saisie LaTeX avec un aperçu KaTeX en direct en dessous. La fenêtre s'ouvre automatiquement lorsque le curseur entre dans une syntaxe mathématique (`$...$`, `$$...$$` ou ` ```latex `). Appuyez sur `Mod + Entrée` pour enregistrer ou `Échap` pour annuler.
 :::
 
 ## Fenêtre contextuelle de note de bas de page
@@ -204,7 +205,7 @@ Corriger les erreurs orthographiques avec des suggestions.
 | Image | Double-clic | Clic sur `![](chemin)` |
 | Vidéo | Double-clic | — |
 | Audio | Double-clic | — |
-| Maths | Clic | Édition directe |
+| Maths | Clic | Curseur dans les maths → popup |
 | Note de bas de page | Survol | Édition directe |
 | Lien wiki | Survol | Clic |
 | Tableau | Barre d'outils | Menu clic droit |

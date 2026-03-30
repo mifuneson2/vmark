@@ -19,7 +19,10 @@ Alterne para edição em Markdown bruto com realce de sintaxe completo:
 
 - Editor baseado no CodeMirror 6
 - Realce de sintaxe completo
-- Experiência familiar de editor de texto
+- Popups interativos para matemática, links, imagens, links wiki e mídia — mesma experiência de edição do WYSIWYG
+- Colagem inteligente — HTML de páginas web e documentos Word é convertido automaticamente em Markdown limpo
+- Colagem de imagens da área de transferência — capturas de tela e imagens copiadas são salvas na pasta de ativos e inseridas como `![](caminho)`
+- Múltiplos cursores com reconhecimento de blocos de código e suporte a limites de palavras CJK
 - Perfeito para usuários avançados
 
 Alterne entre os modos com `F6`.
@@ -173,6 +176,18 @@ Suporte completo de mídia com tags HTML5:
 - Fallback de sintaxe de imagem: `![](arquivo.mp4)` promovido automaticamente a vídeo
 - Decoração no modo fonte com bordas coloridas específicas por tipo
 - [Saiba mais →](/pt-BR/guide/media-support)
+
+## Painel de Frontmatter
+
+Edite o frontmatter YAML diretamente no modo WYSIWYG sem alternar para o modo Fonte.
+
+- **Recolhido por padrão** — um pequeno rótulo "Frontmatter" aparece no topo do documento quando há frontmatter presente
+- **Clique para expandir** — abre um editor de texto simples para o conteúdo YAML
+- **`Mod + Enter`** — salvar alterações e recolher o painel
+- **`Escape`** — reverter para o último valor salvo e recolher
+- **Salvamento automático ao perder o foco** — se você clicar fora, as alterações são salvas automaticamente após um breve atraso
+
+O painel cria um ponto de desfazer no histórico do editor, então você sempre pode usar `Mod + Z` para reverter alterações no frontmatter.
 
 ## Conteúdo Especial
 
