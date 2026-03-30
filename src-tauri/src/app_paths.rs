@@ -129,17 +129,6 @@ pub fn atomic_write_file(path: &Path, contents: &[u8]) -> Result<(), String> {
     Ok(())
 }
 
-/// Remove a file, returning Ok for NotFound (idempotent delete).
-/// Returns error for other failures (permission denied, etc.)
-#[allow(dead_code)]
-pub fn remove_file_if_exists(path: &Path) -> Result<(), String> {
-    match fs::remove_file(path) {
-        Ok(()) => Ok(()),
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
-        Err(e) => Err(format!("Failed to remove {:?}: {}", path, e)),
-    }
-}
-
 // ============================================================================
 // Tests
 // ============================================================================

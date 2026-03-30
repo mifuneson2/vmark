@@ -338,6 +338,10 @@ export async function resolveResources(
         } catch (e) {
           exportWarn(`Failed to copy ${resolvedPath}:`, e);
           info.found = false;
+          // Replace with placeholder to avoid broken Tauri-internal URLs in exported HTML
+          const copyFailPlaceholder = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='150' viewBox='0 0 200 150'%3E%3Crect fill='%23f0f0f0' width='200' height='150'/%3E%3Ctext x='100' y='75' text-anchor='middle' fill='%23999' font-family='sans-serif' font-size='14'%3ECopy failed%3C/text%3E%3C/svg%3E";
+          info.exportSrc = copyFailPlaceholder;
+          modifiedHtml = modifiedHtml.split(src).join(copyFailPlaceholder);
         }
 
         // Use stat() to get size without re-reading the file

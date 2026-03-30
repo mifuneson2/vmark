@@ -552,12 +552,13 @@ describe("resolveResources", () => {
       outputDir: "/output",
     });
 
-    // Copy failed — resource should be marked as missing, not resolved
+    // Copy failed — resource should be marked as missing with placeholder
     expect(report.resolved).toHaveLength(0);
     expect(report.missing).toHaveLength(1);
     expect(report.missing[0].found).toBe(false);
-    // Original src should remain (not rewritten to assets/ path)
-    expect(result).toContain("photo.png");
+    // Original src replaced with placeholder (not left as broken Tauri URL)
+    expect(result).not.toContain("photo.png");
+    expect(result).toContain("data:image/svg+xml");
     expect(result).not.toContain("assets/images/");
   });
 
