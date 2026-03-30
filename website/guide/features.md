@@ -19,7 +19,10 @@ Switch to raw Markdown editing with full syntax highlighting:
 
 - CodeMirror 6 powered editor
 - Full syntax highlighting
-- Familiar text editor experience
+- Interactive popups for math, links, images, wiki links, and media — same editing experience as WYSIWYG
+- Smart paste — HTML from web pages and Word documents is automatically converted to clean Markdown
+- Clipboard image paste — screenshots and copied images are saved to the assets folder and inserted as `![](path)`
+- Code-fence-aware multi-cursor with CJK word boundary support
 - Perfect for advanced users
 
 Toggle between modes with `F6`.
@@ -173,6 +176,18 @@ Full media support with HTML5 tags:
 - Image syntax fallback: `![](file.mp4)` auto-promotes to video
 - Source mode decoration with type-specific colored borders
 - [Learn more →](/guide/media-support)
+
+## Frontmatter Panel
+
+Edit YAML frontmatter directly in WYSIWYG mode without switching to Source mode.
+
+- **Collapsed by default** — a small "Frontmatter" label appears at the top of the document when frontmatter is present
+- **Click to expand** — opens a plain-text editor for the YAML content
+- **`Mod + Enter`** — save changes and collapse the panel
+- **`Escape`** — revert to the last saved value and collapse
+- **Blur auto-saves** — if you click away, changes are saved automatically after a brief delay
+
+The panel creates an undo point in the editor history, so you can always `Mod + Z` to revert frontmatter changes.
 
 ## Special Content
 
