@@ -23,7 +23,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Checkout data branch (ledger lives here)
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
         with:
           ref: data
 
