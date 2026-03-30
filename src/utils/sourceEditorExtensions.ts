@@ -25,7 +25,8 @@ import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { languages } from "@codemirror/language-data";
 import { syntaxHighlighting } from "@codemirror/language";
 import { closeBrackets, closeBracketsKeymap } from "@codemirror/autocomplete";
-import { search, selectNextOccurrence, selectSelectionMatches } from "@codemirror/search";
+import { search } from "@codemirror/search";
+import { selectNextOccurrenceSource, selectAllOccurrencesSource } from "@/plugins/codemirror/sourceSelectOccurrence";
 import { useEditorStore } from "@/stores/editorStore";
 import {
   sourceEditorTheme,
@@ -189,16 +190,26 @@ export function createSourceEditorExtensions(config: ExtensionConfig): Extension
         run: (view) => toggleTaskList(view),
         preventDefault: true,
       }),
-      // Cmd+D: select next occurrence (official CodeMirror implementation)
+      // Cmd+D: select next occurrence (custom — CJK-aware, code fence boundary-aware)
       guardCodeMirrorKeyBinding({
         key: "Mod-d",
-        run: (view) => selectNextOccurrence({ state: view.state, dispatch: view.dispatch }),
+        run: (view) => {
+          const spec = selectNextOccurrenceSource(view.state);
+          if (!spec) return false;
+          view.dispatch(spec);
+          return true;
+        },
         preventDefault: true,
       }),
-      // Cmd+Shift+L: select all occurrences (official CodeMirror implementation)
+      // Cmd+Shift+L: select all occurrences (custom — code fence boundary-aware)
       guardCodeMirrorKeyBinding({
         key: "Mod-Shift-l",
-        run: (view) => selectSelectionMatches({ state: view.state, dispatch: view.dispatch }),
+        run: (view) => {
+          const spec = selectAllOccurrencesSource(view.state);
+          if (!spec) return false;
+          view.dispatch(spec);
+          return true;
+        },
         preventDefault: true,
       }),
       // Cmd+Option+W: toggle word wrap

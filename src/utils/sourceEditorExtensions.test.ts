@@ -60,8 +60,15 @@ vi.mock("@codemirror/autocomplete", () => ({
 
 vi.mock("@codemirror/search", () => ({
   search: vi.fn(() => "search"),
-  selectNextOccurrence: vi.fn(),
-  selectSelectionMatches: vi.fn(),
+}));
+
+const { selectNextOccurrenceSource, selectAllOccurrencesSource } = vi.hoisted(() => ({
+  selectNextOccurrenceSource: vi.fn(),
+  selectAllOccurrencesSource: vi.fn(),
+}));
+vi.mock("@/plugins/codemirror/sourceSelectOccurrence", () => ({
+  selectNextOccurrenceSource,
+  selectAllOccurrencesSource,
 }));
 
 const { editorStoreState } = vi.hoisted(() => ({
@@ -170,7 +177,7 @@ import {
   readOnlyCompartment,
 } from "./sourceEditorExtensions";
 import { keymap } from "@codemirror/view";
-import { selectNextOccurrence, selectSelectionMatches } from "@codemirror/search";
+// selectNextOccurrenceSource and selectAllOccurrencesSource are hoisted mocks above
 
 import { performUnifiedUndo, performUnifiedRedo } from "@/hooks/useUnifiedHistory";
 import { toggleTaskList } from "@/plugins/sourceContextDetection/taskListActions";
@@ -286,30 +293,43 @@ describe("createSourceEditorExtensions — keymap run() callbacks", () => {
     expect(toggleTaskList).toHaveBeenCalledWith(mockView);
   });
 
-  it("Mod-d run: calls selectNextOccurrence", () => {
+  it("Mod-d run: calls selectNextOccurrenceSource and dispatches result", () => {
+    const mockSpec = { selection: "mockSelection" };
+    selectNextOccurrenceSource.mockReturnValue(mockSpec);
     const mockDispatch = vi.fn();
     const mockView = { state: "mockState", dispatch: mockDispatch };
     const bindings = getKeyBindings();
     const binding = bindings.find((b) => b.key === "Mod-d");
     expect(binding).toBeDefined();
-    binding!.run(mockView);
-    expect(vi.mocked(selectNextOccurrence)).toHaveBeenCalledWith({
-      state: "mockState",
-      dispatch: mockDispatch,
-    });
+    const result = binding!.run(mockView);
+    expect(selectNextOccurrenceSource).toHaveBeenCalledWith("mockState");
+    expect(mockDispatch).toHaveBeenCalledWith(mockSpec);
+    expect(result).toBe(true);
   });
 
-  it("Mod-Shift-l run: calls selectSelectionMatches", () => {
+  it("Mod-d run: returns false when no occurrence found", () => {
+    selectNextOccurrenceSource.mockReturnValue(null);
+    const mockView = { state: "mockState", dispatch: vi.fn() };
+    const bindings = getKeyBindings();
+    const binding = bindings.find((b) => b.key === "Mod-d");
+    expect(binding).toBeDefined();
+    const result = binding!.run(mockView);
+    expect(result).toBe(false);
+    expect(mockView.dispatch).not.toHaveBeenCalled();
+  });
+
+  it("Mod-Shift-l run: calls selectAllOccurrencesSource and dispatches result", () => {
+    const mockSpec = { selection: "mockSelection" };
+    selectAllOccurrencesSource.mockReturnValue(mockSpec);
     const mockDispatch = vi.fn();
     const mockView = { state: "mockState", dispatch: mockDispatch };
     const bindings = getKeyBindings();
     const binding = bindings.find((b) => b.key === "Mod-Shift-l");
     expect(binding).toBeDefined();
-    binding!.run(mockView);
-    expect(vi.mocked(selectSelectionMatches)).toHaveBeenCalledWith({
-      state: "mockState",
-      dispatch: mockDispatch,
-    });
+    const result = binding!.run(mockView);
+    expect(selectAllOccurrencesSource).toHaveBeenCalledWith("mockState");
+    expect(mockDispatch).toHaveBeenCalledWith(mockSpec);
+    expect(result).toBe(true);
   });
 
   it("Mod-Alt-w run: calls toggleWordWrap and returns true", () => {
