@@ -24,6 +24,9 @@
 
 import { EditorView } from "@codemirror/view";
 import { cleanPastedMarkdown } from "@/utils/cleanPastedMarkdown";
+import { htmlToMarkdown, isSubstantialHtml } from "@/utils/htmlToMarkdown";
+import { useSettingsStore, type PasteMode } from "@/stores/settingsStore";
+import { getCodeFenceInfo } from "@/plugins/sourceContextDetection/codeFenceDetection";
 import { isValidUrl } from "./smartPasteUtils";
 import { tryImagePaste } from "./smartPasteImage";
 
@@ -41,8 +44,36 @@ export function createSmartPastePlugin() {
       const { from, to } = view.state.selection.main;
       const trimmedText = pastedText.trim();
 
-      // First, check for image path/URL (works with or without selection)
-      // Pass the original text for fallback paste (preserves whitespace)
+      // HTML paste: convert HTML to markdown (skip inside code fences)
+      const pasteMode: PasteMode = useSettingsStore.getState().markdown.pasteMode ?? "smart";
+      if (pasteMode === "smart") {
+        const html = event.clipboardData?.getData("text/html");
+        if (html && html.length <= 100_000 && isSubstantialHtml(html)) {
+          // Skip inside code fences — paste raw text
+          const inCodeFence = getCodeFenceInfo(view) !== null;
+          if (!inCodeFence) {
+            const markdown = htmlToMarkdown(html);
+            if (markdown && markdown.trim().length >= 2 && markdown.trim() !== pastedText.trim()) {
+              event.preventDefault();
+              view.dispatch({
+                changes: { from, to, insert: markdown },
+                selection: { anchor: from + markdown.length },
+              });
+              return true;
+            }
+          }
+        }
+      } else if (pasteMode === "plain") {
+        // Plain mode: just insert text as-is (skip all smart handling)
+        event.preventDefault();
+        view.dispatch({
+          changes: { from, to, insert: pastedText },
+          selection: { anchor: from + pastedText.length },
+        });
+        return true;
+      }
+
+      // Image path/URL paste (works with or without selection)
       if (tryImagePaste(view, pastedText)) {
         event.preventDefault();
         return true;

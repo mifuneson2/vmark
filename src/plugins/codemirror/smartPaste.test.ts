@@ -29,6 +29,23 @@ vi.mock("./smartPasteUtils", () => ({
   isValidUrl: (...args: unknown[]) => mockIsValidUrl(...args),
 }));
 
+const mockHtmlToMarkdown = vi.fn((_html: string) => "");
+const mockIsSubstantialHtml = vi.fn((_html: string) => false);
+vi.mock("@/utils/htmlToMarkdown", () => ({
+  htmlToMarkdown: (...args: unknown[]) => mockHtmlToMarkdown(...args),
+  isSubstantialHtml: (...args: unknown[]) => mockIsSubstantialHtml(...args),
+}));
+
+vi.mock("@/stores/settingsStore", () => ({
+  useSettingsStore: {
+    getState: vi.fn(() => ({ markdown: { pasteMode: "smart" } })),
+  },
+}));
+
+vi.mock("@/plugins/sourceContextDetection/codeFenceDetection", () => ({
+  getCodeFenceInfo: vi.fn(() => null),
+}));
+
 import { EditorState } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
 import { createSmartPastePlugin } from "./smartPaste";
@@ -61,8 +78,9 @@ function createView(
 /**
  * Create a minimal ClipboardData-like object for jsdom which lacks DataTransfer.
  */
-function makeClipboardData(text: string): DataTransfer {
+function makeClipboardData(text: string, html?: string): DataTransfer {
   const data: Record<string, string> = { "text/plain": text };
+  if (html) data["text/html"] = html;
   return {
     getData: (type: string) => data[type] ?? "",
     setData: (type: string, value: string) => { data[type] = value; },
@@ -353,6 +371,38 @@ describe("createSmartPastePlugin", () => {
 
       expect(mockCleanPastedMarkdown).toHaveBeenCalled();
       expect(mockIsValidUrl).toHaveBeenCalledWith("https://example.com");
+    });
+  });
+
+  describe("HTML paste to markdown (smart mode)", () => {
+    function dispatchPasteWithHtml(view: EditorView, text: string, html: string): void {
+      const clipboardData = makeClipboardData(text, html);
+      const event = new Event("paste", { bubbles: true, cancelable: true });
+      Object.defineProperty(event, "clipboardData", { value: clipboardData });
+      view.contentDOM.dispatchEvent(event);
+    }
+
+    beforeEach(() => {
+      mockIsSubstantialHtml.mockReturnValue(true);
+    });
+
+    it("converts substantial HTML to markdown", () => {
+      mockHtmlToMarkdown.mockReturnValue("**bold text**");
+
+      const view = createView("hello", 5, 5);
+      dispatchPasteWithHtml(view, "bold text", "<b>bold text</b>");
+
+      expect(view.state.doc.toString()).toBe("hello**bold text**");
+    });
+
+    it("falls through when HTML is not substantial", () => {
+      mockIsSubstantialHtml.mockReturnValue(false);
+
+      const view = createView("hello", 5, 5);
+      dispatchPasteWithHtml(view, "plain text", "<p>plain text</p>");
+
+      // Should not have converted — falls through to default paste
+      expect(mockHtmlToMarkdown).not.toHaveBeenCalled();
     });
   });
 });
