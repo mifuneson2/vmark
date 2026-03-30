@@ -1,45 +1,48 @@
 /**
  * Source Mode Math Preview Plugin
  *
- * Purpose: Shows a floating KaTeX-rendered preview when the cursor is inside
+ * Purpose: Opens an editable math popup when the cursor is inside
  * math syntax ($...$, $$...$$, or ```latex```) in Source mode.
+ * The popup provides a textarea for LaTeX editing with live KaTeX preview.
  *
  * Key decisions:
- *   - Reuses MathPreviewView singleton from the WYSIWYG latex plugin
- *   - Supports Escape to dismiss the preview and return focus to the editor
- *   - Debounces updates to avoid re-rendering KaTeX on every keystroke
- *   - Distinguishes inline vs block math for appropriate preview positioning
+ *   - Opens the SourceMathPopupView (editable) rather than the old read-only preview
+ *   - Debounces cursor checks to avoid popup flicker on rapid navigation
+ *   - Distinguishes inline vs block math for appropriate positioning and save behavior
+ *   - Click-outside the popup auto-saves; Escape cancels
  *
- * @coordinates-with mathPreview/MathPreviewView.ts — shared math preview rendering singleton
+ * @coordinates-with sourceMathPopup/SourceMathPopupView.ts — the editable popup
+ * @coordinates-with stores/sourceMathPopupStore.ts — popup state
  * @coordinates-with toolbarActions/sourceMathActions.ts — findInlineMathAtCursor, findBlockMathAtCursor
  * @module plugins/codemirror/sourceMathPreview
  */
 
-import { EditorView, ViewPlugin, ViewUpdate, keymap } from "@codemirror/view";
-import { Prec } from "@codemirror/state";
-import { getMathPreviewView } from "@/plugins/mathPreview/MathPreviewView";
+import { EditorView, ViewPlugin, type ViewUpdate } from "@codemirror/view";
 import { findInlineMathAtCursor, findBlockMathAtCursor } from "@/plugins/toolbarActions/sourceMathActions";
+import { useSourceMathPopupStore } from "@/stores/sourceMathPopupStore";
+import { SourceMathPopupView } from "@/plugins/sourceMathPopup/SourceMathPopupView";
 
 class SourceMathPreviewPlugin {
   private view: EditorView;
-  private currentMathRange: { from: number; to: number; content: string } | null = null;
-  private isBlockMath = false;
   private pendingUpdate = false;
+  private popupView: SourceMathPopupView;
 
   constructor(view: EditorView) {
     this.view = view;
+    this.popupView = new SourceMathPopupView(view);
     this.scheduleCheck();
   }
 
   update(update: ViewUpdate) {
-    /* v8 ignore next -- @preserve else path: update with neither selectionSet nor docChanged not triggered in tests */
+    // Don't recheck while popup is open (user is editing math content)
+    if (useSourceMathPopupStore.getState().isOpen) return;
+
     if (update.selectionSet || update.docChanged) {
       this.scheduleCheck();
     }
   }
 
   private scheduleCheck() {
-    // Defer layout reading to after the update cycle
     if (this.pendingUpdate) return;
     this.pendingUpdate = true;
     requestAnimationFrame(() => {
@@ -51,52 +54,34 @@ class SourceMathPreviewPlugin {
   private checkMathAtCursor() {
     const { from, to } = this.view.state.selection.main;
 
-    // Only show preview for collapsed selection (cursor, not range)
-    if (from !== to) {
-      this.hidePreview();
-      return;
-    }
+    // Only show for collapsed selection (cursor, not range)
+    if (from !== to) return;
+
+    // Don't open if already open
+    if (useSourceMathPopupStore.getState().isOpen) return;
 
     // Check for block math first ($$...$$ or ```latex...```)
     const blockMathRange = findBlockMathAtCursor(this.view, from);
     if (blockMathRange) {
-      this.currentMathRange = blockMathRange;
-      this.isBlockMath = true;
-      this.showPreview(blockMathRange.content);
+      this.openPopup(blockMathRange.from, blockMathRange.to, blockMathRange.content, true);
       return;
     }
 
     // Then check for inline math ($...$)
     const inlineMathRange = findInlineMathAtCursor(this.view, from);
     if (inlineMathRange) {
-      this.currentMathRange = inlineMathRange;
-      this.isBlockMath = false;
-      this.showPreview(inlineMathRange.content);
-      return;
+      this.openPopup(inlineMathRange.from, inlineMathRange.to, inlineMathRange.content, false);
     }
-
-    this.hidePreview();
   }
 
-  private showPreview(content: string) {
-    /* v8 ignore next -- @preserve early return: currentMathRange is always set before showPreview is called */
-    if (!this.currentMathRange) return;
-
-    const preview = getMathPreviewView();
-
-    // Get coordinates for the math range
-    const fromCoords = this.view.coordsAtPos(this.currentMathRange.from);
-    const toCoords = this.view.coordsAtPos(this.currentMathRange.to);
-
-    if (!fromCoords || !toCoords) {
-      this.hidePreview();
-      return;
-    }
+  private openPopup(mathFrom: number, mathTo: number, content: string, isBlock: boolean) {
+    const fromCoords = this.view.coordsAtPos(mathFrom);
+    const toCoords = this.view.coordsAtPos(mathTo);
+    if (!fromCoords || !toCoords) return;
 
     let anchorRect: { top: number; left: number; bottom: number; right: number };
 
-    if (this.isBlockMath) {
-      // For block math, center horizontally using editor bounds
+    if (isBlock) {
       const editorRect = this.view.dom.getBoundingClientRect();
       anchorRect = {
         top: Math.min(fromCoords.top, toCoords.top),
@@ -105,7 +90,6 @@ class SourceMathPreviewPlugin {
         right: editorRect.right,
       };
     } else {
-      // For inline math, use the actual text coordinates
       anchorRect = {
         top: Math.min(fromCoords.top, toCoords.top),
         left: Math.min(fromCoords.left, toCoords.left),
@@ -114,46 +98,14 @@ class SourceMathPreviewPlugin {
       };
     }
 
-    if (preview.isVisible()) {
-      // Update existing preview
-      preview.updateContent(content);
-      preview.updatePosition(anchorRect);
-    } else {
-      // Show new preview
-      preview.show(content, anchorRect, this.view.dom);
-    }
-  }
-
-  private hidePreview() {
-    this.currentMathRange = null;
-    getMathPreviewView().hide();
+    useSourceMathPopupStore.getState().openPopup(anchorRect, content, mathFrom, mathTo, isBlock);
   }
 
   destroy() {
-    this.hidePreview();
+    this.popupView.destroy();
   }
 }
 
-/** Keymap to close math preview on ESC */
-const mathPreviewEscKeymap = Prec.high(
-  keymap.of([
-    {
-      key: "Escape",
-      run: () => {
-        const preview = getMathPreviewView();
-        if (preview.isVisible()) {
-          preview.hide();
-          return true;
-        }
-        return false;
-      },
-    },
-  ])
-);
-
 export function createSourceMathPreviewPlugin() {
-  return [
-    ViewPlugin.fromClass(SourceMathPreviewPlugin),
-    mathPreviewEscKeymap,
-  ];
+  return [ViewPlugin.fromClass(SourceMathPreviewPlugin)];
 }

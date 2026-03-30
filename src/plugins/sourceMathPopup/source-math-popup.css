@@ -1,0 +1,97 @@
+/**
+ * Source Math Popup Styles
+ *
+ * Purpose: Styles for the Source mode math editing popup.
+ * Follows popup-shared patterns: compact padding, tokens, dark theme.
+ */
+
+.source-math-popup {
+  display: flex;
+  flex-direction: column;
+  width: 360px;
+  gap: 4px;
+  padding: var(--popup-padding);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  background: var(--bg-color);
+  box-shadow: var(--popup-shadow);
+  animation: popup-fade-in 0.1s ease-out;
+  z-index: 9999;
+}
+
+.dark-theme .source-math-popup {
+  box-shadow: var(--popup-shadow-dark);
+}
+
+.source-math-popup-input {
+  width: 100%;
+  min-height: 60px;
+  max-height: 120px;
+  resize: vertical;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-color);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 6px 8px;
+  outline: none;
+}
+
+.source-math-popup-input:focus {
+  border-color: var(--primary-color);
+}
+
+.source-math-popup-preview {
+  min-height: 30px;
+  padding: 6px 8px;
+  overflow: auto;
+  text-align: center;
+  color: var(--text-color);
+}
+
+.source-math-popup-preview:empty {
+  display: none;
+}
+
+.source-math-popup-error {
+  font-size: 11px;
+  color: var(--error-color);
+  padding: 0 8px;
+}
+
+.source-math-popup-error:empty {
+  display: none;
+}
+
+.source-math-popup-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  padding-top: 4px;
+}
+
+.source-math-popup-btn {
+  padding: 3px 10px;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  cursor: pointer;
+  background: transparent;
+  color: var(--text-secondary);
+}
+
+.source-math-popup-btn:hover {
+  background: var(--hover-bg);
+  color: var(--text-color);
+}
+
+.source-math-popup-btn-save {
+  background: var(--primary-color);
+  color: var(--contrast-text);
+}
+
+.source-math-popup-btn-save:hover {
+  opacity: 0.9;
+  color: var(--contrast-text);
+}
