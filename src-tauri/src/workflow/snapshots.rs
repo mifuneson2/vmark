@@ -16,6 +16,9 @@ pub struct SnapshotInfo {
     pub execution_id: String,
     pub timestamp: u64,
     pub files: Vec<String>,
+    /// Files that did not exist before execution (should be deleted on restore).
+    #[serde(default)]
+    pub created_files: Vec<String>,
 }
 
 /// Create a snapshot of the given files before modification.
@@ -40,9 +43,13 @@ pub async fn create_snapshot(
     cleanup_old_snapshots(app_data_dir).await;
 
     let mut saved_files = Vec::new();
+    let mut created_files = Vec::new();
 
     for path in file_paths {
         if !path.exists() {
+            // Track files that don't exist yet — they'll be created by the workflow
+            // and should be deleted on restore
+            created_files.push(path.to_string_lossy().to_string());
             continue;
         }
 
@@ -74,6 +81,7 @@ pub async fn create_snapshot(
             .unwrap_or_default()
             .as_secs(),
         files: saved_files,
+        created_files,
     };
     let meta_path = snapshot_dir.join("metadata.json");
     let meta_json =
@@ -137,6 +145,20 @@ pub async fn restore_snapshot(
                 "Snapshot file missing for '{}' — skipping",
                 original_path_str
             );
+        }
+    }
+
+    // Delete files that were created by the workflow (didn't exist before)
+    for created_path_str in &info.created_files {
+        if let Err(e) = super::sandbox::validate_path(created_path_str, workspace_root) {
+            log::warn!("Skipping delete of created file '{}' — {}", created_path_str, e);
+            continue;
+        }
+        let created_path = PathBuf::from(created_path_str);
+        if created_path.exists() {
+            if let Err(e) = tokio::fs::remove_file(&created_path).await {
+                log::warn!("Failed to delete created file '{}': {}", created_path_str, e);
+            }
         }
     }
 

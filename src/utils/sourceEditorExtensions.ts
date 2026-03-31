@@ -25,6 +25,7 @@ import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { yaml } from "@codemirror/lang-yaml";
 import { languages } from "@codemirror/language-data";
 import { isYamlFileName } from "@/utils/dropPaths";
+import { sourceWorkflowPreviewExtensions } from "@/plugins/codemirror/sourceWorkflowPreview";
 import { syntaxHighlighting } from "@codemirror/language";
 import { closeBrackets, closeBracketsKeymap } from "@codemirror/autocomplete";
 import { search } from "@codemirror/search";
@@ -256,6 +257,8 @@ export function createSourceEditorExtensions(config: ExtensionConfig): Extension
     search(),
     // Language mode: YAML for .yml/.yaml files, markdown for everything else
     isYaml ? yaml() : markdown({ codeLanguages: languages }),
+    // Workflow preview plugin for YAML files (parses YAML → workflowPreviewStore)
+    ...(isYaml ? sourceWorkflowPreviewExtensions : []),
     // Syntax highlighting for code blocks
     syntaxHighlighting(codeHighlightStyle, { fallback: true }),
     // Listen for changes

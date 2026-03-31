@@ -473,6 +473,7 @@ pub fn run() {
         )
         .manage(workflow::commands::WorkflowRunnerState {
             running: std::sync::atomic::AtomicBool::new(false),
+            cancel_requested: std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false)),
         })
         .invoke_handler(tauri::generate_handler![
             get_pending_file_opens,

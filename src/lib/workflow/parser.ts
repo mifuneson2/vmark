@@ -91,10 +91,12 @@ function computeSourceRanges(
   const ranges: Array<{ startLine: number; endLine: number }> = [];
   let inSteps = false;
   let currentStepStart = -1;
+  let stepItemIndent = -1; // indentation level of step list items (e.g., 2 for "  - id:")
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     const trimmed = line.trimStart();
+    const indent = line.length - trimmed.length;
 
     // Detect `steps:` block
     if (/^steps\s*:/.test(trimmed)) {
@@ -102,17 +104,25 @@ function computeSourceRanges(
       continue;
     }
 
-    // Once inside steps, detect step items (`- id:` or `- uses:`)
-    if (inSteps && /^\s+-\s+/.test(line)) {
-      // Close previous step
-      if (currentStepStart >= 0) {
-        ranges.push({ startLine: currentStepStart, endLine: i });
+    // Once inside steps, detect top-level step items only.
+    // A step item is a `- ` at the expected indentation level (e.g., "  - id:").
+    // Block-style lists under needs:/matrix: are at deeper indentation and ignored.
+    if (inSteps && /^-\s+/.test(trimmed)) {
+      if (stepItemIndent === -1) {
+        // First list item sets the expected indentation
+        stepItemIndent = indent;
       }
-      currentStepStart = i + 1; // 1-based line numbers
+      if (indent === stepItemIndent) {
+        // This is a top-level step entry, not a nested list
+        if (currentStepStart >= 0) {
+          ranges.push({ startLine: currentStepStart, endLine: i });
+        }
+        currentStepStart = i + 1; // 1-based line numbers
+      }
     }
 
     // Exit steps block if we hit a top-level key (not indented, not a comment, not empty)
-    if (inSteps && currentStepStart >= 0 && trimmed.length > 0 && !/^#/.test(trimmed) && line[0] !== " " && !/^\s*-/.test(line) && !/^steps/.test(trimmed)) {
+    if (inSteps && currentStepStart >= 0 && trimmed.length > 0 && !/^#/.test(trimmed) && indent === 0 && !/^-/.test(trimmed) && !/^steps/.test(trimmed)) {
       break;
     }
   }

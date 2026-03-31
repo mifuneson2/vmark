@@ -1,0 +1,83 @@
+/**
+ * Source Workflow Preview Plugin
+ *
+ * Purpose: When editing a standalone .yml workflow file in Source mode,
+ * debounces YAML parsing and feeds the result to workflowPreviewStore
+ * so the WorkflowSidePanel shows a live React Flow graph.
+ *
+ * @coordinates-with workflowPreviewStore.ts — writes graph/parseError
+ * @coordinates-with parser.ts — parseWorkflow, isWorkflowYaml
+ * @module plugins/codemirror/sourceWorkflowPreview
+ */
+
+import { ViewPlugin, type ViewUpdate } from "@codemirror/view";
+import { useWorkflowPreviewStore } from "@/stores/workflowPreviewStore";
+import { parseWorkflow, isWorkflowYaml, WorkflowParseError, WorkflowValidationError } from "@/lib/workflow/parser";
+import { workflowLog, workflowWarn } from "@/utils/debug";
+
+const DEBOUNCE_MS = 300;
+
+class SourceWorkflowPreviewPlugin {
+  private debounceTimer: ReturnType<typeof setTimeout> | null = null;
+  private lastContent = "";
+
+  constructor() {
+    // Initial parse when plugin mounts
+    // (content isn't available in constructor — will parse on first update)
+  }
+
+  update(update: ViewUpdate) {
+    if (!update.docChanged) return;
+
+    const content = update.state.doc.toString();
+    if (content === this.lastContent) return;
+    this.lastContent = content;
+
+    // Debounce parsing
+    if (this.debounceTimer) clearTimeout(this.debounceTimer);
+    this.debounceTimer = setTimeout(() => {
+      this.parseAndUpdate(content);
+    }, DEBOUNCE_MS);
+  }
+
+  private parseAndUpdate(content: string) {
+    if (!isWorkflowYaml(content)) {
+      useWorkflowPreviewStore.getState().setGraph(null);
+      useWorkflowPreviewStore.getState().closePanel();
+      return;
+    }
+
+    try {
+      const graph = parseWorkflow(content);
+      workflowLog("Parsed workflow:", graph.name, `(${graph.steps.length} steps)`);
+      useWorkflowPreviewStore.getState().setGraph(graph);
+      // Auto-open the panel if a valid workflow is detected
+      if (!useWorkflowPreviewStore.getState().panelOpen) {
+        useWorkflowPreviewStore.getState().openPanel();
+      }
+    } catch (e) {
+      if (e instanceof WorkflowParseError || e instanceof WorkflowValidationError) {
+        workflowWarn("Workflow parse error:", e.message);
+        useWorkflowPreviewStore.getState().setGraph(null, e.message);
+      } else {
+        workflowWarn("Unexpected parse error:", e instanceof Error ? e.message : String(e));
+        useWorkflowPreviewStore.getState().setGraph(
+          null,
+          e instanceof Error ? e.message : String(e),
+        );
+      }
+    }
+  }
+
+  destroy() {
+    if (this.debounceTimer) clearTimeout(this.debounceTimer);
+    // Reset store when leaving the workflow file
+    useWorkflowPreviewStore.getState().reset();
+  }
+}
+
+export function createSourceWorkflowPreviewPlugin() {
+  return ViewPlugin.fromClass(SourceWorkflowPreviewPlugin);
+}
+
+export const sourceWorkflowPreviewExtensions = [createSourceWorkflowPreviewPlugin()];

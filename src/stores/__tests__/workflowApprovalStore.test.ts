@@ -1,6 +1,11 @@
 import { useWorkflowApprovalStore } from "../workflowApprovalStore";
 import type { ApprovalRequest } from "../workflowApprovalStore";
 
+const mockEmit = vi.fn();
+vi.mock("@tauri-apps/api/event", () => ({
+  emit: (...args: unknown[]) => mockEmit(...args),
+}));
+
 const mockRequest: ApprovalRequest = {
   executionId: "exec-1",
   stepId: "step-1",
@@ -12,6 +17,7 @@ const mockRequest: ApprovalRequest = {
 
 beforeEach(() => {
   useWorkflowApprovalStore.getState().reset();
+  mockEmit.mockClear();
 });
 
 describe("workflowApprovalStore", () => {
@@ -29,18 +35,33 @@ describe("workflowApprovalStore", () => {
     expect(state.request!.stepId).toBe("step-1");
   });
 
-  it("approve closes the dialog", () => {
+  it("approve closes dialog and emits IPC event", () => {
     const store = useWorkflowApprovalStore.getState();
     store.showApproval(mockRequest);
     store.approve();
     expect(useWorkflowApprovalStore.getState().isOpen).toBe(false);
+    expect(mockEmit).toHaveBeenCalledWith("workflow:approval-response", {
+      executionId: "exec-1",
+      stepId: "step-1",
+      approved: true,
+    });
   });
 
-  it("reject closes the dialog", () => {
+  it("reject closes dialog and emits IPC event", () => {
     const store = useWorkflowApprovalStore.getState();
     store.showApproval(mockRequest);
     store.reject();
     expect(useWorkflowApprovalStore.getState().isOpen).toBe(false);
+    expect(mockEmit).toHaveBeenCalledWith("workflow:approval-response", {
+      executionId: "exec-1",
+      stepId: "step-1",
+      approved: false,
+    });
+  });
+
+  it("approve without request does not emit", () => {
+    useWorkflowApprovalStore.getState().approve();
+    expect(mockEmit).not.toHaveBeenCalled();
   });
 
   it("reset clears everything", () => {

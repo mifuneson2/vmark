@@ -33,6 +33,7 @@ vi.mock("@codemirror/view", () => ({
   drawSelection: vi.fn(() => "drawSelection"),
   dropCursor: vi.fn(() => "dropCursor"),
   lineNumbers: vi.fn(() => "lineNumbers"),
+  ViewPlugin: { fromClass: vi.fn(() => "ViewPlugin") },
 }));
 
 vi.mock("@codemirror/commands", () => ({
