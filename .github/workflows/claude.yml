@@ -83,7 +83,7 @@ jobs:
           github_token: ${{ github.token }}
           claude_args: "--model opus --max-turns 25 --allowedTools Bash Read Write Edit Glob Grep MultiEdit"
           show_full_output: true
-          direct_prompt: |
+          prompt: |
             Fix the open audit issues. Issue numbers: ${{ steps.find-issues.outputs.ISSUE_NUMBERS }}
 
             For EACH issue number:
