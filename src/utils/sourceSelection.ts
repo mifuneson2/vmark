@@ -115,7 +115,7 @@ export function getSourceSelectionRange(
   return normalizeRange({ from: main.from, to: main.to });
 }
 
-/** Return a range spanning the entire document. */
-export function getSourceDocRange(doc: Text): SourceSelectionRange {
+/** Test helper: return a range spanning the entire document. */
+export function _getSourceDocRange(doc: Text): SourceSelectionRange {
   return { from: 0, to: doc.length };
 }

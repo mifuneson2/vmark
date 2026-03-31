@@ -104,9 +104,8 @@ export function hasPendingSave(path: string): boolean {
   return pendingSaves.has(normalized);
 }
 
-/**
- * Clear all pending saves (for testing).
- */
-export function clearAllPendingSaves(): void {
+/** Test helper: clear all pending saves. */
+export function _clearAllPendingSaves(): void {
   pendingSaves.clear();
 }
+

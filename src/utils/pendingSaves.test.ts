@@ -4,12 +4,12 @@ import {
   clearPendingSave,
   matchesPendingSave,
   hasPendingSave,
-  clearAllPendingSaves,
+  _clearAllPendingSaves,
 } from "./pendingSaves";
 
 describe("pendingSaves (content-based)", () => {
   beforeEach(() => {
-    clearAllPendingSaves();
+    _clearAllPendingSaves();
   });
 
   describe("registerPendingSave / hasPendingSave", () => {
@@ -116,13 +116,13 @@ describe("pendingSaves (content-based)", () => {
     });
   });
 
-  describe("clearAllPendingSaves", () => {
+  describe("_clearAllPendingSaves", () => {
     it("removes all registered paths", () => {
       registerPendingSave("/path/to/file1.md", "content1");
       registerPendingSave("/path/to/file2.md", "content2");
       registerPendingSave("/path/to/file3.md", "content3");
 
-      clearAllPendingSaves();
+      _clearAllPendingSaves();
 
       expect(hasPendingSave("/path/to/file1.md")).toBe(false);
       expect(hasPendingSave("/path/to/file2.md")).toBe(false);

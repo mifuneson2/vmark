@@ -6,7 +6,7 @@ import {
   getSourceLineRange,
   getSourceWordRange,
   getSourceSelectionRange,
-  getSourceDocRange,
+  _getSourceDocRange,
 } from "./sourceSelection";
 
 function createState(doc: string, from: number, to = from) {
@@ -119,17 +119,17 @@ describe("sourceSelection", () => {
     expect(range).toEqual({ from: 0, to: 5 });
   });
 
-  describe("getSourceDocRange", () => {
+  describe("_getSourceDocRange", () => {
     it("returns full document range", () => {
       const doc = "Hello world";
       const state = createState(doc, 0);
-      const range = getSourceDocRange(state.doc);
+      const range = _getSourceDocRange(state.doc);
       expect(range).toEqual({ from: 0, to: doc.length });
     });
 
     it("returns {0,0} for empty document", () => {
       const state = createState("", 0);
-      const range = getSourceDocRange(state.doc);
+      const range = _getSourceDocRange(state.doc);
       expect(range).toEqual({ from: 0, to: 0 });
     });
   });
