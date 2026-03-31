@@ -33,6 +33,7 @@ const SourceEditor = lazy(() =>
   import("./SourceEditor").then((m) => ({ default: m.SourceEditor }))
 );
 import { DropZoneIndicator } from "./DropZoneIndicator";
+import { WorkflowSidePanel } from "@/plugins/workflowPreview";
 import "./editor.css";
 import "./heading-picker.css";
 import "@/styles/popup-shared.css";
@@ -86,6 +87,7 @@ export function Editor() {
       <div className="editor-content" data-active-editor={activeEditor}>
         {editorContent}
       </div>
+      <WorkflowSidePanel />
       <HeadingPicker />
       <DropZoneIndicator />
     </div>

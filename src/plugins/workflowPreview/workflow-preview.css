@@ -1,0 +1,49 @@
+/**
+ * Workflow Preview Styles
+ * Overrides React Flow defaults to match VMark design system.
+ */
+
+.workflow-preview-canvas {
+  width: 100%;
+  height: 100%;
+}
+
+/* Override React Flow background dots */
+.workflow-preview-canvas .react-flow__background pattern circle {
+  fill: var(--border-color);
+}
+
+/* Override React Flow controls to match VMark style */
+.workflow-preview-canvas .react-flow__controls {
+  box-shadow: var(--shadow-sm);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  background: var(--bg-color);
+}
+
+.workflow-preview-canvas .react-flow__controls-button {
+  background: var(--bg-color);
+  border-bottom-color: var(--border-color);
+  color: var(--text-secondary);
+  width: 24px;
+  height: 24px;
+}
+
+.workflow-preview-canvas .react-flow__controls-button:hover {
+  background: var(--hover-bg);
+}
+
+.workflow-preview-canvas .react-flow__controls-button svg {
+  fill: var(--text-secondary);
+}
+
+/* Edge styles */
+.workflow-preview-canvas .react-flow__edge-path {
+  stroke: var(--border-color);
+  stroke-width: 1.5;
+}
+
+/* Dark theme */
+.dark-theme .workflow-preview-canvas .react-flow__controls {
+  box-shadow: var(--popup-shadow-dark);
+}

@@ -33,5 +33,6 @@
   "fileDeleted": "File deleted from disk",
   "fileDivergent": "Local differs from disk",
   "closeTab": "Close {{title}}",
-  "tabActions": "Tab actions"
+  "tabActions": "Tab actions",
+  "resize": "Resize"
 }

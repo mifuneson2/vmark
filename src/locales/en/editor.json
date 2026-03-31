@@ -203,5 +203,7 @@
   "preview.pathResolutionFailed": "Path resolution failed",
   "preview.failedToLoad": "Failed to load",
 
-  "frontmatter.label": "Frontmatter"
+  "frontmatter.label": "Frontmatter",
+
+  "workflow.noPreview": "No workflow preview available"
 }

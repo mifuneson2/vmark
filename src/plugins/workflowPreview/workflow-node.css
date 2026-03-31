@@ -1,0 +1,128 @@
+/**
+ * Workflow Node Styles
+ * Uses VMark design tokens — no hardcoded colors.
+ */
+
+.workflow-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 12px;
+  min-width: 120px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.workflow-node:hover {
+  background: var(--hover-bg);
+}
+
+.workflow-node--selected {
+  background: var(--accent-bg);
+  border-color: var(--accent-primary);
+}
+
+/* Status states */
+.workflow-node--pending {
+  opacity: 0.6;
+  border-style: dashed;
+}
+
+.workflow-node--running {
+  border-color: var(--warning-color);
+  animation: workflow-node-pulse 1.5s ease-in-out infinite;
+}
+
+.workflow-node--success {
+  border-color: var(--success-color);
+}
+
+.workflow-node--error {
+  border-color: var(--error-color);
+}
+
+.workflow-node--skipped {
+  opacity: 0.4;
+  border-style: dashed;
+}
+
+@keyframes workflow-node-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 transparent; }
+  50% { box-shadow: 0 0 0 3px var(--warning-bg); }
+}
+
+/* Content layout */
+.workflow-node__content {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-1);
+}
+
+.workflow-node__icon {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.workflow-node__label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-color);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 140px;
+}
+
+.workflow-node__spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--border-color);
+  border-top-color: var(--warning-color);
+  border-radius: 50%;
+  animation: workflow-spinner 0.6s linear infinite;
+}
+
+@keyframes workflow-spinner {
+  to { transform: rotate(360deg); }
+}
+
+.workflow-node__status-icon {
+  font-size: 12px;
+  color: var(--success-color);
+}
+
+.workflow-node__status-icon--error {
+  color: var(--error-color);
+}
+
+.workflow-node__duration {
+  font-size: 10px;
+  color: var(--text-tertiary);
+  margin-top: 2px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Handles (connection points) */
+.workflow-node__handle {
+  width: 6px !important;
+  height: 6px !important;
+  background: var(--border-color) !important;
+  border: none !important;
+}
+
+/* Dark theme */
+.dark-theme .workflow-node {
+  box-shadow: none;
+}
+
+.dark-theme .workflow-node--running {
+  animation-name: workflow-node-pulse-dark;
+}
+
+@keyframes workflow-node-pulse-dark {
+  0%, 100% { box-shadow: 0 0 0 0 transparent; }
+  50% { box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.15); }
+}
