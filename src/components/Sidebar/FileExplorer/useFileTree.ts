@@ -26,7 +26,7 @@ import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
 import type { FileNode, FsChangeEvent, DirectoryEntry } from "./types";
 import { shouldRefreshTree } from "@/utils/fsEventFilter";
-import { isMarkdownFileName, stripMarkdownExtension } from "@/utils/dropPaths";
+import { isMarkdownFileName, isVMarkFileName, stripMarkdownExtension } from "@/utils/dropPaths";
 import { shouldIncludeEntry, type FileTreeFilterOptions } from "./fileTreeFilters";
 import { fileExplorerError } from "@/utils/debug";
 
@@ -90,7 +90,7 @@ async function loadDirectoryRecursive(
 
 const mdFilter = (name: string, isFolder: boolean): boolean => {
   if (isFolder) return true;
-  return isMarkdownFileName(name);
+  return isVMarkFileName(name);
 };
 
 interface UseFileTreeOptions {

@@ -27,6 +27,7 @@ import { openWorkspaceWithConfig } from "@/hooks/openWorkspaceWithConfig";
 import { getReplaceableTab, findExistingTabForPath } from "@/hooks/useReplaceableTab";
 import { createUntitledTab } from "@/utils/newFile";
 import { detectLinebreaks } from "@/utils/linebreakDetection";
+import { isYamlFileName } from "@/utils/dropPaths";
 
 /**
  * Open a file in a new tab (core logic).
@@ -69,6 +70,16 @@ export async function openFileInNewTabCore(
     perfEnd("detectLinebreaks");
 
     useRecentFilesStore.getState().addFile(path);
+
+    // Auto-switch to source mode for YAML workflow files
+    const fileName = path.split("/").pop() ?? "";
+    if (isYamlFileName(fileName)) {
+      const { useEditorStore } = await import("@/stores/editorStore");
+      if (!useEditorStore.getState().sourceMode) {
+        useEditorStore.getState().setSourceMode(true);
+      }
+    }
+
     perfMark("openFileInNewTab:complete");
   } catch (error) {
     fileOpsError("Failed to open file:", path, error);

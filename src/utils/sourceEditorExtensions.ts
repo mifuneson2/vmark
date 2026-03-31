@@ -22,7 +22,9 @@ import { defaultKeymap, history } from "@codemirror/commands";
 import { getCurrentWindowLabel } from "@/utils/workspaceStorage";
 import { performUnifiedUndo, performUnifiedRedo } from "@/hooks/useUnifiedHistory";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
+import { yaml } from "@codemirror/lang-yaml";
 import { languages } from "@codemirror/language-data";
+import { isYamlFileName } from "@/utils/dropPaths";
 import { syntaxHighlighting } from "@codemirror/language";
 import { closeBrackets, closeBracketsKeymap } from "@codemirror/autocomplete";
 import { search } from "@codemirror/search";
@@ -108,13 +110,16 @@ interface ExtensionConfig {
   tabId?: string;
   /** Whether to include the lint annotation extension */
   lintEnabled?: boolean;
+  /** File path for language mode detection (YAML vs markdown) */
+  filePath?: string | null;
 }
 
 /**
  * Creates the array of CodeMirror extensions for the source editor.
  */
 export function createSourceEditorExtensions(config: ExtensionConfig): Extension[] {
-  const { initialWordWrap, initialShowBrTags, initialAutoPair, initialShowLineNumbers, updateListener, tabId, lintEnabled } = config;
+  const { initialWordWrap, initialShowBrTags, initialAutoPair, initialShowLineNumbers, updateListener, tabId, lintEnabled, filePath } = config;
+  const isYaml = filePath ? isYamlFileName(filePath.split("/").pop() ?? "") : false;
 
   return [
     // Line wrapping (dynamic via compartment)
@@ -249,8 +254,8 @@ export function createSourceEditorExtensions(config: ExtensionConfig): Extension
     ]),
     // Search extension (programmatic control only, no panel)
     search(),
-    // Markdown syntax with code block language support
-    markdown({ codeLanguages: languages }),
+    // Language mode: YAML for .yml/.yaml files, markdown for everything else
+    isYaml ? yaml() : markdown({ codeLanguages: languages }),
     // Syntax highlighting for code blocks
     syntaxHighlighting(codeHighlightStyle, { fallback: true }),
     // Listen for changes

@@ -4,7 +4,7 @@
  * @module utils/dropPaths.test
  */
 import { describe, it, expect } from "vitest";
-import { filterMarkdownPaths, MARKDOWN_EXTENSIONS, isMarkdownFileName, stripMarkdownExtension } from "./dropPaths";
+import { filterMarkdownPaths, MARKDOWN_EXTENSIONS, YAML_EXTENSIONS, isMarkdownFileName, isYamlFileName, isVMarkFileName, stripMarkdownExtension } from "./dropPaths";
 
 describe("MARKDOWN_EXTENSIONS", () => {
   it("includes common markdown extensions", () => {
@@ -113,5 +113,48 @@ describe("stripMarkdownExtension", () => {
   it("leaves unrelated extensions intact", () => {
     expect(stripMarkdownExtension("archive.md.bak")).toBe("archive.md.bak");
     expect(stripMarkdownExtension("image.png")).toBe("image.png");
+  });
+});
+
+describe("YAML_EXTENSIONS", () => {
+  it("includes common YAML extensions", () => {
+    expect(YAML_EXTENSIONS).toContain(".yml");
+    expect(YAML_EXTENSIONS).toContain(".yaml");
+  });
+});
+
+describe("isYamlFileName", () => {
+  it("recognizes .yml files", () => {
+    expect(isYamlFileName("workflow.yml")).toBe(true);
+    expect(isYamlFileName("config.yaml")).toBe(true);
+  });
+
+  it("is case-insensitive", () => {
+    expect(isYamlFileName("CONFIG.YML")).toBe(true);
+    expect(isYamlFileName("Config.YAML")).toBe(true);
+  });
+
+  it("rejects non-YAML files", () => {
+    expect(isYamlFileName("readme.md")).toBe(false);
+    expect(isYamlFileName("app.js")).toBe(false);
+    expect(isYamlFileName("")).toBe(false);
+  });
+});
+
+describe("isVMarkFileName", () => {
+  it("recognizes markdown files", () => {
+    expect(isVMarkFileName("readme.md")).toBe(true);
+    expect(isVMarkFileName("notes.markdown")).toBe(true);
+  });
+
+  it("recognizes YAML files", () => {
+    expect(isVMarkFileName("workflow.yml")).toBe(true);
+    expect(isVMarkFileName("config.yaml")).toBe(true);
+  });
+
+  it("rejects other file types", () => {
+    expect(isVMarkFileName("app.js")).toBe(false);
+    expect(isVMarkFileName("style.css")).toBe(false);
+    expect(isVMarkFileName("data.json")).toBe(false);
   });
 });

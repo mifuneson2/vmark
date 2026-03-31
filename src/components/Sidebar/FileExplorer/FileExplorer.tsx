@@ -41,7 +41,7 @@ import { useObservedHeight } from "./useObservedHeight";
 import { useWorkspaceStore } from "@/stores/workspaceStore";
 import { useWindowLabel } from "@/contexts/WindowContext";
 import { getFileName, getParentDir } from "@/utils/paths";
-import { isMarkdownFileName } from "@/utils/dropPaths";
+import { isVMarkFileName } from "@/utils/dropPaths";
 import type { FileNode as FileNodeType } from "./types";
 import "./FileExplorer.css";
 
@@ -161,11 +161,11 @@ export const FileExplorer = forwardRef<FileExplorerHandle, FileExplorerProps>(
     []
   );
 
-  // Shared: open markdown in VMark, others with system default app
+  // Shared: open markdown/YAML in VMark, others with system default app
   const openFileByType = useCallback(
     (path: string) => {
       const fileName = getFileName(path);
-      if (fileName && isMarkdownFileName(fileName)) {
+      if (fileName && isVMarkFileName(fileName)) {
         openFile(path);
       } else {
         void openWithDefaultApp(path);

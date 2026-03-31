@@ -9,12 +9,30 @@
 /** Supported markdown file extensions (lowercase) — must match tauri.conf.json fileAssociations */
 export const MARKDOWN_EXTENSIONS = [".md", ".markdown", ".mdown", ".mkd", ".txt"] as const;
 
+/** Supported YAML file extensions (lowercase) — first-class in VMark for workflow files */
+export const YAML_EXTENSIONS = [".yml", ".yaml"] as const;
+
 /**
  * Check if a filename matches markdown extensions (case-insensitive).
  */
 export function isMarkdownFileName(name: string): boolean {
   const lowerName = name.toLowerCase();
   return MARKDOWN_EXTENSIONS.some((ext) => lowerName.endsWith(ext));
+}
+
+/**
+ * Check if a filename matches YAML extensions (case-insensitive).
+ */
+export function isYamlFileName(name: string): boolean {
+  const lowerName = name.toLowerCase();
+  return YAML_EXTENSIONS.some((ext) => lowerName.endsWith(ext));
+}
+
+/**
+ * Check if a filename is a first-class VMark file type (markdown or YAML).
+ */
+export function isVMarkFileName(name: string): boolean {
+  return isMarkdownFileName(name) || isYamlFileName(name);
 }
 
 /**

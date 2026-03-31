@@ -40,6 +40,7 @@ import {
   restoreCursorInCodeMirror,
 } from "@/utils/cursorSync/codemirror";
 import { useSourceCursorContextStore } from "@/stores/sourceCursorContextStore";
+import { useDocumentStore } from "@/stores/documentStore";
 import { useActiveEditorStore } from "@/stores/activeEditorStore";
 import { buildSourceShortcutKeymap } from "@/plugins/codemirror/sourceShortcuts";
 import { runOrQueueCodeMirrorAction } from "@/utils/imeGuard";
@@ -171,6 +172,11 @@ export function SourceEditor({ hidden = false, readOnly = false }: SourceEditorP
     const { activeTabId: currentTabId } = useTabStore.getState();
     /* v8 ignore next -- @preserve reason: runtime window label lookup; windowLabel always resolves in tests */
     const mountTabId = currentTabId[windowLabel] ?? undefined;
+    // Capture file path for language mode detection (YAML vs markdown)
+    /* v8 ignore next 2 -- @preserve reason: documentStore access at mount time; filePath is always available */
+    const mountFilePath = mountTabId
+      ? useDocumentStore.getState().documents[mountTabId]?.filePath ?? null
+      : null;
 
     const state = EditorState.create({
       doc: content,
@@ -183,6 +189,7 @@ export function SourceEditor({ hidden = false, readOnly = false }: SourceEditorP
         updateListener,
         tabId: mountTabId,
         lintEnabled: initialLintEnabled,
+        filePath: mountFilePath,
       }),
     });
 
