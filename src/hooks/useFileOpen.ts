@@ -28,6 +28,7 @@ import { getReplaceableTab, findExistingTabForPath } from "@/hooks/useReplaceabl
 import { createUntitledTab } from "@/utils/newFile";
 import { detectLinebreaks } from "@/utils/linebreakDetection";
 import { isYamlFileName } from "@/utils/dropPaths";
+import { WORKFLOW_ENABLED } from "@/lib/workflow/featureFlag";
 
 /**
  * Open a file in a new tab (core logic).
@@ -71,9 +72,9 @@ export async function openFileInNewTabCore(
 
     useRecentFilesStore.getState().addFile(path);
 
-    // Auto-switch to source mode for YAML workflow files
+    // Auto-switch to source mode for YAML workflow files (feature-flagged)
     const fileName = path.split("/").pop() ?? "";
-    if (isYamlFileName(fileName)) {
+    if (WORKFLOW_ENABLED && isYamlFileName(fileName)) {
       const { useEditorStore } = await import("@/stores/editorStore");
       if (!useEditorStore.getState().sourceMode) {
         useEditorStore.getState().setSourceMode(true);

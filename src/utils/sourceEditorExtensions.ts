@@ -26,6 +26,7 @@ import { yaml } from "@codemirror/lang-yaml";
 import { languages } from "@codemirror/language-data";
 import { isYamlFileName } from "@/utils/dropPaths";
 import { sourceWorkflowPreviewExtensions } from "@/plugins/codemirror/sourceWorkflowPreview";
+import { WORKFLOW_ENABLED } from "@/lib/workflow/featureFlag";
 import { syntaxHighlighting } from "@codemirror/language";
 import { closeBrackets, closeBracketsKeymap } from "@codemirror/autocomplete";
 import { search } from "@codemirror/search";
@@ -120,7 +121,7 @@ interface ExtensionConfig {
  */
 export function createSourceEditorExtensions(config: ExtensionConfig): Extension[] {
   const { initialWordWrap, initialShowBrTags, initialAutoPair, initialShowLineNumbers, updateListener, tabId, lintEnabled, filePath } = config;
-  const isYaml = filePath ? isYamlFileName(filePath.split("/").pop() ?? "") : false;
+  const isYaml = WORKFLOW_ENABLED && filePath ? isYamlFileName(filePath.split("/").pop() ?? "") : false;
 
   return [
     // Line wrapping (dynamic via compartment)
