@@ -17,6 +17,7 @@
  *
  * @coordinates-with SourceEditor.tsx, TiptapEditor.tsx — mounts one or both based on mode
  * @coordinates-with stores/editorStore.ts — reads sourceMode for mode switching
+ * @coordinates-with plugins/workflowPreview/WorkflowSidePanel.tsx — renders workflow panel for .yml files
  * @module components/Editor/Editor
  */
 import { lazy, Suspense } from "react";
