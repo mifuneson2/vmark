@@ -31,5 +31,6 @@
   "closeTab": "关闭 {{title}}",
   "tabActions": "标签页操作",
   "aria.sidebar": "Sidebar",
-  "aria.mainContent": "Main content"
+  "aria.mainContent": "Main content",
+  "resize": "Resize"
 }

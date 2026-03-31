@@ -31,5 +31,6 @@
   "closeTab": "{{title}} 닫기",
   "tabActions": "탭 작업",
   "aria.sidebar": "Sidebar",
-  "aria.mainContent": "Main content"
+  "aria.mainContent": "Main content",
+  "resize": "Resize"
 }

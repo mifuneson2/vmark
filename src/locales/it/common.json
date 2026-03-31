@@ -31,5 +31,6 @@
   "closeTab": "Chiudi {{title}}",
   "tabActions": "Azioni scheda",
   "aria.sidebar": "Sidebar",
-  "aria.mainContent": "Main content"
+  "aria.mainContent": "Main content",
+  "resize": "Resize"
 }
