@@ -40,6 +40,7 @@ mod file_tree;
 mod hot_exit;
 mod pandoc;
 mod tab_transfer;
+mod workflow;
 
 #[cfg(target_os = "macos")]
 mod app_nap;
@@ -527,6 +528,8 @@ pub fn run() {
             genies::commands::get_genies_dir,
             genies::commands::list_genies,
             genies::commands::read_genie,
+            workflow::commands::run_workflow,
+            workflow::commands::cancel_workflow,
             ai_provider::detect_ai_providers,
             ai_provider::run_ai_prompt,
             ai_provider::read_env_api_keys,

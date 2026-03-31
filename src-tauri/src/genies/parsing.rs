@@ -43,6 +43,10 @@ pub(crate) fn parse_genie(content: &str, path: &str) -> Result<GenieContent, Str
                 model: None,
                 action: None,
                 context: None,
+                version: None,
+                input: None,
+                output: None,
+                tags: None,
             },
             template: content.to_string(),
         });
@@ -76,6 +80,30 @@ pub(crate) fn parse_genie(content: &str, path: &str) -> Result<GenieContent, Str
     // Frontmatter `name:` is intentionally ignored for this field.
     let name = name_from_path(path);
 
+    // Check for Genie v1 spec
+    let version = fields.get("genie").cloned();
+    let (input, output, tags) = if version.as_deref() == Some("v1") {
+        // For v1, parse input/output from frontmatter key:value pairs.
+        // Full nested YAML parsing (serde_yaml) deferred to a future release —
+        // this simple parser handles the flat `input_type:`, `output_type:` form.
+        let input = fields.get("input_type").map(|t| super::types::GenieIoSpec {
+            io_type: t.clone(),
+            accept: fields.get("input_accept").cloned(),
+            description: fields.get("input_description").cloned(),
+        });
+        let output = fields.get("output_type").map(|t| super::types::GenieIoSpec {
+            io_type: t.clone(),
+            accept: None,
+            description: fields.get("output_description").cloned(),
+        });
+        let tags = fields.get("tags").map(|t| {
+            t.split(',').map(|s| s.trim().to_string()).collect()
+        });
+        (input, output, tags)
+    } else {
+        (None, None, None)
+    };
+
     Ok(GenieContent {
         metadata: GenieMetadata {
             name,
@@ -90,6 +118,10 @@ pub(crate) fn parse_genie(content: &str, path: &str) -> Result<GenieContent, Str
             context: fields.get("context")
                 .and_then(|v| v.parse::<u8>().ok())
                 .filter(|&v| v <= 2),
+            version,
+            input,
+            output,
+            tags,
         },
         template,
     })

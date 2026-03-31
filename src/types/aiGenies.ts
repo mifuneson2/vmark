@@ -33,6 +33,42 @@ export interface GenieDefinition {
 }
 
 // ============================================================================
+// Genie Spec v1 (Typed Input/Output for Workflows)
+// ============================================================================
+
+export type GenieInputType = "text" | "files" | "folder" | "none" | "pipe";
+export type GenieOutputType = "text" | "file" | "files" | "json";
+
+export interface GenieInput {
+  type: GenieInputType;
+  accept?: string;
+  description?: string;
+}
+
+export interface GenieOutput {
+  type: GenieOutputType;
+  filename?: string;
+  schema?: Record<string, unknown>;
+  description?: string;
+}
+
+/** Extended metadata for v1 Genies with typed I/O. */
+export interface GenieMetadataV1 extends GenieMetadata {
+  version: "v1";
+  input: GenieInput;
+  output: GenieOutput;
+  temperature?: number;
+  maxTokens?: number;
+  approval?: "auto" | "ask";
+  tags?: string[];
+}
+
+/** Type guard: is this a v1 Genie with typed I/O? */
+export function isGenieV1(meta: GenieMetadata): meta is GenieMetadataV1 {
+  return "version" in meta && (meta as GenieMetadataV1).version === "v1";
+}
+
+// ============================================================================
 // Provider Types
 // ============================================================================
 
