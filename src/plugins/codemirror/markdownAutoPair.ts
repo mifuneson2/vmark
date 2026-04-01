@@ -194,23 +194,31 @@ export function createMarkdownAutoPairPlugin() {
 
       /**
        * Replace the backtick run on the current line with a clean code fence.
-       * Scans from lineStart to capture all backticks — robust against stale
-       * auto-paired backticks from slow typing or future timing changes.
+       * Skips leading whitespace, then scans the backtick run — robust against
+       * stale auto-paired backticks from slow typing and indented fences.
        */
       private replaceWithCodeFence(lineStart: number): void {
         setTimeout(() => {
           const doc = this.view.state.doc;
-          // Scan from line start to find end of backtick run
-          let endOfRun = lineStart;
+          // Skip leading whitespace to find backtick run start
+          let runStart = lineStart;
+          while (runStart < doc.length) {
+            const ch = doc.sliceString(runStart, runStart + 1);
+            if (ch !== " " && ch !== "\t") break;
+            runStart++;
+          }
+          // Scan forward to find end of backtick run
+          let endOfRun = runStart;
           while (endOfRun < doc.length && doc.sliceString(endOfRun, endOfRun + 1) === "`") {
             endOfRun++;
           }
-          // Replace entire backtick run with clean code fence
-          const fence = "```\n\n```";
+          // Preserve leading indentation in the fence
+          const indent = doc.sliceString(lineStart, runStart);
+          const fence = indent + "```\n\n" + indent + "```";
           safeDispatch(
             this.view,
             { from: lineStart, to: endOfRun, insert: fence },
-            lineStart + 3
+            lineStart + indent.length + 3
           );
         }, 0);
       }

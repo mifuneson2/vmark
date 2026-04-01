@@ -23,12 +23,14 @@ import { isInCodeBlock } from "./utils";
 // Tracks consecutive backtick presses without intervening text input.
 // 1 = code mark activated, 2 = code mark deactivated, 3 = create code block.
 let consecutiveBackticks = 0;
+let lastBacktickFrom = -1;
 let resetTimeout: ReturnType<typeof setTimeout> | null = null;
 const BACKTICK_RESET_DELAY = 500;
 
 /** Reset consecutive backtick state. Called by handlers.ts on non-backtick input. */
 export function resetBacktickState(): void {
   consecutiveBackticks = 0;
+  lastBacktickFrom = -1;
   if (resetTimeout) {
     clearTimeout(resetTimeout);
     resetTimeout = null;
@@ -109,7 +111,12 @@ export function handleBacktickCodeToggle(
   }
 
   // --- Consecutive backtick state machine ---
+  // Reset if cursor moved since last backtick (e.g., user clicked elsewhere)
+  if (consecutiveBackticks > 0 && from !== lastBacktickFrom) {
+    resetBacktickState();
+  }
   consecutiveBackticks++;
+  lastBacktickFrom = from;
   scheduleReset();
 
   if (consecutiveBackticks === 1) {

@@ -69,15 +69,16 @@ export function handleTextInput(
   text: string,
   config: AutoPairConfig
 ): boolean {
+  // Reset consecutive backtick counter on any non-backtick input
+  // (before early returns so multi-char pastes and disabled state also reset)
+  if (text !== "`") {
+    resetBacktickState();
+  }
+
   if (!config.enabled) return false;
 
   // Only handle single character input
   if (text.length !== 1) return false;
-
-  // Reset consecutive backtick counter on non-backtick input
-  if (text !== "`") {
-    resetBacktickState();
-  }
 
   // Handle backtick as code mark toggle (before normal auto-pair)
   if (text === "`") {
