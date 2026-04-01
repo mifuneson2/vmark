@@ -650,3 +650,13 @@ export const workflowWarn = isDev
   ? (...args: unknown[]) => console.warn("[Workflow]", ...args)
   : (...args: unknown[]) => prodWarn("[Workflow]", ...args);
 
+/** Warn logger for Menu Sync (startup menu rebuild) operations. */
+export const menuSyncWarn = isDev
+  ? (...args: unknown[]) => console.warn("[MenuSync]", ...args)
+  : (...args: unknown[]) => prodWarn("[MenuSync]", ...args);
+
+/** Warn logger for Update Sync (cross-window state) operations. */
+export const updateSyncWarn = isDev
+  ? (...args: unknown[]) => console.warn("[UpdateSync]", ...args)
+  : (...args: unknown[]) => prodWarn("[UpdateSync]", ...args);
+

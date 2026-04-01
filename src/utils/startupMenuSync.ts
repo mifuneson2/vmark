@@ -12,6 +12,7 @@
  * @coordinates-with stores/shortcutsStore.ts — reads shortcuts for menu rebuild
  */
 import { invoke } from "@tauri-apps/api/core";
+import { menuSyncWarn } from "@/utils/debug";
 import { useSettingsStore } from "@/stores/settingsStore";
 import {
   useShortcutsStore,
@@ -44,5 +45,5 @@ if (startupLang && startupLang !== "en") {
         useRecentWorkspacesStore.getState().syncToNativeMenu();
       });
     })
-    .catch((e) => { console.warn("[MenuSync] rebuild failed:", e); });
+    .catch((e) => { menuSyncWarn("rebuild failed:", e); });
 }

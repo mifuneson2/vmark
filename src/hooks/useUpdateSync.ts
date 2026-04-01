@@ -19,6 +19,7 @@ import { useEffect, useRef } from "react";
 import { emit, listen } from "@tauri-apps/api/event";
 import { useUpdateStore, type UpdateStatus, type UpdateInfo, type DownloadProgress } from "@/stores/updateStore";
 import { safeUnlistenAsync } from "@/utils/safeUnlisten";
+import { updateSyncWarn } from "@/utils/debug";
 
 const UPDATE_STATE_EVENT = "update:state-changed";
 const REQUEST_STATE_EVENT = "update:request-state";
@@ -56,7 +57,7 @@ export function useUpdateBroadcast() {
 
     if (prevJson !== currentJson) {
       prevState.current = currentState;
-      emit(UPDATE_STATE_EVENT, currentState).catch((e) => { console.warn("[UpdateSync] emit failed:", e); });
+      emit(UPDATE_STATE_EVENT, currentState).catch((e) => { updateSyncWarn("emit failed:", e); });
     }
   }, [status, updateInfo, downloadProgress, error]);
 }
@@ -99,7 +100,7 @@ export function useUpdateListener() {
 
     // Small delay to ensure listeners are set up
     const timer = setTimeout(() => {
-      emit(REQUEST_STATE_EVENT).catch((e) => { console.warn("[UpdateSync] request state failed:", e); });
+      emit(REQUEST_STATE_EVENT).catch((e) => { updateSyncWarn("request state failed:", e); });
     }, 100);
 
     return () => clearTimeout(timer);
