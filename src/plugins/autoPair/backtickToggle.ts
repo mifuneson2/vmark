@@ -2,12 +2,15 @@
  * Backtick Code Mark Toggle
  *
  * Purpose: Handles backtick (`) input as a code mark toggle in WYSIWYG mode.
- * - Outside code: activate code mark (or wrap selection)
- * - Inside code: escape to end of code mark
+ * Uses a consecutive backtick state machine:
+ *   - 1st backtick: activate code mark (or wrap selection / escape from code)
+ *   - 2nd consecutive backtick: deactivate code mark (user changed their mind)
+ *   - 3rd consecutive backtick: create code block
  *
  * Split from handlers.ts to keep files under ~300 lines.
  *
- * @coordinates-with handlers.ts — called from handleTextInput for backtick input
+ * @coordinates-with handlers.ts — called from handleTextInput for backtick input;
+ *   handlers.ts calls resetBacktickState() on non-backtick input.
  * @module plugins/autoPair/backtickToggle
  */
 
@@ -16,10 +19,35 @@ import type { EditorState } from "@tiptap/pm/state";
 import { TextSelection } from "@tiptap/pm/state";
 import { isInCodeBlock } from "./utils";
 
+// --- Consecutive backtick state machine ---
+// Tracks consecutive backtick presses without intervening text input.
+// 1 = code mark activated, 2 = code mark deactivated, 3 = create code block.
+let consecutiveBackticks = 0;
+let resetTimeout: ReturnType<typeof setTimeout> | null = null;
+const BACKTICK_RESET_DELAY = 500;
+
+/** Reset consecutive backtick state. Called by handlers.ts on non-backtick input. */
+export function resetBacktickState(): void {
+  consecutiveBackticks = 0;
+  if (resetTimeout) {
+    clearTimeout(resetTimeout);
+    resetTimeout = null;
+  }
+}
+
+function scheduleReset(): void {
+  if (resetTimeout) clearTimeout(resetTimeout);
+  resetTimeout = setTimeout(() => {
+    consecutiveBackticks = 0;
+    resetTimeout = null;
+  }, BACKTICK_RESET_DELAY);
+}
+
 /**
  * Handle backtick as code mark toggle in WYSIWYG mode.
- * - Outside code: activate code mark (or wrap selection)
+ * - Outside code: consecutive state machine (1=activate, 2=deactivate, 3=code block)
  * - Inside code: escape to end of code mark
+ * - Selection: wrap with code mark
  * Returns true if handled.
  */
 export function handleBacktickCodeToggle(
@@ -38,44 +66,77 @@ export function handleBacktickCodeToggle(
       $pos.parentOffset,
       ""
     );
-    if (textBefore === "\\") return false;
+    if (textBefore === "\\") {
+      resetBacktickState();
+      return false;
+    }
   }
 
   // Don't handle in code blocks
-  if (isInCodeBlock(state)) return false;
+  if (isInCodeBlock(state)) {
+    resetBacktickState();
+    return false;
+  }
 
   const codeMarkType = state.schema.marks.code;
-  if (!codeMarkType) return false;
+  if (!codeMarkType) {
+    resetBacktickState();
+    return false;
+  }
 
-  // Check if cursor is in inline code
+  // Check if cursor is in inline code (actual mark in document, not stored marks)
   const $from = state.doc.resolve(from);
   const inCode = $from.marks().some((m) => m.type === codeMarkType);
 
   if (inCode) {
-    // Escape: move cursor to end of code mark
+    // Escape: move cursor to end of code mark (not part of consecutive counting)
+    resetBacktickState();
     const endPos = findCodeMarkEnd(state, from, codeMarkType);
-    // findCodeMarkEnd always returns non-null when inCode is true — use non-null assertion
-    // (the null guard above exists as a type-safety guarantee only)
     /* v8 ignore next -- @preserve reason: endPos is always non-null when inCode is true; the ?? from fallback is structurally unreachable */
-    const pos = endPos ?? from; // fallback to from keeps selection stable if null (unreachable)
+    const pos = endPos ?? from;
     const tr = state.tr.setSelection(TextSelection.create(state.doc, pos));
     tr.removeStoredMark(codeMarkType);
     dispatch(tr);
     return true;
   }
 
-  // Outside code: toggle code mark
+  // Selection: wrap with code mark (one-shot, not part of consecutive counting)
   if (from !== to) {
-    // Selection: wrap with code mark
+    resetBacktickState();
     const tr = state.tr.addMark(from, to, codeMarkType.create());
     dispatch(tr);
     return true;
   }
 
-  // No selection: activate code mark for subsequent typing
-  const tr = state.tr.addStoredMark(codeMarkType.create());
-  dispatch(tr);
-  return true;
+  // --- Consecutive backtick state machine ---
+  consecutiveBackticks++;
+  scheduleReset();
+
+  if (consecutiveBackticks === 1) {
+    // First backtick: activate code mark
+    const tr = state.tr.addStoredMark(codeMarkType.create());
+    dispatch(tr);
+    return true;
+  }
+
+  if (consecutiveBackticks === 2) {
+    // Second backtick: deactivate code mark (user changed their mind)
+    const tr = state.tr.removeStoredMark(codeMarkType);
+    dispatch(tr);
+    return true;
+  }
+
+  if (consecutiveBackticks === 3) {
+    // Triple backtick: create code block
+    resetBacktickState();
+    const codeBlockType = state.schema.nodes.code_block;
+    if (!codeBlockType) return false;
+    const tr = state.tr.replaceSelectionWith(codeBlockType.create());
+    dispatch(tr);
+    return true;
+  }
+
+  return false;
 }
 
 /**

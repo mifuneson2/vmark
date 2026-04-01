@@ -30,7 +30,7 @@ import {
   type PairConfig,
 } from "./pairs";
 import { shouldAutoPair, isInCodeBlock, isInInlineCode, getCharAt, getCharBefore } from "./utils";
-import { handleBacktickCodeToggle } from "./backtickToggle";
+import { handleBacktickCodeToggle, resetBacktickState } from "./backtickToggle";
 
 export interface AutoPairConfig {
   enabled: boolean;
@@ -73,6 +73,11 @@ export function handleTextInput(
 
   // Only handle single character input
   if (text.length !== 1) return false;
+
+  // Reset consecutive backtick counter on non-backtick input
+  if (text !== "`") {
+    resetBacktickState();
+  }
 
   // Handle backtick as code mark toggle (before normal auto-pair)
   if (text === "`") {

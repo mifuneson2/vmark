@@ -5,17 +5,26 @@
  * instead of inserting backtick text.
  */
 
-import { describe, it, expect } from "vitest";
-import { Schema } from "@tiptap/pm/model";
+import { describe, it, expect, beforeEach, vi } from "vitest";
+import { Schema, type Node } from "@tiptap/pm/model";
 import { EditorState, TextSelection } from "@tiptap/pm/state";
 import { EditorView } from "@tiptap/pm/view";
 import { handleTextInput, type AutoPairConfig } from "../handlers";
+import { resetBacktickState } from "../backtickToggle";
 
-// Minimal schema with code mark
+// Minimal schema with code mark and code_block node
 const schema = new Schema({
   nodes: {
-    doc: { content: "paragraph+" },
+    doc: { content: "block+" },
     paragraph: { content: "text*", group: "block" },
+    code_block: {
+      content: "text*",
+      group: "block",
+      code: true,
+      defining: true,
+      parseDOM: [{ tag: "pre", preserveWhitespace: "full" }],
+      toDOM() { return ["pre", ["code", 0]]; },
+    },
     text: { inline: true },
   },
   marks: {
@@ -56,7 +65,7 @@ function createStateWithCodeMark(
   cursorInCode?: number
 ): EditorState {
   const codeMark = schema.marks.code.create();
-  const children = [];
+  const children: Node[] = [];
   if (before) children.push(schema.text(before));
   if (code) children.push(schema.text(code, [codeMark]));
   if (after) children.push(schema.text(after));
@@ -99,6 +108,10 @@ function callHandleTextInput(
 }
 
 describe("backtick code mark toggle (WYSIWYG)", () => {
+  beforeEach(() => {
+    resetBacktickState();
+  });
+
   it("activates code mark when typing backtick outside code", () => {
     // Cursor at position 1 (start of paragraph content)
     const state = createState("", 1);
@@ -158,6 +171,108 @@ describe("backtick code mark toggle (WYSIWYG)", () => {
     const state = createState("\\", 2); // Cursor after backslash
     const { handled } = callHandleTextInput(state, "`");
 
+    expect(handled).toBe(false);
+  });
+
+  it("double backtick (consecutive) deactivates code mark", () => {
+    const state = createState("", 1);
+
+    // First backtick: activates code mark
+    const { handled: h1, newState: s1 } = callHandleTextInput(state, "`");
+    expect(h1).toBe(true);
+    expect(s1.storedMarks?.some((m) => m.type.name === "code")).toBe(true);
+
+    // Second backtick: deactivates code mark
+    const { handled: h2, newState: s2 } = callHandleTextInput(s1, "`");
+    expect(h2).toBe(true);
+    // Code mark should be removed from stored marks
+    const hasCode = s2.storedMarks?.some((m) => m.type.name === "code") ?? false;
+    expect(hasCode).toBe(false);
+  });
+
+  it("triple backtick (consecutive) creates code block", () => {
+    const state = createState("", 1);
+
+    // First backtick
+    const { newState: s1 } = callHandleTextInput(state, "`");
+    // Second backtick
+    const { newState: s2 } = callHandleTextInput(s1, "`");
+    // Third backtick: creates code block
+    const { handled: h3, newState: s3 } = callHandleTextInput(s2, "`");
+
+    expect(h3).toBe(true);
+    // Document should contain a code_block node
+    let hasCodeBlock = false;
+    s3.doc.descendants((node) => {
+      if (node.type.name === "code_block") hasCodeBlock = true;
+    });
+    expect(hasCodeBlock).toBe(true);
+  });
+
+  it("non-backtick input resets consecutive backtick count", () => {
+    const state = createState("", 1);
+
+    // First backtick: activates code mark
+    const { newState: s1 } = callHandleTextInput(state, "`");
+    expect(s1.storedMarks?.some((m) => m.type.name === "code")).toBe(true);
+
+    // Reset (simulates non-backtick input calling resetBacktickState)
+    resetBacktickState();
+
+    // Next backtick should act as first again (activate code mark, not deactivate)
+    const s1Clean = s1.apply(s1.tr);
+    const { handled, newState: s2 } = callHandleTextInput(s1Clean, "`");
+    expect(handled).toBe(true);
+    expect(s2.storedMarks?.some((m) => m.type.name === "code")).toBe(true);
+  });
+
+  it("non-backtick input through handleTextInput resets consecutive count", () => {
+    const state = createState("", 1);
+
+    // First backtick: activates code mark
+    const { newState: s1 } = callHandleTextInput(state, "`");
+    expect(s1.storedMarks?.some((m) => m.type.name === "code")).toBe(true);
+
+    // Type a non-backtick character — this should reset via handlers.ts wiring
+    callHandleTextInput(s1, "a");
+
+    // Next backtick should act as first again (activate, not deactivate)
+    const s1Clean = s1.apply(s1.tr);
+    const { handled, newState: s2 } = callHandleTextInput(s1Clean, "`");
+    expect(handled).toBe(true);
+    expect(s2.storedMarks?.some((m) => m.type.name === "code")).toBe(true);
+  });
+
+  it("500ms timeout resets consecutive backtick state", () => {
+    vi.useFakeTimers();
+    const state = createState("", 1);
+
+    // First backtick: activates code mark
+    const { newState: s1 } = callHandleTextInput(state, "`");
+    expect(s1.storedMarks?.some((m) => m.type.name === "code")).toBe(true);
+
+    // Advance past 500ms timeout
+    vi.advanceTimersByTime(501);
+
+    // Next backtick should act as first again (activate, not deactivate)
+    const s1Clean = s1.apply(s1.tr);
+    const { handled, newState: s2 } = callHandleTextInput(s1Clean, "`");
+    expect(handled).toBe(true);
+    expect(s2.storedMarks?.some((m) => m.type.name === "code")).toBe(true);
+
+    vi.useRealTimers();
+  });
+
+  it("triple backtick inside code block is not handled", () => {
+    // Create state with cursor inside a code_block
+    const codeBlockNode = schema.nodes.code_block.create(null, []);
+    const doc = schema.node("doc", null, [codeBlockNode]);
+    const state = EditorState.create({ doc });
+    const stateWithCursor = state.apply(
+      state.tr.setSelection(TextSelection.create(state.doc, 1))
+    );
+
+    const { handled } = callHandleTextInput(stateWithCursor, "`");
     expect(handled).toBe(false);
   });
 
