@@ -1,96 +1,133 @@
-# 英文提示词效果更好
+# 为什么英文提示词能产生更好的代码
 
-AI 编程工具在你给出英文提示词时表现更好——即使英语不是你的母语。VMark 自带一个钩子，可以自动翻译和优化你的提示词。
+AI 编程工具在你给出英文提示词时表现更好——即使英语不是你的母语。[claude-english-buddy](https://github.com/xiaolai/claude-english-buddy-for-claude) 插件可以自动纠正、翻译和优化你的提示词。
 
 ## 为什么英语对 AI 编程很重要
 
-### 大语言模型在英语中思考
+### 大语言模型用英语思考
 
-大语言模型在内部通过一个与英语高度对齐的表示空间处理所有语言。[^1] 在发送给模型之前将非英语提示词预翻译成英语，可以明显提升输出质量。[^2]
+大语言模型在内部通过一个与英语高度对齐的表示空间来处理所有语言。[^1] 在发送给模型之前将非英语提示词预翻译成英语，可以明显提升输出质量。[^2]
 
-在实践中，像"把这个函数改成异步的"这样的中文提示词是能用的——但英文等效"Convert this function to async"能产生更精准的代码，迭代次数更少。
+在实践中，像"把这个函数改成异步的"这样的中文提示词是能用的——但英文等效表达 "Convert this function to async" 能产生更精准的代码，迭代次数更少。
 
 ### 工具调用继承提示词语言
 
-当 AI 编程工具搜索网络、阅读文档或查阅 API 参考时，它使用你提示词的语言进行这些查询。英文查询能找到更好的结果，因为：
+当 AI 编程工具搜索网络、阅读文档或查阅 API 参考时，它会使用你提示词的语言进行这些查询。英文查询能找到更好的结果，因为：
 
 - 官方文档、Stack Overflow 和 GitHub Issues 主要是英文的
-- 技术术语在英文中更精准
+- 技术搜索术语在英文中更精准
 - 代码示例和错误信息几乎总是英文的
 
 用中文提示词询问"状态管理"可能会搜索中文资源，错过权威的英文文档。多语言基准测试一致显示，英语与其他语言之间的性能差距高达 24%——即使是法语或德语这样有充分代表性的语言也不例外。[^3]
 
-## `::` 提示词优化钩子
+## `claude-english-buddy` 插件
 
-VMark 的 `.claude/hooks/refine_prompt.mjs` 是一个 [UserPromptSubmit 钩子](https://docs.anthropic.com/en/docs/claude-code/hooks)，它在你的提示词到达 Claude 之前拦截它、将其翻译成英语，并将其优化为一个更优质的编程提示词。
+`claude-english-buddy` 是一个 Claude Code 插件，它会拦截每一条提示词，并通过以下四种模式之一进行处理：
 
-### 使用方法
+| 模式 | 触发条件 | 处理方式 |
+|------|---------|---------|
+| **纠正** | 包含错误的英文提示词 | 修正拼写/语法，显示改动内容 |
+| **翻译** | 检测到非英语（中日韩、西里尔字母等） | 翻译为英语，显示翻译结果 |
+| **优化** | `::` 前缀 | 将模糊输入重写为精确、结构化的提示词 |
+| **跳过** | 短文本、命令、URL、代码 | 原样通过，不做处理 |
 
-在提示词前加 `::` 或 `>>` 前缀：
+该插件使用 Claude Haiku 进行纠正——速度快、成本低，对你的工作流程零干扰。
 
-```
-:: 把这个函数改成异步的
-```
+### 自动纠正（默认模式）
 
-钩子会：
-1. 将你的文本发送给 Claude Haiku（快速、低成本）进行翻译和优化
-2. 阻止原始提示词被发送
-3. 将优化后的英文提示词复制到剪贴板
-4. 向你显示结果
-
-然后你粘贴（`Cmd+V`）优化后的提示词并按回车发送。
-
-### 示例
-
-**输入：**
-```
-:: 这个组件渲染太慢了，每次父组件更新都会重新渲染，帮我优化一下
-```
-
-**优化后的输出（已复制到剪贴板）：**
-```
-Optimize this component to prevent unnecessary re-renders when the parent component updates. Use React.memo, useMemo, or useCallback as appropriate.
-```
-
-### 它做了什么
-
-钩子使用一个精心设计的系统提示词，给 Haiku 提供：
-
-- **Claude Code 感知** — 了解目标工具的能力（文件编辑、Bash、Glob/Grep、MCP 工具、计划模式、子 Agent）
-- **项目上下文** — 从 `.claude/hooks/project-context.txt` 加载，让 Haiku 了解技术栈、约定和关键文件路径
-- **优先排序的规则** — 首先保留意图，然后翻译，然后明确范围，最后去除冗余
-- **混合语言处理** — 翻译散文，但保留技术术语不翻译（`useEffect`、文件路径、CLI 命令）
-- **少样本示例**[^4] — 七组输入/输出对，涵盖中文、模糊英语、混合语言和多步骤请求
-- **输出长度指导** — 简单请求 1–2 句，复杂请求 3–5 句
-
-如果你的输入已经是清晰的英文提示词，它会以最少的改动返回。
-
-### 设置
-
-该钩子已在 VMark 的 `.claude/settings.json` 中预配置。它需要 [Claude Agent SDK](https://www.npmjs.com/package/@anthropic-ai/claude-agent-sdk)，该 SDK 随 Claude Code 自动可用。
-
-无需额外设置——直接使用 `::` 或 `>>` 前缀即可。
-
-::: tip 何时跳过它
-对于简短的命令（`go ahead`、`yes`、`continue`、`option 2`），无需前缀直接发送。钩子会忽略这些内容，以避免不必要的往返。
-:::
-
-## 英语母语者同样适用
-
-即使你用英语写作，`>>` 前缀对于提示词优化也很有用：
+正常输入即可，插件会自动检测语言：
 
 ```
->> make the thing work better with the new API
+You type:    "refactor the autentication modul, its got too many responsibilties"
+
+You see:     Refactor the authentication module. It has too many responsibilities.
+             (autentication>authentication; modul>module; its got>it has;
+              responsibilties>responsibilities)
+
+Claude sees: the corrected version and responds normally.
+```
+
+当你的提示词没有错误时——一片安静。没有噪音。安静意味着正确。
+
+### 翻译
+
+非英语提示词会被自动翻译：
+
+```
+You type:    这个组件渲染太慢了，每次父组件更新都会重新渲染，帮我优化一下
+
+You see:     Optimize this component to prevent unnecessary re-renders when
+             the parent component updates.
+             (Chinese)
+
+Claude sees: the English translation.
+```
+
+### 使用 `::` 优化提示词
+
+在提示词前加 `::` 前缀，可以将粗糙的想法优化为精确的提示词：
+
+```
+:: make the search faster it's really slow with big files
 ```
 
 变成：
+
 ```
-Update the integration to use the new API. Fix any deprecated method calls and ensure error handling follows the updated response format.
+Optimize the search implementation for large files. Profile the current
+bottleneck and consider debouncing, web workers, or incremental matching.
 ```
 
-这种优化增加了特异性和结构，有助于 AI 在第一次尝试时就产生更好的代码。[^5]
+`::` 前缀适用于任何语言——一步完成翻译和结构重组。[^4]
 
-[^1]: 多语言 LLM 在一个最接近英语的表示空间中做出关键决策，无论输入/输出语言如何。研究人员使用逻辑透镜探测内部表示，发现语义负载的词（如"water"或"sun"）在被翻译为目标语言之前，会先在英语中被选定。激活引导在以英语计算时也更有效。参见：Schut, L., Gal, Y., & Farquhar, S. (2025). [Do Multilingual LLMs Think In English?](https://arxiv.org/abs/2502.15603). *arXiv:2502.15603*.
+::: tip 插件何时保持安静
+短命令（`yes`、`continue`、`option 2`）、斜杠命令、URL 和代码片段会原样通过，不做处理。没有不必要的往返开销。
+:::
+
+## 追踪你的进步
+
+插件会记录每一次纠正。几周之后，你可以看到自己英语水平的提升：
+
+| 命令 | 显示内容 |
+|------|---------|
+| `/claude-english-buddy:today` | 今天的纠正、反复出现的错误、经验总结、趋势 |
+| `/claude-english-buddy:stats` | 长期错误率和改进轨迹 |
+| `/claude-english-buddy:mistakes` | 历史上所有反复出现的模式——你的盲点所在 |
+
+## 安装设置
+
+在 Claude Code 中安装插件：
+
+```bash
+/plugin marketplace add xiaolai/claude-plugin-marketplace
+/plugin install claude-english-buddy@xiaolai
+```
+
+无需额外配置——自动纠正立即生效。
+
+### 可选配置
+
+在项目根目录创建 `.claude-english-buddy.json` 进行自定义：
+
+```json
+{
+  "auto_correct": true,
+  "summary_language": "Chinese",
+  "strictness": "standard",
+  "domain_terms": ["ProseMirror", "Tiptap", "Zustand"]
+}
+```
+
+| 设置项 | 可选值 | 默认值 |
+|-------|-------|-------|
+| `auto_correct` | `true` / `false` | `true` |
+| `strictness` | `gentle`、`standard`、`strict` | `standard` |
+| `summary_language` | 任意语言名称，或 `null` 禁用 | `null` |
+| `domain_terms` | 需要保持不变的术语数组 | `[]` |
+
+当 `summary_language` 被设置后，Claude 会在每次回复末尾附加一段该语言的简要摘要——当你希望用母语了解关键决策时非常有用。[^5]
+
+[^1]: 多语言 LLM 在一个最接近英语的表示空间中做出关键决策，无论输入/输出语言如何。研究人员使用 logit lens 探测内部表示，发现语义负载词（如 "water" 或 "sun"）在被翻译为目标语言之前，会先在英语中被选定。激活引导在以英语计算时也更有效。参见：Schut, L., Gal, Y., & Farquhar, S. (2025). [Do Multilingual LLMs Think In English?](https://arxiv.org/abs/2502.15603). *arXiv:2502.15603*.
 
 [^2]: 在推理之前系统性地将非英语提示词预翻译成英语，可以在多个任务和语言中提升 LLM 输出质量。研究人员将提示词分解为四个功能部分（指令、上下文、示例、输出），并表明选择性翻译特定组件有时比翻译所有内容更有效。参见：Watts, J., Batsuren, K., & Gurevych, I. (2025). [Beyond English: The Impact of Prompt Translation Strategies across Languages and Tasks in Multilingual LLMs](https://arxiv.org/abs/2502.09331). *arXiv:2502.09331*.
 

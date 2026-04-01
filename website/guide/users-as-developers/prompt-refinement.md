@@ -1,6 +1,6 @@
 # Why English Prompts Produce Better Code
 
-AI coding tools work better when you give them English prompts — even if English isn’t your first language. VMark ships a hook that translates and refines your prompts automatically.
+AI coding tools work better when you give them English prompts — even if English isn't your first language. The [claude-english-buddy](https://github.com/xiaolai/claude-english-buddy-for-claude) plugin auto-corrects, translates, and refines your prompts automatically.
 
 ## Why English Matters for AI Coding
 
@@ -20,75 +20,112 @@ When an AI coding tool searches the web, reads documentation, or looks up API re
 
 A Chinese prompt asking about "状态管理" may search for Chinese resources, missing the canonical English documentation. Multilingual benchmarks consistently show performance gaps of up to 24% between English and other languages — even well-represented ones like French or German.[^3]
 
-## The `::` Prompt Refinement Hook
+## The `claude-english-buddy` Plugin
 
-VMark’s `.claude/hooks/refine_prompt.mjs` is a [UserPromptSubmit hook](https://docs.anthropic.com/en/docs/claude-code/hooks) that intercepts your prompt before it reaches Claude, translates it to English, and refines it into an optimized coding prompt.
+`claude-english-buddy` is a Claude Code plugin that intercepts every prompt and processes it through one of four modes:
 
-### How to Use It
+| Mode | Trigger | What Happens |
+|------|---------|--------------|
+| **Correct** | English prompt with errors | Fixes spelling/grammar, shows what changed |
+| **Translate** | Non-English detected (CJK, Cyrillic, etc.) | Translates to English, shows translation |
+| **Refine** | `::` prefix | Rewrites vague input into a precise, structured prompt |
+| **Skip** | Short text, commands, URLs, code | Passes through unchanged |
 
-Prefix your prompt with `::` or `>>`:
+The plugin uses Claude Haiku for corrections — fast and cheap, with zero interruption to your workflow.
 
-```
-:: 把这个函数改成异步的
-```
+### Auto-Correction (Default)
 
-The hook:
-1. Sends your text to Claude Haiku (fast, cheap) for translation and refinement
-2. Blocks the original prompt from being sent
-3. Copies the refined English prompt to your clipboard
-4. Shows you the result
-
-You then paste (`Cmd+V`) the refined prompt and press Enter to send it.
-
-### Example
-
-**Input:**
-```
-:: 这个组件渲染太慢了，每次父组件更新都会重新渲染，帮我优化一下
-```
-
-**Refined output (copied to clipboard):**
-```
-Optimize this component to prevent unnecessary re-renders when the parent component updates. Use React.memo, useMemo, or useCallback as appropriate.
-```
-
-### What It Does
-
-The hook uses a carefully structured system prompt that gives Haiku:
-
-- **Claude Code awareness** — knows the target tool’s capabilities (file editing, Bash, Glob/Grep, MCP tools, plan mode, subagents)
-- **Project context** — loads from `.claude/hooks/project-context.txt` so Haiku knows the tech stack, conventions, and key file paths
-- **Priority-ordered rules** — preserve intent first, then translate, then clarify scope, then strip filler
-- **Mixed-language handling** — translates prose but keeps technical terms untranslated (`useEffect`, file paths, CLI commands)
-- **Few-shot examples**[^4] — seven input/output pairs covering Chinese, vague English, mixed-language, and multi-step requests
-- **Output length guidance** — 1–2 sentences for simple requests, 3–5 for complex ones
-
-If your input is already a clear English prompt, it’s returned with minimal changes.
-
-### Setup
-
-The hook is pre-configured in VMark’s `.claude/settings.json`. It requires the [Claude Agent SDK](https://www.npmjs.com/package/@anthropic-ai/claude-agent-sdk) which is automatically available with Claude Code.
-
-No additional setup is needed — just use the `::` or `>>` prefix.
-
-::: tip When to Skip It
-For short commands (`go ahead`, `yes`, `continue`, `option 2`), send them without the prefix. The hook ignores these to avoid unnecessary round-trips.
-:::
-
-## Also Works for English Speakers
-
-Even if you write in English, the `>>` prefix is useful for prompt optimization:
+Just type normally. The plugin detects language automatically:
 
 ```
->> make the thing work better with the new API
+You type:    "refactor the autentication modul, its got too many responsibilties"
+
+You see:     Refactor the authentication module. It has too many responsibilities.
+             (autentication>authentication; modul>module; its got>it has;
+              responsibilties>responsibilities)
+
+Claude sees: the corrected version and responds normally.
+```
+
+When your prompt is clean — silence. No noise. Silence means correct.
+
+### Translation
+
+Non-English prompts are automatically translated:
+
+```
+You type:    这个组件渲染太慢了，每次父组件更新都会重新渲染，帮我优化一下
+
+You see:     Optimize this component to prevent unnecessary re-renders when
+             the parent component updates.
+             (Chinese)
+
+Claude sees: the English translation.
+```
+
+### Prompt Refinement with `::`
+
+Prefix your prompt with `::` to refine a rough idea into a precise prompt:
+
+```
+:: make the search faster it's really slow with big files
 ```
 
 Becomes:
+
 ```
-Update the integration to use the new API. Fix any deprecated method calls and ensure error handling follows the updated response format.
+Optimize the search implementation for large files. Profile the current
+bottleneck and consider debouncing, web workers, or incremental matching.
 ```
 
-The refinement adds specificity and structure that helps the AI produce better code on the first try.[^5]
+The `::` prefix works for any language — it translates and restructures in one step.[^4]
+
+::: tip When the Plugin Stays Silent
+Short commands (`yes`, `continue`, `option 2`), slash commands, URLs, and code snippets are passed through unchanged. No unnecessary round-trips.
+:::
+
+## Tracking Your Progress
+
+The plugin logs every correction. Over weeks, you can see your English improving:
+
+| Command | What It Shows |
+|---------|---------------|
+| `/claude-english-buddy:today` | Today's corrections, recurring mistakes, lessons, trend |
+| `/claude-english-buddy:stats` | Long-term error rate and improvement trajectory |
+| `/claude-english-buddy:mistakes` | All-time recurring patterns — your blind spots |
+
+## Setup
+
+Install the plugin in Claude Code:
+
+```bash
+/plugin marketplace add xiaolai/claude-plugin-marketplace
+/plugin install claude-english-buddy@xiaolai
+```
+
+No additional configuration needed — auto-correction starts immediately.
+
+### Optional Configuration
+
+Create `.claude-english-buddy.json` in your project root to customize:
+
+```json
+{
+  "auto_correct": true,
+  "summary_language": "Chinese",
+  "strictness": "standard",
+  "domain_terms": ["ProseMirror", "Tiptap", "Zustand"]
+}
+```
+
+| Setting | Options | Default |
+|---------|---------|---------|
+| `auto_correct` | `true` / `false` | `true` |
+| `strictness` | `gentle`, `standard`, `strict` | `standard` |
+| `summary_language` | Any language name, or `null` to disable | `null` |
+| `domain_terms` | Array of terms to preserve unchanged | `[]` |
+
+When `summary_language` is set, Claude appends a brief summary in that language at the end of every response — useful when you want key decisions in your native language.[^5]
 
 [^1]: Multilingual LLMs make key decisions in a representation space closest to English, regardless of input/output language. Using a logit lens to probe internal representations, researchers found that semantically loaded words (like "water" or "sun") are selected in English before being translated into the target language. Activation steering is also more effective when computed in English. See: Schut, L., Gal, Y., & Farquhar, S. (2025). [Do Multilingual LLMs Think In English?](https://arxiv.org/abs/2502.15603). *arXiv:2502.15603*.
 

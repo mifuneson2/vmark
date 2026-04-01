@@ -1,101 +1,138 @@
-# 영어 프롬프트가 더 나은 코드를 생성하는 이유
+# 영어 프롬프트가 더 나은 코드를 만드는 이유
 
-AI 코딩 도구는 영어 프롬프트를 줄 때 더 잘 작동합니다 — 영어가 모국어가 아니더라도. VMark는 자동으로 프롬프트를 번역하고 정제하는 훅을 제공합니다.
+AI 코딩 도구는 영어로 프롬프트를 입력할 때 더 잘 작동해요——영어가 모국어가 아니더라도요. [claude-english-buddy](https://github.com/xiaolai/claude-english-buddy-for-claude) 플러그인이 프롬프트를 자동으로 교정하고, 번역하고, 다듬어 줘요.
 
 ## AI 코딩에서 영어가 중요한 이유
 
-### LLM은 영어로 사고합니다
+### LLM 은 영어로 사고해요
 
-대형 언어 모델은 내부적으로 영어와 강하게 정렬된 표현 공간을 통해 모든 언어를 처리합니다.[^1] 비영어 프롬프트를 모델에 보내기 전에 영어로 미리 번역하면 출력 품질이 측정 가능하게 향상됩니다.[^2]
+대규모 언어 모델은 모든 언어를 영어에 강하게 정렬된 표현 공간을 통해 내부적으로 처리해요.[^1] 영어가 아닌 프롬프트를 모델에 보내기 전에 영어로 미리 번역하면 출력 품질이 측정 가능한 수준으로 향상돼요.[^2]
 
-실제로, "把这个函数改成异步的"와 같은 중국어 프롬프트는 작동하지만, 영어 동등어 "Convert this function to async"는 더 적은 반복으로 더 정확한 코드를 생성합니다.
+실제로 중국어 프롬프트 "把这个函数改成异步的"도 작동하지만, 영어 표현 "Convert this function to async"가 더 정확한 코드를 더 적은 반복으로 생성해요.
 
-### 도구 사용이 프롬프트 언어를 상속합니다
+### 도구 사용은 프롬프트 언어를 따라가요
 
-AI 코딩 도구가 웹을 검색하거나, 문서를 읽거나, API 참조를 조회할 때 해당 쿼리에 프롬프트 언어를 사용합니다. 영어 쿼리가 더 나은 결과를 찾는 이유:
+AI 코딩 도구가 웹을 검색하거나, 문서를 읽거나, API 레퍼런스를 찾을 때 프롬프트의 언어로 쿼리를 수행해요. 영어 쿼리가 더 나은 결과를 찾는 이유는 다음과 같아요:
 
-- 공식 문서, Stack Overflow, GitHub 이슈가 주로 영어입니다
-- 기술 검색 용어가 영어에서 더 정확합니다
-- 코드 예시와 오류 메시지가 거의 항상 영어입니다
+- 공식 문서, Stack Overflow, GitHub 이슈는 대부분 영어로 작성되어 있어요
+- 기술 검색어는 영어로 더 정확해요
+- 코드 예제와 에러 메시지는 거의 항상 영어예요
 
-"状态管理"에 대한 중국어 프롬프트는 중국어 리소스를 검색하여 표준 영어 문서를 놓칠 수 있습니다. 다국어 벤치마크에서 영어와 다른 언어 사이에 최대 24%의 성능 격차를 일관되게 보여줍니다 — 프랑스어나 독일어 같이 잘 표현된 언어조차도.[^3]
+중국어 프롬프트로 "状态管理"를 검색하면 중국어 자료를 찾게 되어, 정식 영어 문서를 놓칠 수 있어요. 다국어 벤치마크에서는 영어와 다른 언어 사이에 최대 24% 의 성능 격차가 일관되게 나타나요——프랑스어나 독일어처럼 잘 지원되는 언어에서도요.[^3]
 
-## `::` 프롬프트 정제 훅
+## `claude-english-buddy` 플러그인
 
-VMark의 `.claude/hooks/refine_prompt.mjs`는 Claude에 도달하기 전에 프롬프트를 가로채서 영어로 번역하고 최적화된 코딩 프롬프트로 정제하는 [UserPromptSubmit 훅](https://docs.anthropic.com/en/docs/claude-code/hooks)입니다.
+`claude-english-buddy`는 모든 프롬프트를 가로채서 네 가지 모드 중 하나로 처리하는 Claude Code 플러그인이에요:
 
-### 사용 방법
+| 모드 | 트리거 | 동작 |
+|------|--------|------|
+| **교정** | 오류가 있는 영어 프롬프트 | 맞춤법/문법 수정, 변경 사항 표시 |
+| **번역** | 비영어 감지 (CJK, 키릴 문자 등) | 영어로 번역, 번역 결과 표시 |
+| **다듬기** | `::` 접두사 | 모호한 입력을 정확하고 구조화된 프롬프트로 재작성 |
+| **건너뛰기** | 짧은 텍스트, 명령어, URL, 코드 | 변경 없이 그대로 전달 |
 
-프롬프트 앞에 `::` 또는 `>>`를 붙이세요:
+이 플러그인은 교정에 Claude Haiku를 사용해요——빠르고 저렴하며, 워크플로우를 전혀 방해하지 않아요.
+
+### 자동 교정 (기본값)
+
+평소처럼 입력하면 돼요. 플러그인이 언어를 자동으로 감지해요:
 
 ```
-:: 把这个函数改成异步的
+You type:    "refactor the autentication modul, its got too many responsibilties"
+
+You see:     Refactor the authentication module. It has too many responsibilities.
+             (autentication>authentication; modul>module; its got>it has;
+              responsibilties>responsibilities)
+
+Claude sees: the corrected version and responds normally.
 ```
 
-훅이 하는 일:
-1. 번역 및 정제를 위해 Claude Haiku (빠르고 저렴함)에게 텍스트를 보냅니다
-2. 원래 프롬프트가 전송되는 것을 차단합니다
-3. 정제된 영어 프롬프트를 클립보드에 복사합니다
-4. 결과를 표시합니다
+프롬프트가 깔끔하면——침묵이에요. 잡음 없이. 침묵은 곧 정확하다는 뜻이에요.
 
-그런 다음 (`Cmd+V`)로 정제된 프롬프트를 붙여넣고 Enter를 눌러 전송합니다.
+### 번역
 
-### 예시
+영어가 아닌 프롬프트는 자동으로 번역돼요:
 
-**입력:**
 ```
-:: 这个组件渲染太慢了，每次父组件更新都会重新渲染，帮我优化一下
-```
+You type:    这个组件渲染太慢了，每次父组件更新都会重新渲染，帮我优化一下
 
-**정제된 출력 (클립보드에 복사됨):**
-```
-Optimize this component to prevent unnecessary re-renders when the parent component updates. Use React.memo, useMemo, or useCallback as appropriate.
+You see:     Optimize this component to prevent unnecessary re-renders when
+             the parent component updates.
+             (Chinese)
+
+Claude sees: the English translation.
 ```
 
-### 기능
+### `::` 로 프롬프트 다듬기
 
-훅은 Haiku에게 다음을 제공하는 신중하게 구조화된 시스템 프롬프트를 사용합니다:
+프롬프트 앞에 `::` 를 붙이면 대략적인 아이디어를 정확한 프롬프트로 다듬어 줘요:
 
-- **Claude Code 인식** — 대상 도구의 기능 파악 (파일 편집, Bash, Glob/Grep, MCP 도구, 계획 모드, 서브에이전트)
-- **프로젝트 컨텍스트** — `.claude/hooks/project-context.txt`에서 로드하여 Haiku가 기술 스택, 규약, 주요 파일 경로를 알 수 있음
-- **우선순위 규칙** — 의도 보존 우선, 번역, 범위 명확화, 불필요한 내용 제거
-- **혼합 언어 처리** — 산문은 번역하지만 기술 용어는 번역 안 함 (`useEffect`, 파일 경로, CLI 명령어)
-- **퓨샷 예시**[^4] — 중국어, 모호한 영어, 혼합 언어, 다단계 요청을 다루는 7쌍의 입출력
-- **출력 길이 지침** — 간단한 요청에는 1–2문장, 복잡한 것에는 3–5문장
+```
+:: make the search faster it's really slow with big files
+```
 
-입력이 이미 명확한 영어 프롬프트라면 최소한의 변경으로 반환됩니다.
+다음과 같이 변환돼요:
 
-### 설정
+```
+Optimize the search implementation for large files. Profile the current
+bottleneck and consider debouncing, web workers, or incremental matching.
+```
 
-훅은 VMark의 `.claude/settings.json`에 미리 구성되어 있습니다. Claude Code와 함께 자동으로 사용 가능한 [Claude Agent SDK](https://www.npmjs.com/package/@anthropic-ai/claude-agent-sdk)가 필요합니다.
+`::` 접두사는 어떤 언어에서든 작동해요——번역과 구조 재편을 한 번에 처리해요.[^4]
 
-추가 설정이 필요 없습니다 — 그냥 `::` 또는 `>>` 접두사를 사용하세요.
-
-::: tip 건너뛸 때
-짧은 명령어 (`go ahead`, `yes`, `continue`, `option 2`)의 경우 접두사 없이 전송하세요. 훅은 불필요한 왕복을 피하기 위해 이것들을 무시합니다.
+::: tip 플러그인이 침묵할 때
+짧은 명령어(`yes`, `continue`, `option 2`), 슬래시 명령어, URL, 코드 스니펫은 변경 없이 그대로 전달돼요. 불필요한 왕복이 없어요.
 :::
 
-## 영어 사용자에게도 작동합니다
+## 진행 상황 추적
 
-영어로 쓰더라도 `>>` 접두사는 프롬프트 최적화에 유용합니다:
+플러그인은 모든 교정을 기록해요. 몇 주가 지나면 영어 실력이 향상되는 것을 확인할 수 있어요:
 
+| 명령어 | 표시 내용 |
+|--------|----------|
+| `/claude-english-buddy:today` | 오늘의 교정, 반복되는 실수, 교훈, 추세 |
+| `/claude-english-buddy:stats` | 장기 오류율 및 개선 추이 |
+| `/claude-english-buddy:mistakes` | 누적 반복 패턴——취약 포인트 |
+
+## 설정
+
+Claude Code 에서 플러그인을 설치하세요:
+
+```bash
+/plugin marketplace add xiaolai/claude-plugin-marketplace
+/plugin install claude-english-buddy@xiaolai
 ```
->> make the thing work better with the new API
+
+추가 설정 없이——자동 교정이 바로 시작돼요.
+
+### 선택적 설정
+
+프로젝트 루트에 `.claude-english-buddy.json` 을 만들어서 커스터마이징할 수 있어요:
+
+```json
+{
+  "auto_correct": true,
+  "summary_language": "Chinese",
+  "strictness": "standard",
+  "domain_terms": ["ProseMirror", "Tiptap", "Zustand"]
+}
 ```
 
-다음이 됩니다:
-```
-Update the integration to use the new API. Fix any deprecated method calls and ensure error handling follows the updated response format.
-```
+| 설정 | 옵션 | 기본값 |
+|------|------|--------|
+| `auto_correct` | `true` / `false` | `true` |
+| `strictness` | `gentle`, `standard`, `strict` | `standard` |
+| `summary_language` | 언어 이름 또는 비활성화하려면 `null` | `null` |
+| `domain_terms` | 변경 없이 유지할 용어 배열 | `[]` |
 
-정제가 구체성과 구조를 추가하여 AI가 첫 번째 시도에서 더 나은 코드를 생성하는 데 도움을 줍니다.[^5]
+`summary_language`를 설정하면, Claude 가 매 응답 끝에 해당 언어로 간략한 요약을 추가해요——주요 결정 사항을 모국어로 확인하고 싶을 때 유용해요.[^5]
 
-[^1]: 다국어 LLM은 입출력 언어에 관계없이 영어에 가장 가까운 표현 공간에서 핵심 결정을 내립니다. logit 렌즈를 사용하여 내부 표현을 탐색한 연구자들은 의미 있는 단어 ("water"나 "sun" 같은)가 대상 언어로 번역되기 전에 영어로 선택된다는 것을 발견했습니다. 참조: Schut, L., Gal, Y., & Farquhar, S. (2025). [Do Multilingual LLMs Think In English?](https://arxiv.org/abs/2502.15603). *arXiv:2502.15603*.
+[^1]: 다국어 LLM 은 입력/출력 언어에 관계없이 영어에 가장 가까운 표현 공간에서 핵심 결정을 내려요. 연구자들이 logit lens 를 사용해 내부 표현을 탐색한 결과, "water"나 "sun" 같은 의미가 풍부한 단어가 대상 언어로 번역되기 전에 영어로 먼저 선택된다는 것을 발견했어요. Activation steering 도 영어로 계산할 때 더 효과적이에요. 참고: Schut, L., Gal, Y., & Farquhar, S. (2025). [Do Multilingual LLMs Think In English?](https://arxiv.org/abs/2502.15603). *arXiv:2502.15603*.
 
-[^2]: 비영어 프롬프트를 추론 전에 체계적으로 영어로 미리 번역하면 여러 작업과 언어에 걸쳐 LLM 출력 품질이 향상됩니다. 참조: Watts, J., Batsuren, K., & Gurevych, I. (2025). [Beyond English: The Impact of Prompt Translation Strategies across Languages and Tasks in Multilingual LLMs](https://arxiv.org/abs/2502.09331). *arXiv:2502.09331*.
+[^2]: 영어가 아닌 프롬프트를 추론 전에 체계적으로 영어로 번역하면 여러 태스크와 언어에서 LLM 출력 품질이 향상돼요. 연구자들은 프롬프트를 네 가지 기능적 부분(지시, 맥락, 예시, 출력)으로 분해하고, 특정 구성 요소만 선택적으로 번역하는 것이 전체를 번역하는 것보다 더 효과적일 수 있음을 보여줬어요. 참고: Watts, J., Batsuren, K., & Gurevych, I. (2025). [Beyond English: The Impact of Prompt Translation Strategies across Languages and Tasks in Multilingual LLMs](https://arxiv.org/abs/2502.09331). *arXiv:2502.09331*.
 
-[^3]: MMLU-ProX 벤치마크 — 29개 언어로 11,829개의 동일한 질문 — 에서 영어와 저자원 언어 사이에 최대 24.3%의 성능 격차를 발견했습니다. 프랑스어와 독일어 같이 잘 표현된 언어조차 측정 가능한 저하를 보입니다. 참조: [MMLU-ProX: A Multilingual Benchmark for Advanced LLM Evaluation](https://mmluprox.github.io/) (2024).
+[^3]: MMLU-ProX 벤치마크——29 개 언어로 된 11,829 개의 동일한 질문——에서 영어와 저자원 언어 사이에 최대 24.3% 의 성능 격차가 발견됐어요. 프랑스어와 독일어 같은 잘 지원되는 언어에서도 측정 가능한 성능 저하가 나타나요. 이 격차는 모델의 사전 학습 코퍼스에서 각 언어가 차지하는 비율과 강하게 상관되며, 단순히 모델 크기를 늘리는 것만으로는 해소되지 않아요. 참고: [MMLU-ProX: A Multilingual Benchmark for Advanced LLM Evaluation](https://mmluprox.github.io/) (2024); Palta, S. & Rudinger, R. (2024). [Language Ranker: A Metric for Quantifying LLM Performance Across High and Low-Resource Languages](https://arxiv.org/abs/2404.11553).
 
-[^4]: 퓨샷 프롬프팅 — 프롬프트 내에 입출력 예시 제공 — 은 LLM 작업 성능을 극적으로 향상시킵니다. 획기적인 GPT-3 논문에서 제로샷 성능은 모델 크기에 따라 꾸준히 향상되지만 퓨샷 성능은 *더 빠르게* 증가한다는 것을 보여주었습니다. 참조: Brown, T., Mann, B., Ryder, N., et al. (2020). [Language Models are Few-Shot Learners](https://arxiv.org/abs/2005.14165). *NeurIPS 2020*.
+[^4]: Few-shot prompting——프롬프트 내에 입력/출력 예시를 제공하는 방식——은 LLM 태스크 성능을 극적으로 향상시켜요. 획기적인 GPT-3 논문에서 zero-shot 성능이 모델 크기에 따라 꾸준히 향상되는 반면, few-shot 성능은 *더 빠르게* 증가하여 때로는 파인튜닝된 모델과 경쟁할 수 있는 수준에 도달한다는 것을 보여줬어요. 더 큰 모델은 in-context 예시로부터 학습하는 능력이 더 뛰어나요. 참고: Brown, T., Mann, B., Ryder, N., et al. (2020). [Language Models are Few-Shot Learners](https://arxiv.org/abs/2005.14165). *NeurIPS 2020*.
 
-[^5]: 구조화되고 잘 설계된 프롬프트는 코드 생성 작업에서 모호한 지시보다 일관되게 더 나은 성능을 보입니다. 연쇄 사고 추론, 역할 할당, 명시적 범위 제약 등의 기법이 모두 첫 번째 시도 정확도를 향상시킵니다. 참조: Sahoo, P., Singh, A.K., Saha, S., et al. (2025). [Unleashing the Potential of Prompt Engineering for Large Language Models](https://www.sciencedirect.com/science/article/pii/S2666389925001084). *Patterns*.
+[^5]: 구조화되고 잘 설계된 프롬프트는 코드 생성 태스크에서 모호한 지시보다 일관되게 더 나은 성과를 보여요. Chain-of-thought 추론, 역할 부여, 명시적 범위 제약과 같은 기법들이 모두 첫 번째 시도의 정확도를 향상시켜요. 참고: Sahoo, P., Singh, A.K., Saha, S., et al. (2025). [Unleashing the Potential of Prompt Engineering for Large Language Models](https://www.sciencedirect.com/science/article/pii/S2666389925001084). *Patterns*.
