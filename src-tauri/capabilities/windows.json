@@ -85,15 +85,6 @@
         { "path": "E:\\**" },
         { "path": "F:\\**" }
       ]
-    },
-    {
-      "identifier": "fs:allow-remove",
-      "allow": [
-        { "path": "C:\\**" },
-        { "path": "D:\\**" },
-        { "path": "E:\\**" },
-        { "path": "F:\\**" }
-      ]
     }
   ]
 }

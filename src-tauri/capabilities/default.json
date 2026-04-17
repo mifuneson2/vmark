@@ -115,15 +115,6 @@
         { "path": "/mnt/**" },
         { "path": "/media/**" }
       ]
-    },
-    {
-      "identifier": "fs:allow-remove",
-      "allow": [
-        { "path": "$HOME/**" },
-        { "path": "/Volumes/**" },
-        { "path": "/mnt/**" },
-        { "path": "/media/**" }
-      ]
     }
   ]
 }

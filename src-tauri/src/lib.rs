@@ -19,8 +19,6 @@
 //!   - Default shell resolved via `getpwuid_r` → `$SHELL` → `/bin/sh` (reliable in
 //!     GUI apps). Available shells detected from `/etc/shells` (Unix) or `where.exe`
 //!     (Windows), always returning absolute paths.
-//!   - `machine_id_hash()` generates a stable anonymous device identifier via
-//!     SHA-256(hostname + OS + arch), sent as `X-Machine-Id` header on update checks.
 //!
 //! Known limitations:
 //!   - ExitRequested handling must carefully distinguish OS quit from user quit
@@ -59,7 +57,6 @@ mod cli_install;
 #[cfg(target_os = "macos")]
 mod pdf_export;
 
-use sha2::{Digest, Sha256};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
 use tauri::{Listener, Manager};
@@ -477,27 +474,6 @@ fn register_dock_recent(path: String) {
     dock_recent::register_recent_document(&path);
 }
 
-/// Compute a stable, anonymous machine identifier hash.
-///
-/// Input: `"vmark-machine-id-v1:" + hostname + ":" + OS + ":" + ARCH`
-/// Output: 64-char lowercase hex SHA-256 digest.
-///
-/// The hash is stable across restarts, updates, and user accounts on the
-/// same machine. It is not reversible without knowing the hostname.
-/// The app-specific prefix prevents cross-app correlation.
-fn machine_id_hash() -> String {
-    let hostname = gethostname::gethostname()
-        .to_string_lossy()
-        .into_owned();
-    let input = format!(
-        "vmark-machine-id-v1:{}:{}:{}",
-        hostname,
-        std::env::consts::OS,
-        std::env::consts::ARCH,
-    );
-    format!("{:x}", Sha256::digest(input.as_bytes()))
-}
-
 /// Build and run the Tauri application with all plugins, commands, and event handlers.
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -528,13 +504,7 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_store::Builder::default().build())
         // PTY managed via custom commands (pty.rs), not a plugin
-        .plugin({
-            let mid = machine_id_hash();
-            tauri_plugin_updater::Builder::new()
-                .header("X-Machine-Id", mid)
-                .expect("valid ASCII hex header")
-                .build()
-        })
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
         .plugin(
             tauri_plugin_window_state::Builder::new()
