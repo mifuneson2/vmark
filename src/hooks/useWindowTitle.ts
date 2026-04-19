@@ -24,16 +24,21 @@ import { getFileName } from "@/utils/pathUtils";
 // Pure formatting functions — exported for testing, no DOM access
 // ---------------------------------------------------------------------------
 
-/** Format the native window title from document state. Pure — no DOM access. */
+/** Format the native window title from document state. Pure — no DOM access.
+ *
+ * Always includes "VMark — filename" so macOS Window menu and CMD+` cycling
+ * show a meaningful label regardless of the showFilenameInTitlebar preference.
+ * The dirty indicator (•) is suppressed when showFilename is off, since that
+ * preference signals the user wants a minimal titlebar experience.
+ */
 export function formatWindowTitle(
   filePath: string | null | undefined,
   isDirty: boolean,
   showFilename: boolean
 ): string {
-  if (!showFilename) return "";
   const filename = filePath ? getFileName(filePath) || "Untitled" : "Untitled";
-  const dirtyIndicator = isDirty ? "• " : "";
-  return `${dirtyIndicator}${filename}`;
+  const dirtyIndicator = isDirty && showFilename ? "• " : "";
+  return `${dirtyIndicator}VMark — ${filename}`;
 }
 
 /** Format the document.title for print dialog PDF naming. Pure — no DOM access. */
