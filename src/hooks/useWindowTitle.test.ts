@@ -2,9 +2,9 @@
  * useWindowTitle — pure function tests
  *
  * Tests the title formatting logic extracted from useWindowTitle.ts:
- *   - Window title with dirty indicator
+ *   - Window title always includes "VMark — filename" for macOS Window menu
+ *   - Dirty indicator (•) shown only when showFilename is true
  *   - Document title (for print PDF naming)
- *   - Empty title when showFilename is false
  *   - Various file path formats (POSIX, Windows, no extension)
  */
 
@@ -15,48 +15,48 @@ import { formatWindowTitle, formatDocumentTitle } from "./useWindowTitle";
 // formatWindowTitle
 // ---------------------------------------------------------------------------
 describe("formatWindowTitle", () => {
-  it("returns filename when showFilename is true and not dirty", () => {
-    expect(formatWindowTitle("/path/to/readme.md", false, true)).toBe("readme.md");
+  it("returns 'VMark — filename' when showFilename is true and not dirty", () => {
+    expect(formatWindowTitle("/path/to/readme.md", false, true)).toBe("VMark — readme.md");
   });
 
   it("prepends dirty indicator when showFilename is true and dirty", () => {
-    expect(formatWindowTitle("/path/to/readme.md", true, true)).toBe("• readme.md");
+    expect(formatWindowTitle("/path/to/readme.md", true, true)).toBe("• VMark — readme.md");
   });
 
-  it("returns empty string when showFilename is false", () => {
-    expect(formatWindowTitle("/path/to/readme.md", false, false)).toBe("");
+  it("returns 'VMark — filename' without dirty indicator when showFilename is false", () => {
+    expect(formatWindowTitle("/path/to/readme.md", false, false)).toBe("VMark — readme.md");
   });
 
-  it("returns empty string when showFilename is false even if dirty", () => {
-    expect(formatWindowTitle("/path/to/readme.md", true, false)).toBe("");
+  it("suppresses dirty indicator when showFilename is false even if dirty", () => {
+    expect(formatWindowTitle("/path/to/readme.md", true, false)).toBe("VMark — readme.md");
   });
 
-  it('uses "Untitled" when filePath is null', () => {
-    expect(formatWindowTitle(null, false, true)).toBe("Untitled");
+  it('uses "VMark — Untitled" when filePath is null', () => {
+    expect(formatWindowTitle(null, false, true)).toBe("VMark — Untitled");
   });
 
-  it('uses "Untitled" when filePath is undefined', () => {
-    expect(formatWindowTitle(undefined, false, true)).toBe("Untitled");
+  it('uses "VMark — Untitled" when filePath is undefined', () => {
+    expect(formatWindowTitle(undefined, false, true)).toBe("VMark — Untitled");
   });
 
-  it('uses "Untitled" with dirty indicator', () => {
-    expect(formatWindowTitle(null, true, true)).toBe("• Untitled");
+  it('uses "VMark — Untitled" with dirty indicator', () => {
+    expect(formatWindowTitle(null, true, true)).toBe("• VMark — Untitled");
   });
 
-  it('uses "Untitled" when filePath is empty string', () => {
-    expect(formatWindowTitle("", false, true)).toBe("Untitled");
+  it('uses "VMark — Untitled" when filePath is empty string', () => {
+    expect(formatWindowTitle("", false, true)).toBe("VMark — Untitled");
   });
 
   it("handles Windows backslash paths", () => {
-    expect(formatWindowTitle("C:\\Users\\test\\doc.md", false, true)).toBe("doc.md");
+    expect(formatWindowTitle("C:\\Users\\test\\doc.md", false, true)).toBe("VMark — doc.md");
   });
 
   it("handles path with no directory", () => {
-    expect(formatWindowTitle("notes.md", false, true)).toBe("notes.md");
+    expect(formatWindowTitle("notes.md", false, true)).toBe("VMark — notes.md");
   });
 
   it("handles file with multiple dots", () => {
-    expect(formatWindowTitle("/path/my.notes.2024.md", false, true)).toBe("my.notes.2024.md");
+    expect(formatWindowTitle("/path/my.notes.2024.md", false, true)).toBe("VMark — my.notes.2024.md");
   });
 });
 
